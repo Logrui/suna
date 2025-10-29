@@ -441,7 +441,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       }
     }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, handleSubmit]);
 
-    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!e.clipboardData) return;
       const items = Array.from(e.clipboardData.items);
       const imageFiles: File[] = [];
@@ -464,7 +464,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           queryClient,
         );
       }
-    };
+    }, [sandboxId, projectId, messages, queryClient]);
 
     const handleTranscription = useCallback((transcribedText: string) => {
       const newValue = localValue ? `${localValue} ${transcribedText}` : transcribedText;
@@ -513,17 +513,17 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       }
     }, [uploadedFiles, sandboxId, pendingFiles, messages, deleteFileMutation]);
 
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDraggingOver(true);
-    };
+    }, []);
 
-    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
       setIsDraggingOver(false);
-    };
+    }, []);
 
     const renderConfigDropdown = useMemo(() => {
       // Don't render dropdown components until after hydration to prevent ID mismatches
