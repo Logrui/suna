@@ -128,6 +128,11 @@ async def _check_billing_and_limits(client, account_id: str, model_name: Optiona
     Raises:
         HTTPException: If billing/limits checks fail
     """
+    # Skip all billing checks in local mode
+    if config.ENV_MODE == EnvMode.LOCAL:
+        logger.debug(f"[BILLING] Local mode detected - skipping billing and model access checks for account {account_id}")
+        return  # No checks needed in local mode
+    
     # Unified billing and model access check
     can_proceed, error_message, context = await billing_integration.check_model_and_billing_access(
         account_id, model_name, client

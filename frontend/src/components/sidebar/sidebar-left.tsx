@@ -287,7 +287,7 @@ export function SidebarLeft({
       </SidebarContent>
       {state !== 'collapsed' && (
         <div className="px-3 py-2">
-          <CTACard />
+          {/* <CTACard /> */}
         </div>
       )}
       <SidebarFooter>

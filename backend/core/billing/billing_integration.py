@@ -104,6 +104,7 @@ class BillingIntegration:
             context_info contains allowed_models, tier_info, etc.
         """
         # Skip all checks in local development mode
+        logger.debug(f"[BILLING_CHECK] config.ENV_MODE={config.ENV_MODE}, EnvMode.LOCAL={EnvMode.LOCAL}, Equal={config.ENV_MODE == EnvMode.LOCAL}")
         if config.ENV_MODE == EnvMode.LOCAL:
             logger.debug("Running in local development mode - skipping all billing and model access checks")
             return True, "Local development mode", {"local_mode": True}

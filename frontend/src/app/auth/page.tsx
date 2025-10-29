@@ -86,28 +86,40 @@ function LoginContent() {
 
     const finalReturnUrl = returnUrl || '/dashboard';
     formData.append('returnUrl', finalReturnUrl);
-    const result = await signIn(prevState, formData);
-
-    if (
-      result &&
-      typeof result === 'object' &&
-      'success' in result &&
-      result.success &&
-      'redirectTo' in result
-      ) {
-      window.location.href = result.redirectTo as string;
+    
+    try {
+      // Get the client Supabase instance which uses the public URL
+      const { createClient: createBrowserClient } = await import('@/lib/supabase/client');
+      const supabase = createBrowserClient();
+      
+      const email = formData.get('email') as string;
+      const password = formData.get('password') as string;
+      
+      // Sign in directly on the client with the public URL
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        toast.error('Login failed', {
+          description: error.message || 'Could not authenticate user',
+          duration: 5000,
+        });
+        return { message: error.message };
+      }
+      
+      // Successful login - redirect to dashboard
+      window.location.href = finalReturnUrl;
       return null;
-    }
-
-    if (result && typeof result === 'object' && 'message' in result) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred';
       toast.error('Login failed', {
-        description: result.message as string,
+        description: message,
         duration: 5000,
       });
-      return {};
+      return { message };
     }
-
-    return result;
   };
 
   const handleSignUp = async (prevState: any, formData: FormData) => {
