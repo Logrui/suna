@@ -75,11 +75,19 @@ export function CsvRenderer({
         let filtered = parsedData.data;
 
         if (searchTerm) {
-            filtered = filtered.filter((row: any) =>
-                Object.values(row).some(value =>
-                    value != null && String(value).toLowerCase().includes(searchTerm.toLowerCase())
-                )
-            );
+            const lowerSearchTerm = searchTerm.toLowerCase();
+            filtered = filtered.filter((row: any) => {
+                // Iterate over row properties directly instead of creating Object.values array
+                for (const key in row) {
+                    if (row.hasOwnProperty(key)) {
+                        const value = row[key];
+                        if (value != null && String(value).toLowerCase().includes(lowerSearchTerm)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
         }
 
         if (sortConfig.column && sortConfig.direction) {

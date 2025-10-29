@@ -129,11 +129,19 @@ export function XlsxRenderer({
   const processedData = useMemo(() => {
     let filtered = currentSheet.data;
     if (searchTerm) {
-      filtered = filtered.filter((row: any) =>
-        Object.entries(row)
-          .filter(([key]) => !hiddenColumns.has(key))
-          .some(([, value]) => value != null && String(value).toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      filtered = filtered.filter((row: any) => {
+        // Iterate over row properties directly instead of creating Object.entries array
+        for (const key in row) {
+          if (row.hasOwnProperty(key) && !hiddenColumns.has(key)) {
+            const value = row[key];
+            if (value != null && String(value).toLowerCase().includes(lowerSearchTerm)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
     }
     if (sortConfig.column && sortConfig.direction) {
       filtered = [...filtered].sort((a: any, b: any) => {

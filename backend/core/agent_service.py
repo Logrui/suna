@@ -224,36 +224,48 @@ class AgentService:
         )
 
     async def _load_agent_versions_batch(self, agents: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        """
+        Efficiently load versions for multiple agents using batch query.
+        This replaces the previous N+1 query pattern with a single batch operation.
+        """
         version_map = {}
-        version_ids = list({agent['current_version_id'] for agent in agents if agent.get('current_version_id')})
         
-        if version_ids:
-            try:
-                # Use versioning service instead of direct config access
-                from core.versioning.version_service import get_version_service
-                version_service = await get_version_service()
+        if not agents:
+            return version_map
+        
+        try:
+            # Use versioning service batch method for efficient loading
+            from core.versioning.version_service import get_version_service
+            version_service = await get_version_service()
+            
+            # Build version requests for batch loading
+            version_requests = [
+                {
+                    'agent_id': agent['agent_id'],
+                    'version_id': agent['current_version_id']
+                }
+                for agent in agents
+                if agent.get('current_version_id')
+            ]
+            
+            if version_requests:
+                # Load all versions in a single batch operation
+                versions = await version_service.get_versions_batch(
+                    version_requests=version_requests,
+                    user_id="system"  # Use system user for internal batch operations
+                )
                 
-                version_map = {}
-                for agent in agents:
-                    version_id = agent.get('current_version_id')
-                    if version_id:
-                        try:
-                            # Get version data using versioning service
-                            version = await version_service.get_version(
-                                agent_id=agent['agent_id'],
-                                version_id=version_id,
-                                user_id=agent['account_id']  # Use account_id as user_id
-                            )
-                            if version:
-                                version_dict = version.to_dict()
-                                version_map[agent['agent_id']] = version_dict
-                        except Exception as e:
-                            logger.warning(f"Failed to load version {version_id} for agent {agent['agent_id']}: {e}")
-                            continue
-                        
-            except Exception as e:
-                logger.warning(f"Failed to batch load agent versions: {e}")
-                version_map = {}
+                # Convert AgentVersion objects to dictionaries
+                version_map = {
+                    agent_id: version.to_dict()
+                    for agent_id, version in versions.items()
+                }
+                
+        except Exception as e:
+            logger.warning(f"Failed to batch load agent versions: {e}")
+            version_map = {}
+        
+        return version_map
 
     async def _passes_complex_filters(
         self, 

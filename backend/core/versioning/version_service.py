@@ -343,6 +343,57 @@ class VersionService:
         versions = [self._version_from_db_row(row) for row in result.data]
         return versions
     
+    async def get_versions_batch(
+        self,
+        version_requests: List[Dict[str, str]],
+        user_id: str = "system"
+    ) -> Dict[str, AgentVersion]:
+        """
+        Efficiently load multiple versions in a single batch operation.
+        
+        Args:
+            version_requests: List of dicts with 'agent_id' and 'version_id' keys
+            user_id: User ID for authorization (defaults to "system" for internal calls)
+            
+        Returns:
+            Dictionary mapping agent_id to AgentVersion object
+        """
+        if not version_requests:
+            return {}
+        
+        client = await self._get_client()
+        
+        # Extract unique version IDs for batch query
+        version_ids = list({req['version_id'] for req in version_requests if req.get('version_id')})
+        
+        if not version_ids:
+            return {}
+        
+        # Batch load all versions using the query_utils batch helper
+        from core.utils.query_utils import batch_query_in
+        
+        versions_data = await batch_query_in(
+            client=client,
+            table_name='agent_versions',
+            select_fields='*',
+            in_field='version_id',
+            in_values=version_ids,
+            batch_size=100
+        )
+        
+        # Build a mapping of agent_id -> version for quick lookup
+        result_map = {}
+        for row in versions_data:
+            agent_id = row['agent_id']
+            try:
+                version = self._version_from_db_row(row)
+                result_map[agent_id] = version
+            except Exception as e:
+                logger.warning(f"Failed to parse version for agent {agent_id}: {e}")
+                continue
+        
+        return result_map
+    
     async def activate_version(self, agent_id: str, version_id: str, user_id: str) -> None:
         is_owner, _ = await self._verify_and_authorize_agent_access(agent_id, user_id)
         if not is_owner:
