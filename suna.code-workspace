@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../suna-supabase"
+		}
+	],
+	"settings": {}
+}
