@@ -27,6 +27,38 @@ class TestVersionServiceBatchLoading:
         service._get_client = AsyncMock(return_value=mock_db_client)
         return service
     
+    @staticmethod
+    def create_mock_version_data(
+        version_id: str,
+        agent_id: str,
+        model: str = 'gpt-4',
+        system_prompt: str = 'Test prompt',
+        version_number: int = 1,
+        created_by: str = 'user1'
+    ):
+        """Helper to create mock version data with consistent structure."""
+        return {
+            'version_id': version_id,
+            'agent_id': agent_id,
+            'version_number': version_number,
+            'version_name': f'v{version_number}.0',
+            'is_active': True,
+            'created_at': '2024-01-01T00:00:00+00:00',
+            'updated_at': '2024-01-01T00:00:00+00:00',
+            'created_by': created_by,
+            'change_description': None,
+            'previous_version_id': None,
+            'config': {
+                'system_prompt': system_prompt,
+                'model': model,
+                'tools': {
+                    'mcp': [],
+                    'custom_mcp': [],
+                    'agentpress': {}
+                }
+            }
+        }
+    
     @pytest.mark.unit
     @pytest.mark.asyncio
     async def test_get_versions_batch_empty_requests(self, version_service):
@@ -42,30 +74,11 @@ class TestVersionServiceBatchLoading:
     @pytest.mark.asyncio
     async def test_get_versions_batch_single_version(self, version_service):
         """Test batch loading with a single version request."""
-        # Mock the batch_query_in function
         with patch('core.versioning.version_service.batch_query_in') as mock_batch_query:
-            # Setup mock data
-            mock_version_data = [{
-                'version_id': 'v1',
-                'agent_id': 'agent1',
-                'version_number': 1,
-                'version_name': 'v1.0',
-                'is_active': True,
-                'created_at': '2024-01-01T00:00:00+00:00',
-                'updated_at': '2024-01-01T00:00:00+00:00',
-                'created_by': 'user1',
-                'change_description': 'Initial version',
-                'previous_version_id': None,
-                'config': {
-                    'system_prompt': 'Test prompt',
-                    'model': 'gpt-4',
-                    'tools': {
-                        'mcp': [],
-                        'custom_mcp': [],
-                        'agentpress': {}
-                    }
-                }
-            }]
+            # Setup mock data using helper
+            mock_version_data = [
+                self.create_mock_version_data('v1', 'agent1', model='gpt-4')
+            ]
             mock_batch_query.return_value = mock_version_data
             
             # Execute batch load
@@ -94,42 +107,10 @@ class TestVersionServiceBatchLoading:
     async def test_get_versions_batch_multiple_versions(self, version_service):
         """Test batch loading with multiple version requests."""
         with patch('core.versioning.version_service.batch_query_in') as mock_batch_query:
-            # Setup mock data for multiple versions
+            # Setup mock data using helper
             mock_version_data = [
-                {
-                    'version_id': 'v1',
-                    'agent_id': 'agent1',
-                    'version_number': 1,
-                    'version_name': 'v1.0',
-                    'is_active': True,
-                    'created_at': '2024-01-01T00:00:00+00:00',
-                    'updated_at': '2024-01-01T00:00:00+00:00',
-                    'created_by': 'user1',
-                    'change_description': None,
-                    'previous_version_id': None,
-                    'config': {
-                        'system_prompt': 'Test prompt 1',
-                        'model': 'gpt-4',
-                        'tools': {'mcp': [], 'custom_mcp': [], 'agentpress': {}}
-                    }
-                },
-                {
-                    'version_id': 'v2',
-                    'agent_id': 'agent2',
-                    'version_number': 1,
-                    'version_name': 'v1.0',
-                    'is_active': True,
-                    'created_at': '2024-01-02T00:00:00+00:00',
-                    'updated_at': '2024-01-02T00:00:00+00:00',
-                    'created_by': 'user2',
-                    'change_description': None,
-                    'previous_version_id': None,
-                    'config': {
-                        'system_prompt': 'Test prompt 2',
-                        'model': 'claude-3',
-                        'tools': {'mcp': [], 'custom_mcp': [], 'agentpress': {}}
-                    }
-                }
+                self.create_mock_version_data('v1', 'agent1', model='gpt-4', system_prompt='Prompt 1'),
+                self.create_mock_version_data('v2', 'agent2', model='claude-3', system_prompt='Prompt 2')
             ]
             mock_batch_query.return_value = mock_version_data
             
@@ -182,24 +163,10 @@ class TestVersionServiceBatchLoading:
     async def test_get_versions_batch_handles_missing_versions(self, version_service):
         """Test batch loading gracefully handles missing/invalid versions."""
         with patch('core.versioning.version_service.batch_query_in') as mock_batch_query:
-            # Return data for only one of the requested versions
-            mock_version_data = [{
-                'version_id': 'v1',
-                'agent_id': 'agent1',
-                'version_number': 1,
-                'version_name': 'v1.0',
-                'is_active': True,
-                'created_at': '2024-01-01T00:00:00+00:00',
-                'updated_at': '2024-01-01T00:00:00+00:00',
-                'created_by': 'user1',
-                'change_description': None,
-                'previous_version_id': None,
-                'config': {
-                    'system_prompt': 'Test',
-                    'model': 'gpt-4',
-                    'tools': {'mcp': [], 'custom_mcp': [], 'agentpress': {}}
-                }
-            }]
+            # Return data for only one of the requested versions using helper
+            mock_version_data = [
+                self.create_mock_version_data('v1', 'agent1', model='gpt-4')
+            ]
             mock_batch_query.return_value = mock_version_data
             
             # Request two versions but only one exists
