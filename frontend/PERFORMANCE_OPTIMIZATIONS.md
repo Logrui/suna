@@ -157,11 +157,13 @@ npm install --save-dev @next/bundle-analyzer
 
 Add to `next.config.ts`:
 ```typescript
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
+const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
-module.exports = withBundleAnalyzer(nextConfig);
+export default bundleAnalyzer(nextConfig());
 ```
 
 Run with: `ANALYZE=true npm run build`

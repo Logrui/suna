@@ -464,7 +464,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           queryClient,
         );
       }
-    }, [sandboxId, projectId, messages, queryClient]);
+    }, [sandboxId, projectId, setPendingFiles, setUploadedFiles, setIsUploading, messages, queryClient]);
 
     const handleTranscription = useCallback((transcribedText: string) => {
       const newValue = localValue ? `${localValue} ${transcribedText}` : transcribedText;
