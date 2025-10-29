@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -100,13 +101,15 @@ export const DocsCard = React.forwardRef<HTMLDivElement, DocsCardProps>(
       >
         {image && (
           <div className={cn(
-            "overflow-hidden",
-            orientation === 'vertical' ? "rounded-t-lg" : "rounded-l-lg w-48 flex-shrink-0"
+            "overflow-hidden relative",
+            orientation === 'vertical' ? "rounded-t-lg h-48" : "rounded-l-lg w-48 flex-shrink-0"
           )}>
-            <img
+            <Image
               src={image}
               alt={imageAlt || title}
-              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+              fill
+              className="object-cover transition-transform group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>
         )}

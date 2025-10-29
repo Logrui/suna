@@ -392,7 +392,7 @@ export interface ThreadContentProps {
     agentData?: any; // Add full agent data prop
 }
 
-export const ThreadContent: React.FC<ThreadContentProps> = ({
+const ThreadContentComponent: React.FC<ThreadContentProps> = ({
     messages,
     streamingTextContent = "",
     streamingToolCall,
@@ -1206,5 +1206,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         </>
     );
 };
+
+// Memoize ThreadContent to prevent unnecessary re-renders
+export const ThreadContent = React.memo(ThreadContentComponent);
 
 export default ThreadContent; 

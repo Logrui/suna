@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -76,22 +77,24 @@ const IntegrationLogo: React.FC<{
   };
 
   return (
-    <div className={`${sizeClasses[size]} flex items-center justify-center flex-shrink-0 overflow-hidden rounded-md`}>
+    <div className={`${sizeClasses[size]} flex items-center justify-center flex-shrink-0 overflow-hidden rounded-md relative`}>
       {logoUrl ? (
-        <img
+        <Image
           src={logoUrl}
           alt={displayName}
-          className="w-full h-full object-cover"
+          fill
+          className="object-cover"
+          sizes="48px"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.style.display = 'none';
-            target.nextElementSibling?.classList.remove('hidden');
           }}
         />
-      ) : null}
-      <div className={logoUrl ? "hidden" : "flex w-full h-full items-center justify-center bg-muted rounded-md text-xs font-medium text-muted-foreground"}>
-        {firstLetter}
-      </div>
+      ) : (
+        <div className="flex w-full h-full items-center justify-center bg-muted rounded-md text-xs font-medium text-muted-foreground">
+          {firstLetter}
+        </div>
+      )}
     </div>
   );
 };
