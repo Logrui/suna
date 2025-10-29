@@ -163,7 +163,10 @@ const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });
 
-export default bundleAnalyzer(nextConfig());
+// Wrap the config function with bundle analyzer
+const nextConfigWithAnalyzer = () => bundleAnalyzer(nextConfig());
+
+export default nextConfigWithAnalyzer;
 ```
 
 Run with: `ANALYZE=true npm run build`
