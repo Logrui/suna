@@ -930,39 +930,75 @@ async def stream_agent_run(
             message_queue = asyncio.Queue()
 
             async def listen_messages():
-                listener = pubsub.listen()
-                task = asyncio.create_task(listener.__anext__())
+                pending_tasks = set()
+                try:
+                    listener = pubsub.listen()
+                    task = asyncio.create_task(listener.__anext__())
+                    pending_tasks.add(task)
 
-                while not terminate_stream:
-                    done, _ = await asyncio.wait([task], return_when=asyncio.FIRST_COMPLETED)
-                    for finished in done:
+                    while not terminate_stream:
                         try:
-                            message = finished.result()
-                            if message and isinstance(message, dict) and message.get("type") == "message":
-                                channel = message.get("channel")
-                                data = message.get("data")
-                                if isinstance(data, bytes):
-                                    data = data.decode('utf-8')
+                            done, _ = await asyncio.wait(pending_tasks, return_when=asyncio.FIRST_COMPLETED)
+                            for finished in done:
+                                try:
+                                    message = finished.result()
+                                    if message and isinstance(message, dict) and message.get("type") == "message":
+                                        channel = message.get("channel")
+                                        data = message.get("data")
+                                        if isinstance(data, bytes):
+                                            data = data.decode('utf-8')
 
-                                if channel == response_channel and data == "new":
-                                    await message_queue.put({"type": "new_response"})
-                                elif channel == control_channel and data in ["STOP", "END_STREAM", "ERROR"]:
-                                    logger.debug(f"Received control signal '{data}' for {agent_run_id}")
-                                    await message_queue.put({"type": "control", "data": data})
-                                    return  # Stop listening on control signal
+                                        if channel == response_channel and data == "new":
+                                            await message_queue.put({"type": "new_response"})
+                                        elif channel == control_channel and data in ["STOP", "END_STREAM", "ERROR"]:
+                                            logger.debug(f"Received control signal '{data}' for {agent_run_id}")
+                                            await message_queue.put({"type": "control", "data": data})
+                                            return  # Stop listening on control signal
 
-                        except StopAsyncIteration:
-                            logger.warning(f"Listener stopped for {agent_run_id}.")
-                            await message_queue.put({"type": "error", "data": "Listener stopped unexpectedly"})
-                            return
-                        except Exception as e:
-                            logger.error(f"Error in listener for {agent_run_id}: {e}")
-                            await message_queue.put({"type": "error", "data": "Listener failed"})
-                            return
-                        finally:
-                            # Resubscribe to the next message if continuing
-                            if not terminate_stream:
-                                task = asyncio.create_task(listener.__anext__())
+                                except StopAsyncIteration:
+                                    logger.warning(f"Listener stopped for {agent_run_id}.")
+                                    await message_queue.put({"type": "error", "data": "Listener stopped unexpectedly"})
+                                    return
+                                except asyncio.CancelledError:
+                                    logger.debug(f"Listener task cancelled for {agent_run_id}")
+                                    raise
+                                except ConnectionError as ce:
+                                    # Connection closed by server is expected during shutdown
+                                    logger.debug(f"Connection closed during shutdown for {agent_run_id}: {ce}")
+                                    return
+                                except Exception as e:
+                                    logger.error(f"Error in listener for {agent_run_id}: {e}")
+                                    await message_queue.put({"type": "error", "data": "Listener failed"})
+                                    return
+                                finally:
+                                    # Always remove finished task from pending set
+                                    pending_tasks.discard(finished)
+                                    # Resubscribe to the next message if continuing
+                                    if not terminate_stream:
+                                        try:
+                                            task = asyncio.create_task(listener.__anext__())
+                                            pending_tasks.add(task)
+                                        except Exception as e:
+                                            logger.debug(f"Failed to resubscribe listener for {agent_run_id}: {e}")
+                                            return
+                        except asyncio.CancelledError:
+                            logger.debug(f"asyncio.wait cancelled for {agent_run_id}")
+                            raise
+                except asyncio.CancelledError:
+                    logger.debug(f"listen_messages task cancelled for {agent_run_id}")
+                except Exception as e:
+                    logger.debug(f"listen_messages ended with exception for {agent_run_id}: {e}")
+                finally:
+                    # Clean up any pending tasks - suppress all exceptions
+                    for pending_task in pending_tasks:
+                        if not pending_task.done():
+                            pending_task.cancel()
+                    # Gather all pending tasks and await them to suppress their exceptions
+                    if pending_tasks:
+                        try:
+                            await asyncio.gather(*pending_tasks, return_exceptions=True)
+                        except Exception:
+                            pass  # Suppress any remaining exceptions
 
 
             listener_task = asyncio.create_task(listen_messages())
@@ -1020,24 +1056,26 @@ async def stream_agent_run(
                  yield f"data: {json.dumps({'type': 'status', 'status': 'error', 'message': f'Failed to start stream: {e}'})}\n\n"
         finally:
             terminate_stream = True
-            # Graceful shutdown order: unsubscribe → close → cancel
+            # Graceful shutdown order: cancel listener → close pubsub
+            if listener_task:
+                listener_task.cancel()
+                try:
+                    # Give the task a moment to handle cancellation before we close pubsub
+                    await asyncio.wait_for(listener_task, timeout=0.5)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
+                except Exception as e:
+                    logger.debug(f"listener_task ended with: {e}")
+            
+            # Now close pubsub (this will cause any pending __anext__() calls to fail,
+            # but they should already be cancelled by listener_task.cancel() above)
             try:
                 if 'pubsub' in locals() and pubsub:
                     await pubsub.unsubscribe(response_channel, control_channel)
                     await pubsub.close()
             except Exception as e:
                 logger.debug(f"Error during pubsub cleanup for {agent_run_id}: {e}")
-
-            if listener_task:
-                listener_task.cancel()
-                try:
-                    await listener_task  # Reap inner tasks & swallow their errors
-                except asyncio.CancelledError:
-                    pass
-                except Exception as e:
-                    logger.debug(f"listener_task ended with: {e}")
-            # Wait briefly for tasks to cancel
-            await asyncio.sleep(0.1)
+            
             logger.debug(f"Streaming cleanup complete for agent run: {agent_run_id}")
 
     return StreamingResponse(stream_generator(agent_run_data), media_type="text/event-stream", headers={

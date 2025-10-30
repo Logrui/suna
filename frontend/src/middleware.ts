@@ -56,8 +56,12 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
+  // Use NEXT_PUBLIC_SUPABASE_PUBLIC_URL for middleware (same as browser client)
+  // Falls back to NEXT_PUBLIC_SUPABASE_URL if not set
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
@@ -80,8 +84,17 @@ export async function middleware(request: NextRequest) {
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
+    // DEBUG: Log auth attempt
+    console.log('[Middleware] Auth check:', {
+      hasError: !!authError,
+      errorMessage: authError?.message,
+      hasUser: !!user,
+      cookies: request.cookies.getAll().map(c => `${c.name}=${c.value.slice(0, 20)}...`),
+    });
+    
     // Redirect to auth if not authenticated
     if (authError || !user) {
+      console.log('[Middleware] Redirecting to /auth due to auth failure');
       const url = request.nextUrl.clone();
       url.pathname = '/auth';
       url.searchParams.set('redirect', pathname);

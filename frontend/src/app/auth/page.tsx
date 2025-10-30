@@ -88,6 +88,7 @@ function LoginContent() {
     formData.append('returnUrl', finalReturnUrl);
     
     try {
+      console.log('[Auth] Starting login...');
       // Get the client Supabase instance which uses the public URL
       const { createClient: createBrowserClient } = await import('@/lib/supabase/client');
       const supabase = createBrowserClient();
@@ -95,13 +96,15 @@ function LoginContent() {
       const email = formData.get('email') as string;
       const password = formData.get('password') as string;
       
+      console.log('[Auth] Authenticating with Supabase:', { email });
       // Sign in directly on the client with the public URL
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
+        console.error('[Auth] Authentication failed:', error.message);
         toast.error('Login failed', {
           description: error.message || 'Could not authenticate user',
           duration: 5000,
@@ -109,11 +112,42 @@ function LoginContent() {
         return { message: error.message };
       }
       
+      console.log('[Auth] Authentication successful, syncing session to server...');
+      // Sync the session to server cookies
+      if (data.session) {
+        try {
+          const syncResponse = await fetch('/api/auth/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            }),
+          });
+          
+          console.log('[Auth] Sync response:', { status: syncResponse.status, ok: syncResponse.ok });
+          const syncData = await syncResponse.json();
+          console.log('[Auth] Sync data:', syncData);
+          
+          if (!syncResponse.ok) {
+            console.warn('[Auth] Failed to sync session to server:', syncData.error);
+          } else {
+            console.log('[Auth] Session synced successfully');
+          }
+        } catch (err) {
+          console.warn('[Auth] Error syncing session:', err);
+        }
+      } else {
+        console.warn('[Auth] No session returned from authentication');
+      }
+      
+      console.log('[Auth] Redirecting to dashboard...');
       // Successful login - redirect to dashboard
       window.location.href = finalReturnUrl;
       return null;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+      console.error('[Auth] Unexpected error:', message);
       toast.error('Login failed', {
         description: message,
         duration: 5000,

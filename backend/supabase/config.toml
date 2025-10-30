@@ -88,7 +88,8 @@ port = 54324
 [storage]
 enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
-file_size_limit = "50MiB"
+# Updated for self-hosted environment: 100GB limit
+file_size_limit = "100GiB"
 
 # Image transformation API is available to Supabase Pro plan.
 # [storage.image_transformation]
@@ -97,7 +98,7 @@ file_size_limit = "50MiB"
 # Configure storage buckets
 [storage.buckets.agentpress]
 public = false
-file_size_limit = "50MiB"
+file_size_limit = "100GiB"
 allowed_mime_types = ["text/plain", "application/json", "text/markdown", "text/css", "text/javascript", "application/javascript", "text/html", "text/xml", "application/xml"]
 
 [auth]

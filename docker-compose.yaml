@@ -50,6 +50,7 @@ services:
     volumes:
       - ./backend/.env:/app/.env:ro
     environment:
+      - ENV_MODE=local
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
@@ -73,6 +74,7 @@ services:
     volumes:
       - ./backend/.env:/app/.env:ro
     environment:
+      - ENV_MODE=local
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
@@ -91,14 +93,14 @@ services:
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_SUPABASE_URL=http://supabase-kong:8000
-        - NEXT_PUBLIC_SUPABASE_PUBLIC_URL=http://localhost:8002
+        - NEXT_PUBLIC_SUPABASE_PUBLIC_URL=http://localhost:8888
         - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000/api
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=http://supabase-kong:8000
-      - NEXT_PUBLIC_SUPABASE_PUBLIC_URL=http://localhost:8002
+      - NEXT_PUBLIC_SUPABASE_PUBLIC_URL=http://localhost:8888
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000/api
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE
     depends_on:

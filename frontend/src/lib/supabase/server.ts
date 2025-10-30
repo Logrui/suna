@@ -5,8 +5,12 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  // Use NEXT_PUBLIC_SUPABASE_PUBLIC_URL for server-side requests (matches client-side)
+  // Falls back to NEXT_PUBLIC_SUPABASE_URL if not set
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
