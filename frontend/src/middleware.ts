@@ -56,9 +56,11 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
-  // Use NEXT_PUBLIC_SUPABASE_PUBLIC_URL for middleware (same as browser client)
-  // Falls back to NEXT_PUBLIC_SUPABASE_URL if not set
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+  // Use the request host to determine Supabase URL
+  // This allows the app to work from both localhost:3000 and kortix.syhc.dev
+  const host = request.headers.get('host') || 'localhost:3000'
+  const protocol = request.headers.get('x-forwarded-proto') || 'http'
+  const supabaseUrl = `${protocol}://${host}`
 
   const supabase = createServerClient(
     supabaseUrl,

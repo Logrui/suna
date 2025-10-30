@@ -1,13 +1,16 @@
 'use server'
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 export async function createClient() {
   const cookieStore = await cookies()
+  const headerStore = await headers()
 
-  // Use NEXT_PUBLIC_SUPABASE_PUBLIC_URL for server-side requests (matches client-side)
-  // Falls back to NEXT_PUBLIC_SUPABASE_URL if not set
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_PUBLIC_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!
+  // For server-side, try to get the origin from request headers
+  // This allows the app to work from both localhost:3000 and kortix.syhc.dev
+  const origin = headerStore.get('x-forwarded-host') || headerStore.get('host')
+  const protocol = headerStore.get('x-forwarded-proto') || 'http'
+  const supabaseUrl = origin ? `${protocol}://${origin}` : process.env.NEXT_PUBLIC_SUPABASE_URL!
 
   return createServerClient(
     supabaseUrl,
