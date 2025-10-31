@@ -32,6 +32,7 @@ import { createClient } from '@/lib/supabase/client';
 import { FileNameValidator, useNameValidation } from '@/lib/validation';
 import { cn } from '@/lib/utils';
 import { type Folder } from '@/hooks/react-query/knowledge-base/use-folders';
+import { getApiUrl } from '@/lib/get-api-url';
 
 interface FileUploadStatus {
     file: File;
@@ -47,7 +48,7 @@ interface UnifiedKbEntryModalProps {
     defaultTab?: 'upload' | 'text' | 'git';
 }
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_URL = getApiUrl();
 
 export function UnifiedKbEntryModal({
     folders,

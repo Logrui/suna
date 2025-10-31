@@ -44,8 +44,9 @@ import { KBDeleteConfirmDialog } from './kb-delete-confirm-dialog';
 import { useKnowledgeFolders, type Folder, type Entry } from '@/hooks/react-query/knowledge-base/use-folders';
 import { FileNameValidator } from '@/lib/validation';
 import { createClient } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/get-api-url';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_URL = getApiUrl();
 
 interface TreeItem {
     id: string;

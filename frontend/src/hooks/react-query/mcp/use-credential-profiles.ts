@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/get-api-url';
 
 export interface CredentialProfile {
   profile_id: string;
@@ -23,7 +24,7 @@ export interface CreateCredentialProfileRequest {
   is_default?: boolean;
 }
 
-const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL}/secure-mcp`;
+const API_BASE = `${getApiUrl()}/secure-mcp`;
 
 async function fetchAllCredentialProfiles(): Promise<CredentialProfile[]> {
   const supabase = createClient();

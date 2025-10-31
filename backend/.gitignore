@@ -176,3 +176,6 @@ state.json
 *.db
 
 .env.scripts
+
+
+.docs/

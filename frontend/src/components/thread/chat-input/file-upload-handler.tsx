@@ -15,8 +15,9 @@ import {
 } from '@/components/ui/tooltip';
 import { UploadedFile } from './chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
+import { getApiUrl } from '@/lib/get-api-url';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_URL = getApiUrl();
 
 const handleLocalFiles = (
   files: File[],
