@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from './error-handler';
+import { getApiUrl } from './get-api-url';
 import posthog from 'posthog-js';
 
-// Get backend URL from environment variables
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_URL = getApiUrl();
 
 // Set to keep track of agent runs that are known to be non-running
 const nonRunningAgentRuns = new Set<string>();

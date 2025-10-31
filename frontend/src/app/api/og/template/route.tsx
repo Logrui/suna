@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
+import { getApiUrl } from '@/lib/get-api-url';
 
 export const runtime = 'edge';
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     const templateResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/templates/public/${shareId}`
+      `${getApiUrl().replace('/api', '')}/api/templates/public/${shareId}`
     );
 
     if (!templateResponse.ok) {

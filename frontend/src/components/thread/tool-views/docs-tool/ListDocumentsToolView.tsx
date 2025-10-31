@@ -22,6 +22,7 @@ import { LoadingState } from '../shared/LoadingState';
 import { cn } from '@/lib/utils';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
 import { TipTapDocumentModal } from '@/components/thread/tiptap-document-modal';
+import { getApiUrl } from '@/lib/get-api-url';
 import { 
   DocumentInfo, 
   extractDocsData,
@@ -75,7 +76,7 @@ export function ListDocumentsToolView({
         
         if (session?.access_token) {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
+            `${getApiUrl()}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
             {
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,
