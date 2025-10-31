@@ -1,0 +1,1 @@
+new threads section that shows tasks related to email threads. Can also be grouped into Workspaces

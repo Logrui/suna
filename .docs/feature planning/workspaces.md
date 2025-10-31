@@ -1,0 +1,1 @@
+Workspaces are groups of tasks related to specific workspaces

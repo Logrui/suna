@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Zap, ChevronRight, BookOpen } from 'lucide-react';
+import { Bot, Menu, Plus, Zap, ChevronRight, BookOpen, MessageSquare, Folder } from 'lucide-react';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
@@ -194,6 +194,21 @@ export function SidebarLeft({
               </span>
             </SidebarMenuButton>
           </Link>
+          <Link href="/conversations">
+            <SidebarMenuButton
+              className={cn('touch-manipulation mt-1', {
+                'bg-accent text-accent-foreground font-medium': pathname === '/conversations',
+              })}
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+              }}
+            >
+              <MessageSquare className="h-4 w-4 mr-1" />
+              <span className="flex items-center justify-between w-full">
+                Conversations
+              </span>
+            </SidebarMenuButton>
+          </Link>
           <Link href="/triggers">
             <SidebarMenuButton
               className={cn('touch-manipulation mt-1', {
@@ -206,6 +221,21 @@ export function SidebarLeft({
               <Zap className="h-4 w-4 mr-1" />
               <span className="flex items-center justify-between w-full">
                 Triggers
+              </span>
+            </SidebarMenuButton>
+          </Link>
+          <Link href="/workspaces">
+            <SidebarMenuButton
+              className={cn('touch-manipulation mt-1', {
+                'bg-accent text-accent-foreground font-medium': pathname === '/workspaces',
+              })}
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+              }}
+            >
+              <Folder className="h-4 w-4 mr-1" />
+              <span className="flex items-center justify-between w-full">
+                Workspaces
               </span>
             </SidebarMenuButton>
           </Link>
@@ -266,6 +296,15 @@ export function SidebarLeft({
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
+                        <SidebarMenuSubButton className={cn('pl-3 touch-manipulation', {
+                          'bg-accent text-accent-foreground font-medium': pathname === '/agents' && searchParams.get('tab') === 'sub-agents',
+                        })} asChild>
+                          <Link href="/agents?tab=sub-agents" onClick={() => isMobile && setOpenMobile(false)}>
+                            <span>Subagents</span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
                         <SidebarMenuSubButton
                           onClick={() => {
                             setShowNewAgentDialog(true);
@@ -273,7 +312,7 @@ export function SidebarLeft({
                           }}
                           className="cursor-pointer pl-3 touch-manipulation"
                         >
-                          <span>New Agent</span>
+                          <span>+ Create Agent</span>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
