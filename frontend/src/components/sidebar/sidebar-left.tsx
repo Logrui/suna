@@ -498,7 +498,7 @@ export function SidebarLeft({
                     >
                       <button
                         className={cn(
-                          "flex flex-col items-center justify-center gap-1.5 p-1.5 rounded-2xl cursor-pointer transition-colors flex-1 h-[64px]",
+                          "flex flex-col items-center justify-center gap-1.5 p-1.5 rounded-2xl cursor-pointer transition-colors w-[64px] h-[64px]",
                           "hover:bg-muted/60 hover:border-[1.5px] hover:border-border",
                           activeView === view ? 'bg-card border-[1.5px] border-border' : 'border-[1.5px] border-transparent'
                         )}
