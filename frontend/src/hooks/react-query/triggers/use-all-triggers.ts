@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { backendApi } from '@/lib/api-client';
 import { getApiUrl } from '@/lib/get-api-url';

@@ -1,4 +1,4 @@
-﻿# syntax=docker.io/docker/dockerfile:1
+# syntax=docker.io/docker/dockerfile:1
 # ---- Base Stage ----
 FROM node:22-slim AS base
 

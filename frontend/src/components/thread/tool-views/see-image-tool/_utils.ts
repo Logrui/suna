@@ -1,4 +1,4 @@
-﻿import { extractToolData, normalizeContentToString } from '../utils';
+import { extractToolData, normalizeContentToString } from '../utils';
 import { getApiUrl } from '@/lib/get-api-url';
 
 export interface SeeImageData {

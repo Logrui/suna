@@ -1,9 +1,9 @@
-﻿# ============================================================================
+# ============================================================================
 # SUNA DOCKER COMPOSE - LOCAL DEVELOPMENT
 # ============================================================================
 # This Docker Compose file runs Suna services (Backend, Worker, Frontend, Redis)
 #
-# ΓÜá∩╕Å  IMPORTANT LIMITATION - LOCAL SUPABASE:
+# ⚠️  IMPORTANT LIMITATION - LOCAL SUPABASE:
 # Currently, local Supabase (via `npx supabase start`) is NOT supported with
 # Docker Compose due to network configuration complexity.
 #

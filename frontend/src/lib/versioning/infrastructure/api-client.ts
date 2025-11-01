@@ -1,4 +1,4 @@
-﻿import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { IApiClient } from '../repositories/interfaces';
 import { getApiUrl } from '@/lib/get-api-url';
 

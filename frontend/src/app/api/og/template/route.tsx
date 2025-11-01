@@ -1,4 +1,4 @@
-﻿import { ImageResponse } from 'next/og';
+import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { getApiUrl } from '@/lib/get-api-url';
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
                 }}
               >
                 <span style={{ color: '#93c5fd', fontSize: '14px', fontWeight: 600 }}>
-                  Γ£¿ Official Template
+                  ✨ Official Template
                 </span>
               </div>
             )}
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
                 marginBottom: '32px',
               }}
             >
-              ≡ƒñû
+              🤖
             </div>
             <h1
               style={{
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
               }}
             >
               <span style={{ color: '#64748b', fontSize: '20px' }}>Kortix Suna</span>
-              <span style={{ color: '#334155', fontSize: '20px' }}>ΓÇó</span>
+              <span style={{ color: '#334155', fontSize: '20px' }}>•</span>
               <span style={{ color: '#64748b', fontSize: '20px' }}>AI Agent Marketplace</span>
             </div>
           </div>
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
                 marginBottom: '24px',
               }}
             >
-              ≡ƒñû
+              🤖
             </div>
             <h1
               style={{

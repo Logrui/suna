@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import traceback
 import uuid
@@ -1056,7 +1056,7 @@ async def stream_agent_run(
                  yield f"data: {json.dumps({'type': 'status', 'status': 'error', 'message': f'Failed to start stream: {e}'})}\n\n"
         finally:
             terminate_stream = True
-            # Graceful shutdown order: cancel listener ΓåÆ close pubsub
+            # Graceful shutdown order: cancel listener → close pubsub
             if listener_task:
                 listener_task.cancel()
                 try:

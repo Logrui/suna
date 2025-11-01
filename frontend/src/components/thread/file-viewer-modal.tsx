@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef, Fragment, useCallback } from 'react';
 import {
@@ -1213,7 +1213,7 @@ export function FileViewerModal({
                     onClick={navigatePrevious}
                     disabled={currentFileIndex <= 0}
                     className="h-8 w-8 p-0"
-                    title="Previous file (ΓåÉ)"
+                    title="Previous file (←)"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -1226,7 +1226,7 @@ export function FileViewerModal({
                     onClick={navigateNext}
                     disabled={currentFileIndex >= (filePathList?.length || 0) - 1}
                     className="h-8 w-8 p-0"
-                    title="Next file (ΓåÆ)"
+                    title="Next file (→)"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -1364,13 +1364,13 @@ export function FileViewerModal({
                         onClick={() => handleExportPdf('portrait')}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <span className="rotate-90">Γ¼î</span> Portrait
+                        <span className="rotate-90">⬌</span> Portrait
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleExportPdf('landscape')}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <span>Γ¼î</span> Landscape
+                        <span>⬌</span> Landscape
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

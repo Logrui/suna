@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { TriggerProvider } from '@/components/agents/triggers/types';
 import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';

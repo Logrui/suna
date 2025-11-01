@@ -1,4 +1,4 @@
-﻿import os
+import os
 import uuid
 import mimetypes
 import structlog
@@ -126,12 +126,12 @@ class SandboxUploadFileTool(SandboxToolsBase):
                     url_expires_at
                 )
                 
-                message = f"≡ƒöÆ File '{original_filename}' uploaded securely!\n"
-                message += f"≡ƒôü Storage: {bucket_name}/{storage_path}\n"
-                message += f"≡ƒôÅ Size: {self._format_file_size(file_info.size)}\n"
-                message += f"≡ƒöù Secure Access URL: {signed_url}\n"
-                message += f"ΓÅ░ URL expires: {url_expires_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
-                message += f"\n≡ƒöÉ This file is stored in private, secure storage with account isolation."
+                message = f"🔒 File '{original_filename}' uploaded securely!\n"
+                message += f"📁 Storage: {bucket_name}/{storage_path}\n"
+                message += f"📏 Size: {self._format_file_size(file_info.size)}\n"
+                message += f"🔗 Secure Access URL: {signed_url}\n"
+                message += f"⏰ URL expires: {url_expires_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+                message += f"\n🔐 This file is stored in private, secure storage with account isolation."
                 
                 return self.success_response(message)
                 

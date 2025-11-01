@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
 import {
@@ -586,7 +586,7 @@ export function UnifiedKbEntryModal({
                                                 </p>
                                             </div>
                                             <p className="text-xs text-muted-foreground">
-                                                Supports PDF, DOC, TXT, MD, CSV, and more ΓÇó Max 50MB total
+                                                Supports PDF, DOC, TXT, MD, CSV, and more • Max 50MB total
                                             </p>
                                         </div>
                                     </div>

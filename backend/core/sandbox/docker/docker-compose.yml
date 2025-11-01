@@ -1,4 +1,4 @@
-﻿services:
+services:
   kortix-suna:
     platform: linux/amd64
     build:

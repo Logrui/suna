@@ -1,4 +1,4 @@
-﻿import { createBrowserClient } from '@supabase/ssr'
+import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
   // Use the current browser origin for Supabase requests

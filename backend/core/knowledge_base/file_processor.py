@@ -1,4 +1,4 @@
-﻿import os
+import os
 import io
 import uuid
 import re
@@ -135,14 +135,14 @@ class FileProcessor:
     async def _generate_summary(self, content: str, filename: str) -> str:
         """Generate LLM summary of file content with smart chunking and fallbacks."""
         try:
-            # Model priority: Google Gemini ΓåÆ OpenRouter ΓåÆ GPT-5 Mini
+            # Model priority: Google Gemini → OpenRouter → GPT-5 Mini
             models = [
                 ("google/gemini-2.5-flash-lite", 1_000_000),  # 1M context
                 ("openrouter/google/gemini-2.5-flash-lite", 1_000_000),  # Fallback
                 ("gpt-5-mini", 400_000)  # Final fallback
             ]
             
-            # Estimate tokens (rough: 1 token Γëê 4 chars)
+            # Estimate tokens (rough: 1 token ≈ 4 chars)
             estimated_tokens = len(content) // 4
             
             for model_name, context_limit in models:
@@ -232,7 +232,7 @@ Keep it under 200 words and make it actionable for context injection."""
                 # Prioritize lines that look important
                 is_important = (
                     line_stripped.isupper() or  # Headers
-                    line_stripped.startswith(('ΓÇó', '-', '*', '1.', '2.')) or  # Lists
+                    line_stripped.startswith(('•', '-', '*', '1.', '2.')) or  # Lists
                     any(keyword in line_stripped.lower() for keyword in ['summary', 'conclusion', 'important', 'key', 'main']) or
                     len(line_stripped) < 100  # Short lines often important
                 )

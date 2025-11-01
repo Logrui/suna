@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { createTrialCheckout } from '@/lib/api/billing-v2';
 import { createClient } from '@/lib/supabase/server';

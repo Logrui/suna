@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import { getApiUrl } from "@/lib/get-api-url";
 
 const API_URL = getApiUrl();
