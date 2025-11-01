@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 from typing import Optional, List
 from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
@@ -555,8 +555,8 @@ Agent ID: {agent_id}
             if not mime_type:
                 mime_type = 'application/octet-stream'
             
-            # Check file size limit (50MB total)
-            MAX_TOTAL_SIZE = 50 * 1024 * 1024
+            # Check file size limit (100GB total)
+            MAX_TOTAL_SIZE = 100 * 1024 * 1024 * 1024
             current_result = await client.table('knowledge_base_entries').select(
                 'file_size'
             ).eq('account_id', account_id).eq('is_active', True).execute()
@@ -565,7 +565,7 @@ Agent ID: {agent_id}
             if current_total + len(file_content) > MAX_TOTAL_SIZE:
                 current_mb = current_total / (1024 * 1024)
                 new_mb = len(file_content) / (1024 * 1024)
-                return self.fail_response(f"File size limit exceeded. Current: {current_mb:.1f}MB, New: {new_mb:.1f}MB, Limit: 50MB")
+                return self.fail_response(f"File size limit exceeded. Current: {current_mb:.1f}MB, New: {new_mb:.1f}MB, Limit: 100GB")
             
             # Generate unique filename if there's a conflict
             from core.knowledge_base.validation import validate_file_name_unique_in_folder

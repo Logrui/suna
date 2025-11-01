@@ -1,4 +1,4 @@
-import os
+﻿import os
 import uuid
 import mimetypes
 import structlog
@@ -66,8 +66,8 @@ class SandboxUploadFileTool(SandboxToolsBase):
             
             try:
                 file_info = await self.sandbox.fs.get_file_info(full_path)
-                if file_info.size > 50 * 1024 * 1024:  # 50MB limit
-                    return self.fail_response(f"File '{file_path}' is too large (>50MB). Please reduce file size before uploading.")
+                if file_info.size > 100 * 1024 * 1024 * 1024:  # 100GB limit
+                    return self.fail_response(f"File '{file_path}' is too large (>100GB). Please reduce file size before uploading.")
             except Exception:
                 return self.fail_response(f"File '{file_path}' not found in workspace.")
             
@@ -126,12 +126,12 @@ class SandboxUploadFileTool(SandboxToolsBase):
                     url_expires_at
                 )
                 
-                message = f"🔒 File '{original_filename}' uploaded securely!\n"
-                message += f"📁 Storage: {bucket_name}/{storage_path}\n"
-                message += f"📏 Size: {self._format_file_size(file_info.size)}\n"
-                message += f"🔗 Secure Access URL: {signed_url}\n"
-                message += f"⏰ URL expires: {url_expires_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
-                message += f"\n🔐 This file is stored in private, secure storage with account isolation."
+                message = f"≡ƒöÆ File '{original_filename}' uploaded securely!\n"
+                message += f"≡ƒôü Storage: {bucket_name}/{storage_path}\n"
+                message += f"≡ƒôÅ Size: {self._format_file_size(file_info.size)}\n"
+                message += f"≡ƒöù Secure Access URL: {signed_url}\n"
+                message += f"ΓÅ░ URL expires: {url_expires_at.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+                message += f"\n≡ƒöÉ This file is stored in private, secure storage with account isolation."
                 
                 return self.success_response(message)
                 

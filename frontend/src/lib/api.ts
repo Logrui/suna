@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+﻿import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from './error-handler';
 import { getApiUrl } from './get-api-url';
 import posthog from 'posthog-js';

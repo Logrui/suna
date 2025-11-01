@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, Fragment, useCallback } from 'react';
 import {
@@ -50,10 +50,11 @@ import {
 } from '@/hooks/react-query/files';
 import JSZip from 'jszip';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
+import { getApiUrl } from '@/lib/get-api-url';
 import { TipTapDocumentModal } from './tiptap-document-modal';
 
 // Define API_URL
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_URL = getApiUrl();
 
 interface FileViewerModalProps {
   open: boolean;
@@ -258,7 +259,7 @@ export function FileViewerModal({
           if (!content) {
             // Load from server if not cached
             const response = await fetch(
-              `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
+              `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
               {
                 headers: { 'Authorization': `Bearer ${session.access_token}` }
               }
@@ -293,7 +294,7 @@ export function FileViewerModal({
               } catch (blobError) {
                 // Fallback: try to fetch from server directly
                 const fallbackResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
+                  `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
                   { headers: { 'Authorization': `Bearer ${session.access_token}` } }
                 );
                 if (fallbackResponse.ok) {
@@ -1019,7 +1020,7 @@ export function FileViewerModal({
           if (rawContent.startsWith('blob:')) {
             // If it's a blob URL, get directly from server to avoid CORS issues
             const response = await fetch(
-              `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
+              `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
               { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
             );
 
@@ -1048,7 +1049,7 @@ export function FileViewerModal({
 
       // Get from server if no raw content
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
+        `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
         { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
       );
 
@@ -1212,7 +1213,7 @@ export function FileViewerModal({
                     onClick={navigatePrevious}
                     disabled={currentFileIndex <= 0}
                     className="h-8 w-8 p-0"
-                    title="Previous file (←)"
+                    title="Previous file (ΓåÉ)"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -1225,7 +1226,7 @@ export function FileViewerModal({
                     onClick={navigateNext}
                     disabled={currentFileIndex >= (filePathList?.length || 0) - 1}
                     className="h-8 w-8 p-0"
-                    title="Next file (→)"
+                    title="Next file (ΓåÆ)"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -1363,13 +1364,13 @@ export function FileViewerModal({
                         onClick={() => handleExportPdf('portrait')}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <span className="rotate-90">⬌</span> Portrait
+                        <span className="rotate-90">Γ¼î</span> Portrait
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleExportPdf('landscape')}
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <span>⬌</span> Landscape
+                        <span>Γ¼î</span> Landscape
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

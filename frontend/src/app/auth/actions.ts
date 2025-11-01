@@ -1,12 +1,13 @@
-'use server';
+﻿'use server';
 
 import { createTrialCheckout } from '@/lib/api/billing-v2';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getApiUrl } from '@/lib/get-api-url';
 
 async function sendWelcomeEmail(email: string, name?: string) {
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const backendUrl = getApiUrl();
     const adminApiKey = process.env.KORTIX_ADMIN_API_KEY;
     
     if (!adminApiKey) {
@@ -14,7 +15,7 @@ async function sendWelcomeEmail(email: string, name?: string) {
       return;
     }
     
-    const response = await fetch(`${backendUrl}/api/send-welcome-email`, {
+    const response = await fetch(`${backendUrl}/send-welcome-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

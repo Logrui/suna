@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef } from 'react';
 import { toast } from 'sonner';
@@ -207,18 +207,18 @@ export function KnowledgeBaseManager({
     const loadAssignments = async () => {
         if (!agentId) return;
         
-        console.log('🔄 Starting to load assignments for agent:', agentId);
+        console.log('≡ƒöä Starting to load assignments for agent:', agentId);
         setAssignmentsLoading(true);
         try {
             const supabase = createClient();
             const { data: { session } } = await supabase.auth.getSession();
             
             if (!session?.access_token) {
-                console.warn('❌ No access token available for assignments');
+                console.warn('Γ¥î No access token available for assignments');
                 return;
             }
 
-            console.log('📡 Fetching assignments from API...');
+            console.log('≡ƒôí Fetching assignments from API...');
             const response = await fetch(`${API_URL}/knowledge-base/agents/${agentId}/assignments`, {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
@@ -226,32 +226,32 @@ export function KnowledgeBaseManager({
                 }
             });
 
-            console.log('📡 Assignments response status:', response.status);
+            console.log('≡ƒôí Assignments response status:', response.status);
 
             if (response.ok) {
                 const assignments = await response.json();
-                console.log('📊 Raw assignments data:', assignments);
+                console.log('≡ƒôè Raw assignments data:', assignments);
                 
                 const selectedSet = new Set<string>();
                 Object.entries(assignments).forEach(([entryId, enabled]) => {
                     if (enabled) {
                         selectedSet.add(entryId);
-                        console.log('✅ Added to selection:', entryId);
+                        console.log('Γ£à Added to selection:', entryId);
                     } else {
-                        console.log('❌ Not selected:', entryId);
+                        console.log('Γ¥î Not selected:', entryId);
                     }
                 });
-                console.log('🎯 Final selected entries:', Array.from(selectedSet));
+                console.log('≡ƒÄ» Final selected entries:', Array.from(selectedSet));
                 setSelectedEntries(selectedSet);
             } else {
                 const errorText = await response.text();
-                console.error('❌ Failed to load assignments:', response.status, errorText);
+                console.error('Γ¥î Failed to load assignments:', response.status, errorText);
             }
         } catch (error) {
-            console.error('❌ Error loading assignments:', error);
+            console.error('Γ¥î Error loading assignments:', error);
         } finally {
             setAssignmentsLoading(false);
-            console.log('✅ Assignment loading complete');
+            console.log('Γ£à Assignment loading complete');
         }
     };
 

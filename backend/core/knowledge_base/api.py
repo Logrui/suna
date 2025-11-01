@@ -1,4 +1,4 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from pydantic import BaseModel, Field, validator
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, require_agent_access, AuthorizedAgentAccess
@@ -8,7 +8,7 @@ from core.utils.logger import logger
 from .validation import FileNameValidator, ValidationError, validate_folder_name_unique, validate_file_name_unique_in_folder
 
 # Constants
-MAX_TOTAL_FILE_SIZE = 50 * 1024 * 1024  # 50MB total limit per user
+MAX_TOTAL_FILE_SIZE = 100 * 1024 * 1024 * 1024  # 100GB total limit per user
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
 

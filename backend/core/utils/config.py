@@ -1,4 +1,4 @@
-"""
+﻿"""
 Configuration management.
 
 This module provides a centralized way to access configuration settings and

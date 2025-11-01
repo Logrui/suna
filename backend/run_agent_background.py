@@ -1,4 +1,4 @@
-import dotenv
+﻿import dotenv
 dotenv.load_dotenv(".env")
 
 import sentry
@@ -26,7 +26,7 @@ from typing import Dict, Any
 redis_host = os.getenv('REDIS_HOST', 'redis')
 redis_port = int(os.getenv('REDIS_PORT', 6379))
 
-logger.info(f"🔧 Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
+logger.info(f"≡ƒöº Configuring Dramatiq broker with Redis at {redis_host}:{redis_port}")
 redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramatiq.middleware.AsyncIO()])
 
 dramatiq.set_broker(redis_broker)
@@ -50,7 +50,7 @@ async def initialize():
     await db.initialize()
 
     _initialized = True
-    logger.info(f"✅ Worker initialized successfully with instance ID: {instance_id}")
+    logger.info(f"Γ£à Worker initialized successfully with instance ID: {instance_id}")
 
 @dramatiq.actor
 async def check_health(key: str):
@@ -109,7 +109,7 @@ async def run_agent_background(
 
     effective_model = model_manager.resolve_model_id(model_name)
     
-    logger.info(f"🚀 Using model: {effective_model}")
+    logger.info(f"≡ƒÜÇ Using model: {effective_model}")
     
     client = await db.client
     start_time = datetime.now(timezone.utc)
@@ -211,7 +211,11 @@ async def run_agent_background(
              duration = (datetime.now(timezone.utc) - start_time).total_seconds()
              logger.info(f"Agent run {agent_run_id} completed normally (duration: {duration:.2f}s, responses: {total_responses})")
              completion_message = {"type": "status", "status": "completed", "message": "Agent run completed successfully"}
-             trace.span(name="agent_run_completed").end(status_message="agent_run_completed")
+             # Only call end() if trace is not None
+             if trace is not None:
+                 span = trace.span(name="agent_run_completed")
+                 if span is not None:
+                     span.end(status_message="agent_run_completed")
              await redis.rpush(response_list_key, json.dumps(completion_message))
              await redis.publish(response_channel, "new") # Notify about the completion message
 
@@ -237,7 +241,11 @@ async def run_agent_background(
         duration = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.error(f"Error in agent run {agent_run_id} after {duration:.2f}s: {error_message}\n{traceback_str} (Instance: {instance_id})")
         final_status = "failed"
-        trace.span(name="agent_run_failed").end(status_message=error_message, level="ERROR")
+        # Only call end() if trace is not None
+        if trace is not None:
+            span = trace.span(name="agent_run_failed")
+            if span is not None:
+                span.end(status_message=error_message, level="ERROR")
 
         # Push error message to Redis list
         error_response = {"type": "status", "status": "error", "message": error_message}

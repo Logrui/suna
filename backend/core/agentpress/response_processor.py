@@ -1,4 +1,4 @@
-"""
+﻿"""
 Response processing module for AgentPress.
 
 This module handles the processing of LLM responses, including:
@@ -127,7 +127,7 @@ class ResponseProcessor:
             prompt_tokens = token_counter(model=llm_model, messages=prompt_messages)
             completion_tokens = token_counter(model=llm_model, text=accumulated_content) if accumulated_content else 0
             
-            logger.warning(f"⚠️ ESTIMATED TOKEN USAGE (no exact data): prompt={prompt_tokens}, completion={completion_tokens}")
+            logger.warning(f"ΓÜá∩╕Å ESTIMATED TOKEN USAGE (no exact data): prompt={prompt_tokens}, completion={completion_tokens}")
             
             return {
                 "prompt_tokens": prompt_tokens,
@@ -140,7 +140,7 @@ class ResponseProcessor:
             fallback_prompt = len(' '.join(str(m.get('content', '')) for m in prompt_messages).split()) * 1.3
             fallback_completion = len(accumulated_content.split()) * 1.3 if accumulated_content else 0
             
-            logger.warning(f"⚠️ FALLBACK TOKEN ESTIMATION: prompt≈{int(fallback_prompt)}, completion≈{int(fallback_completion)}")
+            logger.warning(f"ΓÜá∩╕Å FALLBACK TOKEN ESTIMATION: promptΓëê{int(fallback_prompt)}, completionΓëê{int(fallback_completion)}")
             
             return {
                 "prompt_tokens": int(fallback_prompt),
@@ -287,7 +287,7 @@ class ResponseProcessor:
         
         # CRITICAL: Generate unique ID for THIS specific LLM call (not per thread run)
         llm_response_id = str(uuid.uuid4())
-        logger.info(f"🔵 LLM CALL #{auto_continue_count + 1} starting - llm_response_id: {llm_response_id}")
+        logger.info(f"≡ƒö╡ LLM CALL #{auto_continue_count + 1} starting - llm_response_id: {llm_response_id}")
 
         try:
             # --- Save and Yield Start Events ---
@@ -315,7 +315,7 @@ class ResponseProcessor:
             )
             if llm_start_msg_obj: 
                 yield format_for_yield(llm_start_msg_obj)
-                logger.info(f"✅ Saved llm_response_start for call #{auto_continue_count + 1}")
+                logger.info(f"Γ£à Saved llm_response_start for call #{auto_continue_count + 1}")
             # --- End Start Events ---
 
             __sequence = continuous_state.get('sequence', 0)    # get the sequence from the previous auto-continue cycle
@@ -336,11 +336,11 @@ class ResponseProcessor:
                 
                 # Store the complete LiteLLM response chunk when we get usage data
                 if hasattr(chunk, 'usage') and chunk.usage and final_llm_response is None:
-                    logger.info(f"🔍 STORING COMPLETE LiteLLM RESPONSE CHUNK AS RECEIVED")
+                    logger.info(f"≡ƒöì STORING COMPLETE LiteLLM RESPONSE CHUNK AS RECEIVED")
                     final_llm_response = chunk  # Store the entire chunk object as-is
-                    logger.info(f"🔍 STORED MODEL: {getattr(chunk, 'model', 'NO_MODEL')}")
-                    logger.info(f"🔍 STORED USAGE: {chunk.usage}")
-                    logger.info(f"🔍 STORED RESPONSE TYPE: {type(chunk)}")
+                    logger.info(f"≡ƒöì STORED MODEL: {getattr(chunk, 'model', 'NO_MODEL')}")
+                    logger.info(f"≡ƒöì STORED USAGE: {chunk.usage}")
+                    logger.info(f"≡ƒöì STORED RESPONSE TYPE: {type(chunk)}")
 
                 if hasattr(chunk, 'choices') and chunk.choices and hasattr(chunk.choices[0], 'finish_reason') and chunk.choices[0].finish_reason:
                     finish_reason = chunk.choices[0].finish_reason
@@ -508,7 +508,7 @@ class ResponseProcessor:
 
                             if hasattr(remaining_chunk, 'usage') and remaining_chunk.usage and final_llm_response is None:
                                 final_llm_response = remaining_chunk
-                                logger.info(f"✅ Captured usage data after tool limit: {remaining_chunk.usage}")
+                                logger.info(f"Γ£à Captured usage data after tool limit: {remaining_chunk.usage}")
                                 break
 
                             if hasattr(remaining_chunk, 'choices') and remaining_chunk.choices:
@@ -536,11 +536,11 @@ class ResponseProcessor:
             
             # Log what we captured
             if final_llm_response:
-                logger.info(f"✅ Captured complete LiteLLM response object")
-                logger.info(f"🔍 RESPONSE MODEL: {getattr(final_llm_response, 'model', 'NO_MODEL')}")
-                logger.info(f"🔍 RESPONSE USAGE: {getattr(final_llm_response, 'usage', 'NO_USAGE')}")
+                logger.info(f"Γ£à Captured complete LiteLLM response object")
+                logger.info(f"≡ƒöì RESPONSE MODEL: {getattr(final_llm_response, 'model', 'NO_MODEL')}")
+                logger.info(f"≡ƒöì RESPONSE USAGE: {getattr(final_llm_response, 'usage', 'NO_USAGE')}")
             else:
-                logger.warning("⚠️ No complete LiteLLM response captured from streaming chunks")
+                logger.warning("ΓÜá∩╕Å No complete LiteLLM response captured from streaming chunks")
 
 
             tool_results_buffer = []
@@ -731,18 +731,18 @@ class ResponseProcessor:
 
                 # Or execute now if not streamed
                 elif final_tool_calls_to_process and not config.execute_on_stream:
-                    logger.info(f"🔄 STREAMING: Executing {len(final_tool_calls_to_process)} tools ({config.tool_execution_strategy}) after stream")
-                    logger.debug(f"📋 Final tool calls to process: {final_tool_calls_to_process}")
-                    logger.debug(f"⚙️ Config: execute_on_stream={config.execute_on_stream}, strategy={config.tool_execution_strategy}")
+                    logger.info(f"≡ƒöä STREAMING: Executing {len(final_tool_calls_to_process)} tools ({config.tool_execution_strategy}) after stream")
+                    logger.debug(f"≡ƒôï Final tool calls to process: {final_tool_calls_to_process}")
+                    logger.debug(f"ΓÜÖ∩╕Å Config: execute_on_stream={config.execute_on_stream}, strategy={config.tool_execution_strategy}")
                     self.trace.event(name="executing_tools_after_stream", level="DEFAULT", status_message=(f"Executing {len(final_tool_calls_to_process)} tools ({config.tool_execution_strategy}) after stream"))
 
                     try:
                         results_list = await self._execute_tools(final_tool_calls_to_process, config.tool_execution_strategy)
-                        logger.debug(f"✅ STREAMING: Tool execution after stream completed, got {len(results_list)} results")
+                        logger.debug(f"Γ£à STREAMING: Tool execution after stream completed, got {len(results_list)} results")
                     except Exception as stream_exec_error:
-                        logger.error(f"❌ STREAMING: Tool execution after stream failed: {str(stream_exec_error)}")
-                        logger.error(f"❌ Error type: {type(stream_exec_error).__name__}")
-                        logger.error(f"❌ Tool calls that failed: {final_tool_calls_to_process}")
+                        logger.error(f"Γ¥î STREAMING: Tool execution after stream failed: {str(stream_exec_error)}")
+                        logger.error(f"Γ¥î Error type: {type(stream_exec_error).__name__}")
+                        logger.error(f"Γ¥î Tool calls that failed: {final_tool_calls_to_process}")
                         raise
                     current_tool_idx = 0
                     for tc, res in results_list:
@@ -835,7 +835,7 @@ class ResponseProcessor:
                     try:
                         # Use the complete LiteLLM response object as received
                         if final_llm_response:
-                            logger.info("✅ Using complete LiteLLM response for llm_response_end (before termination)")
+                            logger.info("Γ£à Using complete LiteLLM response for llm_response_end (before termination)")
                             # Serialize the complete response object as-is
                             llm_end_content = self._serialize_model_response(final_llm_response)
                             
@@ -859,7 +859,7 @@ class ResponseProcessor:
                             ]
                             llm_end_content["llm_response_id"] = llm_response_id
                         else:
-                            logger.warning("⚠️ No complete LiteLLM response available, skipping llm_response_end")
+                            logger.warning("ΓÜá∩╕Å No complete LiteLLM response available, skipping llm_response_end")
                             llm_end_content = None
                         
                         # Only save if we have content
@@ -877,7 +877,7 @@ class ResponseProcessor:
                             llm_response_end_saved = True
                             # Yield to stream for real-time context usage updates
                             if llm_end_msg_obj: yield format_for_yield(llm_end_msg_obj)
-                        logger.info(f"✅ llm_response_end saved for call #{auto_continue_count + 1} (before termination)")
+                        logger.info(f"Γ£à llm_response_end saved for call #{auto_continue_count + 1} (before termination)")
                     except Exception as e:
                         logger.error(f"Error saving llm_response_end (before termination): {str(e)}")
                         self.trace.event(name="error_saving_llm_response_end_before_termination", level="ERROR", status_message=(f"Error saving llm_response_end (before termination): {str(e)}"))
@@ -892,16 +892,16 @@ class ResponseProcessor:
                     try:
                         # Use the complete LiteLLM response object as received
                         if final_llm_response:
-                            logger.info("✅ Using complete LiteLLM response for llm_response_end (normal completion)")
+                            logger.info("Γ£à Using complete LiteLLM response for llm_response_end (normal completion)")
                             
                             # Log the complete response object for debugging
-                            logger.info(f"🔍 COMPLETE RESPONSE OBJECT: {final_llm_response}")
-                            logger.info(f"🔍 RESPONSE OBJECT TYPE: {type(final_llm_response)}")
-                            logger.info(f"🔍 RESPONSE OBJECT DICT: {final_llm_response.__dict__ if hasattr(final_llm_response, '__dict__') else 'NO_DICT'}")
+                            logger.info(f"≡ƒöì COMPLETE RESPONSE OBJECT: {final_llm_response}")
+                            logger.info(f"≡ƒöì RESPONSE OBJECT TYPE: {type(final_llm_response)}")
+                            logger.info(f"≡ƒöì RESPONSE OBJECT DICT: {final_llm_response.__dict__ if hasattr(final_llm_response, '__dict__') else 'NO_DICT'}")
                             
                             # Serialize the complete response object as-is
                             llm_end_content = self._serialize_model_response(final_llm_response)
-                            logger.info(f"🔍 SERIALIZED CONTENT: {llm_end_content}")
+                            logger.info(f"≡ƒöì SERIALIZED CONTENT: {llm_end_content}")
                             
                             # Add streaming flag and response timing if available
                             llm_end_content["streaming"] = True
@@ -924,8 +924,8 @@ class ResponseProcessor:
                             llm_end_content["llm_response_id"] = llm_response_id
                                 
                             # DEBUG: Log the actual response usage
-                            logger.info(f"🔍 RESPONSE PROCESSOR COMPLETE USAGE (normal): {llm_end_content.get('usage', 'NO_USAGE')}")
-                            logger.info(f"🔍 FINAL LLM END CONTENT: {llm_end_content}")
+                            logger.info(f"≡ƒöì RESPONSE PROCESSOR COMPLETE USAGE (normal): {llm_end_content.get('usage', 'NO_USAGE')}")
+                            logger.info(f"≡ƒöì FINAL LLM END CONTENT: {llm_end_content}")
                             
                             llm_end_msg_obj = await self.add_message(
                                 thread_id=thread_id,
@@ -941,8 +941,8 @@ class ResponseProcessor:
                             # Yield to stream for real-time context usage updates
                             if llm_end_msg_obj: yield format_for_yield(llm_end_msg_obj)
                         else:
-                            logger.warning("⚠️ No complete LiteLLM response available, skipping llm_response_end")
-                        logger.info(f"✅ llm_response_end saved for call #{auto_continue_count + 1} (normal completion)")
+                            logger.warning("ΓÜá∩╕Å No complete LiteLLM response available, skipping llm_response_end")
+                        logger.info(f"Γ£à llm_response_end saved for call #{auto_continue_count + 1} (normal completion)")
                     except Exception as e:
                         logger.error(f"Error saving llm_response_end: {str(e)}")
                         self.trace.event(name="error_saving_llm_response_end", level="ERROR", status_message=(f"Error saving llm_response_end: {str(e)}"))
@@ -968,12 +968,12 @@ class ResponseProcessor:
             
             if not llm_response_end_saved and last_assistant_message_object:
                 try:
-                    logger.info(f"💰 BULLETPROOF BILLING: Saving llm_response_end in finally block for call #{auto_continue_count + 1}")
+                    logger.info(f"≡ƒÆ░ BULLETPROOF BILLING: Saving llm_response_end in finally block for call #{auto_continue_count + 1}")
                     if final_llm_response:
-                        logger.info("💰 Using exact usage from LLM response")
+                        logger.info("≡ƒÆ░ Using exact usage from LLM response")
                         llm_end_content = self._serialize_model_response(final_llm_response)
                     else:
-                        logger.warning("💰 No LLM response with usage - ESTIMATING token usage for billing")
+                        logger.warning("≡ƒÆ░ No LLM response with usage - ESTIMATING token usage for billing")
                         estimated_usage = self._estimate_token_usage(prompt_messages, accumulated_content, llm_model)
                         llm_end_content = {
                             "model": llm_model,
@@ -1002,7 +1002,7 @@ class ResponseProcessor:
                     
                     usage_info = llm_end_content.get('usage', {})
                     is_estimated = usage_info.get('estimated', False)
-                    logger.info(f"💰 BILLING RECOVERY - Usage ({'ESTIMATED' if is_estimated else 'EXACT'}): {usage_info}")
+                    logger.info(f"≡ƒÆ░ BILLING RECOVERY - Usage ({'ESTIMATED' if is_estimated else 'EXACT'}): {usage_info}")
                     
                     llm_end_msg_obj = await self.add_message(
                         thread_id=thread_id,
@@ -1017,17 +1017,17 @@ class ResponseProcessor:
                     llm_response_end_saved = True
                     # Don't yield in finally block - stream may be closed (GeneratorExit)
                     # Frontend already stopped consuming, no point in yielding
-                    logger.info(f"✅ BILLING SUCCESS: Saved llm_response_end in finally for call #{auto_continue_count + 1} ({'estimated' if is_estimated else 'exact'} usage)")
+                    logger.info(f"Γ£à BILLING SUCCESS: Saved llm_response_end in finally for call #{auto_continue_count + 1} ({'estimated' if is_estimated else 'exact'} usage)")
                     
                 except Exception as billing_e:
-                    logger.error(f"❌ CRITICAL BILLING FAILURE: Could not save llm_response_end: {str(billing_e)}", exc_info=True)
+                    logger.error(f"Γ¥î CRITICAL BILLING FAILURE: Could not save llm_response_end: {str(billing_e)}", exc_info=True)
                     self.trace.event(
                         name="critical_billing_failure_in_finally", 
                         level="ERROR", 
                         status_message=(f"Failed to save llm_response_end for billing: {str(billing_e)}")
                     )
             elif llm_response_end_saved:
-                logger.debug(f"✅ Billing already handled for call #{auto_continue_count + 1} (llm_response_end was saved earlier)")
+                logger.debug(f"Γ£à Billing already handled for call #{auto_continue_count + 1} (llm_response_end was saved earlier)")
             
             if should_auto_continue:
                 continuous_state['accumulated_content'] = accumulated_content
@@ -1060,7 +1060,7 @@ class ResponseProcessor:
                                 self.total_tokens = total
                         
                         usage = EstimatedUsage(estimated_total_tokens)
-                        logger.info(f"⚡ Using fast check estimate: {estimated_total_tokens} tokens (stream stopped, no recalculation)")
+                        logger.info(f"ΓÜí Using fast check estimate: {estimated_total_tokens} tokens (stream stopped, no recalculation)")
                     
                     end_content = {"status_type": "thread_run_end"}
                     
@@ -1177,21 +1177,21 @@ class ResponseProcessor:
 
        # --- Execute Tools and Yield Results ---
             tool_calls_to_execute = [item['tool_call'] for item in all_tool_data]
-            logger.debug(f"🔧 NON-STREAMING: Extracted {len(tool_calls_to_execute)} tool calls to execute")
-            logger.debug(f"📋 Tool calls data: {tool_calls_to_execute}")
+            logger.debug(f"≡ƒöº NON-STREAMING: Extracted {len(tool_calls_to_execute)} tool calls to execute")
+            logger.debug(f"≡ƒôï Tool calls data: {tool_calls_to_execute}")
 
             if config.execute_tools and tool_calls_to_execute:
-                logger.debug(f"🚀 NON-STREAMING: Executing {len(tool_calls_to_execute)} tools with strategy: {config.tool_execution_strategy}")
-                logger.debug(f"⚙️ Execution config: execute_tools={config.execute_tools}, strategy={config.tool_execution_strategy}")
+                logger.debug(f"≡ƒÜÇ NON-STREAMING: Executing {len(tool_calls_to_execute)} tools with strategy: {config.tool_execution_strategy}")
+                logger.debug(f"ΓÜÖ∩╕Å Execution config: execute_tools={config.execute_tools}, strategy={config.tool_execution_strategy}")
                 self.trace.event(name="executing_tools_with_strategy", level="DEFAULT", status_message=(f"Executing {len(tool_calls_to_execute)} tools with strategy: {config.tool_execution_strategy}"))
 
                 try:
                     tool_results = await self._execute_tools(tool_calls_to_execute, config.tool_execution_strategy)
-                    logger.debug(f"✅ NON-STREAMING: Tool execution completed, got {len(tool_results)} results")
+                    logger.debug(f"Γ£à NON-STREAMING: Tool execution completed, got {len(tool_results)} results")
                 except Exception as exec_error:
-                    logger.error(f"❌ NON-STREAMING: Tool execution failed: {str(exec_error)}")
-                    logger.error(f"❌ Error type: {type(exec_error).__name__}")
-                    logger.error(f"❌ Tool calls that failed: {tool_calls_to_execute}")
+                    logger.error(f"Γ¥î NON-STREAMING: Tool execution failed: {str(exec_error)}")
+                    logger.error(f"Γ¥î Error type: {type(exec_error).__name__}")
+                    logger.error(f"Γ¥î Tool calls that failed: {tool_calls_to_execute}")
                     raise
 
                 for i, (returned_tool_call, result) in enumerate(tool_results):
@@ -1474,89 +1474,95 @@ class ResponseProcessor:
     # Tool execution methods
     async def _execute_tool(self, tool_call: Dict[str, Any]) -> ToolResult:
         """Execute a single tool call and return the result."""
-        span = self.trace.span(name=f"execute_tool.{tool_call['function_name']}", input=tool_call["arguments"])
+        span = None
+        if self.trace is not None:
+            span = self.trace.span(name=f"execute_tool.{tool_call['function_name']}", input=tool_call["arguments"])
         function_name = "unknown"
         try:
             function_name = tool_call["function_name"]
             arguments = tool_call["arguments"]
 
-            logger.debug(f"🔧 EXECUTING TOOL: {function_name}")
-            # logger.debug(f"📝 RAW ARGUMENTS TYPE: {type(arguments)}")
-            logger.debug(f"📝 RAW ARGUMENTS VALUE: {arguments}")
-            self.trace.event(name="executing_tool", level="DEFAULT", status_message=(f"Executing tool: {function_name} with arguments: {arguments}"))
+            logger.debug(f"≡ƒöº EXECUTING TOOL: {function_name}")
+            # logger.debug(f"≡ƒô¥ RAW ARGUMENTS TYPE: {type(arguments)}")
+            logger.debug(f"≡ƒô¥ RAW ARGUMENTS VALUE: {arguments}")
+            if self.trace is not None:
+                self.trace.event(name="executing_tool", level="DEFAULT", status_message=(f"Executing tool: {function_name} with arguments: {arguments}"))
 
             # Get available functions from tool registry
-            logger.debug(f"🔍 Looking up tool function: {function_name}")
+            logger.debug(f"≡ƒöì Looking up tool function: {function_name}")
             available_functions = self.tool_registry.get_available_functions()
-            # logger.debug(f"📋 Available functions: {list(available_functions.keys())}")
+            # logger.debug(f"≡ƒôï Available functions: {list(available_functions.keys())}")
 
             # Look up the function by name
             tool_fn = available_functions.get(function_name)
             if not tool_fn:
-                logger.error(f"❌ Tool function '{function_name}' not found in registry")
-                # logger.error(f"❌ Available functions: {list(available_functions.keys())}")
-                span.end(status_message="tool_not_found", level="ERROR")
+                logger.error(f"Γ¥î Tool function '{function_name}' not found in registry")
+                # logger.error(f"Γ¥î Available functions: {list(available_functions.keys())}")
+                if span is not None:
+                    span.end(status_message="tool_not_found", level="ERROR")
                 return ToolResult(success=False, output=f"Tool function '{function_name}' not found. Available: {list(available_functions.keys())}")
 
-            logger.debug(f"✅ Found tool function for '{function_name}'")
-            # logger.debug(f"🔧 Tool function type: {type(tool_fn)}")
+            logger.debug(f"Γ£à Found tool function for '{function_name}'")
+            # logger.debug(f"≡ƒöº Tool function type: {type(tool_fn)}")
 
             # Handle arguments - if it's a string, try to parse it, otherwise pass as-is
             if isinstance(arguments, str):
-                logger.debug(f"🔄 Parsing string arguments for {function_name}")
+                logger.debug(f"≡ƒöä Parsing string arguments for {function_name}")
                 try:
                     parsed_args = safe_json_parse(arguments)
                     if isinstance(parsed_args, dict):
-                        # logger.debug(f"✅ Parsed arguments as dict: {parsed_args}")
+                        # logger.debug(f"Γ£à Parsed arguments as dict: {parsed_args}")
                         result = await tool_fn(**parsed_args)
                     else:
-                        logger.debug(f"🔄 Arguments parsed as non-dict, passing as single argument")
+                        logger.debug(f"≡ƒöä Arguments parsed as non-dict, passing as single argument")
                         result = await tool_fn(arguments)
                 except json.JSONDecodeError:
-                    logger.debug(f"🔄 JSON parse failed, passing raw string")
+                    logger.debug(f"≡ƒöä JSON parse failed, passing raw string")
                     result = await tool_fn(arguments)
                 except Exception as parse_error:
-                    logger.error(f"❌ Error parsing arguments: {str(parse_error)}")
-                    # logger.debug(f"🔄 Falling back to raw arguments")
+                    logger.error(f"Γ¥î Error parsing arguments: {str(parse_error)}")
+                    # logger.debug(f"≡ƒöä Falling back to raw arguments")
                     if isinstance(arguments, dict):
-                        # logger.debug(f"🔄 Fallback: unpacking dict arguments")
+                        # logger.debug(f"≡ƒöä Fallback: unpacking dict arguments")
                         result = await tool_fn(**arguments)
                     else:
-                        # logger.debug(f"🔄 Fallback: passing as single argument")
+                        # logger.debug(f"≡ƒöä Fallback: passing as single argument")
                         result = await tool_fn(arguments)
             else:
-                # logger.debug(f"✅ Arguments are not string, unpacking dict: {type(arguments)}")
+                # logger.debug(f"Γ£à Arguments are not string, unpacking dict: {type(arguments)}")
                 if isinstance(arguments, dict):
-                    # logger.debug(f"🔄 Unpacking dict arguments for tool call")
+                    # logger.debug(f"≡ƒöä Unpacking dict arguments for tool call")
                     result = await tool_fn(**arguments)
                 else:
-                    # logger.debug(f"🔄 Passing non-dict arguments as single parameter")
+                    # logger.debug(f"≡ƒöä Passing non-dict arguments as single parameter")
                     result = await tool_fn(arguments)
 
-            logger.debug(f"✅ Tool execution completed successfully")
-            # logger.debug(f"📤 Result type: {type(result)}")
-            logger.debug(f"📤 Result: {result}")
+            logger.debug(f"Γ£à Tool execution completed successfully")
+            # logger.debug(f"≡ƒôñ Result type: {type(result)}")
+            logger.debug(f"≡ƒôñ Result: {result}")
 
             # Validate result is a ToolResult object
             if not isinstance(result, ToolResult):
-                logger.warning(f"⚠️ Tool returned non-ToolResult object: {type(result)}")
+                logger.warning(f"ΓÜá∩╕Å Tool returned non-ToolResult object: {type(result)}")
                 # Convert to ToolResult if possible
                 if hasattr(result, 'success') and hasattr(result, 'output'):
                     result = ToolResult(success=result.success, output=result.output)
-                    logger.debug("✅ Converted result to ToolResult")
+                    logger.debug("Γ£à Converted result to ToolResult")
                 else:
-                    logger.error(f"❌ Tool returned invalid result type: {type(result)}")
+                    logger.error(f"Γ¥î Tool returned invalid result type: {type(result)}")
                     result = ToolResult(success=False, output=f"Tool returned invalid result type: {type(result)}")
 
-            span.end(status_message="tool_executed", output=str(result))
+            if span is not None:
+                span.end(status_message="tool_executed", output=str(result))
             return result
 
         except Exception as e:
-            logger.error(f"❌ CRITICAL ERROR executing tool {function_name}: {str(e)}")
-            logger.error(f"❌ Error type: {type(e).__name__}")
-            logger.error(f"❌ Tool call data: {tool_call}")
-            logger.error(f"❌ Full traceback:", exc_info=True)
-            span.end(status_message="critical_error", output=str(e), level="ERROR")
+            logger.error(f"Γ¥î CRITICAL ERROR executing tool {function_name}: {str(e)}")
+            logger.error(f"Γ¥î Error type: {type(e).__name__}")
+            logger.error(f"Γ¥î Tool call data: {tool_call}")
+            logger.error(f"Γ¥î Full traceback:", exc_info=True)
+            if span is not None:
+                span.end(status_message="critical_error", output=str(e), level="ERROR")
             return ToolResult(success=False, output=f"Critical error executing tool: {str(e)}")
 
     async def _execute_tools(
@@ -1578,39 +1584,39 @@ class ResponseProcessor:
         Returns:
             List of tuples containing the original tool call and its result
         """
-        logger.debug(f"🎯 MAIN EXECUTE_TOOLS: Executing {len(tool_calls)} tools with strategy: {execution_strategy}")
-        logger.debug(f"📋 Tool calls received: {tool_calls}")
+        logger.debug(f"≡ƒÄ» MAIN EXECUTE_TOOLS: Executing {len(tool_calls)} tools with strategy: {execution_strategy}")
+        logger.debug(f"≡ƒôï Tool calls received: {tool_calls}")
 
         # Validate tool_calls structure
         if not isinstance(tool_calls, list):
-            logger.error(f"❌ tool_calls must be a list, got {type(tool_calls)}: {tool_calls}")
+            logger.error(f"Γ¥î tool_calls must be a list, got {type(tool_calls)}: {tool_calls}")
             return []
 
         for i, tool_call in enumerate(tool_calls):
             if not isinstance(tool_call, dict):
-                logger.error(f"❌ Tool call {i} must be a dict, got {type(tool_call)}: {tool_call}")
+                logger.error(f"Γ¥î Tool call {i} must be a dict, got {type(tool_call)}: {tool_call}")
                 continue
             if 'function_name' not in tool_call:
-                logger.warning(f"⚠️ Tool call {i} missing 'function_name': {tool_call}")
+                logger.warning(f"ΓÜá∩╕Å Tool call {i} missing 'function_name': {tool_call}")
             if 'arguments' not in tool_call:
-                logger.warning(f"⚠️ Tool call {i} missing 'arguments': {tool_call}")
+                logger.warning(f"ΓÜá∩╕Å Tool call {i} missing 'arguments': {tool_call}")
 
         self.trace.event(name="executing_tools_with_strategy", level="DEFAULT", status_message=(f"Executing {len(tool_calls)} tools with strategy: {execution_strategy}"))
 
         try:
             if execution_strategy == "sequential":
-                logger.debug("🔄 Dispatching to sequential execution")
+                logger.debug("≡ƒöä Dispatching to sequential execution")
                 return await self._execute_tools_sequentially(tool_calls)
             elif execution_strategy == "parallel":
-                logger.debug("🔄 Dispatching to parallel execution")
+                logger.debug("≡ƒöä Dispatching to parallel execution")
                 return await self._execute_tools_in_parallel(tool_calls)
             else:
-                logger.warning(f"⚠️ Unknown execution strategy: {execution_strategy}, falling back to sequential")
+                logger.warning(f"ΓÜá∩╕Å Unknown execution strategy: {execution_strategy}, falling back to sequential")
                 return await self._execute_tools_sequentially(tool_calls)
         except Exception as dispatch_error:
-            logger.error(f"❌ CRITICAL: Failed to dispatch tool execution: {str(dispatch_error)}")
-            logger.error(f"❌ Dispatch error type: {type(dispatch_error).__name__}")
-            logger.error(f"❌ Tool calls that caused dispatch failure: {tool_calls}")
+            logger.error(f"Γ¥î CRITICAL: Failed to dispatch tool execution: {str(dispatch_error)}")
+            logger.error(f"Γ¥î Dispatch error type: {type(dispatch_error).__name__}")
+            logger.error(f"Γ¥î Tool calls that caused dispatch failure: {tool_calls}")
             raise
 
     async def _execute_tools_sequentially(self, tool_calls: List[Dict[str, Any]]) -> List[Tuple[Dict[str, Any], ToolResult]]:
@@ -1626,44 +1632,44 @@ class ResponseProcessor:
             List of tuples containing the original tool call and its result
         """
         if not tool_calls:
-            logger.debug("🚫 No tool calls to execute sequentially")
+            logger.debug("≡ƒÜ½ No tool calls to execute sequentially")
             return []
 
         try:
             tool_names = [t.get('function_name', 'unknown') for t in tool_calls]
-            logger.debug(f"🔄 EXECUTING {len(tool_calls)} TOOLS SEQUENTIALLY: {tool_names}")
-            logger.debug(f"📋 Tool calls data: {tool_calls}")
+            logger.debug(f"≡ƒöä EXECUTING {len(tool_calls)} TOOLS SEQUENTIALLY: {tool_names}")
+            logger.debug(f"≡ƒôï Tool calls data: {tool_calls}")
             self.trace.event(name="executing_tools_sequentially", level="DEFAULT", status_message=(f"Executing {len(tool_calls)} tools sequentially: {tool_names}"))
 
             results = []
             for index, tool_call in enumerate(tool_calls):
                 tool_name = tool_call.get('function_name', 'unknown')
-                logger.debug(f"🔧 Executing tool {index+1}/{len(tool_calls)}: {tool_name}")
-                logger.debug(f"📝 Tool call data: {tool_call}")
+                logger.debug(f"≡ƒöº Executing tool {index+1}/{len(tool_calls)}: {tool_name}")
+                logger.debug(f"≡ƒô¥ Tool call data: {tool_call}")
 
                 try:
-                    logger.debug(f"🚀 Calling _execute_tool for {tool_name}")
+                    logger.debug(f"≡ƒÜÇ Calling _execute_tool for {tool_name}")
                     result = await self._execute_tool(tool_call)
-                    logger.debug(f"✅ _execute_tool returned for {tool_name}: success={result.success if hasattr(result, 'success') else 'N/A'}")
+                    logger.debug(f"Γ£à _execute_tool returned for {tool_name}: success={result.success if hasattr(result, 'success') else 'N/A'}")
 
                     # Validate result
                     if not isinstance(result, ToolResult):
-                        logger.error(f"❌ Tool {tool_name} returned invalid result type: {type(result)}")
+                        logger.error(f"Γ¥î Tool {tool_name} returned invalid result type: {type(result)}")
                         result = ToolResult(success=False, output=f"Invalid result type from tool: {type(result)}")
 
                     results.append((tool_call, result))
-                    logger.debug(f"✅ Completed tool {tool_name} with success={result.success if hasattr(result, 'success') else False}")
+                    logger.debug(f"Γ£à Completed tool {tool_name} with success={result.success if hasattr(result, 'success') else False}")
 
                     # Check if this is a terminating tool (ask or complete)
                     if tool_name in ['ask', 'complete', 'present_presentation']:
-                        logger.debug(f"🛑 TERMINATING TOOL '{tool_name}' executed. Stopping further tool execution.")
+                        logger.debug(f"≡ƒ¢æ TERMINATING TOOL '{tool_name}' executed. Stopping further tool execution.")
                         self.trace.event(name="terminating_tool_executed", level="DEFAULT", status_message=(f"Terminating tool '{tool_name}' executed. Stopping further tool execution."))
                         break  # Stop executing remaining tools
 
                 except Exception as e:
-                    logger.error(f"❌ ERROR executing tool {tool_name}: {str(e)}")
-                    logger.error(f"❌ Error type: {type(e).__name__}")
-                    logger.error(f"❌ Tool call that failed: {tool_call}")
+                    logger.error(f"Γ¥î ERROR executing tool {tool_name}: {str(e)}")
+                    logger.error(f"Γ¥î Error type: {type(e).__name__}")
+                    logger.error(f"Γ¥î Tool call that failed: {tool_call}")
                     self.trace.event(name="error_executing_tool", level="ERROR", status_message=(f"Error executing tool {tool_name}: {str(e)}"))
 
                     # Create error result safely
@@ -1671,27 +1677,27 @@ class ResponseProcessor:
                         error_result = ToolResult(success=False, output=f"Error executing tool: {str(e)}")
                         results.append((tool_call, error_result))
                     except Exception as result_error:
-                        logger.error(f"❌ Failed to create error result: {result_error}")
+                        logger.error(f"Γ¥î Failed to create error result: {result_error}")
                         # Create a basic error result
                         error_result = ToolResult(success=False, output="Unknown error during tool execution")
                         results.append((tool_call, error_result))
 
-            logger.debug(f"✅ Sequential execution completed for {len(results)} tools (out of {len(tool_calls)} total)")
+            logger.debug(f"Γ£à Sequential execution completed for {len(results)} tools (out of {len(tool_calls)} total)")
             self.trace.event(name="sequential_execution_completed", level="DEFAULT", status_message=(f"Sequential execution completed for {len(results)} tools (out of {len(tool_calls)} total)"))
             return results
 
         except Exception as e:
-            logger.error(f"❌ CRITICAL ERROR in sequential tool execution: {str(e)}")
-            logger.error(f"❌ Error type: {type(e).__name__}")
-            logger.error(f"❌ Tool calls data: {tool_calls}")
-            logger.error(f"❌ Full traceback:", exc_info=True)
+            logger.error(f"Γ¥î CRITICAL ERROR in sequential tool execution: {str(e)}")
+            logger.error(f"Γ¥î Error type: {type(e).__name__}")
+            logger.error(f"Γ¥î Tool calls data: {tool_calls}")
+            logger.error(f"Γ¥î Full traceback:", exc_info=True)
 
             # Return partial results plus error results for remaining tools
             completed_results = results if 'results' in locals() else []
             completed_tool_names = [r[0].get('function_name', 'unknown') for r in completed_results]
             remaining_tools = [t for t in tool_calls if t.get('function_name', 'unknown') not in completed_tool_names]
 
-            logger.debug(f"📊 Creating error results for {len(remaining_tools)} remaining tools")
+            logger.debug(f"≡ƒôè Creating error results for {len(remaining_tools)} remaining tools")
 
             # Add error results for remaining tools
             error_results = []
@@ -1700,7 +1706,7 @@ class ResponseProcessor:
                     error_result = ToolResult(success=False, output=f"Execution error: {str(e)}")
                     error_results.append((tool, error_result))
                 except Exception as result_error:
-                    logger.error(f"❌ Failed to create error result for remaining tool: {result_error}")
+                    logger.error(f"Γ¥î Failed to create error result for remaining tool: {result_error}")
                     error_result = ToolResult(success=False, output="Critical execution error")
                     error_results.append((tool, error_result))
 
@@ -1719,71 +1725,71 @@ class ResponseProcessor:
             List of tuples containing the original tool call and its result
         """
         if not tool_calls:
-            logger.debug("🚫 No tool calls to execute in parallel")
+            logger.debug("≡ƒÜ½ No tool calls to execute in parallel")
             return []
 
         try:
             tool_names = [t.get('function_name', 'unknown') for t in tool_calls]
-            logger.debug(f"🔄 EXECUTING {len(tool_calls)} TOOLS IN PARALLEL: {tool_names}")
-            logger.debug(f"📋 Tool calls data: {tool_calls}")
+            logger.debug(f"≡ƒöä EXECUTING {len(tool_calls)} TOOLS IN PARALLEL: {tool_names}")
+            logger.debug(f"≡ƒôï Tool calls data: {tool_calls}")
             self.trace.event(name="executing_tools_in_parallel", level="DEFAULT", status_message=(f"Executing {len(tool_calls)} tools in parallel: {tool_names}"))
 
             # Create tasks for all tool calls
-            logger.debug("🛠️ Creating async tasks for parallel execution")
+            logger.debug("≡ƒ¢á∩╕Å Creating async tasks for parallel execution")
             tasks = []
             for i, tool_call in enumerate(tool_calls):
-                logger.debug(f"📋 Creating task {i+1} for tool: {tool_call.get('function_name', 'unknown')}")
+                logger.debug(f"≡ƒôï Creating task {i+1} for tool: {tool_call.get('function_name', 'unknown')}")
                 task = self._execute_tool(tool_call)
                 tasks.append(task)
 
-            logger.debug(f"✅ Created {len(tasks)} tasks for parallel execution")
+            logger.debug(f"Γ£à Created {len(tasks)} tasks for parallel execution")
 
             # Execute all tasks concurrently with error handling
-            logger.debug("🚀 Starting parallel execution with asyncio.gather")
+            logger.debug("≡ƒÜÇ Starting parallel execution with asyncio.gather")
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            logger.debug(f"✅ Parallel execution completed, got {len(results)} results")
+            logger.debug(f"Γ£à Parallel execution completed, got {len(results)} results")
 
             # Process results and handle any exceptions
             processed_results = []
             for i, (tool_call, result) in enumerate(zip(tool_calls, results)):
                 tool_name = tool_call.get('function_name', 'unknown')
-                logger.debug(f"📊 Processing result {i+1} for tool: {tool_name}")
+                logger.debug(f"≡ƒôè Processing result {i+1} for tool: {tool_name}")
 
                 if isinstance(result, Exception):
-                    logger.error(f"❌ EXCEPTION in parallel execution for tool {tool_name}: {str(result)}")
-                    logger.error(f"❌ Exception type: {type(result).__name__}")
-                    logger.error(f"❌ Tool call data: {tool_call}")
+                    logger.error(f"Γ¥î EXCEPTION in parallel execution for tool {tool_name}: {str(result)}")
+                    logger.error(f"Γ¥î Exception type: {type(result).__name__}")
+                    logger.error(f"Γ¥î Tool call data: {tool_call}")
                     self.trace.event(name="error_executing_tool_parallel", level="ERROR", status_message=(f"Error executing tool {tool_name}: {str(result)}"))
 
                     # Create error result safely
                     try:
                         error_result = ToolResult(success=False, output=f"Error executing tool: {str(result)}")
                         processed_results.append((tool_call, error_result))
-                        logger.debug(f"✅ Created error result for {tool_name}")
+                        logger.debug(f"Γ£à Created error result for {tool_name}")
                     except Exception as result_error:
-                        logger.error(f"❌ Failed to create error result for {tool_name}: {result_error}")
+                        logger.error(f"Γ¥î Failed to create error result for {tool_name}: {result_error}")
                         error_result = ToolResult(success=False, output="Critical error in parallel execution")
                         processed_results.append((tool_call, error_result))
                 else:
-                    logger.debug(f"✅ Tool {tool_name} executed successfully in parallel")
-                    # logger.debug(f"📤 Result type: {type(result)}")
+                    logger.debug(f"Γ£à Tool {tool_name} executed successfully in parallel")
+                    # logger.debug(f"≡ƒôñ Result type: {type(result)}")
 
                     # Validate result
                     if not isinstance(result, ToolResult):
-                        logger.error(f"❌ Tool {tool_name} returned invalid result type: {type(result)}")
+                        logger.error(f"Γ¥î Tool {tool_name} returned invalid result type: {type(result)}")
                         result = ToolResult(success=False, output=f"Invalid result type from tool: {type(result)}")
 
                     processed_results.append((tool_call, result))
 
-            logger.debug(f"✅ Parallel execution completed for {len(tool_calls)} tools")
+            logger.debug(f"Γ£à Parallel execution completed for {len(tool_calls)} tools")
             self.trace.event(name="parallel_execution_completed", level="DEFAULT", status_message=(f"Parallel execution completed for {len(tool_calls)} tools"))
             return processed_results
 
         except Exception as e:
-            logger.error(f"❌ CRITICAL ERROR in parallel tool execution: {str(e)}")
-            logger.error(f"❌ Error type: {type(e).__name__}")
-            logger.error(f"❌ Tool calls data: {tool_calls}")
-            logger.error(f"❌ Full traceback:", exc_info=True)
+            logger.error(f"Γ¥î CRITICAL ERROR in parallel tool execution: {str(e)}")
+            logger.error(f"Γ¥î Error type: {type(e).__name__}")
+            logger.error(f"Γ¥î Tool calls data: {tool_calls}")
+            logger.error(f"Γ¥î Full traceback:", exc_info=True)
             self.trace.event(name="error_in_parallel_tool_execution", level="ERROR", status_message=(f"Error in parallel tool execution: {str(e)}"))
 
             # Return error results for all tools if the gather itself fails
@@ -1794,7 +1800,7 @@ class ResponseProcessor:
                     error_result = ToolResult(success=False, output=f"Execution error: {str(e)}")
                     error_results.append((tool_call, error_result))
                 except Exception as result_error:
-                    logger.error(f"❌ Failed to create error result for {tool_name}: {result_error}")
+                    logger.error(f"Γ¥î Failed to create error result for {tool_name}: {result_error}")
                     error_result = ToolResult(success=False, output="Critical parallel execution error")
                     error_results.append((tool_call, error_result))
 

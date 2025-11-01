@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
@@ -629,6 +629,19 @@ export default function AgentsPage() {
               onPublishAgent={handleAgentPublish}
               publishingAgentId={publishingAgentId}
             />
+          )}
+
+          {activeTab === "sub-agents" && (
+            <div className="flex items-center justify-center min-h-[calc(100vh-400px)]">
+              <div className="text-center">
+                <div className="text-muted-foreground text-lg mb-2">
+                  Subagents
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Subagents management coming soon
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Marketplace tab is disabled

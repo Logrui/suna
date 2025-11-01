@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -161,7 +161,7 @@ export default function MasterLoginPage() {
         </form>
 
         <div className="text-center text-xs text-muted-foreground">
-          <p>⚠️ This is an admin-only feature</p>
+          <p>ΓÜá∩╕Å This is an admin-only feature</p>
           <p>Works with both OAuth and standard users</p>
         </div>
       </div>
