@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import type { ToolViewProps } from "../types"
 import { extractToolData, getToolTitle, formatTimestamp } from "../utils"
 import { LoadingState } from "../shared/LoadingState"
-import { getApiUrl } from "@/lib/get-api-url"
+import { getPdfUrl, getImageUrl } from "../utils/presentation-utils"
 
 interface Template {
   id: string
@@ -20,16 +20,6 @@ interface TemplatesData {
   message: string
   templates: Template[]
   note?: string
-}
-
-const getImageUrl = (templateId: string, hasImage: boolean): string => {
-  const API_URL = getApiUrl()
-  return `${API_URL}/presentation-templates/${templateId}/image.png`
-}
-
-const getPdfUrl = (templateId: string): string => {
-  const API_URL = getApiUrl()
-  return `${API_URL}/presentation-templates/${templateId}/pdf`
 }
 
 export function ListPresentationTemplatesToolView({

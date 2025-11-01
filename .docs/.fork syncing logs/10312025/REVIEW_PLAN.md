@@ -9,7 +9,13 @@ For each file:
 2. Decide: Keep dev version, take main version, or manually merge
 3. Cherry-pick specific changes as needed
 
-## Modified Files to Review (58 total)
+## Modified Files to Review (61 total) - ✅ REVIEW COMPLETE
+- **Backend Files:** 13 ✅
+- **Frontend Config Files:** 3 ✅
+- **Frontend Pages/Layouts:** 8 ✅
+- **Frontend Components:** 15 ✅
+- **Frontend Hooks & Utils:** 22 ✅
+**Total: 61 files - ALL REVIEWED (100%)**
 
 ### Backend Files (13) - ✅ ALL REVIEWED - KEEP ALL (WITH NOTE ON agent_runs.py)
 **All files contain critical self-hosted configurations. agent_runs.py needs error handling from main merged in.**
@@ -28,10 +34,10 @@ For each file:
 - [✅] backend/supabase/config.toml (100GB storage limits for self-hosted - KEEP)
 - [✅] docker-compose.yaml (Complete self-hosted deployment config - KEEP)
 
-### Frontend Config Files (3)
-- [ ] frontend/Dockerfile
-- [ ] frontend/next.config.ts
-- [ ] setup.py
+### Frontend Config Files (3) - ✅ REVIEWED
+- [✅] frontend/Dockerfile (BUILD ARGS added for environment variables - KEEP: Docker needs to pass build args for self-hosted deployment)
+- [✅] frontend/next.config.ts (Supabase URL rewriting + OAuth callback proxying - KEEP: CRITICAL for Cloudflare Tunnel OAuth flows)
+- [✅] setup.py (No differences between main and dev - KEEP)
 
 ### Frontend Pages/Layouts (8) - ✅ REVIEWED - KEEP ALL (CRITICAL AUTH LOGIC)
 **Most files have critical self-hosted auth flow and Supabase integration - DO NOT UPDATE FROM MAIN**
@@ -45,22 +51,22 @@ For each file:
 - [✅] frontend/src/app/templates/[shareId]/layout.tsx (Uses getApiUrl() for metadata - KEEP)
 - [✅] frontend/src/app/templates/[shareId]/page.tsx (Uses getApiUrl() for template fetch - KEEP)
 
-### Frontend Components (15)
+### Frontend Components (15) - ✅ ALL REVIEWED AND REFACTORED
 - [✅] frontend/src/components/agents/custom-agents-page/tabs-navigation.tsx
 - [✅] frontend/src/components/agents/mcp/custom-mcp-dialog.tsx
 - [✅] frontend/src/components/knowledge-base/knowledge-base-manager.tsx
 - [✅] frontend/src/components/knowledge-base/knowledge-base-page.tsx (Tab system + databases placeholder - KEEP; removed showRecentFiles)
 - [✅] frontend/src/components/knowledge-base/unified-kb-entry-modal.tsx
-- [ ] frontend/src/components/sidebar/sidebar-left.tsx
-- [ ] frontend/src/components/thread/chat-input/file-upload-handler.tsx
-- [ ] frontend/src/components/thread/file-attachment.tsx
-- [ ] frontend/src/components/thread/file-viewer-modal.tsx
-- [ ] frontend/src/components/thread/tiptap-document-modal.tsx
-- [ ] frontend/src/components/thread/tool-views/docs-tool/DocsToolView.tsx
-- [ ] frontend/src/components/thread/tool-views/docs-tool/ListDocumentsToolView.tsx
-- [ ] frontend/src/components/thread/tool-views/presentation-tools/ListPresentationTemplatesToolView.tsx
-- [ ] frontend/src/components/thread/tool-views/see-image-tool/_utils.ts
-- [ ] frontend/src/components/thread/tool-views/sheets-tools/sheets-tool-view.tsx
+- [✅] frontend/src/components/sidebar/sidebar-left.tsx (Refactored: 6 buttons + hybrid routing + vertical mode with tooltips - see SIDEBAR_COMPLETION_SUMMARY.md)
+- [✅] frontend/src/components/thread/chat-input/file-upload-handler.tsx (Uses getApiUrl() - KEEP)
+- [✅] frontend/src/components/thread/file-attachment.tsx (Uses getApiUrl() - KEEP)
+- [✅] frontend/src/components/thread/file-viewer-modal.tsx (Uses getApiUrl() - KEEP)
+- [✅] frontend/src/components/thread/tiptap-document-modal.tsx (Uses getApiUrl() - KEEP)
+- [✅] frontend/src/components/thread/tool-views/docs-tool/DocsToolView.tsx (Uses getApiUrl() - KEEP)
+- [✅] frontend/src/components/thread/tool-views/docs-tool/ListDocumentsToolView.tsx (Uses getApiUrl() - KEEP)
+- [✅] frontend/src/components/thread/tool-views/presentation-tools/ListPresentationTemplatesToolView.tsx (Pulled from main + refactored getApiUrl() - CRITICAL FIX for Google Slides)
+- [✅] frontend/src/components/thread/tool-views/see-image-tool/_utils.ts (Uses getApiUrl() - KEEP)
+- [✅] frontend/src/components/thread/tool-views/sheets-tools/sheets-tool-view.tsx (Uses getApiUrl() - KEEP)
 
 ### Frontend Hooks & Utils (22) - ✅ ALL REVIEWED AND APPROVED
 **17 files with API URL routing only + 5 flagged files with critical self-hosted logic - ALL KEEPING**
@@ -106,17 +112,15 @@ git diff main HEAD~X -- <filename>
 
 ## Completed Reviews
 
-### ✅ Completed (30/58 files)
-- **22 Frontend Hooks & Utils** - All approved
-- **8 Frontend Pages/Layouts** - All approved  
-- **13 Backend Files** - All approved (agent_runs.py needs error handling merge)
+### ✅ COMPLETE - All 61 Files Reviewed (100%)
+- **13 Backend Files** - All approved (agent_runs.py error handling merged)
+- **22 Frontend Hooks & Utils** - All approved (all use getApiUrl() smart routing)
+- **8 Frontend Pages/Layouts** - All approved (critical auth logic preserved)
+- **15 Frontend Components** - All approved (sidebar refactored, presentation utils restored)
+- **3 Frontend Config Files** - All approved (Docker, Next.js routing, setup)
 
-**Total Reviewed: 43 files (74%)**
-
-### ⏳ Pending Review (28 files)
-- **3 Frontend Config files** - Next
-- **15 Frontend Components** - Later
-- **10 remaining** - Final batch
+**Total Reviewed: 61 files (100%)**
+**Status: REVIEW COMPLETE ✅**
 
 ## Special Task: agent_runs.py Error Handling ✅ COMPLETED
 
@@ -127,17 +131,23 @@ File: `backend/core/agent_runs.py`
 
 ## Next Steps
 
-1. **MANUAL MERGE**: Edit `backend/core/agent_runs.py` to include:
-   - LOCAL mode billing bypass from dev
-   - Error handling from main
-2. Review remaining 28 files (Frontend Config, Components)
-3. For files where we want to accept main's changes:
+1. **Continue reviews:** Work through remaining 12 files
+2. Review remaining **3 Frontend Config files**:
+   - frontend/Dockerfile
+   - frontend/next.config.ts
+   - setup.py
+3. Review remaining **9 Frontend Components**:
+   - chat-input/file-upload-handler.tsx
+   - file-attachment.tsx
+   - file-viewer-modal.tsx
+   - And 6 others (see list above)
+4. For files where we want to accept main's changes:
    ```bash
    git checkout main -- <filename>
    git add <filename>
    git commit -m "Accept upstream changes for <filename>"
    ```
-4. For files to keep as-is, leave unchanged
+5. For files to keep as-is, leave unchanged
 
 ## Notes
 
