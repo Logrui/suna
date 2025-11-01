@@ -1086,6 +1086,17 @@ export const streamAgent = (
     onClose: () => void;
   },
 ): (() => void) => {
+  // Track reconnection attempts per agent run for exponential backoff
+  const reconnectAttemptsMap: Record<string, number> = {};
+  
+  const getReconnectAttempts = (runId: string) => reconnectAttemptsMap[runId] || 0;
+  const incrementReconnectAttempts = (runId: string) => {
+    reconnectAttemptsMap[runId] = (getReconnectAttempts(runId)) + 1;
+  };
+  const resetReconnectAttempts = (runId: string) => {
+    reconnectAttemptsMap[runId] = 0;
+  };
+
   if (nonRunningAgentRuns.has(agentRunId)) {
     setTimeout(() => {
       callbacks.onError(`Agent run ${agentRunId} is not running`);
@@ -1149,6 +1160,7 @@ export const streamAgent = (
 
       eventSource.onopen = () => {
         console.log(`[STREAM] EventSource opened for ${agentRunId}`);
+        resetReconnectAttempts(agentRunId);  // Reset retry count on successful open
       };
 
       eventSource.onmessage = (event) => {
@@ -1241,36 +1253,84 @@ export const streamAgent = (
         getAgentStatus(agentRunId)
           .then((status) => {
             if (status.status !== 'running') {
+              // Agent finished, close normally
               nonRunningAgentRuns.add(agentRunId);
               cleanupEventSource(agentRunId, 'agent not running');
               callbacks.onClose();
             } else {
-              // Let the browser handle reconnection for non-fatal errors
+              // ✅ NEW: Agent is still running, attempt reconnection with backoff
+              const attempts = getReconnectAttempts(agentRunId);
+              const maxAttempts = 5;
+
+              if (attempts < maxAttempts) {
+                // Calculate exponential backoff delay
+                const delay = Math.min(
+                  1000 * Math.pow(1.5, attempts),
+                  30000 // Cap at 30 seconds
+                );
+
+                incrementReconnectAttempts(agentRunId);
+
+                console.log(
+                  `[STREAM] Agent still running for ${agentRunId}, reconnecting (attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`
+                );
+
+                // Clean up the broken EventSource
+                cleanupEventSource(agentRunId, 'reconnecting');
+
+                // Wait and then recreate the stream
+                setTimeout(() => {
+                  setupStream();
+                }, delay);
+              } else {
+                // Exceeded max reconnection attempts
+                console.error(
+                  `[STREAM] Max reconnection attempts (${maxAttempts}) exceeded for ${agentRunId}`
+                );
+                nonRunningAgentRuns.add(agentRunId);
+                cleanupEventSource(agentRunId, 'max reconnect attempts exceeded');
+                callbacks.onError('Stream disconnected - max reconnection attempts exceeded');
+                callbacks.onClose();
+              }
             }
           })
           .catch((err) => {
+            const errorMessage = err instanceof Error ? err.message : String(err);
             console.error(
-              `[STREAM] Error checking agent status after stream error:`,
+              `[STREAM] Error checking agent status for ${agentRunId}:`,
               err,
             );
 
-            // Check if this is a "not found" error
-            const errMsg = err instanceof Error ? err.message : String(err);
-            const isNotFoundErr =
-              errMsg.includes('not found') ||
-              errMsg.includes('404') ||
-              errMsg.includes('does not exist');
+            // Also attempt reconnection on status check errors
+            const attempts = getReconnectAttempts(agentRunId);
+            const maxAttempts = 5;
 
-            if (isNotFoundErr) {
-              nonRunningAgentRuns.add(agentRunId);
-              cleanupEventSource(agentRunId, 'agent not found');
-              callbacks.onClose();
+            if (attempts < maxAttempts) {
+              const delay = Math.min(
+                1000 * Math.pow(1.5, attempts),
+                30000
+              );
+
+              incrementReconnectAttempts(agentRunId);
+
+              console.log(
+                `[STREAM] Error checking status, reconnecting (attempt ${attempts + 1}/${maxAttempts}) in ${delay}ms...`
+              );
+
+              cleanupEventSource(agentRunId, 'reconnecting after status check error');
+
+              setTimeout(() => {
+                setupStream();
+              }, delay);
             } else {
-              // For other errors, still clean up the stream to prevent memory leaks
-              // but don't add to nonRunningAgentRuns as it might be a temporary network issue
-              console.warn(`[STREAM] Cleaning up stream for ${agentRunId} due to persistent error`);
-              cleanupEventSource(agentRunId, 'persistent error');
-              callbacks.onError(errMsg);
+              console.error(
+                `[STREAM] Max reconnection attempts exceeded for ${agentRunId} after error checking status`
+              );
+              nonRunningAgentRuns.add(agentRunId);
+              cleanupEventSource(agentRunId, 'max reconnect attempts exceeded');
+              callbacks.onError(
+                errorMessage || 'Stream disconnected - failed to check agent status'
+              );
               callbacks.onClose();
             }
           });

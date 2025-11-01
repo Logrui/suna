@@ -102,15 +102,25 @@ class XMLToolParser:
             "raw_parameters": {}
         }
         
-        # Extract all parameters
-        param_matches = self.PARAMETER_PATTERN.findall(invoke_content)
+        # Extract all TOP-LEVEL parameters only (not nested ones)
+        # This regex uses a non-greedy match and stops at the first </parameter>
+        param_pattern = re.compile(
+            r'<parameter\s+name=["\']([^"\']+)["\']>([^<]*(?:<(?!parameter)[^>]*>[^<]*)*)</parameter>',
+            re.DOTALL | re.IGNORECASE
+        )
+        param_matches = param_pattern.findall(invoke_content)
         
         for param_name, param_value in param_matches:
             # Clean up the parameter value
             param_value = param_value.strip()
             
-            # Try to parse as JSON if it looks like JSON
-            parsed_value = self._parse_parameter_value(param_value)
+            # If the parameter value contains nested <parameter> tags, extract them
+            if '<parameter' in param_value:
+                # This looks like improperly nested XML - try to extract as structured data
+                parsed_value = self._parse_nested_parameters(param_value)
+            else:
+                # Try to parse as JSON if it looks like JSON
+                parsed_value = self._parse_parameter_value(param_value)
             
             parameters[param_name] = parsed_value
             parsing_details["raw_parameters"][param_name] = param_value
@@ -129,6 +139,51 @@ class XMLToolParser:
             raw_xml=raw_xml,
             parsing_details=parsing_details
         )
+    
+    def _parse_nested_parameters(self, nested_xml: str) -> Any:
+        """
+        Parse improperly nested parameters from XML content.
+        
+        When LLM generates nested <parameter> tags, extract them as a structured list/dict.
+        Example:
+            <parameter name="tasks">
+            <parameter name="task">Task 1</parameter>
+            <parameter name="task">Task 2</parameter>
+            </parameter>
+        
+        Args:
+            nested_xml: XML content with nested parameter tags
+            
+        Returns:
+            List of extracted parameter values
+        """
+        try:
+            # Extract all nested <parameter> tags
+            nested_pattern = re.compile(
+                r'<parameter\s+name=["\']([^"\']+)["\']>([^<]*)</parameter>',
+                re.DOTALL | re.IGNORECASE
+            )
+            matches = nested_pattern.findall(nested_xml)
+            
+            if matches:
+                # If all nested parameters have the same name, return as list of values
+                # Otherwise return as dict
+                names = [name for name, _ in matches]
+                values = [self._parse_parameter_value(value.strip()) for _, value in matches]
+                
+                if len(set(names)) == 1:
+                    # All same parameter name - return as list
+                    return values if len(values) > 1 else values[0] if values else None
+                else:
+                    # Different names - return as dict
+                    return {name: value for name, value in zip(names, values)}
+            
+            # If no nested parameters found, return the raw value
+            return nested_xml.strip()
+            
+        except Exception as e:
+            logger.error(f"Error parsing nested parameters: {e}")
+            return nested_xml.strip()
     
     def _parse_parameter_value(self, value: str) -> Any:
         """

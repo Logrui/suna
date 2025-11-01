@@ -3,6 +3,7 @@ import json
 import traceback
 import uuid
 import os
+import time
 from datetime import datetime, timezone
 from typing import Optional, List, Tuple, Dict
 from fastapi import APIRouter, HTTPException, Depends, Request, Body, File, UploadFile, Form
@@ -902,6 +903,7 @@ async def stream_agent_run(
         listener_task = None
         terminate_stream = False
         initial_yield_complete = False
+        stream_start_time = time.time()  # Track stream start for keepalive logging
 
         try:
             # 1. Fetch and yield initial responses from Redis list
@@ -1012,7 +1014,11 @@ async def stream_agent_run(
             # 4. Main loop to process messages from the queue
             while not terminate_stream:
                 try:
-                    queue_item = await message_queue.get()
+                    # Add 30-second timeout to send keepalive pings for long-running tasks
+                    queue_item = await asyncio.wait_for(
+                        message_queue.get(),
+                        timeout=30.0
+                    )
 
                     if queue_item["type"] == "new_response":
                         # Fetch new responses from Redis list starting after the last processed index
@@ -1044,6 +1050,14 @@ async def stream_agent_run(
                         terminate_stream = True
                         yield f"data: {json.dumps({'type': 'status', 'status': 'error'})}\n\n"
                         break
+
+                except asyncio.TimeoutError:
+                    # No new messages for 30 seconds - send keepalive ping
+                    # This prevents browsers from closing the connection during long agent processing
+                    elapsed = time.time() - stream_start_time
+                    logger.debug(f"[KEEPALIVE] Sending heartbeat ping for {agent_run_id} (streaming for ~{elapsed:.0f}s)")
+                    yield f"data: {json.dumps({'type': 'ping'})}\n\n"
+                    continue
 
                 except asyncio.CancelledError:
                      logger.debug(f"Stream generator main loop cancelled for {agent_run_id}")

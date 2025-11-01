@@ -781,6 +781,7 @@ class AgentRunner:
                 )
 
                 last_tool_call = None
+                last_message_type = None  # Track the type of the last message
                 agent_should_terminate = False
                 error_detected = False
 
@@ -800,6 +801,10 @@ class AgentRunner:
                                     content = chunk.get('content', {})
                                     if isinstance(content, str):
                                         content = json.loads(content)
+                                    
+                                    # Track message type for continuation decisions
+                                    if 'status_type' in content:
+                                        last_message_type = content['status_type']  # e.g., 'tool_error', 'tool_failed', 'tool_completed'
                                     
                                     # Check for error status
                                     if content.get('status_type') == 'error':
@@ -825,6 +830,7 @@ class AgentRunner:
                             
                             # Check for terminating XML tools in assistant content
                             if chunk.get('type') == 'assistant' and 'content' in chunk:
+                                last_message_type = 'assistant'  # Assistant message is a final type
                                 try:
                                     content = chunk.get('content', '{}')
                                     if isinstance(content, str):
@@ -868,7 +874,28 @@ class AgentRunner:
                         continue_execution = False
                     
                     # Enhanced AUTO-CONTINUE LOGIC (Pattern 2 with Task Awareness)
-                    # If last message is not from assistant, continue the conversation
+                    # Determine if we should enter auto-continue
+                    # Non-final message types that require continuation:
+                    non_final_message_types = [
+                        'tool',
+                        'tool_completed',
+                        'tool_failed',
+                        'tool_error',
+                        'status'
+                    ]
+                    
+                    should_auto_continue = last_message_type in non_final_message_types
+                    
+                    if not should_auto_continue:
+                        logger.info(f"✅ Response complete: last_message_type='{last_message_type}' (final type, no auto-continue needed)")
+                        continue_execution = False
+                    else:
+                        logger.info(f"🔄 Auto-continue needed: last_message_type='{last_message_type}' is non-final, entering auto-continue loop")
+                    
+                    if not should_auto_continue:
+                        continue_execution = False
+                        break
+                    
                     logger.info(f"🔄 Entering auto-continue loop (continue_execution={continue_execution}, termination_tool={last_tool_call})")
                     auto_continue_iterations = 0
                     max_auto_continue = 25
@@ -954,6 +981,7 @@ class AgentRunner:
                             last_activity_time = time.time()
                             
                             last_auto_continue_tool_call = None
+                            last_message_type = None  # Reset for this iteration
                             continuation_error = False
                             response_length = 0
                             
@@ -961,6 +989,7 @@ class AgentRunner:
                                 async for chunk in continuation_response:
                                     # Track response quality indicators
                                     if chunk.get('type') == 'assistant' and 'content' in chunk:
+                                        last_message_type = 'assistant'  # Mark as final
                                         try:
                                             content = chunk.get('content', '{}')
                                             if isinstance(content, str):
@@ -972,7 +1001,7 @@ class AgentRunner:
                                     if chunk.get('type') == 'assistant':
                                         continuation_error = False
                                     
-                                    # Check for tool calls
+                                    # Check for tool calls and status types
                                     if isinstance(chunk, dict) and chunk.get('type') == 'status':
                                         try:
                                             content = chunk.get('content', {})
@@ -981,6 +1010,10 @@ class AgentRunner:
                                             metadata = chunk.get('metadata', {})
                                             if isinstance(metadata, str):
                                                 metadata = json.loads(metadata)
+                                            
+                                            # Track message type for continuation decisions
+                                            if 'status_type' in content:
+                                                last_message_type = content['status_type']
                                             
                                             if metadata.get('agent_should_terminate'):
                                                 if content.get('function_name'):
@@ -1036,6 +1069,13 @@ class AgentRunner:
                             if last_auto_continue_tool_call in ['ask', 'complete', 'present_presentation']:
                                 logger.info(f"🛑 Auto-continue: Termination tool detected: {last_auto_continue_tool_call}")
                                 break
+                            
+                            # Check if we got a final message (last_message_type == 'assistant')
+                            if last_message_type == 'assistant':
+                                logger.info(f"✅ Auto-continue: Received final assistant message (last_message_type='assistant')")
+                                break
+                            elif last_message_type and last_message_type != 'assistant':
+                                logger.info(f"🔄 Auto-continue: Continuing after non-final message_type='{last_message_type}'")
                             
                             # Escalation check: prompt for user guidance at critical points
                             if auto_continue_iterations == 20 and conversation_health_score < 60:
