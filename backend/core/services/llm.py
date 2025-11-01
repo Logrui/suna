@@ -103,6 +103,7 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
     ]
     
     # Configure fallbacks: MAP-tagged Bedrock app inference profiles (global routing, 14B tokens/day)
+    # Keep Bedrock fallback chains for the specific MAP-tagged profiles
     fallbacks = [
         # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5 -> Anthropic fallbacks
         {
@@ -133,7 +134,6 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
     
     provider_router = Router(
         model_list=model_list,
-        retry_after=15,
         fallbacks=fallbacks,
     )
     
@@ -254,22 +254,94 @@ async def make_llm_api_call(
         
         # For streaming responses, we need to handle errors that occur during iteration
         if hasattr(response, '__aiter__') and stream:
-            return _wrap_streaming_response(response)
+            return _wrap_streaming_response(response, resolved_model_name, params)
         
         return response
         
     except Exception as e:
+        # Check if this is a rate limit error
+        is_rate_limit = any(keyword in str(e).lower() for keyword in ['rate_limit', 'quota', 'ratelimit', '429', 'overloaded'])
+        
+        if is_rate_limit:
+            # Get fallbacks from the model registry
+            from core.ai_models import model_manager
+            model = model_manager.get_model(resolved_model_name)
+            fallback_models = model.fallback_models if model and model.fallback_models else []
+            
+            if fallback_models:
+                logger.info(f"Rate limit hit for {resolved_model_name}. Trying fallback models: {fallback_models}")
+                
+                # Try each fallback model
+                for fallback_model in fallback_models:
+                    try:
+                        logger.info(f"Attempting fallback to {fallback_model}")
+                        params_copy = params.copy()
+                        params_copy["model"] = fallback_model
+                        
+                        response = await provider_router.acompletion(**params_copy)
+                        
+                        if hasattr(response, '__aiter__') and stream:
+                            logger.info(f"Fallback to {fallback_model} succeeded")
+                            return _wrap_streaming_response(response)
+                        
+                        logger.info(f"Fallback to {fallback_model} succeeded")
+                        return response
+                        
+                    except Exception as fallback_error:
+                        logger.debug(f"Fallback to {fallback_model} failed: {str(fallback_error)[:100]}")
+                        continue
+                
+                logger.error(f"All fallback models failed for {resolved_model_name}")
+            else:
+                logger.warning(f"Rate limit hit but no fallback models configured for {resolved_model_name}")
+        
         # Use ErrorProcessor to handle the error consistently
         processed_error = ErrorProcessor.process_llm_error(e, context={"model": model_name})
         ErrorProcessor.log_error(processed_error)
         raise LLMError(processed_error.message)
 
-async def _wrap_streaming_response(response) -> AsyncGenerator:
-    """Wrap streaming response to handle errors during iteration."""
+async def _wrap_streaming_response(response, resolved_model_name: str = None, params: Dict = None) -> AsyncGenerator:
+    """Wrap streaming response to handle errors during iteration, including rate limit fallbacks."""
     try:
         async for chunk in response:
             yield chunk
     except Exception as e:
+        # Check if this is a rate limit error that occurred mid-stream
+        is_rate_limit = any(keyword in str(e).lower() 
+                           for keyword in ['rate_limit', 'quota', 'ratelimit', '429', 'overloaded', 'mid', 'stream', 'fallback'])
+        
+        if is_rate_limit and resolved_model_name and params:
+            # Get fallbacks from the model registry
+            from core.ai_models import model_manager
+            model = model_manager.get_model(resolved_model_name)
+            fallback_models = model.fallback_models if model and model.fallback_models else []
+            
+            if fallback_models:
+                logger.info(f"Rate limit hit during streaming for {resolved_model_name}. Trying fallback models: {fallback_models}")
+                
+                # Try each fallback model
+                for fallback_model in fallback_models:
+                    try:
+                        logger.info(f"Attempting streaming fallback to {fallback_model}")
+                        params_copy = params.copy()
+                        params_copy["model"] = fallback_model
+                        
+                        response = await provider_router.acompletion(**params_copy)
+                        
+                        if hasattr(response, '__aiter__'):
+                            logger.info(f"Fallback to {fallback_model} succeeded during streaming")
+                            async for chunk in response:
+                                yield chunk
+                            return
+                        
+                    except Exception as fallback_error:
+                        logger.debug(f"Streaming fallback to {fallback_model} failed: {str(fallback_error)[:100]}")
+                        continue
+                
+                logger.error(f"All fallback models failed during streaming for {resolved_model_name}")
+            else:
+                logger.warning(f"Rate limit hit during streaming but no fallback models configured for {resolved_model_name}")
+        
         # Convert streaming errors to processed errors
         processed_error = ErrorProcessor.process_llm_error(e)
         ErrorProcessor.log_error(processed_error)

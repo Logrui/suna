@@ -2,13 +2,53 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+/**
+ * Intelligently detect the correct redirect URI for OAuth callbacks
+ *
+ * This supports multi-domain deployments:
+ * - localhost:3000 (local development)
+ * - https://kortix.syhc.dev (Cloudflare Tunnel)
+ *
+ * Priority:
+ * 1. NEXT_PUBLIC_URL (explicit override, backward compatible)
+ * 2. Request headers (x-forwarded-proto/host for proxies, host header)
+ * 3. Fallback to localhost:3000
+ */
+function getBaseUrl(request: NextRequest): string {
+  // If NEXT_PUBLIC_URL is explicitly set, use it (backward compatibility)
+  if (process.env.NEXT_PUBLIC_URL) {
+    return process.env.NEXT_PUBLIC_URL
+  }
+
+  // Extract the protocol from the request
+  // x-forwarded-proto is set by Cloudflare Tunnel and other reverse proxies
+  const protocol = request.headers.get('x-forwarded-proto') || 'http'
+
+  // Extract the host from the request
+  // x-forwarded-host is set by Cloudflare Tunnel
+  // host header is used for direct access
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000'
+
+  const baseUrl = `${protocol}://${host}`
+
+  console.log('🔐 OAuth Callback URL Detection:', {
+    protocol,
+    host,
+    baseUrl,
+    xForwardedProto: request.headers.get('x-forwarded-proto'),
+    xForwardedHost: request.headers.get('x-forwarded-host'),
+    hostHeader: request.headers.get('host'),
+  })
+
+  return baseUrl
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('returnUrl') || searchParams.get('redirect') || '/dashboard'
-  
-  // Use configured URL instead of parsed origin to avoid 0.0.0.0 issues in self-hosted environments
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+
+  const baseUrl = getBaseUrl(request)
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 

@@ -41,7 +41,12 @@ class ModelRegistry:
             priority=102,
             recommended=True,
             enabled=True,
-            config=ModelConfig()
+            config=ModelConfig(),
+            # Fallback chain: try other models when rate limited
+            fallback_models=[
+                "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+                "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
+            ]
         ))
         
         self.register(Model(
@@ -68,7 +73,12 @@ class ModelRegistry:
                 extra_headers={
                     "anthropic-beta": "context-1m-2025-08-07" 
                 },
-            )
+            ),
+            # Fallback chain: try other models when rate limited
+            fallback_models=[
+                "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+                "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ]
         ))
         
         self.register(Model(
@@ -95,7 +105,12 @@ class ModelRegistry:
                 extra_headers={
                     "anthropic-beta": "context-1m-2025-08-07" 
                 },
-            )
+            ),
+            # Fallback chain: try other models when rate limited
+            fallback_models=[
+                "anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
+                "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ]
         ))
         
         # Sonnet 3.7 - No global inference profile available yet
@@ -164,70 +179,209 @@ class ModelRegistry:
         #     enabled=True
         # ))
         
-        # Commented out OpenAI models as requested
-        # self.register(Model(
-        #     id="openai/gpt-5",
-        #     name="GPT-5",
-        #     provider=ModelProvider.OPENAI,
-        #     aliases=["gpt-5", "GPT-5"],
-        #     context_window=400_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #         ModelCapability.VISION,
-        #         ModelCapability.STRUCTURED_OUTPUT,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=1.25,
-        #         output_cost_per_million_tokens=10.00
-        #     ),
-        #     tier_availability=["paid"],
-        #     priority=97,
-        #     enabled=True
-        # ))
+        # OpenAI Models - Updated with GPT-5 lineup (Nov 1, 2025)
+        self.register(Model(
+            id="openai/gpt-5",
+            name="GPT-5",
+            provider=ModelProvider.OPENAI,
+            aliases=["gpt-5", "GPT-5"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.25,
+                output_cost_per_million_tokens=10.00
+            ),
+            tier_availability=["paid"],
+            priority=95,
+            enabled=config.OPENAI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "openai/gpt-5-mini",
+                "openai/gpt-4o",
+                "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            ]
+        ))
         
-        # self.register(Model(
-        #     id="openai/gpt-5-mini",
-        #     name="GPT-5 Mini",
-        #     provider=ModelProvider.OPENAI,
-        #     aliases=["gpt-5-mini", "GPT-5 Mini"],
-        #     context_window=400_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #         ModelCapability.STRUCTURED_OUTPUT,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=0.25,
-        #         output_cost_per_million_tokens=2.00
-        #     ),
-        #     tier_availability=["free", "paid"],
-        #     priority=96,
-        #     enabled=True
-        # ))
+        self.register(Model(
+            id="openai/gpt-5-mini",
+            name="GPT-5 Mini",
+            provider=ModelProvider.OPENAI,
+            aliases=["gpt-5-mini", "GPT-5 Mini"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.25,
+                output_cost_per_million_tokens=2.00
+            ),
+            tier_availability=["paid"],
+            priority=94,
+            enabled=config.OPENAI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "openai/gpt-4o",
+                "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ]
+        ))
         
-        # Commented out Google models as requested
-        # self.register(Model(
-        #     id="gemini/gemini-2.5-pro",
-        #     name="Gemini 2.5 Pro",
-        #     provider=ModelProvider.GOOGLE,
-        #     aliases=["gemini-2.5-pro", "Gemini 2.5 Pro"],
-        #     context_window=2_000_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #         ModelCapability.VISION,
-        #         ModelCapability.STRUCTURED_OUTPUT,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=1.25,
-        #         output_cost_per_million_tokens=10.00
-        #     ),
-        #     tier_availability=["paid"],
-        #     priority=95,
-        #     enabled=True
-        # ))
+        self.register(Model(
+            id="openai/gpt-4o",
+            name="GPT-4o (Legacy)",
+            provider=ModelProvider.OPENAI,
+            aliases=["gpt-4o", "GPT-4o"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=2.50,
+                output_cost_per_million_tokens=10.00
+            ),
+            tier_availability=["paid"],
+            priority=93,
+            enabled=config.OPENAI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            ]
+        ))
         
+        self.register(Model(
+            id="openai/gpt-4o-mini",
+            name="GPT-4o Mini (Legacy)",
+            provider=ModelProvider.OPENAI,
+            aliases=["gpt-4o-mini", "GPT-4o Mini"],
+            context_window=128_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.15,
+                output_cost_per_million_tokens=0.60
+            ),
+            tier_availability=["free", "paid"],
+            priority=92,
+            enabled=config.OPENAI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ]
+        ))
+        
+        # Google Gemini Models - Updated with latest pricing (Nov 1, 2025)
+        self.register(Model(
+            id="gemini/gemini-2.5-flash-lite",
+            name="Gemini 2.5 Flash-Lite",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite"],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.10,
+                output_cost_per_million_tokens=0.40
+            ),
+            tier_availability=["free", "paid"],
+            priority=98,
+            enabled=config.GEMINI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "gemini/gemini-2.5-flash",
+                "gemini/gemini-2.5-pro",
+                "openai/gpt-4o" if config.OPENAI_API_KEY else "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            ]
+        ))
+        
+        self.register(Model(
+            id="gemini/gemini-2.5-flash",
+            name="Gemini 2.5 Flash",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-2.5-flash", "gemini-flash-latest", "Gemini 2.5 Flash"],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.30,
+                output_cost_per_million_tokens=2.50
+            ),
+            tier_availability=["free", "paid"],
+            priority=97,
+            enabled=config.GEMINI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "gemini/gemini-2.5-pro",
+                "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ]
+        ))
+        
+        self.register(Model(
+            id="gemini/gemini-2.5-pro",
+            name="Gemini 2.5 Pro",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-2.5-pro", "Gemini 2.5 Pro"],
+            context_window=2_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.25,
+                output_cost_per_million_tokens=10.00
+            ),
+            tier_availability=["paid"],
+            priority=96,
+            enabled=config.GEMINI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "openai/gpt-4o" if config.OPENAI_API_KEY else "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            ]
+        ))
+        
+        
+        # OpenAI-Compatible Models (for Ollama, LM Studio, vLLM, etc.)
+        # These are only registered if both API key and base URL are configured
+        if config.OPENAI_COMPATIBLE_API_KEY and config.OPENAI_COMPATIBLE_API_BASE:
+            self.register(Model(
+                id="openai-compatible/local-model",
+                name="Local LLM (OpenAI-Compatible)",
+                provider=ModelProvider.OPENAI,
+                aliases=["local-llm", "ollama", "lm-studio", "local"],
+                context_window=4_000,  # Default, can be overridden
+                capabilities=[
+                    ModelCapability.CHAT,
+                    ModelCapability.FUNCTION_CALLING,
+                ],
+                pricing=ModelPricing(
+                    input_cost_per_million_tokens=0.0,
+                    output_cost_per_million_tokens=0.0
+                ),
+                tier_availability=["free", "paid"],
+                priority=50,  # Lower priority - fallback option
+                enabled=True,
+                config=ModelConfig(
+                    api_base=config.OPENAI_COMPATIBLE_API_BASE,
+                ),
+                fallback_models=[
+                    "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+                    "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
+                ]
+            ))
+        
+        # # Commented out OpenRouter models
         
         # self.register(Model(
         #     id="openrouter/moonshotai/kimi-k2",

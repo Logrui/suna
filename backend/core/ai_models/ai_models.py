@@ -77,6 +77,9 @@ class Model:
     # NEW: Centralized model configuration
     config: Optional[ModelConfig] = None
     
+    # NEW: Fallback models for rate limiting and failures
+    fallback_models: List[str] = field(default_factory=list)
+    
     def __post_init__(self):        
         if ModelCapability.CHAT not in self.capabilities:
             self.capabilities.insert(0, ModelCapability.CHAT)
