@@ -20,14 +20,24 @@ class OllamaClient:
         
         Args:
             base_url: Ollama API base URL (e.g., http://localhost:11434)
-                     If None, extracts from OPENAI_COMPATIBLE_API_BASE
+                     If None, tries multiple strategies:
+                     1. OLLAMA_API_BASE (explicit override for Docker)
+                     2. OPENAI_COMPATIBLE_API_BASE (fallback)
+                     3. Default localhost:11434
         """
+        # Strategy 1: Use explicit OLLAMA_API_BASE if set (for Docker override)
         if base_url:
             self.base_url = base_url.rstrip('/v1').rstrip('/')
+        elif config.OLLAMA_API_BASE:
+            logger.debug(f"Using OLLAMA_API_BASE: {config.OLLAMA_API_BASE}")
+            self.base_url = config.OLLAMA_API_BASE.rstrip('/v1').rstrip('/')
         elif config.OPENAI_COMPATIBLE_API_BASE:
+            # Strategy 2: Extract from OPENAI_COMPATIBLE_API_BASE
             # Convert http://localhost:11434/v1 -> http://localhost:11434
             self.base_url = config.OPENAI_COMPATIBLE_API_BASE.rstrip('/v1').rstrip('/')
+            logger.debug(f"Using OPENAI_COMPATIBLE_API_BASE: {self.base_url}")
         else:
+            # Strategy 3: Default
             self.base_url = "http://localhost:11434"
         
         self._model_cache: Dict[str, Dict[str, Any]] = {}

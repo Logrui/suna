@@ -21,6 +21,23 @@ OPENAI_COMPATIBLE_API_KEY=ollama
 OPENAI_COMPATIBLE_API_BASE=http://localhost:11434/v1
 ```
 
+### Docker Networking Fix
+
+If running backend in Docker and Ollama on the host, add:
+
+```bash
+# For Docker Desktop (Mac/Windows)
+OLLAMA_API_BASE=http://host.docker.internal:11434
+
+# For Linux Docker
+OLLAMA_API_BASE=http://172.17.0.1:11434
+
+# For Docker on WSL2 (Windows)
+OLLAMA_API_BASE=http://host.docker.internal:11434
+```
+
+This overrides the default `localhost:11434` which doesn't work inside containers.
+
 ### Disable (Backward Compatible)
 
 To use the old generic "local-model" behavior:
@@ -254,6 +271,34 @@ Invoke-RestMethod -Uri "http://localhost:8000/api/models" -Method Get
 1. `OLLAMA_ENABLED=true` in `.env`
 2. Ollama is running: `Invoke-RestMethod http://localhost:11434/api/tags`
 3. Check backend startup logs for errors
+
+### Issue: Docker - "All connection attempts failed"
+
+**Root Cause:** Inside Docker, `localhost:11434` refers to the container's network, not the host.
+
+**Solution:** Add to `backend/.env`:
+
+```bash
+# Docker Desktop (Mac/Windows)
+OLLAMA_API_BASE=http://host.docker.internal:11434
+
+# Linux
+OLLAMA_API_BASE=http://172.17.0.1:11434
+
+# WSL2 Windows
+OLLAMA_API_BASE=http://host.docker.internal:11434
+```
+
+Then restart the container:
+```bash
+docker compose restart
+```
+
+**Verification:**
+Check logs for:
+```
+[INFO] Successfully registered 12 Ollama models
+```
 
 ### Issue: Wrong context windows
 

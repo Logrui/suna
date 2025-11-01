@@ -37,11 +37,11 @@ export const metadata: Metadata = {
     'research',
     'data analysis',
   ],
-  authors: [{ name: 'Kortix Team', url: 'https://suna.so' }],
+  authors: [{ name: 'Kortix Team - SYHC Private Server', url: 'https://suna.so' }],
   creator:
-    'Kortix Team',
+    'Kortix Team - SYHC Private Server',
   publisher:
-    'Kortix Team',
+    'Kortix Team - SYHC Private Server',
   category: 'Technology',
   applicationName: 'Kortix',
   formatDetection: {
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Kortix - Open Source Generalist AI Worker',
+    title: 'Kortix - Open Source Generalist AI Workers - SYHC Private Server',
     description:
       'Kortix is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',
     url: siteConfig.url,
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
         url: new URL('/banner.png', siteConfig.url).toString(),
         width: 1200,
         height: 630,
-        alt: 'Kortix - Open Source Generalist AI Worker',
+        alt: 'Kortix - Open Source Generalist AI Workers - SYHC Private Server',
         type: 'image/png',
       },
     ],
