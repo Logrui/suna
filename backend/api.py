@@ -67,6 +67,15 @@ async def lifespan(app: FastAPI):
             logger.error(f"Failed to initialize Redis connection: {e}")
             # Continue without Redis - the application will handle Redis failures gracefully
         
+        # Initialize Ollama models (dynamic discovery or fallback to generic)
+        from core.ai_models import registry
+        try:
+            await registry.initialize_ollama_models()
+            logger.debug("Ollama model initialization completed")
+        except Exception as e:
+            logger.error(f"Failed to initialize Ollama models: {e}")
+            # Continue - the application will work without Ollama models
+        
         # Start background tasks
         # asyncio.create_task(core_api.restore_running_agent_runs())
         

@@ -1,0 +1,235 @@
+"""
+Ollama API client for discovering and querying local Ollama models.
+
+This module provides async methods to interact with the Ollama API
+for dynamic model discovery and metadata extraction.
+"""
+
+from typing import List, Dict, Optional, Any
+import httpx
+from core.utils.logger import logger
+from core.utils.config import config
+
+
+class OllamaClient:
+    """Async client for Ollama API interactions."""
+    
+    def __init__(self, base_url: Optional[str] = None):
+        """
+        Initialize Ollama client.
+        
+        Args:
+            base_url: Ollama API base URL (e.g., http://localhost:11434)
+                     If None, extracts from OPENAI_COMPATIBLE_API_BASE
+        """
+        if base_url:
+            self.base_url = base_url.rstrip('/v1').rstrip('/')
+        elif config.OPENAI_COMPATIBLE_API_BASE:
+            # Convert http://localhost:11434/v1 -> http://localhost:11434
+            self.base_url = config.OPENAI_COMPATIBLE_API_BASE.rstrip('/v1').rstrip('/')
+        else:
+            self.base_url = "http://localhost:11434"
+        
+        self._model_cache: Dict[str, Dict[str, Any]] = {}
+        logger.debug(f"OllamaClient initialized with base_url: {self.base_url}")
+    
+    async def list_models(self) -> List[Dict[str, Any]]:
+        """
+        List all available Ollama models.
+        
+        Returns:
+            List of model dictionaries from /api/tags
+            
+        Raises:
+            httpx.HTTPError: If API request fails
+        """
+        url = f"{self.base_url}/api/tags"
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json()
+                
+                models = data.get("models", [])
+                logger.info(f"Found {len(models)} Ollama models")
+                return models
+                
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to list Ollama models: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error listing Ollama models: {e}")
+            raise
+    
+    async def get_model_info(self, model_name: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific model.
+        
+        Args:
+            model_name: Name of the model (e.g., "llama3.2:latest")
+            
+        Returns:
+            Model info dictionary from /api/show
+            
+        Raises:
+            httpx.HTTPError: If API request fails
+        """
+        # Check cache first
+        if model_name in self._model_cache:
+            logger.debug(f"Using cached model info for {model_name}")
+            return self._model_cache[model_name]
+        
+        url = f"{self.base_url}/api/show"
+        payload = {"name": model_name}
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, json=payload)
+                response.raise_for_status()
+                model_info = response.json()
+                
+                # Cache the result
+                self._model_cache[model_name] = model_info
+                logger.debug(f"Retrieved and cached info for {model_name}")
+                
+                return model_info
+                
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to get info for model {model_name}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error getting model info for {model_name}: {e}")
+            raise
+    
+    def extract_context_window(self, model_info: Dict[str, Any]) -> int:
+        """
+        Extract context window from model_info.
+        
+        The field name varies by architecture:
+        - llama.context_length
+        - qwen2.context_length
+        - gemma2.context_length
+        
+        Args:
+            model_info: Dictionary from /api/show
+            
+        Returns:
+            Context window size in tokens (default: 4000 if not found)
+        """
+        # Try to get architecture
+        architecture = model_info.get("general.architecture", "")
+        
+        # Try architecture-specific field first
+        if architecture:
+            context_field = f"{architecture}.context_length"
+            context_window = model_info.get(context_field)
+            if context_window:
+                logger.debug(f"Found context window via {context_field}: {context_window}")
+                return int(context_window)
+        
+        # Fallback: try known architectures
+        for arch in ["llama", "qwen2", "qwen3", "gemma2", "gemma", "phi", "deepseek"]:
+            context_field = f"{arch}.context_length"
+            context_window = model_info.get(context_field)
+            if context_window:
+                logger.debug(f"Found context window via {context_field}: {context_window}")
+                return int(context_window)
+        
+        # Final fallback
+        logger.warning(f"Could not find context window in model_info, using default 4000")
+        return 4_000
+    
+    def is_chat_model(self, capabilities: Optional[List[str]]) -> bool:
+        """
+        Check if model supports chat completion.
+        
+        Filters out embedding-only models.
+        
+        Args:
+            capabilities: List of capabilities from model_info
+            
+        Returns:
+            True if chat model, False if embedding-only
+        """
+        if not capabilities:
+            # Assume chat if no capabilities listed
+            return True
+        
+        # Has completion or tools capability = chat model
+        if "completion" in capabilities or "tools" in capabilities:
+            return True
+        
+        # Only has embedding = NOT a chat model
+        if capabilities == ["embedding"]:
+            logger.debug("Model is embedding-only, filtering out")
+            return False
+        
+        # Default to chat model
+        return True
+    
+    def construct_display_name(
+        self, 
+        model_info: Dict[str, Any], 
+        details: Dict[str, Any],
+        fallback_name: str
+    ) -> str:
+        """
+        Construct human-friendly display name from model metadata.
+        
+        Format: "{BaseName} {Size} {Finetune} ({Quantization})"
+        Examples:
+            - "Llama-3.2 3B Instruct (Q4_K_M)"
+            - "DeepSeek-R1 8B (Q4_K_M)"
+            
+        Args:
+            model_info: Dictionary from /api/show
+            details: Details sub-dictionary with parameter_size, quantization_level
+            fallback_name: Original model name to use if parsing fails
+            
+        Returns:
+            Human-friendly display name
+        """
+        basename = model_info.get("general.basename", "")
+        finetune = model_info.get("general.finetune", "")
+        size_label = model_info.get("general.size_label", "")
+        
+        # Fallback to details if model_info fields missing
+        if not size_label and details:
+            size_label = details.get("parameter_size", "")
+        
+        quantization = details.get("quantization_level", "") if details else ""
+        
+        # Build display name
+        parts = []
+        
+        if basename:
+            parts.append(basename)
+        
+        if size_label:
+            parts.append(size_label)
+        
+        if finetune:
+            parts.append(finetune)
+        
+        # Add quantization in parentheses if available
+        if parts:
+            display_name = " ".join(parts)
+            if quantization:
+                display_name = f"{display_name} ({quantization})"
+            logger.debug(f"Constructed display name: {display_name}")
+            return display_name
+        
+        # Fallback: parse model name manually
+        # Convert "llama3.2:latest" -> "Llama 3.2"
+        name_part = fallback_name.split(':')[0]  # Remove tag
+        
+        # Capitalize and add spaces
+        formatted = name_part.replace('-', ' ').replace('_', ' ')
+        formatted = ' '.join(word.capitalize() for word in formatted.split())
+        
+        if quantization:
+            formatted = f"{formatted} ({quantization})"
+        
+        logger.debug(f"Fallback display name: {formatted}")
+        return formatted

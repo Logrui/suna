@@ -351,35 +351,9 @@ class ModelRegistry:
             ]
         ))
         
-        
         # OpenAI-Compatible Models (for Ollama, LM Studio, vLLM, etc.)
-        # These are only registered if both API key and base URL are configured
-        if config.OPENAI_COMPATIBLE_API_KEY and config.OPENAI_COMPATIBLE_API_BASE:
-            self.register(Model(
-                id="openai-compatible/local-model",
-                name="Local LLM (OpenAI-Compatible)",
-                provider=ModelProvider.OPENAI,
-                aliases=["local-llm", "ollama", "lm-studio", "local"],
-                context_window=4_000,  # Default, can be overridden
-                capabilities=[
-                    ModelCapability.CHAT,
-                    ModelCapability.FUNCTION_CALLING,
-                ],
-                pricing=ModelPricing(
-                    input_cost_per_million_tokens=0.0,
-                    output_cost_per_million_tokens=0.0
-                ),
-                tier_availability=["free", "paid"],
-                priority=50,  # Lower priority - fallback option
-                enabled=True,
-                config=ModelConfig(
-                    api_base=config.OPENAI_COMPATIBLE_API_BASE,
-                ),
-                fallback_models=[
-                    "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-                    "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
-                ]
-            ))
+        # Note: Actual registration happens in initialize_ollama_models() called during app startup
+        # This ensures we don't block synchronous initialization with async API calls
         
         # # Commented out OpenRouter models
         
@@ -556,5 +530,173 @@ class ModelRegistry:
             "FREE_TIER_MODELS": free_models,
             "PAID_TIER_MODELS": paid_models,
         }
+    
+    def _register_generic_openai_compatible(self):
+        """
+        Register a generic OpenAI-compatible local model.
+        
+        This is the fallback registration method used when:
+        - OLLAMA_ENABLED is False/not set
+        - Ollama discovery fails
+        - No specific provider integration is configured
+        """
+        if not (config.OPENAI_COMPATIBLE_API_KEY and config.OPENAI_COMPATIBLE_API_BASE):
+            return
+        
+        self.register(Model(
+            id="openai-compatible/local-model",
+            name="Local LLM (OpenAI-Compatible)",
+            provider=ModelProvider.OPENAI,
+            aliases=["local-llm", "ollama", "lm-studio", "local"],
+            context_window=4_000,  # Default, can be overridden
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.0,
+                output_cost_per_million_tokens=0.0
+            ),
+            tier_availability=["free", "paid"],
+            priority=50,  # Lower priority - fallback option
+            enabled=True,
+            config=ModelConfig(
+                api_base=config.OPENAI_COMPATIBLE_API_BASE,
+            ),
+            fallback_models=[
+                "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+                "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
+            ]
+        ))
+    
+    async def initialize_ollama_models(self):
+        """
+        Discover and register Ollama models dynamically.
+        
+        This method should be called during application startup (after async services are ready).
+        If OLLAMA_ENABLED is False or Ollama discovery fails, falls back to generic registration.
+        """
+        from core.utils.logger import logger
+        
+        # Check if Ollama integration is enabled
+        if not config.OLLAMA_ENABLED:
+            logger.info("OLLAMA_ENABLED is False, using generic OpenAI-compatible registration")
+            self._register_generic_openai_compatible()
+            return
+        
+        # Check if API base is configured
+        if not config.OPENAI_COMPATIBLE_API_BASE:
+            logger.warning("OPENAI_COMPATIBLE_API_BASE not set, skipping Ollama discovery")
+            return
+        
+        try:
+            from .ollama_client import OllamaClient
+            
+            logger.info("Starting Ollama model discovery...")
+            client = OllamaClient()
+            
+            # List all models
+            models_data = await client.list_models()
+            
+            if not models_data:
+                logger.warning("No Ollama models found, using generic registration as fallback")
+                self._register_generic_openai_compatible()
+                return
+            
+            # Track registered count
+            registered_count = 0
+            
+            # Process each model
+            for model_data in models_data:
+                try:
+                    model_name = model_data.get("name")
+                    if not model_name:
+                        continue
+                    
+                    details = model_data.get("details", {})
+                    
+                    # Get detailed model info
+                    model_info = await client.get_model_info(model_name)
+                    
+                    # Filter out embedding-only models
+                    capabilities = model_info.get("capabilities", [])
+                    if not client.is_chat_model(capabilities):
+                        logger.debug(f"Skipping embedding-only model: {model_name}")
+                        continue
+                    
+                    # Extract context window
+                    context_window = client.extract_context_window(model_info)
+                    
+                    # Construct display name
+                    display_name = client.construct_display_name(model_info, details, model_name)
+                    
+                    # Calculate priority (50-63 range based on parameter size)
+                    base_priority = 50
+                    param_size = details.get("parameter_size", "")
+                    
+                    # Add small boost for larger models
+                    priority_boost = 0
+                    if param_size:
+                        try:
+                            # Extract number from "3.2B", "8B", etc.
+                            size_str = param_size.replace('B', '').replace('M', '')
+                            size_num = float(size_str)
+                            
+                            # Larger models get slightly higher priority (max +13)
+                            if 'B' in param_size:
+                                priority_boost = min(int(size_num / 2), 13)
+                            elif 'M' in param_size:
+                                priority_boost = min(int(size_num / 1000), 5)
+                        except (ValueError, AttributeError):
+                            pass
+                    
+                    priority = base_priority + priority_boost
+                    
+                    # Register the model
+                    model_id = f"openai-compatible/{model_name}"
+                    
+                    self.register(Model(
+                        id=model_id,
+                        name=display_name,
+                        provider=ModelProvider.OPENAI,
+                        aliases=[model_name],
+                        context_window=context_window,
+                        capabilities=[
+                            ModelCapability.CHAT,
+                            ModelCapability.FUNCTION_CALLING,
+                        ] if "tools" in capabilities else [ModelCapability.CHAT],
+                        pricing=ModelPricing(
+                            input_cost_per_million_tokens=0.0,
+                            output_cost_per_million_tokens=0.0
+                        ),
+                        tier_availability=["free", "paid"],
+                        priority=priority,
+                        enabled=True,
+                        config=ModelConfig(
+                            api_base=config.OPENAI_COMPATIBLE_API_BASE,
+                        ),
+                        fallback_models=[
+                            "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+                            "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
+                        ]
+                    ))
+                    
+                    registered_count += 1
+                    logger.debug(f"Registered Ollama model: {display_name} (context: {context_window}, priority: {priority})")
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to register Ollama model {model_name}: {e}")
+                    continue
+            
+            if registered_count > 0:
+                logger.info(f"Successfully registered {registered_count} Ollama models")
+            else:
+                logger.warning("No Ollama models were registered, using generic registration as fallback")
+                self._register_generic_openai_compatible()
+                
+        except Exception as e:
+            logger.error(f"Ollama model discovery failed: {e}")
+            logger.info("Falling back to generic OpenAI-compatible registration")
+            self._register_generic_openai_compatible()
 
 registry = ModelRegistry() 
