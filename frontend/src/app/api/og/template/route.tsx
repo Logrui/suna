@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { getApiUrl } from '@/lib/get-api-url';
 
 export const runtime = 'edge';
 
@@ -14,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     const templateResponse = await fetch(
-      `${getApiUrl().replace('/api', '')}/api/templates/public/${shareId}`
+      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/templates/public/${shareId}`
     );
 
     if (!templateResponse.ok) {
@@ -168,7 +167,7 @@ export async function GET(request: NextRequest) {
                 bottom: '40px',
               }}
             >
-              <span style={{ color: '#64748b', fontSize: '20px' }}>Kortix Suna</span>
+              <span style={{ color: '#64748b', fontSize: '20px' }}>Kortix</span>
               <span style={{ color: '#334155', fontSize: '20px' }}>•</span>
               <span style={{ color: '#64748b', fontSize: '20px' }}>AI Agent Marketplace</span>
             </div>
@@ -229,7 +228,7 @@ export async function GET(request: NextRequest) {
                 color: '#94a3b8',
               }}
             >
-              Discover powerful AI agents on Kortix Suna
+              Discover powerful AI agents on Kortix
             </p>
           </div>
         </div>

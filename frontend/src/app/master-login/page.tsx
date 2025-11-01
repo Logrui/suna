@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { getApiUrl } from '@/lib/get-api-url';
 
 export default function MasterLoginPage() {
   const [email, setEmail] = useState('');
@@ -18,7 +17,7 @@ export default function MasterLoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${getApiUrl()}/admin/master-login/authenticate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/admin/master-login/authenticate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,33 +34,33 @@ export default function MasterLoginPage() {
       }
 
       const data = await response.json();
-      
+
       console.log('Response data:', data);
-      
+
       if (data.action_link) {
         console.log('Raw action_link:', data.action_link);
         const url = new URL(data.action_link);
         console.log('Action link URL:', url.href);
         console.log('Hash:', url.hash);
         console.log('Hash length:', url.hash.length);
-        
+
         const hash = url.hash.substring(1);
         console.log('Hash after substring:', hash);
         console.log('Hash substring length:', hash.length);
-        
+
         const params = new URLSearchParams(hash);
         console.log('All params:', Array.from(params.entries()));
-        
+
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
-        
-        console.log('Extracted tokens:', { 
-          hasAccess: !!accessToken, 
+
+        console.log('Extracted tokens:', {
+          hasAccess: !!accessToken,
           hasRefresh: !!refreshToken,
           accessTokenStart: accessToken?.substring(0, 20),
           refreshToken: refreshToken
         });
-        
+
         if (accessToken && refreshToken) {
           console.log('Setting session with extracted tokens...');
           const supabase = createClient();
@@ -108,7 +107,7 @@ export default function MasterLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-6 p-8">
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold">Master Password Login</h1>
+          <h1 className="text-3xl font-medium">Master Password Login</h1>
           <p className="text-muted-foreground">
             Admin access to any user account
           </p>
