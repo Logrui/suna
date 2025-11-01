@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { IApiClient } from '../repositories/interfaces';
-import { getApiUrl } from '@/lib/get-api-url';
 
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 export class SupabaseApiClient implements IApiClient {
   private async getAuthHeaders(): Promise<Record<string, string>> {

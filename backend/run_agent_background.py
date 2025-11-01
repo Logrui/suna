@@ -211,11 +211,7 @@ async def run_agent_background(
              duration = (datetime.now(timezone.utc) - start_time).total_seconds()
              logger.info(f"Agent run {agent_run_id} completed normally (duration: {duration:.2f}s, responses: {total_responses})")
              completion_message = {"type": "status", "status": "completed", "message": "Agent run completed successfully"}
-             # Only call end() if trace is not None
-             if trace is not None:
-                 span = trace.span(name="agent_run_completed")
-                 if span is not None:
-                     span.end(status_message="agent_run_completed")
+             trace.span(name="agent_run_completed").end(status_message="agent_run_completed")
              await redis.rpush(response_list_key, json.dumps(completion_message))
              await redis.publish(response_channel, "new") # Notify about the completion message
 
@@ -241,11 +237,7 @@ async def run_agent_background(
         duration = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.error(f"Error in agent run {agent_run_id} after {duration:.2f}s: {error_message}\n{traceback_str} (Instance: {instance_id})")
         final_status = "failed"
-        # Only call end() if trace is not None
-        if trace is not None:
-            span = trace.span(name="agent_run_failed")
-            if span is not None:
-                span.end(status_message=error_message, level="ERROR")
+        trace.span(name="agent_run_failed").end(status_message=error_message, level="ERROR")
 
         # Push error message to Redis list
         error_response = {"type": "status", "status": "error", "message": error_message}

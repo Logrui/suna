@@ -3,7 +3,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { fileQueryKeys } from './use-file-queries';
 import { FileCache } from '@/hooks/use-cached-file';
 import { toast } from 'sonner';
-import { getApiUrl } from '@/lib/get-api-url';
 // Import the normalizePath function from use-file-queries
 function normalizePath(path: string): string {
   if (!path) return '/';
@@ -27,7 +26,7 @@ function normalizePath(path: string): string {
   return path;
 }
 
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 /**
  * Hook for uploading files

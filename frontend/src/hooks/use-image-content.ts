@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { FileCache } from './use-cached-file';
-import { getApiUrl } from '@/lib/get-api-url';
 
 // Track in-progress image loads to prevent duplication
 const inProgressImageLoads = new Map<string, Promise<string>>();
@@ -78,7 +77,7 @@ export function useImageContent(sandboxId?: string, filePath?: string) {
     setIsLoading(true);
     
     // Create a URL for the fetch request
-    const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+    const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
     url.searchParams.append('path', normalizedPath);
     
     // Create a promise for this load and track it
@@ -118,7 +117,7 @@ export function useImageContent(sandboxId?: string, filePath?: string) {
           filePath, 
           normalizedPath,
           hasToken: !!session?.access_token,
-          backendUrl: getApiUrl() 
+          backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL 
         });
         setError(err);
         setIsLoading(false);

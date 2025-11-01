@@ -28,7 +28,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6380:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
       - ./backend/services/docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
@@ -50,7 +50,6 @@ services:
     volumes:
       - ./backend/.env:/app/.env:ro
     environment:
-      - ENV_MODE=local
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
@@ -60,9 +59,6 @@ services:
         condition: service_healthy
       worker:
         condition: service_started
-    networks:
-      - default
-      - supabase
 
   worker:
     image: ghcr.io/suna-ai/suna-backend:latest
@@ -74,7 +70,6 @@ services:
     volumes:
       - ./backend/.env:/app/.env:ro
     environment:
-      - ENV_MODE=local
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
@@ -82,39 +77,16 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    networks:
-      - default
-      - supabase
 
   frontend:
     init: true
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_ENV_MODE=local
-        - NEXT_PUBLIC_SUPABASE_URL=http://supabase-kong:8000
-        - NEXT_PUBLIC_BACKEND_URL=http://backend:8000/api
-        - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_ENV_MODE=local
-      - NEXT_PUBLIC_SUPABASE_URL=http://supabase-kong:8000
-      - NEXT_PUBLIC_BACKEND_URL=http://backend:8000/api
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE
     depends_on:
       - backend
-    networks:
-      - default
-      - supabase
 
 volumes:
   redis_data:
-
-networks:
-  default:
-    name: suna
-  supabase:
-    name: supabase
-    external: true

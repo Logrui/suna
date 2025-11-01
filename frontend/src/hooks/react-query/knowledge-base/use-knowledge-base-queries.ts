@@ -2,9 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { knowledgeBaseKeys } from './keys';
-import { getApiUrl } from '@/lib/get-api-url';
 
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 // Only keep the types that are actually used
 export interface KnowledgeBaseEntry {

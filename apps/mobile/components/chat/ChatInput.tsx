@@ -1,7 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useLanguage } from '@/contexts';
-import { BlurView } from 'expo-blur';
 import { AudioLines, CornerDownLeft, Paperclip, X, Image, Presentation, Table2, FileText, Users, Search, Square, Loader2 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
@@ -114,11 +113,11 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
     },
   }), []);
   
-  // Pulsing animation for agent running state
+  // Subtle fade animation for agent running state
   React.useEffect(() => {
     if (isAgentRunning) {
       pulseOpacity.value = withRepeat(
-        withTiming(0.5, { duration: 1000 }),
+        withTiming(0.85, { duration: 1500 }),
         -1,
         true
       );
@@ -318,20 +317,13 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
       ]}
       {...props}
     >
-      {/* Blur Background */}
-      <BlurView
-        intensity={80}
-        tint={colorScheme === 'dark' ? 'dark' : 'light'}
-        className="absolute inset-0"
-      />
-      
-      {/* Semi-transparent background overlay */}
+      {/* Solid background */}
       <View 
         className="absolute inset-0"
         style={{ 
           backgroundColor: colorScheme === 'dark' 
-            ? 'rgba(22, 22, 24, 0.7)' 
-            : 'rgba(255, 255, 255, 0.7)' 
+            ? '#161618' 
+            : '#FFFFFF' 
         }}
       />
 
@@ -506,7 +498,7 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
                   disabled={isSendingMessage || isTranscribing}
                   className={`rounded-full items-center justify-center ${
                     isAgentRunning 
-                      ? 'bg-destructive' 
+                      ? 'bg-foreground' 
                       : 'bg-primary'
                   }`}
                   style={[{ width: 40, height: 40 }, sendAnimatedStyle]}
@@ -530,7 +522,7 @@ export const ChatInput = React.forwardRef<ChatInputRef, ChatInputProps>(({
                             : AudioLines
                       } 
                       size={isAgentRunning ? 14 : 16} 
-                      className="text-primary-foreground"
+                      className={isAgentRunning ? "text-background" : "text-primary-foreground"}
                       strokeWidth={2}
                     />
                   )}

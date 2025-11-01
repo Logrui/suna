@@ -4,10 +4,11 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, Image, ActivityIndicator, ScrollView, Dimensions } from 'react-native';
+import { View, Image, ScrollView, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
+import { KortixLoader } from '@/components/ui';
 import { AlertCircle, FileText } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import Markdown from 'react-native-markdown-display';
@@ -168,7 +169,7 @@ function ImagePreview({ blobUrl, fileName }: { blobUrl?: string; fileName: strin
   if (!blobUrl) {
     return (
       <View className="flex-1 items-center justify-center p-8">
-        <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#000000'} />
+        <KortixLoader size="large" />
         <Text className="text-sm text-muted-foreground mt-4">
           Loading image...
         </Text>
@@ -181,6 +182,7 @@ function ImagePreview({ blobUrl, fileName }: { blobUrl?: string; fileName: strin
       className="flex-1"
       contentContainerStyle={{ padding: 16 }}
       showsVerticalScrollIndicator={false}
+      style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}
     >
       {hasError ? (
         <View className="items-center justify-center p-8">
@@ -198,7 +200,7 @@ function ImagePreview({ blobUrl, fileName }: { blobUrl?: string; fileName: strin
         <View className="items-center">
           {isLoading && (
             <View className="absolute inset-0 items-center justify-center z-10">
-              <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#000000'} />
+              <KortixLoader size="large" />
             </View>
           )}
           <Image
@@ -241,7 +243,8 @@ function MarkdownPreview({ content }: { content: string }) {
   return (
     <ScrollView 
       className="flex-1 px-4 py-4"
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator={true}
+      style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}
     >
       <Markdown style={isDark ? markdownStylesDark : markdownStyles}>
         {content}
@@ -270,7 +273,8 @@ function JsonPreview({ content }: { content: string }) {
   return (
     <ScrollView 
       className="flex-1"
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator={true}
+      style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}
     >
       <View className="px-4 py-3 border-b" style={{
         borderBottomColor: isDark ? 'rgba(248, 248, 248, 0.1)' : 'rgba(18, 18, 21, 0.1)',
@@ -292,8 +296,8 @@ function JsonPreview({ content }: { content: string }) {
             backgroundColor: 'transparent',
             padding: 12,
             margin: 0,
-            fontSize: 12,
-            lineHeight: 18,
+            fontSize: 13,
+            lineHeight: 20,
           }}
           highlighter="hljs"
         >
@@ -315,7 +319,8 @@ function CodePreview({ content, fileName }: { content: string; fileName: string 
   return (
     <ScrollView 
       className="flex-1"
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator={true}
+      style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}
     >
       <View className="px-4 py-3 border-b" style={{
         borderBottomColor: isDark ? 'rgba(248, 248, 248, 0.1)' : 'rgba(18, 18, 21, 0.1)',
@@ -337,8 +342,8 @@ function CodePreview({ content, fileName }: { content: string; fileName: string 
             backgroundColor: 'transparent',
             padding: 12,
             margin: 0,
-            fontSize: 12,
-            lineHeight: 18,
+            fontSize: 13,
+            lineHeight: 20,
           }}
           highlighter="hljs"
         >
@@ -378,7 +383,7 @@ function HtmlPreview({
           startInLoadingState={true}
           renderLoading={() => (
             <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" color={isDark ? '#f8f8f8' : '#121215'} />
+              <KortixLoader size="large" />
               <Text 
                 className="text-sm mt-4 font-roobert"
                 style={{ color: isDark ? 'rgba(248, 248, 248, 0.5)' : 'rgba(18, 18, 21, 0.5)' }}
@@ -406,14 +411,17 @@ function TextPreview({ content }: { content: string }) {
   return (
     <ScrollView 
       className="flex-1 px-4 py-4"
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator={true}
+      style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}
     >
       <Text
         style={{
           color: isDark ? '#f8f8f8' : '#121215',
           fontFamily: 'monospace',
+          fontSize: 13,
+          lineHeight: 20,
         }}
-        className="text-xs leading-5"
+        selectable
       >
         {content}
       </Text>
@@ -436,12 +444,14 @@ function CsvPreview({ content }: { content: string }) {
   return (
     <ScrollView 
       horizontal
-      showsHorizontalScrollIndicator={false}
+      showsHorizontalScrollIndicator={true}
       className="flex-1"
+      style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}
     >
       <ScrollView 
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         className="px-4 py-4"
+        style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}
       >
         {/* Headers */}
         <View className="flex-row border-b pb-2 mb-2"

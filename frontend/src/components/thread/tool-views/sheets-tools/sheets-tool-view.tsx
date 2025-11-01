@@ -12,7 +12,6 @@ import { XlsxRenderer } from '@/components/file-renderers/xlsx-renderer';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/components/AuthProvider';
 import { fetchFileContent } from '@/hooks/react-query/files/use-file-queries';
-import { getApiUrl } from '@/lib/get-api-url';
 
 function getFileUrl(sandboxId: string | undefined, path: string): string {
   if (!sandboxId) return path;
@@ -22,7 +21,7 @@ function getFileUrl(sandboxId: string | undefined, path: string): string {
   try {
     path = path.replace(/\\u([0-9a-fA-F]{4})/g, (_, hexCode) => String.fromCharCode(parseInt(hexCode, 16)));
   } catch {}
-  const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+  const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
   url.searchParams.append('path', path);
   return url.toString();
 }

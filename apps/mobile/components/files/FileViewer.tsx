@@ -4,12 +4,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Modal, Pressable, ActivityIndicator, Share, Platform } from 'react-native';
+import { View, Modal, Pressable, Share, Platform } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
+import { KortixLoader } from '@/components/ui';
 import { X, Download, Share2, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { BlurView } from 'expo-blur';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -181,29 +181,21 @@ export function FileViewer({
   return (
     <Modal
       visible={visible}
-      animationType="fade"
-      transparent
+      animationType="slide"
+      presentationStyle="fullScreen"
       onRequestClose={handleClose}
-      statusBarTranslucent
     >
-      <View className="flex-1">
-        {/* Blur Background */}
-        <BlurView
-          intensity={isDark ? 80 : 60}
-          tint={isDark ? 'dark' : 'light'}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-
+      <View className="flex-1" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
         {/* Header */}
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(200)}
-          className="px-4 pt-12 pb-4 flex-row items-center justify-between"
+          className="px-4 pt-12 pb-4 flex-row items-center justify-between border-b"
           style={{
-            backgroundColor: isDark ? 'rgba(18, 18, 21, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            backgroundColor: isDark ? '#121215' : '#ffffff',
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
           }}
         >
-          {/* File Name */}
           <View className="flex-1 min-w-0 mr-4">
             <Text
               style={{ color: isDark ? '#f8f8f8' : '#121215' }}
@@ -295,7 +287,7 @@ export function FileViewer({
         <View className="flex-1">
           {isLoading ? (
             <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#000000'} />
+              <KortixLoader size="large" />
               <Text className="text-sm text-muted-foreground mt-4">
                 Loading file...
               </Text>

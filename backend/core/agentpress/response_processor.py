@@ -1474,9 +1474,7 @@ class ResponseProcessor:
     # Tool execution methods
     async def _execute_tool(self, tool_call: Dict[str, Any]) -> ToolResult:
         """Execute a single tool call and return the result."""
-        span = None
-        if self.trace is not None:
-            span = self.trace.span(name=f"execute_tool.{tool_call['function_name']}", input=tool_call["arguments"])
+        span = self.trace.span(name=f"execute_tool.{tool_call['function_name']}", input=tool_call["arguments"])
         function_name = "unknown"
         try:
             function_name = tool_call["function_name"]
@@ -1485,8 +1483,7 @@ class ResponseProcessor:
             logger.debug(f"🔧 EXECUTING TOOL: {function_name}")
             # logger.debug(f"📝 RAW ARGUMENTS TYPE: {type(arguments)}")
             logger.debug(f"📝 RAW ARGUMENTS VALUE: {arguments}")
-            if self.trace is not None:
-                self.trace.event(name="executing_tool", level="DEFAULT", status_message=(f"Executing tool: {function_name} with arguments: {arguments}"))
+            self.trace.event(name="executing_tool", level="DEFAULT", status_message=(f"Executing tool: {function_name} with arguments: {arguments}"))
 
             # Get available functions from tool registry
             logger.debug(f"🔍 Looking up tool function: {function_name}")
@@ -1498,8 +1495,7 @@ class ResponseProcessor:
             if not tool_fn:
                 logger.error(f"❌ Tool function '{function_name}' not found in registry")
                 # logger.error(f"❌ Available functions: {list(available_functions.keys())}")
-                if span is not None:
-                    span.end(status_message="tool_not_found", level="ERROR")
+                span.end(status_message="tool_not_found", level="ERROR")
                 return ToolResult(success=False, output=f"Tool function '{function_name}' not found. Available: {list(available_functions.keys())}")
 
             logger.debug(f"✅ Found tool function for '{function_name}'")
@@ -1552,8 +1548,7 @@ class ResponseProcessor:
                     logger.error(f"❌ Tool returned invalid result type: {type(result)}")
                     result = ToolResult(success=False, output=f"Tool returned invalid result type: {type(result)}")
 
-            if span is not None:
-                span.end(status_message="tool_executed", output=str(result))
+            span.end(status_message="tool_executed", output=str(result))
             return result
 
         except Exception as e:
@@ -1561,8 +1556,7 @@ class ResponseProcessor:
             logger.error(f"❌ Error type: {type(e).__name__}")
             logger.error(f"❌ Tool call data: {tool_call}")
             logger.error(f"❌ Full traceback:", exc_info=True)
-            if span is not None:
-                span.end(status_message="critical_error", output=str(e), level="ERROR")
+            span.end(status_message="critical_error", output=str(e), level="ERROR")
             return ToolResult(success=False, output=f"Critical error executing tool: {str(e)}")
 
     async def _execute_tools(

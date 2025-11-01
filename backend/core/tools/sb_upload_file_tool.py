@@ -66,8 +66,8 @@ class SandboxUploadFileTool(SandboxToolsBase):
             
             try:
                 file_info = await self.sandbox.fs.get_file_info(full_path)
-                if file_info.size > 100 * 1024 * 1024 * 1024:  # 100GB limit
-                    return self.fail_response(f"File '{file_path}' is too large (>100GB). Please reduce file size before uploading.")
+                if file_info.size > 50 * 1024 * 1024:  # 50MB limit
+                    return self.fail_response(f"File '{file_path}' is too large (>50MB). Please reduce file size before uploading.")
             except Exception:
                 return self.fail_response(f"File '{file_path}' not found in workspace.")
             

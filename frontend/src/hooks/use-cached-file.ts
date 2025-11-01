@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
-import { getApiUrl } from '@/lib/get-api-url';
 
 // Global cache to persist between component mounts
 const fileCache = new Map<string, {
@@ -95,7 +94,7 @@ export function useCachedFile<T = string>(
       // Use normalized path consistently
       const normalizedPath = normalizePath(filePath || '');
       
-      const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+      const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
       
       // Properly encode the path parameter for UTF-8 support
       url.searchParams.append('path', normalizedPath);
@@ -434,7 +433,7 @@ export const FileCache = {
       // Create a promise for this preload and store it
       const preloadPromise = (async () => {
         try {        
-          const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+          const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
           
           // Properly encode the path parameter for UTF-8 support
           url.searchParams.append('path', normalizedPath);
@@ -567,7 +566,7 @@ export async function getCachedFile(
   
   // Fetch fresh content
   try {
-    const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+    const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
     url.searchParams.append('path', normalizedPath);
     
     const attemptFetch = async (isRetry: boolean = false): Promise<Response> => {
@@ -653,7 +652,7 @@ export async function fetchFileContent(
   const attemptFetch = async (isRetry: boolean = false): Promise<string | Blob | any> => {
     try {
       // Prepare the API URL
-      const apiUrl = `${getApiUrl()}/sandboxes/${sandboxId}/files/content`;
+      const apiUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`;
       const url = new URL(apiUrl);
       url.searchParams.append('path', filePath);
       

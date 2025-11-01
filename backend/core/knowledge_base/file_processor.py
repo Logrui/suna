@@ -16,7 +16,7 @@ from core.services.llm import make_llm_api_call
 
 class FileProcessor:
     SUPPORTED_EXTENSIONS = {'.txt', '.pdf', '.docx'}
-    MAX_FILE_SIZE = 100 * 1024 * 1024 * 1024  # 100GB limit
+    MAX_FILE_SIZE = 50 * 1024 * 1024
     
     def __init__(self):
         self.db = DBConnection()

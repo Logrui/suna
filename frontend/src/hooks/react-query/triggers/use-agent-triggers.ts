@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TriggerConfiguration } from '@/components/agents/triggers/types';
 import { createClient } from '@/lib/supabase/client';
-import { getApiUrl } from '@/lib/get-api-url';
 
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 const fetchAgentTriggers = async (agentId: string): Promise<TriggerConfiguration[]> => {
     const supabase = createClient();
