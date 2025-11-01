@@ -53,7 +53,7 @@ export function KnowledgeBasePage() {
                     {activeTab === "knowledge-base" && (
                         <KnowledgeBaseManager
                             showHeader={true}
-                            showRecentFiles={true}
+                            showRecentFiles={false}
                             enableAssignments={false}
                         />
                     )}
