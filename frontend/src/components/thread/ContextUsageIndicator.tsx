@@ -12,6 +12,9 @@ interface ContextUsageIndicatorProps {
   className?: string
 }
 
+// Display threshold (as percentage) - change this to adjust when indicator shows
+const CONTEXT_DISPLAY_THRESHOLD = 25  // Was 75, now 25%
+
 export const ContextUsageIndicator = ({
   threadId,
   modelName,
@@ -33,12 +36,15 @@ export const ContextUsageIndicator = ({
   const rawPct = (current_tokens / context_window) * 100
   const percentage = Math.max(0, Math.min(100, rawPct))
 
+  // Hide if below threshold
+  if (percentage < CONTEXT_DISPLAY_THRESHOLD) return null
+
   const radius = radiusProp
   const strokeWidth = strokeWidthProp
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference - (percentage / 100) * circumference
 
-  const getNeutralStroke = (pct: number) => (pct < 75 ? "var(--color-muted-foreground)" : "var(--color-foreground)")
+  const getNeutralStroke = (pct: number) => (pct < CONTEXT_DISPLAY_THRESHOLD ? "var(--color-muted-foreground)" : "var(--color-foreground)")
   const strokeColor = getNeutralStroke(percentage)
 
   const size = (radius + strokeWidth) * 2

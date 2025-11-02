@@ -351,6 +351,32 @@ class ModelRegistry:
             ]
         ))
         
+        self.register(Model(
+            id="gemini/gemini-2.5-computer-use-preview",
+            name="Gemini 2.5 Computer Use Preview",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-2.5-computer-use-preview", "Gemini 2.5 Computer Use Preview", "gemini-2.5-computer-use-preview-10-2025", "models/gemini-2.5-computer-use-preview-10-2025"],
+            context_window=131_072,
+            max_output_tokens=65_536,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.25,
+                output_cost_per_million_tokens=10.00
+            ),
+            tier_availability=["paid"],
+            priority=97,
+            enabled=config.GEMINI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "gemini/gemini-2.5-pro",
+                "openai/gpt-4o" if config.OPENAI_API_KEY else "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            ]
+        ))
+        
         # OpenAI-Compatible Models (for Ollama, LM Studio, vLLM, etc.)
         # Note: Actual registration happens in initialize_ollama_models() called during app startup
         # This ensures we don't block synchronous initialization with async API calls
