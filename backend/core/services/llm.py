@@ -259,6 +259,19 @@ async def make_llm_api_call(
         return response
         
     except Exception as e:
+        # Check if this is a NotFoundError (upstream issue - don't use fallbacks)
+        is_not_found = any(keyword in str(e).lower() for keyword in ['notfounderror', 'does not exist', 'model not found', 'no such model'])
+        
+        if is_not_found:
+            # NotFoundError indicates an upstream issue with the model not being available
+            # Don't use fallbacks - we need to debug why the model isn't accessible
+            logger.error(f"Model not found error for {resolved_model_name}. This is an upstream issue that needs debugging.")
+            logger.debug(f"Full error: {str(e)}")
+            
+            processed_error = ErrorProcessor.process_llm_error(e, context={"model": model_name})
+            ErrorProcessor.log_error(processed_error)
+            raise LLMError(processed_error.message)
+        
         # Check if this is a rate limit error
         is_rate_limit = any(keyword in str(e).lower() for keyword in ['rate_limit', 'quota', 'ratelimit', '429', 'overloaded'])
         
@@ -306,6 +319,19 @@ async def _wrap_streaming_response(response, resolved_model_name: str = None, pa
         async for chunk in response:
             yield chunk
     except Exception as e:
+        # Check if this is a NotFoundError (upstream issue - don't use fallbacks)
+        is_not_found = any(keyword in str(e).lower() for keyword in ['notfounderror', 'does not exist', 'model not found', 'no such model'])
+        
+        if is_not_found:
+            # NotFoundError indicates an upstream issue with the model not being available
+            # Don't use fallbacks - we need to debug why the model isn't accessible
+            logger.error(f"Model not found error during streaming for {resolved_model_name}. This is an upstream issue that needs debugging.")
+            logger.debug(f"Full error: {str(e)}")
+            
+            processed_error = ErrorProcessor.process_llm_error(e)
+            ErrorProcessor.log_error(processed_error)
+            raise LLMError(processed_error.message)
+        
         # Check if this is a rate limit error that occurred mid-stream
         is_rate_limit = any(keyword in str(e).lower() 
                            for keyword in ['rate_limit', 'quota', 'ratelimit', '429', 'overloaded', 'mid', 'stream', 'fallback'])

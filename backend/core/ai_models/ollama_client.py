@@ -187,10 +187,11 @@ class OllamaClient:
         """
         Construct human-friendly display name from model metadata.
         
-        Format: "{BaseName} {Size} {Finetune} ({Quantization})"
+        Format: "{ModelName} ({Quantization} - {Size})"
         Examples:
-            - "Llama-3.2 3B Instruct (Q4_K_M)"
-            - "DeepSeek-R1 8B (Q4_K_M)"
+            - "Llama 3.2 (Q4_K_M - 3B)"
+            - "DeepSeek-R1 (Q4_K_M - 8B)"
+            - "GPT-OSS (Q4_0 - 20.9B)"
             
         Args:
             model_info: Dictionary from /api/show
@@ -200,46 +201,49 @@ class OllamaClient:
         Returns:
             Human-friendly display name
         """
-        basename = model_info.get("general.basename", "")
-        finetune = model_info.get("general.finetune", "")
-        size_label = model_info.get("general.size_label", "")
-        
-        # Fallback to details if model_info fields missing
-        if not size_label and details:
-            size_label = details.get("parameter_size", "")
-        
+        # Extract basic info
         quantization = details.get("quantization_level", "") if details else ""
+        size_label = details.get("parameter_size", "") if details else ""
         
-        # Build display name
-        parts = []
+        # Parse the model name to get a nice display name
+        # Start with fallback_name which looks like "llama3.2:latest" or "gpt-oss:latest"
+        model_name_raw = fallback_name.split(':')[0]  # Remove :latest tag
         
+        # Try to get basename from model_info first (more reliable if available)
+        basename = model_info.get("general.basename", "")
         if basename:
-            parts.append(basename)
+            # If we have basename, use it - it's already nicely formatted
+            display_model_name = basename
+        else:
+            # Otherwise, manually parse and format the model name
+            # Convert "llama3.2" -> "Llama 3.2"
+            # Convert "gpt-oss" -> "GPT-OSS"
+            # Convert "deepseek-r1" -> "DeepSeek-R1"
+            
+            formatted = model_name_raw.replace('-', ' ').replace('_', ' ')
+            words = formatted.split()
+            
+            # Special handling for known patterns
+            if "gpt" in model_name_raw.lower():
+                display_model_name = "GPT-OSS" if "gpt-oss" in model_name_raw.lower() else "GPT"
+            elif "deepseek" in model_name_raw.lower():
+                display_model_name = "-".join(word.capitalize() for word in words)
+            elif "qwen" in model_name_raw.lower():
+                # Handle qwen2.5-coder -> Qwen2.5 Coder
+                display_model_name = model_name_raw.replace("-", " ").title()
+            else:
+                # Default: capitalize each word
+                display_model_name = " ".join(word.capitalize() for word in words)
         
-        if size_label:
-            parts.append(size_label)
+        # Build the final display name: "{Name} ({Quantization} - {Size})"
+        if quantization and size_label:
+            display_name = f"{display_model_name} ({quantization} - {size_label})"
+        elif quantization:
+            display_name = f"{display_model_name} ({quantization})"
+        elif size_label:
+            display_name = f"{display_model_name} ({size_label})"
+        else:
+            display_name = display_model_name
         
-        if finetune:
-            parts.append(finetune)
-        
-        # Add quantization in parentheses if available
-        if parts:
-            display_name = " ".join(parts)
-            if quantization:
-                display_name = f"{display_name} ({quantization})"
-            logger.debug(f"Constructed display name: {display_name}")
-            return display_name
-        
-        # Fallback: parse model name manually
-        # Convert "llama3.2:latest" -> "Llama 3.2"
-        name_part = fallback_name.split(':')[0]  # Remove tag
-        
-        # Capitalize and add spaces
-        formatted = name_part.replace('-', ' ').replace('_', ' ')
-        formatted = ' '.join(word.capitalize() for word in formatted.split())
-        
-        if quantization:
-            formatted = f"{formatted} ({quantization})"
-        
-        logger.debug(f"Fallback display name: {formatted}")
-        return formatted
+        logger.debug(f"Constructed display name: {display_name}")
+        return display_name
