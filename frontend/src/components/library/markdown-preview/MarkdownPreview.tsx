@@ -12,9 +12,9 @@ import { cn } from '@/lib/utils';
 interface MarkdownPreviewProps {
   /** Raw markdown content to preview */
   markdown: string;
-  /** Maximum number of lines to show (default: 5) */
+  /** Maximum number of lines to show (default: 20) */
   maxLines?: number;
-  /** Maximum number of characters to show (default: 300) */
+  /** Maximum number of characters to show (default: 1600) */
   maxChars?: number;
   /** Optional CSS class */
   className?: string;
@@ -50,64 +50,102 @@ function truncateMarkdown(
 }
 
 /**
- * Custom renderers for preview mode (minimal, text-focused)
+ * Custom renderers for preview mode with proper formatting
  */
 const previewComponents = {
-  // Headings: render without # markers
-  h1: ({ children }: any) => <span className="font-semibold">{children}</span>,
-  h2: ({ children }: any) => <span className="font-semibold">{children}</span>,
-  h3: ({ children }: any) => <span className="font-semibold">{children}</span>,
-  h4: ({ children }: any) => <span className="font-semibold">{children}</span>,
-  h5: ({ children }: any) => <span className="font-semibold">{children}</span>,
-  h6: ({ children }: any) => <span className="font-semibold">{children}</span>,
+  // Headings: render with proper sizing and spacing
+  h1: ({ children }: any) => <h1 className="text-2xl font-semibold mb-2 mt-3 first:mt-0">{children}</h1>,
+  h2: ({ children }: any) => <h2 className="text-xl font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
+  h3: ({ children }: any) => <h3 className="text-lg font-semibold mb-1.5 mt-2.5 first:mt-0">{children}</h3>,
+  h4: ({ children }: any) => <h4 className="text-base font-semibold mb-1.5 mt-2 first:mt-0">{children}</h4>,
+  h5: ({ children }: any) => <h5 className="text-base font-medium mb-1 mt-2 first:mt-0">{children}</h5>,
+  h6: ({ children }: any) => <h6 className="text-base font-medium mb-1 mt-2 first:mt-0">{children}</h6>,
 
   // Inline elements
-  strong: ({ children }: any) => <strong>{children}</strong>,
-  em: ({ children }: any) => <em>{children}</em>,
+  strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }: any) => <em className="italic">{children}</em>,
 
-  // Links: render as text with accent color
-  a: ({ children }: any) => <span className="text-blue-500">{children}</span>,
+  // Links: render with accent color
+  a: ({ children, href }: any) => <span className="text-blue-400 underline">{children}</span>,
 
-  // Paragraphs: inline flow
-  p: ({ children }: any) => <span>{children}</span>,
+  // Paragraphs: block-level with spacing
+  p: ({ children }: any) => <p className="mb-2 leading-relaxed">{children}</p>,
 
   // Line breaks
   br: () => <br />,
 
-  // Lists: show first item only
-  ul: ({ children }: any) => <span>{children}</span>,
-  ol: ({ children }: any) => <span>{children}</span>,
-  li: ({ children }: any) => (
-    <span className="inline">
-      • {children}{' '}
-    </span>
-  ),
+  // Lists: proper formatting
+  ul: ({ children }: any) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+  ol: ({ children }: any) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+  li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
 
-  // Code blocks and inline code: show with minimal styling
+  // Code blocks and inline code
   code: ({ node, inline, className, children, ...props }: any) => {
     if (inline) {
       return (
-        <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+        <code className="bg-muted/50 px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>
       );
     }
 
-    // For code blocks in preview, just show first line
-    const firstLine = String(children).split('\n')[0];
-    const match = /language-(\w+)/.exec(className || '');
-    const language = match ? match[1] : 'code';
-
+    // For code blocks, show with proper formatting
     return (
-      <span className="inline text-xs">
-        [{language}] {firstLine}
-      </span>
+      <pre className="bg-muted/50 p-2 rounded mb-2 overflow-x-auto">
+        <code className="text-sm font-mono">{children}</code>
+      </pre>
     );
   },
 
-  // Skip complex elements for preview
-  blockquote: ({ children }: any) => <span>{children}</span>,
-  table: () => <span>[Table]</span>,
-  img: () => <span>[Image]</span>,
-  hr: () => null,
+  // Blockquotes
+  blockquote: ({ children }: any) => (
+    <blockquote className="border-l-2 border-muted-foreground/30 pl-3 mb-2 italic text-muted-foreground">
+      {children}
+    </blockquote>
+  ),
+
+  // Tables - properly formatted
+  table: ({ children }: any) => (
+    <div className="overflow-x-auto mb-3">
+      <table className="min-w-full border-collapse border border-border/30 text-sm">
+        {children}
+      </table>
+    </div>
+  ),
+  
+  thead: ({ children }: any) => (
+    <thead className="bg-muted/30">
+      {children}
+    </thead>
+  ),
+  
+  tbody: ({ children }: any) => (
+    <tbody>
+      {children}
+    </tbody>
+  ),
+  
+  tr: ({ children }: any) => (
+    <tr className="border-b border-border/20">
+      {children}
+    </tr>
+  ),
+  
+  th: ({ children }: any) => (
+    <th className="border border-border/20 px-3 py-1.5 text-left font-semibold">
+      {children}
+    </th>
+  ),
+  
+  td: ({ children }: any) => (
+    <td className="border border-border/20 px-3 py-1.5">
+      {children}
+    </td>
+  ),
+  
+  // Images - show placeholder
+  img: ({ alt }: any) => <div className="text-sm text-muted-foreground mb-1">[Image: {alt || 'untitled'}]</div>,
+  
+  // Horizontal rule
+  hr: () => <hr className="my-2 border-muted-foreground/20" />,
 };
 
 /**
@@ -116,8 +154,8 @@ const previewComponents = {
  */
 export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   markdown,
-  maxLines = 5,
-  maxChars = 300,
+  maxLines = 20,
+  maxChars = 1600,
   className,
 }) => {
   if (!markdown) {
@@ -129,8 +167,9 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   return (
     <div
       className={cn(
-        'text-sm text-muted-foreground line-clamp-3 prose-sm prose-invert max-w-none',
-        'break-words whitespace-normal overflow-hidden text-ellipsis',
+        'text-lg leading-relaxed text-foreground prose prose-invert max-w-none',
+        'break-words overflow-hidden',
+        '[&>*:first-child]:mt-0',
         className
       )}
     >

@@ -10,6 +10,8 @@ import { listSandboxFiles, getProjects, getSandboxFileContent } from '@/lib/api'
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
 import { FileIcon } from '@/components/library/file-icons';
 import { MarkdownPreview } from '@/components/library/markdown-preview';
+import { FileCard } from '@/components/library/file-card';
+import { getFileType, FILE_ICONS } from '@/lib/utils/fileTypeDetector';
 import type { ThreadWithProject } from '@/hooks/react-query/sidebar/use-sidebar';
 
 interface ThreadCardProps {
@@ -37,22 +39,33 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
 
   const project = projects.find(p => p.id === thread.projectId);
   const sandboxId = project?.sandbox?.id;
+
+  console.log('🔧 Project/Sandbox Debug:', {
+    threadName: thread.projectName,
+    projectId: thread.projectId,
+    projectFound: !!project,
+    sandboxId,
+    sandboxObject: project?.sandbox,
+  });
   
   // Fetch files for this thread's project sandbox - fetch immediately for visible threads
   const { data: files = [], isLoading: filesLoading, error: filesError } = useQuery({
     queryKey: ['sandbox-files', sandboxId],
     queryFn: async () => {
-      if (!sandboxId) return [];
+      if (!sandboxId) {
+        return [];
+      }
       try {
         const fileList = await listSandboxFiles(sandboxId, '/workspace');
         // Filter out directories, only show files, and sort by modification time (newest first)
-        return fileList
+        const filtered = fileList
           .filter((file: any) => !file.is_dir)
           .sort((a: any, b: any) => {
             const aTime = new Date(a.mod_time).getTime();
             const bTime = new Date(b.mod_time).getTime();
             return bTime - aTime; // Newest first
           });
+        return filtered;
       } catch (error: any) {
         // Sandbox might not exist yet (404/500) - this is normal for new threads
         console.error('Failed to fetch files:', error);
@@ -68,13 +81,22 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
   const firstMarkdownFile = files.find((file: any) => file.name?.endsWith('.md'));
 
   // Fetch markdown preview content (only when first markdown file exists)
-  const { data: markdownContent = '' } = useQuery({
+  const { data: markdownContent = '', isLoading: markdownLoading, error: markdownError } = useQuery({
     queryKey: ['markdown-preview', sandboxId, firstMarkdownFile?.path],
     queryFn: async () => {
       if (!sandboxId || !firstMarkdownFile?.path) return '';
       try {
         const content = await getSandboxFileContent(sandboxId, firstMarkdownFile.path);
-        return typeof content === 'string' ? content : '';
+        
+        // Handle both string and Blob responses
+        let contentStr = '';
+        if (typeof content === 'string') {
+          contentStr = content;
+        } else if (content instanceof Blob) {
+          contentStr = await content.text();
+        }
+        
+        return contentStr;
       } catch (error) {
         console.error('Failed to fetch markdown preview:', error);
         return '';
@@ -83,6 +105,16 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
     enabled: !!sandboxId && !!firstMarkdownFile?.path,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes
     retry: false,
+  });
+
+  // Debug markdown state
+  console.log('📝 Markdown Preview State:', {
+    threadName,
+    hasFirstMarkdownFile: !!firstMarkdownFile,
+    markdownContentLength: markdownContent?.length || 0,
+    markdownLoading,
+    markdownError,
+    willShowPreview: !!(firstMarkdownFile && markdownContent),
   });
   
   // Format date
@@ -123,97 +155,92 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
   const displayedFiles = showAllFiles ? files : files.slice(0, 3);
   const remainingCount = files.length - 3;
 
-  // Manus-style vertical list layout (always use this, ignore viewMode for now)
+  // Manus-style layout: Thread header + grid of file cards
   return (
-    <div className="flex flex-col pb-6 px-6 gap-3">
-      {/* Header Row: Title + Date + Favorite */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h3 
-            className="font-medium text-base md:text-lg truncate cursor-pointer hover:underline"
-            onClick={handleCardClick}
-          >
-            {threadName}
-          </h3>
-        </div>
-        
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {getRelativeDate()}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleFavoriteClick}
-            className="h-8 w-8"
-          >
-            <Star
-              className={cn(
-                'w-4 h-4',
-                isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
-              )}
-            />
-          </Button>
-        </div>
-      </div>
-
-      {/* Markdown Preview - Shows first markdown file preview */}
-      {firstMarkdownFile && markdownContent && (
-        <div
-          className="pl-2 py-2 border-l border-muted-foreground/20 cursor-pointer hover:border-muted-foreground/50 transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedFilePath(firstMarkdownFile.path);
-            setFileViewerOpen(true);
-          }}
-        >
-          <MarkdownPreview markdown={markdownContent} maxLines={5} maxChars={300} />
-        </div>
-      )}
-
-      {/* Files Section - Expandable List */}
-      {filesLoading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground/60 py-2">
-          <FileText className="w-4 h-4 animate-pulse" />
-          <span className="italic">Loading files...</span>
-        </div>
-      ) : files.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {displayedFiles.map((file: any, index: number) => (
-            <div
-              key={file.path || index}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground cursor-pointer group"
-              onClick={(e) => handleFileClick(e, file.path)}
+    <>
+      <div className="flex flex-col gap-3">
+        {/* Header Row: Title + Date + Favorite */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <h3 
+              className="font-medium text-base md:text-lg truncate cursor-pointer hover:underline"
+              onClick={handleCardClick}
             >
-              <FileIcon filename={file.name || ''} className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate group-hover:underline">{file.name || 'Untitled File'}</span>
-              <ChevronRight className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          ))}
+              {threadName}
+            </h3>
+          </div>
           
-          {remainingCount > 0 && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
+              {getRelativeDate()}
+            </span>
             <Button
               variant="ghost"
-              size="sm"
-              onClick={handleExpandFiles}
-              className="self-start text-sm h-auto py-1 px-2 -ml-2"
+              size="icon"
+              onClick={handleFavoriteClick}
+              className="h-8 w-8"
             >
-              <ChevronDown 
+              <Star
                 className={cn(
-                  "w-3 h-3 mr-1 transition-transform",
-                  showAllFiles && "rotate-180"
-                )} 
+                  'w-4 h-4',
+                  isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
+                )}
               />
-              {showAllFiles ? 'Show less' : `+${remainingCount} more file${remainingCount > 1 ? 's' : ''}`}
             </Button>
-          )}
+          </div>
         </div>
-      ) : (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground/60 py-2">
-          <FileText className="w-4 h-4" />
-          <span className="italic">No files associated with this thread</span>
-        </div>
-      )}
+
+        {/* File Cards Grid - Manus Style */}
+        {filesLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground/60 py-2">
+            <FileText className="w-4 h-4 animate-pulse" />
+            <span className="italic">Loading files...</span>
+          </div>
+        ) : files.length > 0 ? (
+          <>
+            <div className="grid gap-4 items-start grid-cols-1 md:grid-cols-3">
+              {files.slice(0, showAllFiles ? files.length : 6).map((file: any) => {
+                const fileType = getFileType(file.name || '');
+                const IconComponent = FILE_ICONS[fileType];
+                const isMarkdown = file.name?.endsWith('.md');
+                
+                return (
+                  <FileCard
+                    key={file.path}
+                    file={file}
+                    IconComponent={IconComponent}
+                    isMarkdown={isMarkdown}
+                    sandboxId={sandboxId || ''}
+                    onFileClick={handleFileClick}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Show More Button */}
+            {files.length > 6 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExpandFiles}
+                className="self-start text-sm h-auto py-1 px-2"
+              >
+                <ChevronDown 
+                  className={cn(
+                    "w-3 h-3 mr-1 transition-transform",
+                    showAllFiles && "rotate-180"
+                  )} 
+                />
+                {showAllFiles ? 'Show less' : `+${files.length - 6} more file${files.length - 6 > 1 ? 's' : ''}`}
+              </Button>
+            )}
+          </>
+        ) : (
+          <div className="text-sm text-muted-foreground/60 py-2">
+            No files associated with this thread
+          </div>
+        )}
+      </div>
 
       {/* File Viewer Modal */}
       {sandboxId && (
@@ -225,6 +252,6 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
           project={project}
         />
       )}
-    </div>
+    </>
   );
 }

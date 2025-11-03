@@ -3,6 +3,13 @@
  * Maps file extensions to icon types based on Manus design system
  */
 
+import { DocumentIcon } from '@/components/library/file-icons/icons/DocumentIcon';
+import { SpreadsheetIcon } from '@/components/library/file-icons/icons/SpreadsheetIcon';
+import { CodeIcon } from '@/components/library/file-icons/icons/CodeIcon';
+import { PdfIcon } from '@/components/library/file-icons/icons/PdfIcon';
+import { ArchiveIcon } from '@/components/library/file-icons/icons/ArchiveIcon';
+import { DefaultIcon } from '@/components/library/file-icons/icons/DefaultIcon';
+
 export type FileType = 
   | 'document' 
   | 'spreadsheet' 
@@ -10,6 +17,18 @@ export type FileType =
   | 'pdf' 
   | 'archive' 
   | 'default';
+
+/**
+ * Map of file types to their corresponding icon components
+ */
+export const FILE_ICONS = {
+  document: DocumentIcon,
+  spreadsheet: SpreadsheetIcon,
+  code: CodeIcon,
+  pdf: PdfIcon,
+  archive: ArchiveIcon,
+  default: DefaultIcon,
+} as const;
 
 interface FileTypeConfig {
   extensions: string[];
