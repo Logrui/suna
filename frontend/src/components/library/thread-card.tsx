@@ -67,7 +67,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
   // Find the first markdown file for preview
   const firstMarkdownFile = files.find((file: any) => file.name?.endsWith('.md'));
 
-  // Fetch markdown preview content (only when expanded and file exists)
+  // Fetch markdown preview content (only when first markdown file exists)
   const { data: markdownContent = '' } = useQuery({
     queryKey: ['markdown-preview', sandboxId, firstMarkdownFile?.path],
     queryFn: async () => {
@@ -80,7 +80,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
         return '';
       }
     },
-    enabled: !!sandboxId && !!firstMarkdownFile?.path && isExpanded,
+    enabled: !!sandboxId && !!firstMarkdownFile?.path,
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes
     retry: false,
   });
@@ -157,8 +157,8 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
         </div>
       </div>
 
-      {/* Markdown Preview - Shows first markdown file preview when expanded */}
-      {isExpanded && firstMarkdownFile && markdownContent && (
+      {/* Markdown Preview - Shows first markdown file preview */}
+      {firstMarkdownFile && markdownContent && (
         <div
           className="pl-2 py-2 border-l border-muted-foreground/20 cursor-pointer hover:border-muted-foreground/50 transition-colors"
           onClick={(e) => {
