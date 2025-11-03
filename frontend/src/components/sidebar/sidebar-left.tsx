@@ -139,11 +139,12 @@ function UserProfileSection({ user }: { user: any }) {
 
 // Route to view mapping
 const routeMap: Record<string, string> = {
-  '/chats': '/chats',
+  '/chats': '/library', // Right-click opens library
   '/agents': '/agents',
   '/triggers': '/triggers',
   '/workspaces': '/workspaces',
   '/knowledge': '/knowledge',
+  '/library': '/library',
   '/inbox': '/inbox',
 };
 
