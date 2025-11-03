@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,6 +98,7 @@ export function KnowledgeBaseManager({
     initialFolderId,
     initialFileId
 }: KnowledgeBaseManagerProps) {
+    const router = useRouter();
     const [treeData, setTreeData] = useState<TreeItem[]>([]);
     const [folderEntries, setFolderEntries] = useState<{ [folderId: string]: Entry[] }>({});
     const [loadingFolders, setLoadingFolders] = useState<{ [folderId: string]: boolean }>({});
@@ -210,6 +212,55 @@ export function KnowledgeBaseManager({
         }
     }, [enableAssignments, agentId, foldersLoading, folders]);
 
+    // Handle URL params for sidebar navigation (auto-expand folder and open file preview)
+    React.useEffect(() => {
+        if (foldersLoading || folders.length === 0) return;
+
+        // Handle folder navigation from sidebar
+        if (initialFolderId && !folderEntries[initialFolderId]) {
+            // Fetch folder entries if not already loaded
+            fetchFolderEntries(initialFolderId);
+            
+            // Auto-expand the folder in the tree
+            setTreeData(prev => prev.map(item => {
+                if (item.id === initialFolderId) {
+                    return { ...item, expanded: true };
+                }
+                return item;
+            }));
+
+            // Scroll to the folder after a brief delay
+            setTimeout(() => {
+                const folderElement = document.querySelector(`[data-folder-id="${initialFolderId}"]`);
+                if (folderElement) {
+                    folderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 300);
+        }
+
+        // Handle file navigation from sidebar
+        if (initialFileId && initialFolderId) {
+            // Make sure folder is loaded first
+            if (!folderEntries[initialFolderId]) {
+                fetchFolderEntries(initialFolderId);
+            }
+            
+            // Find the file in folder entries and open preview
+            setTimeout(() => {
+                const entries = folderEntries[initialFolderId];
+                if (entries) {
+                    const file = entries.find(e => e.entry_id === initialFileId);
+                    if (file) {
+                        setFilePreviewModal({
+                            isOpen: true,
+                            file: file,
+                        });
+                    }
+                }
+            }, 500); // Wait for folder entries to load
+        }
+    }, [initialFolderId, initialFileId, foldersLoading, folders, folderEntries]);
+
     const loadAssignments = async () => {
         if (!agentId) return;
         
@@ -264,13 +315,32 @@ export function KnowledgeBaseManager({
     // File handling functions
     const handleFileSelect = (item: TreeItem) => {
         if (item.type === 'file' && item.data && 'entry_id' in item.data) {
+            const entry = item.data as Entry;
+            
+            // Update URL to reflect selection (keeps sidebar in sync)
+            router.replace(`/knowledge?folder=${entry.folder_id}&file=${entry.entry_id}`, { scroll: false });
+            
             setFilePreviewModal({
                 isOpen: true,
-                file: item.data,
+                file: entry,
             });
         } else {
             setSelectedItem(item);
         }
+    };
+
+    const handleCloseFilePreview = () => {
+        // Clear file param from URL when closing preview
+        const currentUrl = new URL(window.location.href);
+        const folderParam = currentUrl.searchParams.get('folder');
+        
+        if (folderParam) {
+            router.replace(`/knowledge?folder=${folderParam}`, { scroll: false });
+        } else {
+            router.replace('/knowledge', { scroll: false });
+        }
+        
+        setFilePreviewModal({ isOpen: false, file: null });
     };
 
     const fetchFolderEntries = async (folderId: string) => {
@@ -313,6 +383,11 @@ export function KnowledgeBaseManager({
                     : item
             )
         );
+
+        // Update URL when expanding a folder (keeps sidebar in sync)
+        if (!isCurrentlyExpanded) {
+            router.replace(`/knowledge?folder=${folderId}`, { scroll: false });
+        }
 
         if (folder && !isCurrentlyExpanded && !folderEntries[folderId]) {
             await fetchFolderEntries(folderId);
@@ -1166,7 +1241,7 @@ export function KnowledgeBaseManager({
             {filePreviewModal.file && (
                 <KBFilePreviewModal
                     isOpen={filePreviewModal.isOpen}
-                    onClose={() => setFilePreviewModal({ isOpen: false, file: null })}
+                    onClose={handleCloseFilePreview}
                     file={filePreviewModal.file}
                     onEditSummary={handleEditSummary}
                 />
