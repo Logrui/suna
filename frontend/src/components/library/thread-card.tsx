@@ -6,8 +6,10 @@ import { Star, FileText, ChevronRight, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { listSandboxFiles, getProjects } from '@/lib/api';
+import { listSandboxFiles, getProjects, getSandboxFileContent } from '@/lib/api';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
+import { FileIcon } from '@/components/library/file-icons';
+import { MarkdownPreview } from '@/components/library/markdown-preview';
 import type { ThreadWithProject } from '@/hooks/react-query/sidebar/use-sidebar';
 
 interface ThreadCardProps {
@@ -60,6 +62,27 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
     enabled: !!sandboxId, // Fetch immediately when sandboxId is available
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     retry: false, // Don't retry if sandbox doesn't exist
+  });
+
+  // Find the first markdown file for preview
+  const firstMarkdownFile = files.find((file: any) => file.name?.endsWith('.md'));
+
+  // Fetch markdown preview content (only when expanded and file exists)
+  const { data: markdownContent = '' } = useQuery({
+    queryKey: ['markdown-preview', sandboxId, firstMarkdownFile?.path],
+    queryFn: async () => {
+      if (!sandboxId || !firstMarkdownFile?.path) return '';
+      try {
+        const content = await getSandboxFileContent(sandboxId, firstMarkdownFile.path);
+        return typeof content === 'string' ? content : '';
+      } catch (error) {
+        console.error('Failed to fetch markdown preview:', error);
+        return '';
+      }
+    },
+    enabled: !!sandboxId && !!firstMarkdownFile?.path && isExpanded,
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    retry: false,
   });
   
   // Format date
@@ -134,6 +157,20 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
         </div>
       </div>
 
+      {/* Markdown Preview - Shows first markdown file preview when expanded */}
+      {isExpanded && firstMarkdownFile && markdownContent && (
+        <div
+          className="pl-2 py-2 border-l border-muted-foreground/20 cursor-pointer hover:border-muted-foreground/50 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedFilePath(firstMarkdownFile.path);
+            setFileViewerOpen(true);
+          }}
+        >
+          <MarkdownPreview markdown={markdownContent} maxLines={5} maxChars={300} />
+        </div>
+      )}
+
       {/* Files Section - Expandable List */}
       {filesLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground/60 py-2">
@@ -148,7 +185,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground cursor-pointer group"
               onClick={(e) => handleFileClick(e, file.path)}
             >
-              <FileText className="w-4 h-4 flex-shrink-0" />
+              <FileIcon filename={file.name || ''} className="w-4 h-4 flex-shrink-0" />
               <span className="truncate group-hover:underline">{file.name || 'Untitled File'}</span>
               <ChevronRight className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
