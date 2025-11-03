@@ -77,6 +77,10 @@ interface KnowledgeBaseManagerProps {
     maxHeight?: string;
     /** Enable assignment mode for agents */
     enableAssignments?: boolean;
+    /** Initial folder ID from URL params (for sidebar navigation) */
+    initialFolderId?: string;
+    /** Initial file ID from URL params (for sidebar navigation) */
+    initialFileId?: string;
 }
 
 export function KnowledgeBaseManager({
@@ -89,7 +93,9 @@ export function KnowledgeBaseManager({
     emptyStateMessage,
     emptyStateContent,
     maxHeight,
-    enableAssignments = false
+    enableAssignments = false,
+    initialFolderId,
+    initialFileId
 }: KnowledgeBaseManagerProps) {
     const [treeData, setTreeData] = useState<TreeItem[]>([]);
     const [folderEntries, setFolderEntries] = useState<{ [folderId: string]: Entry[] }>({});

@@ -17,6 +17,10 @@ export function KnowledgeBasePage() {
         return tab || 'knowledge-base';
     }, [searchParams]);
 
+    // Get folder and file IDs from URL (for sidebar navigation)
+    const folderIdFromUrl = searchParams.get('folder');
+    const fileIdFromUrl = searchParams.get('file');
+
     const handleTabChange = (newTab: string) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('tab', newTab);
@@ -55,6 +59,8 @@ export function KnowledgeBasePage() {
                             showHeader={true}
                             showRecentFiles={false}
                             enableAssignments={false}
+                            initialFolderId={folderIdFromUrl || undefined}
+                            initialFileId={fileIdFromUrl || undefined}
                         />
                     )}
 
