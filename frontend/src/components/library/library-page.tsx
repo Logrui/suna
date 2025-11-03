@@ -1,20 +1,20 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getThreads, getProjects } from '@/lib/api';
 import { LibraryPageHeader } from './library-page-header';
 import { ThreadCard } from './thread-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, Search, Star } from 'lucide-react';
+import { LayoutGrid, List, Search, Star, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ThreadWithProject } from '@/hooks/react-query/sidebar/use-sidebar';
 
 type ViewMode = 'grid' | 'list';
 type FilterMode = 'all' | 'favorites';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 5; // Load 5 threads at a time
 const FAVORITES_KEY = 'library-favorites';
 
 export function LibraryPage() {
@@ -22,7 +22,9 @@ export function LibraryPage() {
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE); // Show 5 initially
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -68,6 +70,10 @@ export function LibraryPage() {
           updatedAt: thread.updated_at,
           iconName: project?.icon_name,
         };
+      })
+      .sort((a, b) => {
+        // Sort by updated_at descending (newest first)
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
   }, [threads, projects]);
 
@@ -106,17 +112,52 @@ export function LibraryPage() {
     return result;
   }, [threadsWithProjects, filterMode, favorites, searchQuery]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredThreads.length / ITEMS_PER_PAGE);
-  const paginatedThreads = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredThreads.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredThreads, currentPage]);
+  // Display limited threads (for progressive loading)
+  const displayedThreads = useMemo(() => {
+    return filteredThreads.slice(0, displayCount);
+  }, [filteredThreads, displayCount]);
 
-  // Reset to page 1 when filters change
+  const hasMore = filteredThreads.length > displayCount;
+
+  // Reset display count when filters change
   useEffect(() => {
-    setCurrentPage(1);
+    setDisplayCount(ITEMS_PER_PAGE);
   }, [filterMode, searchQuery]);
+
+  // Load more function
+  const loadMore = useCallback(() => {
+    if (isLoadingMore || !hasMore) return;
+    
+    setIsLoadingMore(true);
+    // Simulate slight delay for smooth UX
+    setTimeout(() => {
+      setDisplayCount(prev => prev + ITEMS_PER_PAGE);
+      setIsLoadingMore(false);
+    }, 300);
+  }, [isLoadingMore, hasMore]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasMore, isLoadingMore, loadMore]);
 
   return (
     <div className="min-h-screen">
@@ -210,7 +251,7 @@ export function LibraryPage() {
           <>
             {/* Thread List - Manus Style */}
             <div className="flex flex-col gap-3 md:gap-[12px]">
-              {paginatedThreads.map((thread) => (
+              {displayedThreads.map((thread) => (
                 <ThreadCard
                   key={thread.threadId}
                   thread={thread}
@@ -221,28 +262,15 @@ export function LibraryPage() {
               ))}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
+            {/* Infinite Scroll Trigger & Loading Spinner */}
+            {hasMore && (
+              <div 
+                ref={loadMoreRef}
+                className="flex items-center justify-center mt-8 py-4"
+              >
+                {isLoadingMore && (
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                )}
               </div>
             )}
           </>

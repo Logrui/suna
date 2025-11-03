@@ -36,25 +36,28 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
   const project = projects.find(p => p.id === thread.projectId);
   const sandboxId = project?.sandbox?.id;
   
-  // Fetch files for this thread's project sandbox
+  // Fetch files for this thread's project sandbox - fetch immediately for visible threads
   const { data: files = [], isLoading: filesLoading, error: filesError } = useQuery({
     queryKey: ['sandbox-files', sandboxId],
     queryFn: async () => {
       if (!sandboxId) return [];
       try {
-        const fileList = await listSandboxFiles(sandboxId, '/');
-        // Filter out directories, only show files
-        return fileList.filter((file: any) => file.type === 'file');
+        const fileList = await listSandboxFiles(sandboxId, '/workspace');
+        // Filter out directories, only show files, and sort by modification time (newest first)
+        return fileList
+          .filter((file: any) => !file.is_dir)
+          .sort((a: any, b: any) => {
+            const aTime = new Date(a.mod_time).getTime();
+            const bTime = new Date(b.mod_time).getTime();
+            return bTime - aTime; // Newest first
+          });
       } catch (error: any) {
-        // Sandbox might not exist yet (404) - this is normal for new threads
-        if (error?.message?.includes('404') || error?.message?.includes('not found')) {
-          return [];
-        }
+        // Sandbox might not exist yet (404/500) - this is normal for new threads
         console.error('Failed to fetch files:', error);
         return [];
       }
     },
-    enabled: !!sandboxId,
+    enabled: !!sandboxId, // Fetch immediately when sandboxId is available
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     retry: false, // Don't retry if sandbox doesn't exist
   });
@@ -146,7 +149,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
               onClick={(e) => handleFileClick(e, file.path)}
             >
               <FileText className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate group-hover:underline">{file.path || 'Untitled File'}</span>
+              <span className="truncate group-hover:underline">{file.name || 'Untitled File'}</span>
               <ChevronRight className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           ))}
@@ -173,6 +176,17 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
           <FileText className="w-4 h-4" />
           <span className="italic">No files associated with this thread</span>
         </div>
+      )}
+
+      {/* File Viewer Modal */}
+      {sandboxId && (
+        <FileViewerModal
+          open={fileViewerOpen}
+          onOpenChange={setFileViewerOpen}
+          sandboxId={sandboxId}
+          initialFilePath={selectedFilePath}
+          project={project}
+        />
       )}
     </div>
   );
