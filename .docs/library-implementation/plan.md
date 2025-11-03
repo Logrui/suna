@@ -3,8 +3,8 @@
 **Feature Name:** Library (Display as "Library" or "Chats")  
 **URL Route:** `/dashboard/library`  
 **Goal:** Recreate Manus-like Library page for Kortix/Suna  
-**Status:** ✅ In Progress - Core Layout Complete  
-**Date:** November 2, 2025  
+**Status:** ✅ Complete - Manus-Style File Previews with Full Markdown Rendering  
+**Date:** November 2-3, 2025  
 **Branch:** feature/library
 
 ---
@@ -1275,6 +1275,246 @@ const handleFileClick = (e: React.MouseEvent, filePath: string) => {
 - ✅ Full FileViewerModal functionality (view, edit, download, etc.)
 - ✅ ChevronRight icon appears on hover for visual feedback
 
+#### 10. Manus-Style File Card Grid ✅ **NEW**
+**Completed: November 3, 2025**
+
+**Implementation:**
+```tsx
+// Grid layout matching Manus design
+<div className="grid gap-4 items-start grid-cols-1 md:grid-cols-3">
+  {files.slice(0, showAllFiles ? files.length : 6).map((file: any) => {
+    const fileType = getFileType(file.name || '');
+    const IconComponent = FILE_ICONS[fileType];
+    const isMarkdown = file.name?.endsWith('.md');
+    
+    return (
+      <FileCard
+        key={file.path}
+        file={file}
+        IconComponent={IconComponent}
+        isMarkdown={isMarkdown}
+        sandboxId={sandboxId || ''}
+        onFileClick={handleFileClick}
+      />
+    );
+  })}
+</div>
+```
+
+**FileCard Component Structure:**
+```tsx
+// Individual file card with preview
+<div className="relative flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border/50 bg-card group hover:shadow-lg transition-shadow">
+  {/* File Header */}
+  <div className="flex items-center gap-2 px-2 py-2.5">
+    <IconComponent className="w-6 h-6" />
+    <span className="truncate text-sm">{file.name}</span>
+    <Button variant="ghost" size="icon">
+      <MoreHorizontal className="h-4 w-4" />
+    </Button>
+  </div>
+
+  {/* File Preview Area (16:9 aspect ratio) */}
+  <div className="aspect-[16/9] rounded-lg overflow-hidden relative m-2 mt-0">
+    <div className="size-full rounded-lg bg-muted p-3 relative">
+      {isMarkdown && markdownContent ? (
+        {/* Markdown Preview with 50% scale */}
+        <div className="scale-[0.5] origin-top-left">
+          <div className="w-[200%] h-[200%]">
+            <MarkdownPreview markdown={markdownContent} maxLines={20} maxChars={1600} />
+          </div>
+        </div>
+        {/* Gradient fade at bottom */}
+        <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-8"
+          style={{ background: 'linear-gradient(rgba(0, 0, 0, 0) 0%, hsl(var(--muted)) 100%)' }}
+        />
+      ) : (
+        {/* Large Icon for Non-Markdown Files */}
+        <div className="flex items-center justify-center h-full">
+          <IconComponent className="w-24 h-24 opacity-40" />
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+```
+
+**Key Features:**
+- ✅ **Grid Layout**: 1 column mobile, 3 columns desktop (`grid-cols-1 md:grid-cols-3`)
+- ✅ **16:9 Aspect Ratio**: Consistent card sizing with `aspect-[16/9]`
+- ✅ **File Type Icons**: 6 Manus-style SVG icons (Document, Spreadsheet, Code, PDF, Archive, Default)
+- ✅ **Markdown Previews**: Live rendered markdown with 20 lines / 1600 chars
+- ✅ **50% Scale Effect**: `scale-[0.5]` with `origin-top-left` for zoomed-out preview
+- ✅ **Gradient Fade**: Smooth gradient at bottom of previews
+- ✅ **Non-Markdown Files**: Large centered file type icon (w-24 h-24, opacity-40)
+- ✅ **Hover Effects**: Shadow and transition on card hover
+- ✅ **Click to Open**: Full FileViewerModal integration
+
+#### 11. File Type Icon System ✅ **NEW**
+**Completed: November 3, 2025**
+
+**Icon Components Created:**
+```typescript
+// 6 color-coded SVG icons matching Manus design
+frontend/src/components/library/file-icons/icons/
+├── DocumentIcon.tsx       // Blue (#4876D3) - .md, .txt, .doc
+├── SpreadsheetIcon.tsx    // Green (#48C774) - .csv, .xlsx
+├── CodeIcon.tsx           // Light Blue (#5DADE2) - .js, .py, .ts
+├── PdfIcon.tsx            // Red (#E74C3C) - .pdf
+├── ArchiveIcon.tsx        // Orange (#FF8C42) - .zip, .tar
+└── DefaultIcon.tsx        // Gray (#95A5A6) - unknown types
+```
+
+**File Type Detector:**
+```typescript
+// frontend/src/lib/utils/fileTypeDetector.ts
+export const FILE_ICONS = {
+  document: DocumentIcon,
+  spreadsheet: SpreadsheetIcon,
+  code: CodeIcon,
+  pdf: PdfIcon,
+  archive: ArchiveIcon,
+  default: DefaultIcon,
+} as const;
+
+export function getFileType(filename: string): FileType {
+  const extension = filename.split('.').pop()?.toLowerCase() || '';
+  
+  const FILE_TYPE_MAP: Record<FileType, string[]> = {
+    document: ['md', 'txt', 'doc', 'docx', 'rtf', 'odt', 'pages', 'tex', 'log'],
+    spreadsheet: ['csv', 'xlsx', 'xls', 'tsv', 'ods', 'numbers'],
+    code: ['js', 'ts', 'tsx', 'jsx', 'py', 'java', 'cpp', 'go', 'rs', 'json', 'yaml', 'html', 'css'],
+    pdf: ['pdf'],
+    archive: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso'],
+    default: [],
+  };
+  
+  // Return matching file type
+}
+```
+
+**Features:**
+- ✅ 40+ file extensions supported
+- ✅ Color-coded by category
+- ✅ Embedded SVG for crisp rendering at any size
+- ✅ Reusable across components
+- ✅ TypeScript typed
+
+#### 12. Advanced Markdown Rendering ✅ **NEW**
+**Completed: November 3, 2025**
+
+**MarkdownPreview Component:**
+```typescript
+// frontend/src/components/library/markdown-preview/MarkdownPreview.tsx
+
+// Uses same rendering logic as FileViewerModal for consistency
+import { CodeRenderer } from '@/components/file-renderers/code-renderer';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
+
+// Custom renderers matching modal styles
+const previewComponents = {
+  // Code blocks with syntax highlighting
+  code: (props) => <CodeRenderer content={code} language={language} />,
+  
+  // Headings with proper sizing
+  h1: (props) => <h1 className="text-2xl font-medium my-4 first:mt-0" {...props} />,
+  h2: (props) => <h2 className="text-xl font-medium my-3 first:mt-0" {...props} />,
+  h3: (props) => <h3 className="text-lg font-medium my-2 first:mt-0" {...props} />,
+  
+  // Tables with borders and styling
+  table: (props) => <table className="w-full border-collapse text-sm" {...props} />,
+  th: (props) => <th className="border border-slate-300 dark:border-zinc-700 px-3 py-2 text-left font-semibold bg-slate-100 dark:bg-zinc-800" {...props} />,
+  td: (props) => <td className="border border-slate-300 dark:border-zinc-700 px-3 py-2" {...props} />,
+  
+  // Lists, links, blockquotes, and more
+};
+
+export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
+  markdown,
+  maxLines = 20,
+  maxChars = 1600,
+}) => {
+  const truncated = truncateMarkdown(markdown, maxLines, maxChars);
+  
+  return (
+    <div className="markdown prose prose-sm dark:prose-invert max-w-none text-lg leading-relaxed">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        components={previewComponents}
+      >
+        {truncated}
+      </ReactMarkdown>
+    </div>
+  );
+};
+```
+
+**Rendering Features:**
+- ✅ **Syntax-Highlighted Code Blocks**: Using CodeRenderer component
+- ✅ **Proper Headings**: h1-h6 with font-medium, size scaling (2xl → base)
+- ✅ **Tables**: Full support with borders, headers, and row styling
+- ✅ **Lists**: Bullet and numbered lists with proper indentation
+- ✅ **Links**: Styled with text-primary and hover:underline
+- ✅ **Blockquotes**: Left border with italic text
+- ✅ **Inline Code**: Background with rounded borders
+- ✅ **Bold/Italic**: Proper semantic rendering
+- ✅ **Horizontal Rules**: Styled dividers
+- ✅ **Large Text**: text-lg with leading-relaxed for readability
+- ✅ **20 Lines / 1600 Characters**: Doubled from initial implementation
+- ✅ **Truncation**: Smart truncation at word boundaries with ellipsis
+
+**Consistency with FileViewerModal:**
+- Same CodeRenderer component
+- Same table styling (borders, backgrounds)
+- Same heading hierarchy
+- Same rehype plugins (rehypeRaw, rehypeSanitize)
+- Same prose classes
+- **Result**: Preview looks identical to full view, just scaled down
+
+#### 13. Performance Optimizations ✅ **NEW**
+**Implemented: November 3, 2025**
+
+**React Query Caching Strategy:**
+```typescript
+// File content query with aggressive caching
+const { data: markdownContent } = useQuery({
+  queryKey: ['file-preview', sandboxId, file.path],
+  queryFn: async () => {
+    const content = await getSandboxFileContent(sandboxId, file.path);
+    
+    // Handle both string and Blob responses
+    let contentStr = '';
+    if (typeof content === 'string') {
+      contentStr = content;
+    } else if (content instanceof Blob) {
+      contentStr = await content.text(); // Async Blob conversion
+    }
+    
+    return contentStr;
+  },
+  enabled: isMarkdown && !!file.path && !!sandboxId,
+  staleTime: 10 * 60 * 1000, // 10 minute cache
+});
+```
+
+**Optimizations:**
+- ✅ **10-Minute Cache**: Markdown content cached for 10 minutes
+- ✅ **Conditional Fetching**: Only fetch when file is markdown
+- ✅ **Blob Handling**: Proper async conversion for Blob responses
+- ✅ **Error Handling**: Graceful fallbacks for failed fetches
+- ✅ **Show More Files**: Initially show 6 files, expand to show all
+- ✅ **Lazy Loading**: File content fetched only when needed (React Query enabled flag)
+
+**Grid Layout Performance:**
+- ✅ **CSS Grid**: Native browser optimization
+- ✅ **Responsive**: Single column on mobile (less rendering)
+- ✅ **Transition Effects**: CSS transitions for smooth interactions
+- ✅ **Image Optimization**: Large icons for non-markdown (no image fetching)
+
 ### ⚠️ Known Limitations & TODOs
 
 #### 1. Loading Skeletons - Not Yet Implemented
@@ -1447,32 +1687,62 @@ User → Threads → Projects → Sandboxes → Files
 ```
 frontend/src/
 ├── app/(dashboard)/library/
-│   └── page.tsx                      # Route wrapper (4 lines)
+│   └── page.tsx                                    # Route wrapper (4 lines)
 ├── components/library/
-│   ├── library-page.tsx              # Main component (252 lines)
-│   ├── library-page-header.tsx       # Header component (18 lines)
-│   └── thread-card.tsx               # Thread list item (191 lines)
+│   ├── library-page.tsx                            # Main component (282 lines)
+│   ├── library-page-header.tsx                     # Header component (18 lines)
+│   ├── thread-card.tsx                             # Thread with file grid (260 lines)
+│   ├── file-card.tsx                               # Individual file card (120 lines) **NEW**
+│   ├── file-icons/
+│   │   ├── icons/
+│   │   │   ├── DocumentIcon.tsx                    # Blue document icon **NEW**
+│   │   │   ├── SpreadsheetIcon.tsx                 # Green spreadsheet icon **NEW**
+│   │   │   ├── CodeIcon.tsx                        # Light blue code icon **NEW**
+│   │   │   ├── PdfIcon.tsx                         # Red PDF icon **NEW**
+│   │   │   ├── ArchiveIcon.tsx                     # Orange archive icon **NEW**
+│   │   │   └── DefaultIcon.tsx                     # Gray default icon **NEW**
+│   │   └── index.ts                                # Icon exports
+│   └── markdown-preview/
+│       └── MarkdownPreview.tsx                     # Markdown renderer (170 lines) **NEW**
 ├── components/thread/
-│   └── FileViewerModal.tsx           # File viewer modal (1605 lines) - integrated
+│   └── file-viewer-modal.tsx                       # File viewer modal (1605 lines)
+├── components/file-renderers/
+│   ├── index.tsx                                   # File type detection
+│   ├── authenticated-markdown-renderer.tsx         # Full markdown renderer (296 lines)
+│   ├── code-renderer.tsx                           # Syntax highlighted code
+│   └── [other renderers...]                        # PDF, Image, CSV, etc.
+└── lib/utils/
+    └── fileTypeDetector.ts                         # File type mapping (120 lines) **NEW**
 ```
 
-**Total Lines of Code:** ~2,070 lines (library-specific: ~465 lines)
-**Components:** 5 files (4 library-specific, 1 shared)
-**Dependencies:** React Query, Next.js, shadcn/ui, Tailwind, FileViewerModal
+**Total Lines of Code:** ~3,450 lines (library-specific: ~1,310 lines, +840 from Nov 3)
+**Components:** 15 files (13 library-specific, 2 shared)
+**Dependencies:** React Query, Next.js, shadcn/ui, Tailwind, react-markdown, rehype, remark
+**External Integrations:** FileViewerModal, CodeRenderer, file-renderers system
 
 **Key Features Implemented:**
 - ✅ Vertical list layout matching Manus design
 - ✅ File fetching with sandbox traversal (Thread → Project → Sandbox → Files)
 - ✅ FileViewerModal integration for file viewing
+- ✅ **Manus-style grid card layout (3 columns)** **NEW**
+- ✅ **File type icons (6 color-coded SVG components)** **NEW**
+- ✅ **Live markdown previews with full formatting** **NEW**
+- ✅ **Syntax-highlighted code blocks** **NEW**
+- ✅ **Table rendering with borders and styling** **NEW**
+- ✅ **16:9 aspect ratio preview containers** **NEW**
+- ✅ **50% scale zoom effect for previews** **NEW**
+- ✅ **Large icons for non-markdown files** **NEW**
+- ✅ **Gradient fade at bottom of previews** **NEW**
 - ✅ Graceful 404 handling for missing sandboxes
 - ✅ Expandable file lists (+N more files)
 - ✅ Favorites toggle with LocalStorage persistence
 - ✅ Search functionality
 - ✅ Offset-based pagination (20 items/page)
+- ✅ Blob-to-text conversion for file content
+- ✅ React Query caching (10-minute staleTime)
 
 ---
 
-**Last Updated:** November 2, 2025  
-**Status:** ✅ Core Features Complete - File Fetching & FileViewerModal Implemented  
-**Next Priority:** Loading Skeletons, then Thread Titles  
-**Next Document:** `implementation-planning.md`
+**Last Updated:** November 3, 2025  
+**Status:** ✅ File Previews Complete - Manus-Style Grid Cards with Markdown Rendering Implemented  
+**Next Priority:** Code optimization, performance testing  

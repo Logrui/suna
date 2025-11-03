@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { getToolTitle } from '../utils';
 import { useVapiCallRealtime } from '@/hooks/useVapiCallRealtime';
 import { useQuery } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, createRealtimeClient } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface MonitorCallData {
@@ -111,12 +111,13 @@ export function MonitorCallToolView({
     if (!initialData?.call_id) return;
 
     console.log('[MonitorCallToolView] Setting up real-time subscription for:', initialData.call_id);
-    const supabase = createClient();
+    const dataClient = createClient(); // For data fetching
+    const realtimeClient = createRealtimeClient(); // For WebSocket subscription
     let channel: RealtimeChannel;
 
     const setupSubscription = async () => {
       // First, do an initial fetch to get current data
-      const { data: currentData } = await supabase
+      const { data: currentData } = await dataClient
         .from('vapi_calls')
         .select('*')
         .eq('call_id', initialData.call_id)
@@ -136,8 +137,8 @@ export function MonitorCallToolView({
         }
       }
 
-      // Set up real-time subscription
-      channel = supabase
+      // Set up real-time subscription using dedicated realtime client
+      channel = realtimeClient
         .channel(`call-monitor-${initialData.call_id}`)
         .on(
           'postgres_changes',
@@ -175,7 +176,7 @@ export function MonitorCallToolView({
     return () => {
       console.log('[MonitorCallToolView] Cleaning up subscription');
       if (channel) {
-        supabase.removeChannel(channel);
+        realtimeClient.removeChannel(channel);
       }
     };
   }, [initialData?.call_id]);

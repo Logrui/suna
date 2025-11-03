@@ -25,15 +25,16 @@ export async function GET(
   // Determine Supabase backend based on environment
   const host = request.headers.get('host') || 'localhost:3000'
   const protocol = request.headers.get('x-forwarded-proto') || 'http'
-  
+
   let supabaseBackend: string
-  
+
   if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    // Local development
+    // Local development: route to local Kong
     supabaseBackend = 'http://localhost:8888'
   } else {
-    // Production/Cloudflare: use the same origin for consistency
-    supabaseBackend = `${protocol}://${host}`
+    // Production/Cloudflare: route to Kong subdomain (e.g., kong.kortix.syhc.dev)
+    // This ensures auth requests go to the actual Supabase backend, not the frontend
+    supabaseBackend = `${protocol}://kong.${host}`
   }
 
   const url = `${supabaseBackend}/auth/v1/${path}`

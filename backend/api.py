@@ -161,6 +161,13 @@ if config.ENV_MODE == EnvMode.PRODUCTION:
     allowed_origins.append("http://localhost:3000")
     allowed_origins.append("http://127.0.0.1:3000")
 
+# Add Cloudflare Tunnel domains for self-hosted deployments
+allowed_origins.extend([
+    "https://kortix.syhc.dev",          # Frontend via Cloudflare Tunnel
+    "http://kong.kortix.syhc.dev",      # Kong/Supabase via Cloudflare Tunnel (HTTP)
+    "https://kong.kortix.syhc.dev",     # Kong/Supabase via Cloudflare Tunnel (HTTPS, for future use)
+])
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,

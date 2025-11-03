@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { createRealtimeClient } from '@/lib/supabase/client';
 import { threadKeys } from '@/hooks/react-query/threads/keys';
 import { Project } from '../app/(dashboard)/projects/[projectId]/thread/_types';
 
@@ -16,7 +16,7 @@ export function useProjectRealtime(projectId?: string) {
   useEffect(() => {
     if (!projectId) return;
 
-    const supabase = createClient();
+    const supabase = createRealtimeClient();
 
     // Subscribe to project changes
     const channel = supabase
