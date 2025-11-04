@@ -107,7 +107,7 @@ The sidebar's content area uses **conditional rendering** based on the `activeVi
 - **Spacing**: `p-4` padding, `mb-2` margin below icon
 
 **Views Using This Pattern:**
-- `library` → Icon + "Library placeholder" text
+- `library` → Icon + "Library placeholder" text (⚠️ **See Note:** Library feature IS implemented, sidebar integration pending)
 - `inbox` → Icon + "Inbox placeholder" text
 
 ---
@@ -132,7 +132,7 @@ Other conditions all evaluate to false (nothing renders)
 
 ---
 
-## Active View Values
+### Active View Values
 
 ```typescript
 type ActiveView = 'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox'
@@ -140,14 +140,16 @@ type ActiveView = 'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'i
 
 ### View-to-Content Mapping:
 
-| View | Component(s) | Status |
-|------|-------------|--------|
-| `chats` | `<NavAgents />` | ✅ Implemented |
-| `agents` | `<NavAgentsView />` | ✅ Implemented |
-| `triggers` | `<NavGlobalConfig />` + `<NavTriggerRuns />` | ✅ Implemented |
-| `library` | Placeholder | ⏳ Pending Implementation |
-| `knowledge` | `<NavKnowledgeBase />` | ✅ Implemented |
-| `inbox` | Placeholder | ⏳ Pending Implementation |
+| View | Component(s) | Status | Notes |
+|------|-------------|--------|-------|
+| `chats` | `<NavAgents />` | ✅ Implemented | - |
+| `agents` | `<NavAgentsView />` | ✅ Implemented | - |
+| `triggers` | `<NavGlobalConfig />` + `<NavTriggerRuns />` | ✅ Implemented | - |
+| `library` | Placeholder (sidebar) | ⚠️ Partial | See Note 1 |
+| `knowledge` | `<NavKnowledgeBase />` | ✅ Implemented | - |
+| `inbox` | Placeholder | ⏳ Pending | - |
+
+**Note 1:** Library page is fully implemented at `frontend/src/app/(dashboard)/library/library-page.tsx` with file preview support. However, sidebar-left component still renders placeholder. This is a known gap - sidebar integration needed.
 
 ---
 

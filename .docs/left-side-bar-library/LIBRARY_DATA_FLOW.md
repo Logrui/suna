@@ -13,9 +13,10 @@
 3. [Frontend API Layer](#frontend-api-layer)
 4. [Data Flow Pipeline](#data-flow-pipeline)
 5. [Sandbox Data Integration](#sandbox-data-integration)
-6. [Security & Row Level Security](#security--row-level-security)
-7. [Complete Data Flow Diagram](#complete-data-flow-diagram)
-8. [Performance Considerations](#performance-considerations)
+6. [File Preview Data Flow](#file-preview-data-flow)
+7. [Security & Row Level Security](#security--row-level-security)
+8. [Complete Data Flow Diagram](#complete-data-flow-diagram)
+9. [Performance Considerations](#performance-considerations)
 
 ---
 
@@ -419,23 +420,32 @@ type Thread = {
    │     }
    └─ Return: ThreadWithProject[]
 
-6️⃣ APPLY FILTERS (useMemo)
+7️⃣ APPLY FILTERS (useMemo)
    ├─ Filter by favorites (if filterMode === 'favorites')
    ├─ Filter by search query (projectName contains searchQuery)
+   ├─ Sort by updated_at descending (newest first)
    └─ Return: filteredThreads[]
 
-7️⃣ PAGINATE (useMemo)
-   ├─ Calculate totalPages = Math.ceil(filteredThreads.length / 20)
-   ├─ Slice: filteredThreads[(page-1)*20 : page*20]
-   └─ Return: paginatedThreads[]
+8️⃣ PROGRESSIVE LOADING (Infinite Scroll)
+   ├─ displayCount = initial 5 threads
+   ├─ displayedThreads = slice(0, displayCount)
+   ├─ hasMore = filteredThreads.length > displayCount
+   ├─ IntersectionObserver watches loadMoreRef element
+   ├─ When element visible:
+   │  └─ loadMore() → displayCount += 5
+   │  └─ UI re-renders with more threads
+   └─ Repeat until all threads shown
 
-8️⃣ RENDER
+9️⃣ RENDER THREAD CARDS
    ├─ Display LibraryPageHeader
-   ├─ Display Toolbar (search, filters, view toggle)
-   ├─ Render ThreadCard[] for paginatedThreads
-   │  └─ Grid layout (responsive 1→4 columns)
-   │  └─ Or List layout (horizontal rows)
-   └─ Display pagination controls
+   ├─ Display Sticky Toolbar (search, filters)
+   ├─ Render ThreadCard[] for displayedThreads (not paginatedThreads!)
+   │  ├─ Project info (name, updated date, star button)
+   │  └─ 🆕 FILE PREVIEW CARDS
+   │     └─ Query sandbox files for each thread
+   │     └─ Render FileCard components
+   │     └─ Show markdown previews
+   └─ Display infinite scroll trigger at bottom
 ```
 
 ---
@@ -522,14 +532,594 @@ type Thread = {
 ### How Library Page Uses Sandbox
 
 **Current Usage:**
-- ✅ `iconName` from sandbox settings used for display
-- ✅ Available for future features (file preview, etc.)
+- ✅ `sandbox.id` used to fetch files from Daytona servers
+- ✅ File previews rendered inline in ThreadCard
+- ✅ Markdown content fetched and displayed with syntax highlighting
+- ✅ File type icons determined from file extensions
 
-**Potential Future Uses:**
-- Display file count in card
-- Show language/technology badges
-- File browser preview in modal
-- Environment variable display
+**Data Flow:**
+```
+Project.sandbox.id
+    ↓
+listSandboxFiles(sandboxId, '/workspace')  [API call to Daytona]
+    ↓
+files: Array<{name, path, type, size}>
+    ↓
+ThreadCard renders FileCard[] components
+    ↓
+For each file:
+  ├─ if markdown: getSandboxFileContent(sandboxId, path) [API call]
+  ├─ Fetch markdown content
+  ├─ Pass to MarkdownPreview component
+  └─ Render with syntax highlighting
+```
+
+---
+
+## File Preview Data Flow
+
+### Overview
+
+The Library page now includes **inline file previews** from Daytona sandboxes. This involves additional API calls beyond the initial data fetch:
+
+```
+1. Initial Load: Supabase queries (threads + projects)
+   ↓
+2. In ThreadCard: Fetch sandbox files from Daytona
+   ↓
+3. For markdown files: Fetch file content from Daytona
+   ↓
+4. Render FileCard with MarkdownPreview
+```
+
+### API Functions for File Preview
+
+#### Function: `listSandboxFiles(sandboxId, path)`
+
+**Purpose:** List files in a Daytona sandbox directory
+
+**Location:** `frontend/src/lib/api.ts` (lines 1475-1523)
+
+**Implementation:**
+```typescript
+export const listSandboxFiles = async (
+  sandboxId: string,
+  path: string,
+): Promise<FileInfo[]> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const url = new URL(`${API_URL}/sandboxes/${sandboxId}/files`);
+    
+    // Normalize the path to handle Unicode escape sequences
+    const normalizedPath = normalizePathWithUnicode(path);
+    
+    // Properly encode the path parameter for UTF-8 support
+    url.searchParams.append('path', normalizedPath);
+
+    const headers: Record<string, string> = {};
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const response = await fetch(url.toString(), { headers });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'No error details available');
+      throw new Error(
+        `Error listing sandbox files: ${response.statusText} (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+    return data.files || [];
+  } catch (error) {
+    console.error('Failed to list sandbox files:', error);
+    throw error;
+  }
+};
+```
+
+**Key Details:**
+- ✅ Uses Supabase session token for authentication (not hardcoded token)
+- ✅ Normalizes path with Unicode support via `normalizePathWithUnicode()`
+- ✅ Uses URL.searchParams to properly encode path parameter
+- ✅ Returns `FileInfo[]` type (not generic SandboxFile)
+- ✅ Throws error on failure (doesn't silently return empty array)
+
+**Return Type:**
+```typescript
+type FileInfo = {
+  name: string;              // e.g., "main.py"
+  path: string;              // e.g., "/workspace/main.py"
+  is_dir: boolean;           // ⭐ CORRECT: is_dir not type
+  mod_time: string;          // ISO timestamp
+  size?: number;             // bytes (optional)
+};
+```
+
+**Usage in ThreadCard:**
+```typescript
+// In ThreadCard component - filters out directories and sorts by mod_time
+const filtered = fileList
+  .filter((file: any) => !file.is_dir)  // ⭐ Filters directories
+  .sort((a: any, b: any) => {
+    const aTime = new Date(a.mod_time).getTime();
+    const bTime = new Date(b.mod_time).getTime();
+    return bTime - aTime; // Newest first
+  });
+```
+
+**When Called:**
+- In `ThreadCard` component via `useQuery` hook
+- Triggered when `sandboxId` exists and component mounts
+- Results cached by React Query with key: `['sandbox-files', sandboxId, path]`
+
+#### Function: `getSandboxFileContent(sandboxId, path)`
+
+**Purpose:** Fetch content of a specific file from Daytona
+
+**Location:** `frontend/src/lib/api.ts` (lines 1524-1570)
+
+**Implementation:**
+```typescript
+export const getSandboxFileContent = async (
+  sandboxId: string,
+  path: string,
+): Promise<string | Blob> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const url = new URL(`${API_URL}/sandboxes/${sandboxId}/files/content`);
+    
+    // Normalize the path to handle Unicode escape sequences
+    const normalizedPath = normalizePathWithUnicode(path);
+    
+    // Properly encode the path parameter for UTF-8 support
+    url.searchParams.append('path', normalizedPath);
+
+    const headers: Record<string, string> = {};
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const response = await fetch(url.toString(), { headers });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'No error details available');
+      throw new Error(
+        `Error getting sandbox file content: ${response.statusText} (${response.status})`
+      );
+    }
+
+    // Check if it's a text file or binary file based on content-type
+    const contentType = response.headers.get('content-type');
+    if (
+      (contentType && contentType.includes('text')) ||
+      contentType?.includes('application/json')
+    ) {
+      return await response.text();
+    } else {
+      return await response.blob();
+    }
+  } catch (error) {
+    console.error('Error fetching file content:', error);
+    throw error;
+  }
+};
+```
+
+**Key Details:**
+- ✅ Uses Supabase session token for authentication
+- ✅ Normalizes path with Unicode support
+- ✅ Returns **either `string` OR `Blob`** depending on content-type
+- ✅ For text/json: returns as string
+- ✅ For binary files: returns as Blob
+- ✅ Throws error on failure
+
+**Return Type:**
+```typescript
+Promise<string | Blob>  // Text files → string, Binary → Blob
+```
+
+**When Called:**
+- In `FileCard` component via `useQuery` hook
+- Only for markdown files (`.md` extension)
+- Results cached by React Query with key: `['file-preview', sandboxId, path]`
+
+### ThreadCard File Preview Flow
+
+**Purpose:** Display thread with inline file previews
+
+**Location:** `frontend/src/components/library/thread-card.tsx`
+
+```typescript
+// In ThreadCard component
+
+// 1. Fetch projects to get sandbox ID
+const { data: projects = [] } = useQuery({
+  queryKey: ['projects'],
+  queryFn: listProjects,
+});
+
+// 2. Find project for this thread
+const project = projects.find(p => p.id === thread.projectId);
+const sandboxId = project?.sandbox?.id;
+
+// 3. Fetch ALL files from /workspace directory
+const { data: allFiles = [] } = useQuery({
+  queryKey: ['sandbox-files', sandboxId, '/workspace'],
+  queryFn: () => listSandboxFiles(sandboxId!, '/workspace'),
+  enabled: !!sandboxId && !!project,
+});
+
+// 4. Process files: filter directories, sort by modified time
+const fileList = allFiles
+  .filter((file) => !file.is_dir)  // Remove directories
+  .sort((a, b) => {
+    // Sort by mod_time descending (newest first)
+    const timeA = new Date(a.mod_time).getTime();
+    const timeB = new Date(b.mod_time).getTime();
+    return timeB - timeA;
+  });
+
+// 5. Display first 6 files in responsive grid
+const displayedFiles = fileList.slice(0, 6);
+const hasMoreFiles = fileList.length > 6;
+
+// 6. Render FileCard for each displayed file
+<div className="grid grid-cols-2 gap-3">
+  {displayedFiles.map((file) => (
+    <FileCard
+      key={file.path}
+      file={file}
+      IconComponent={getFileType(file.name).icon}
+      isMarkdown={getFileType(file.name).type === 'markdown'}
+      sandboxId={sandboxId!}
+      onFileClick={handleFileClick}
+    />
+  ))}
+</div>
+
+// 7. Show "Show More" button if more files exist
+{hasMoreFiles && (
+  <button onClick={handleShowMore}>
+    Show {fileList.length - 6} more files...
+  </button>
+)}
+```
+
+**Key Details:**
+- ✅ Fetches all files from `/workspace` directory
+- ✅ Filters out directories (`.filter((file) => !file.is_dir)`)
+- ✅ Sorts by modification time descending (newest first)
+- ✅ Displays first 6 files in a 2-column grid
+- ✅ Shows "Show More" button if files.length > 6
+- ✅ Each FileCard receives file metadata + sandbox context
+
+### FileCard Component Flow
+
+**Purpose:** Display a single file preview card with markdown content or file icon
+
+**Location:** `frontend/src/components/library/file-card.tsx`
+
+```typescript
+// In FileCard component
+
+interface FileCardProps {
+  file: FileInfo;  // {name, path, is_dir, mod_time, size}
+  IconComponent: React.ComponentType;
+  isMarkdown: boolean;
+  sandboxId: string;
+  onFileClick?: (path: string) => void;
+}
+
+export function FileCard({
+  file,
+  IconComponent,
+  isMarkdown,
+  sandboxId,
+  onFileClick,
+}: FileCardProps) {
+  // 1. For markdown files: fetch content via API
+  const { data: content } = useQuery({
+    queryKey: ['file-preview', sandboxId, file.path],
+    queryFn: () => getSandboxFileContent(sandboxId, file.path),
+    enabled: isMarkdown,  // Only fetch if file is markdown
+    staleTime: 5 * 60 * 1000,  // 5 minute cache
+  });
+
+  return (
+    <div 
+      className="border rounded p-3 cursor-pointer hover:bg-accent"
+      onClick={() => onFileClick?.(file.path)}
+    >
+      {/* File header with icon and name */}
+      <div className="flex items-center gap-2 mb-2">
+        <IconComponent className="w-4 h-4 flex-shrink-0" />
+        <span className="text-sm font-medium truncate">{file.name}</span>
+      </div>
+
+      {/* Markdown preview for .md files */}
+      {isMarkdown && content && (
+        <MarkdownPreview 
+          content={content} 
+          maxLines={3}
+          maxChars={200}
+        />
+      )}
+
+      {/* File type icon fallback for non-markdown files */}
+      {!isMarkdown && (
+        <div className="flex items-center justify-center py-4">
+          <IconComponent className="w-8 h-8 opacity-50" />
+        </div>
+      )}
+
+      {/* File metadata */}
+      <div className="text-xs text-muted-foreground mt-2 flex justify-between">
+        <span>
+          {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''}
+        </span>
+        <span>
+          {new Date(file.mod_time).toLocaleDateString()}
+        </span>
+      </div>
+    </div>
+  );
+}
+```
+
+**Key Details:**
+- ✅ Receives `FileInfo` object with metadata
+- ✅ For markdown files: fetches content with `getSandboxFileContent()`
+- ✅ Content cached by React Query with 5-minute TTL
+- ✅ Displays `MarkdownPreview` for markdown with truncation
+- ✅ Shows file icon for non-markdown files
+- ✅ Displays file size and modification date
+
+### MarkdownPreview Component
+
+**Purpose:** Render markdown content with syntax highlighting and preview truncation
+
+**Location:** `frontend/src/components/library/markdown-preview/MarkdownPreview.tsx`
+
+**Props:**
+```typescript
+interface MarkdownPreviewProps {
+  markdown: string;           // Raw markdown content to preview
+  maxLines?: number;          // Maximum number of lines (default: 20)
+  maxChars?: number;          // Maximum number of characters (default: 1600)
+  className?: string;         // Optional CSS class
+}
+```
+
+**Implementation Details:**
+```typescript
+function truncateMarkdown(
+  markdown: string,
+  maxLines: number = 5,
+  maxChars: number = 300
+): string {
+  // 1. Split markdown by lines and take first N
+  const lines = markdown.split('\n').slice(0, maxLines);
+  let truncated = lines.join('\n');
+
+  // 2. Limit total character count
+  if (truncated.length > maxChars) {
+    truncated = truncated.substring(0, maxChars).trim();
+    // Remove incomplete last word for clean cutoff
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > 0) {
+      truncated = truncated.substring(0, lastSpace);
+    }
+    truncated += '…';  // Add ellipsis
+  }
+
+  return truncated;
+}
+
+export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
+  markdown,
+  maxLines = 20,
+  maxChars = 1600,
+  className,
+}) => {
+  if (!markdown) return null;
+
+  const truncated = truncateMarkdown(markdown, maxLines, maxChars);
+
+  return (
+    <div className="...prose formatting...">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}  // GitHub Flavored Markdown support
+        components={previewComponents}  // Custom renderers
+      >
+        {truncated}
+      </ReactMarkdown>
+    </div>
+  );
+};
+```
+
+**Custom Renderers Support:**
+- ✅ Headings (h1-h6) with responsive sizing
+- ✅ **Bold**, _italic_, links formatting
+- ✅ Code blocks with monospace font (inline and block)
+- ✅ Lists (ordered/unordered) with proper spacing
+- ✅ Tables with borders and proper alignment
+- ✅ Blockquotes with left border styling
+- ✅ Horizontal rules
+- ✅ Images shown as placeholders (no rendering)
+
+**Example Usage in FileCard:**
+```typescript
+<MarkdownPreview 
+  markdown={content}      // String returned from getSandboxFileContent()
+  maxLines={3}            // Show first 3 lines max
+  maxChars={200}          // Limit to 200 characters
+  className="custom-class"
+/>
+```
+
+**Default Behavior in FileCard:**
+- Truncated to 3 lines or 200 characters (whichever comes first)
+- Shows cleaned markdown with formatting preserved
+- Adds ellipsis if truncated
+
+### Path Normalization Utility
+
+**Purpose:** Handle Unicode and path normalization for cross-platform compatibility
+
+**Location:** `frontend/src/lib/api.ts` (line 1463)
+
+**Function:**
+```typescript
+function normalizePathWithUnicode(path: string): string {
+  if (!path) return '';
+  
+  // Normalize Unicode characters and escape sequences
+  // Converts escape sequences like \u0000 to actual Unicode characters
+  return path.replace(/\\u([0-9a-fA-F]{4})/g, (match, code) => {
+    return String.fromCharCode(parseInt(code, 16));
+  });
+}
+```
+
+**Why It's Needed:**
+- ✅ File paths may contain Unicode escape sequences from backend
+- ✅ Proper handling of non-ASCII characters in file names
+- ✅ Safe URL parameter encoding for path transmission
+- ✅ Cross-platform compatibility (Windows/Linux/macOS)
+
+**Used In:**
+- `listSandboxFiles()` - normalizes path parameter before API call
+- `getSandboxFileContent()` - normalizes path before fetching content
+
+**Example:**
+```typescript
+// Input with escape sequence
+const escapedPath = '/workspace/docs/\\u00e9file.md';  // é character
+
+// After normalization
+const normalized = normalizePathWithUnicode(escapedPath);
+// Result: '/workspace/docs/éfile.md'
+
+// Safe to use in URL
+url.searchParams.append('path', normalized);
+```
+
+### File Type Detection
+
+**Purpose:** Map file extensions to icon components for visual identification
+
+**Location:** `frontend/src/lib/utils/fileTypeDetector.ts`
+
+**File Type Enum:**
+```typescript
+type FileType = 
+  | 'document'      // Text & documents
+  | 'spreadsheet'   // Data files
+  | 'code'          // Source code
+  | 'pdf'           // PDF documents
+  | 'archive'       // Compressed files
+  | 'default'       // Unknown types
+```
+
+**Icon Component Map:**
+```typescript
+export const FILE_ICONS = {
+  document: DocumentIcon,      // Used for .md, .txt, .doc, .docx, etc.
+  spreadsheet: SpreadsheetIcon, // Used for .csv, .xlsx, .xls, etc.
+  code: CodeIcon,              // Used for .js, .ts, .py, .java, etc.
+  pdf: PdfIcon,                // Used for .pdf
+  archive: ArchiveIcon,        // Used for .zip, .tar, .gz, etc.
+  default: DefaultIcon,        // Used for unknown types
+} as const;
+```
+
+**Extension Mappings:**
+
+| File Type | Extensions | Examples |
+|-----------|-----------|----------|
+| **document** | md, txt, doc, docx, rtf, odt, pages, tex, log | README.md, notes.txt |
+| **spreadsheet** | csv, xlsx, xls, tsv, ods, numbers, xlsm, xlsb | data.csv, budget.xlsx |
+| **code** | js, ts, tsx, jsx, py, java, cpp, c, h, hpp, go, rs, json, yaml, yml, html, css, scss, sass, less, xml, sql, sh, bash, perl, rb, php, swift, kt, scala, groovy, gradle, maven, dockerfile, makefile, cmake, lua, vim, toml, ini, conf, vue, graphql, gql, prisma | app.ts, styles.css, script.py |
+| **pdf** | pdf | document.pdf |
+| **archive** | zip, rar, 7z, tar, gz, bz2, xz, iso, dmg, exe, msi | project.zip, backup.tar.gz |
+| **default** | any other extension | file.xyz |
+
+**Core Functions:**
+
+```typescript
+// Get file type from filename
+export function getFileType(filename: string): FileType {
+  const extension = filename.split('.').pop()?.toLowerCase() || '';
+  
+  // Search FILE_TYPE_MAP for matching extension
+  for (const [fileType, config] of Object.entries(FILE_TYPE_MAP)) {
+    if (config.extensions.includes(extension)) {
+      return fileType as FileType;
+    }
+  }
+  
+  return 'default';
+}
+
+// Get all extensions for a file type
+export function getExtensionsForType(fileType: FileType): string[]
+
+// Get human-readable description
+export function getTypeDescription(fileType: FileType): string
+```
+
+**Usage in ThreadCard:**
+```typescript
+const fileType = getFileType(file.name);  // e.g., 'code', 'document', 'default'
+const IconComponent = FILE_ICONS[fileType];  // Get icon component
+
+<FileCard
+  file={file}
+  IconComponent={IconComponent}
+  isMarkdown={fileType === 'document' && file.name.endsWith('.md')}
+  sandboxId={sandboxId}
+/>
+```
+
+**Supported File Types:** 70+ extensions across 6 categories
+- **Default:** Any other type
+
+### Caching Strategy
+
+React Query caches file preview data:
+
+```typescript
+// Cache keys:
+['sandbox-files', 'sandbox-123', '/workspace']  // File list - cached
+['file-preview', 'sandbox-123', '/workspace/main.py']  // File content - cached
+
+// Cache duration: 5 minutes (default React Query behavior)
+// Manual invalidation available if files change
+```
+
+**Benefits:**
+- ✅ Reduces API calls to Daytona servers
+- ✅ Faster UI re-renders
+- ✅ Smooth scrolling experience
+- ✅ Can be cleared manually if files updated
+
+---
+
+## Potential Future Enhancements
+
+**File Preview Features:**
+1. File browser modal - full directory tree navigation
+2. Diff viewer - compare file versions
+3. Search within files - full-text search in sandbox files
+4. File download - download files directly
+5. Real-time file sync - WebSocket updates when files change
 
 ---
 

@@ -2,7 +2,7 @@
 
 **File Location:** `frontend/src/components/library/library-page.tsx`  
 **Route:** `/library`  
-**Date:** November 3, 2025
+**Date:** November 3, 2025 (Updated: Latest Restored Version from ec3bfa013)
 
 ---
 
@@ -12,28 +12,34 @@
 2. [Component Architecture](#component-architecture)
 3. [Data Flow & State Management](#data-flow--state-management)
 4. [UI Layout & Structure](#ui-layout--structure)
-5. [Feature Implementation Details](#feature-implementation-details)
-6. [Complete Reconstruction Guide](#complete-reconstruction-guide)
+5. [Infinite Scroll Implementation](#infinite-scroll-implementation)
+6. [File Preview System](#file-preview-system)
+7. [Feature Implementation Details](#feature-implementation-details)
+8. [Complete Reconstruction Guide](#complete-reconstruction-guide)
 
 ---
 
 ## Page Overview
 
 ### Purpose
-The Library Page provides users with a browsable, searchable, and filterable interface to access all conversation threads across their projects. It serves as a centralized hub for managing and navigating thread history.
+The Library Page provides users with a browsable, searchable, and filterable interface to access all conversation threads with **inline file previews** from their associated Daytona sandboxes. It serves as a centralized hub for managing and navigating thread history with rich preview capabilities.
 
 ### Display Features
-- **Grid & List View Modes** - Toggle between responsive grid layout and compact list layout
+- **Infinite Scroll Loading** - Progressive loading with Intersection Observer (5 threads at a time)
+- **File Previews** - Inline markdown and file preview cards within each thread
+- **File Type Icons** - Visual indicators for different file types (code, documents, archives, etc.)
 - **Search Functionality** - Full-text search across thread names (by project name)
 - **Favorites System** - Star/bookmark threads with localStorage persistence
-- **Pagination** - Display threads in batches of 20 items per page
 - **Filter Modes** - All threads vs. Favorites only
-- **Responsive Design** - Adapts from mobile (1 column) to desktop (4 columns)
+- **Sticky Header** - Search and filters remain visible while scrolling
+- **Responsive Design** - Adapts layouts with `container mx-auto max-w-7xl` wrapper
 
 ### Key Metrics
-- **Items per page:** 20 threads
+- **Initial Load:** 5 threads
+- **Load More Increment:** 5 threads per scroll trigger
 - **Storage:** Favorites stored in browser localStorage
 - **Key:** `library-favorites`
+- **Sorting:** Threads sorted by `updated_at` descending (newest first)
 
 ---
 
@@ -42,25 +48,35 @@ The Library Page provides users with a browsable, searchable, and filterable int
 ### Component Hierarchy
 
 ```
-LibraryPage (main container, state management)
+LibraryPage (main container, state management, infinite scroll)
 ├── LibraryPageHeader (title & description)
-├── Toolbar (search, filters, view toggle)
-└── Content Area
+├── Sticky Toolbar (search, filters)
+└── Content Area (container mx-auto max-w-7xl)
     ├── LoadingState (loading indicator)
     ├── EmptyState (no results messaging)
-    └── ThreadGrid/List
-        └── ThreadCard[] (repeated for each thread)
-            ├── Grid View Card (4-column layout)
-            └── List View Card (single-row layout)
+    └── ThreadList (flex flex-col gap-3)
+        └── ThreadCard[] (repeated for each displayed thread)
+            ├── Project info, updated date, favorite toggle
+            ├── FileCard[] (files from sandbox)
+            │   ├── FileIcon (type-specific icon)
+            │   ├── MarkdownPreview (if markdown file)
+            │   └── File metadata
+            └── Show More/Less toggle for files
+    └── Infinite Scroll Trigger (IntersectionObserver ref)
+        └── Loading spinner (if more content available)
 ```
 
 ### Component Files
 
 | Component | File Path | Purpose |
 |-----------|-----------|---------|
-| **LibraryPage** | `library-page.tsx` | Main container, data fetching, state management |
+| **LibraryPage** | `library-page.tsx` | Main container, infinite scroll, state management |
 | **LibraryPageHeader** | `library-page-header.tsx` | Header with title & description |
-| **ThreadCard** | `thread-card.tsx` | Individual thread display (grid & list) |
+| **ThreadCard** | `thread-card.tsx` | Individual thread with file previews |
+| **FileCard** | `file-card.tsx` | Individual file preview card with markdown rendering |
+| **MarkdownPreview** | `markdown-preview/MarkdownPreview.tsx` | Renders markdown content with code highlighting |
+| **FileIcon** | `file-icons/FileIcon.tsx` | Maps file type to icon component |
+| **File Type Icons** | `file-icons/icons/*.tsx` | Individual icon components (CodeIcon, DocumentIcon, PdfIcon, etc.) |
 
 ---
 
@@ -77,9 +93,18 @@ const [searchQuery, setSearchQuery] = useState('');
 // Favorites persistence
 const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-// Pagination
-const [currentPage, setCurrentPage] = useState(1);
+// Infinite scroll
+const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE); // Show 5 initially
+const [isLoadingMore, setIsLoadingMore] = useState(false);
+const loadMoreRef = useRef<HTMLDivElement>(null);
 ```
+
+**Key Changes from Old Version:**
+- ❌ Removed: `currentPage` (pagination)
+- ❌ Removed: Grid/List view toggle (commented out, only list view)
+- ✅ Added: `displayCount` for progressive loading
+- ✅ Added: `isLoadingMore` for loading state during scroll
+- ✅ Added: `loadMoreRef` for IntersectionObserver anchor
 
 ### Data Fetching
 
@@ -109,7 +134,7 @@ const { data: projects = [], isLoading: projectsLoading } = useQuery({
 
 ### Data Processing
 
-#### Step 1: Combine Threads with Project Data
+#### Step 1: Combine Threads with Project Data & Sort
 ```typescript
 const threadsWithProjects: ThreadWithProject[] = useMemo(() => {
   if (!threads.length || !projects.length) return [];
@@ -128,9 +153,17 @@ const threadsWithProjects: ThreadWithProject[] = useMemo(() => {
         updatedAt: thread.updated_at,
         iconName: project?.icon_name,
       };
+    })
+    .sort((a, b) => {
+      // Sort by updated_at descending (newest first)
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
 }, [threads, projects]);
 ```
+
+**Key Changes:**
+- ✅ Added: Sort by `updated_at` descending (newest threads first)
+- ✅ Ensures consistent ordering regardless of API response order
 
 **Type: `ThreadWithProject`**
 ```typescript
@@ -166,14 +199,64 @@ const filteredThreads = useMemo(() => {
 }, [threadsWithProjects, filterMode, favorites, searchQuery]);
 ```
 
-#### Step 3: Paginate Results
+#### Step 3: Progressive Loading (Infinite Scroll)
 ```typescript
-const totalPages = Math.ceil(filteredThreads.length / ITEMS_PER_PAGE);
-const paginatedThreads = useMemo(() => {
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  return filteredThreads.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-}, [filteredThreads, currentPage]);
+// Display limited threads (for progressive loading)
+const displayedThreads = useMemo(() => {
+  return filteredThreads.slice(0, displayCount);
+}, [filteredThreads, displayCount]);
+
+const hasMore = filteredThreads.length > displayCount;
+
+// Load more function
+const loadMore = useCallback(() => {
+  if (isLoadingMore || !hasMore) return;
+  
+  setIsLoadingMore(true);
+  // Simulate slight delay for smooth UX
+  setTimeout(() => {
+    setDisplayCount(prev => prev + ITEMS_PER_PAGE);
+    setIsLoadingMore(false);
+  }, 300);
+}, [isLoadingMore, hasMore]);
+
+// Intersection Observer for infinite scroll
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+        loadMore();
+      }
+    },
+    { threshold: 0.1 }
+  );
+
+  const currentRef = loadMoreRef.current;
+  if (currentRef) {
+    observer.observe(currentRef);
+  }
+
+  return () => {
+    if (currentRef) {
+      observer.unobserve(currentRef);
+    }
+  };
+}, [hasMore, isLoadingMore, loadMore]);
 ```
+
+**How It Works:**
+1. `displayedThreads` - Slice of `filteredThreads` up to `displayCount`
+2. `loadMore()` - Increments `displayCount` by 5 (ITEMS_PER_PAGE)
+3. `IntersectionObserver` - Watches `loadMoreRef` element at bottom
+4. When element becomes visible (`threshold: 0.1`) - triggers `loadMore()`
+5. 300ms delay prevents rapid successive loads
+6. Spinner shows while loading
+
+**Key Changes:**
+- ✅ Replaced pagination (`currentPage`) with progressive loading (`displayCount`)
+- ✅ Uses IntersectionObserver instead of "Next" button
+- ✅ Smoother UX - no page jumps, continuous scroll
+- ✅ More performant - only renders visible threads
 
 ### Side Effects
 
@@ -192,12 +275,14 @@ useEffect(() => {
 }, []);
 ```
 
-#### Reset Pagination on Filter/Search Change
+#### Reset Display Count on Filter/Search Change
 ```typescript
 useEffect(() => {
-  setCurrentPage(1);
+  setDisplayCount(ITEMS_PER_PAGE);
 }, [filterMode, searchQuery]);
 ```
+
+**Purpose:** When user changes filter or search, reset to showing only first 5 threads
 
 ---
 
@@ -205,18 +290,41 @@ useEffect(() => {
 
 ### Overall Layout
 ```typescript
-<div className="flex flex-col h-full w-full">
-  {/* Header Section */}
-  <LibraryPageHeader />
-  
-  {/* Toolbar Section */}
-  <div className="flex items-center gap-4 px-6 py-4 border-b">
-    {/* Search, Filters, View Toggle */}
+<div className="min-h-screen">
+  {/* Combined Sticky Header + Toolbar */}
+  <div className="sticky top-0 z-20 bg-background">
+    <div className="container mx-auto max-w-7xl px-4">
+      {/* Header */}
+      <div className="py-4 md:py-[14px]">
+        <LibraryPageHeader />
+      </div>
+
+      {/* Toolbar */}
+      <div className="pb-4">
+        <div className="flex items-center gap-4">
+          {/* Search, Filters */}
+        </div>
+      </div>
+    </div>
   </div>
-  
-  {/* Content Section */}
-  <div className="flex-1 overflow-auto px-6 py-4">
-    {/* Loading State | Empty State | Thread Grid/List */}
+
+  {/* Content */}
+  <div className="container mx-auto max-w-7xl px-4 py-2">
+    {/* Loading State | Empty State | Thread List */}
+    <div className="flex flex-col gap-3 md:gap-[12px]">
+      {displayedThreads.map((thread) => (
+        <ThreadCard ... />
+      ))}
+    </div>
+
+    {/* Infinite Scroll Trigger & Loading Spinner */}
+    {hasMore && (
+      <div ref={loadMoreRef} className="flex items-center justify-center mt-8 py-4">
+        {isLoadingMore && (
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        )}
+      </div>
+    )}
   </div>
 </div>
 ```
@@ -225,17 +333,171 @@ useEffect(() => {
 
 | Area | Class | Purpose |
 |------|-------|---------|
-| Container | `flex flex-col h-full w-full` | Full-height flex column |
-| Toolbar | `flex items-center gap-4 px-6 py-4 border-b` | Horizontal layout with border |
-| Content | `flex-1 overflow-auto px-6 py-4` | Grows to fill space, allows scroll |
-| Grid | `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4` | Responsive 1→4 columns |
-| List | `flex flex-col gap-2` | Vertical stacked layout |
+| Container | `min-h-screen` | Full viewport height minimum |
+| Sticky Header | `sticky top-0 z-20 bg-background` | Stays at top while scrolling |
+| Width Constraint | `container mx-auto max-w-7xl px-4` | Max 80rem width, centered, responsive padding |
+| Content | `flex flex-col gap-3 md:gap-[12px]` | Vertical list, 3px mobile gap / 12px tablet+ |
+| Thread Grid | `flex flex-col gap-3 md:gap-[12px]` | Stacked vertical layout (Manus design) |
+| Scroll Trigger | `flex items-center justify-center mt-8 py-4` | Centered loader at bottom |
 
-### Grid Breakpoints
-- **Mobile (< 768px):** 1 column
-- **Tablet (768px - 1023px):** 2 columns  
-- **Desktop (1024px - 1279px):** 3 columns
-- **Large Desktop (≥ 1280px):** 4 columns
+**Key Changes:**
+- ✅ Changed from `h-full w-full` to `min-h-screen`
+- ✅ Sticky header with `top-0 z-20`
+- ✅ `container mx-auto max-w-7xl` wrapper (max width, centered)
+- ✅ Only list view (grid view toggle is commented out)
+- ✅ Dynamic gap: `gap-3 md:gap-[12px]` (Manus design system)
+
+---
+
+## Infinite Scroll Implementation
+
+### How It Works
+
+1. **Initial State**: `displayCount = 5` (ITEMS_PER_PAGE)
+2. **User Scrolls**: Page content loads, user scrolls to bottom
+3. **Trigger Element**: `<div ref={loadMoreRef}>` at bottom becomes visible
+4. **IntersectionObserver**: Detects element in viewport (threshold: 0.1)
+5. **Load More**: Increments `displayCount` by 5
+6. **Re-render**: `displayedThreads` now shows more items
+7. **Repeat**: Cycle continues until all filtered threads are shown
+
+### Code Flow
+
+```typescript
+// 1. Set initial display count
+const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE); // 5
+
+// 2. Slice threads for display
+const displayedThreads = useMemo(() => {
+  return filteredThreads.slice(0, displayCount);
+}, [filteredThreads, displayCount]);
+
+// 3. Check if more content available
+const hasMore = filteredThreads.length > displayCount;
+
+// 4. Load more function with delay
+const loadMore = useCallback(() => {
+  if (isLoadingMore || !hasMore) return;
+  setIsLoadingMore(true);
+  setTimeout(() => {
+    setDisplayCount(prev => prev + ITEMS_PER_PAGE); // Add 5 more
+    setIsLoadingMore(false);
+  }, 300);
+}, [isLoadingMore, hasMore]);
+
+// 5. Observe scroll trigger element
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+        loadMore();
+      }
+    },
+    { threshold: 0.1 }
+  );
+  // ... observe loadMoreRef
+}, [hasMore, isLoadingMore, loadMore]);
+```
+
+### Performance Benefits
+
+| Aspect | Benefit |
+|--------|---------|
+| **Memory** | Only renders visible threads, not all 100+ |
+| **Network** | No additional API calls - uses already-fetched data |
+| **UX** | Smooth scrolling, no page jumps, continuous experience |
+| **Mobile** | Reduces initial load time, better for low-bandwidth |
+
+---
+
+## File Preview System
+
+### Overview
+
+Each ThreadCard now displays **inline file previews** from the associated Daytona sandbox:
+
+```
+ThreadCard
+├── Project Info (name, date, star button)
+├── FileCard[] (up to 3 shown, expandable)
+│   ├── File Icon (type-specific)
+│   ├── File Name
+│   ├── MarkdownPreview (if .md file)
+│   └── File Size / Type
+└── "Show More / Show Less" toggle
+```
+
+### Data Flow
+
+```typescript
+// In ThreadCard
+const sandboxId = project?.sandbox?.id;
+
+// Fetch files from sandbox
+const { data: files = [] } = useQuery({
+  queryKey: ['sandbox-files', sandboxId, '/workspace'],
+  queryFn: () => listSandboxFiles(sandboxId!, '/workspace'),
+  enabled: !!sandboxId && !!project,
+});
+
+// Render each file with FileCard
+{files.map((file) => (
+  <FileCard
+    key={file.path}
+    file={file}
+    IconComponent={getFileType(file.path).icon}
+    isMarkdown={getFileType(file.path).type === 'markdown'}
+    sandboxId={sandboxId!}
+  />
+))}
+```
+
+### FileCard Component
+
+Located: `frontend/src/components/library/file-card.tsx`
+
+**Features:**
+- ✅ Fetches markdown content via `getSandboxFileContent()`
+- ✅ Renders markdown with syntax highlighting
+- ✅ Shows file icon, name, and metadata
+- ✅ Expandable/collapsible preview
+- ✅ Handles various file types
+
+### MarkdownPreview Component
+
+Located: `frontend/src/components/library/markdown-preview/MarkdownPreview.tsx`
+
+**Features:**
+- ✅ Uses `react-markdown` library
+- ✅ Code syntax highlighting via `CodeRenderer`
+- ✅ Custom component rendering
+- ✅ Safe HTML rendering
+
+### File Type Detection
+
+Located: `frontend/src/lib/utils/fileTypeDetector.ts`
+
+**Exports:**
+```typescript
+const FILE_ICONS = {
+  'code': CodeIcon,
+  'document': DocumentIcon,
+  'pdf': PdfIcon,
+  'spreadsheet': SpreadsheetIcon,
+  'archive': ArchiveIcon,
+  'default': DefaultIcon,
+};
+
+function getFileType(path: string): { type: string; icon: Component }
+```
+
+**Supported File Types:**
+- Code: `.ts`, `.js`, `.py`, `.java`, `.go`, `.rs`, `.jsx`, `.tsx`
+- Document: `.doc`, `.docx`, `.txt`, `.md`
+- PDF: `.pdf`
+- Spreadsheet: `.xls`, `.xlsx`, `.csv`
+- Archive: `.zip`, `.tar`, `.gz`, `.7z`
+- Default: anything else
 
 ---
 
@@ -260,7 +522,8 @@ useEffect(() => {
 - Searches across `projectName` field (case-insensitive)
 - Partial matching (contains, not exact)
 - Triggers filter recalculation via `useMemo`
-- Resets pagination to page 1
+- Resets display to first 5 items (`displayCount = ITEMS_PER_PAGE`)
+- Infinite scroll triggers again as user scrolls
 
 **Example:**
 - Search: "api"
@@ -302,34 +565,18 @@ if (filterMode === 'favorites') {
 
 ---
 
-### 3. View Mode Toggle
+### 3. View Mode Toggle (DEPRECATED)
 
-**UI:**
+**Status:** ❌ **DISABLED/COMMENTED OUT**
+
+The view mode toggle (Grid/List) has been disabled in the current design. Only list view is used (Manus design system requirement).
+
 ```typescript
-<div className="flex items-center gap-1 border rounded-md">
-  <Button
-    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-    size="sm"
-    onClick={() => setViewMode('grid')}
-    className="rounded-r-none"
-  >
-    <LayoutGrid className="w-4 h-4" />
-  </Button>
-  <Button
-    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-    size="sm"
-    onClick={() => setViewMode('list')}
-    className="rounded-l-none"
-  >
-    <List className="w-4 h-4" />
-  </Button>
-</div>
+{/* View Mode Toggle - Hidden for now, Manus only uses list view */}
+{/* <div className="flex items-center gap-1 border rounded-md">
+  ... grid/list buttons ...
+</div> */}
 ```
-
-**Implementation:**
-- Grid view: Multi-column responsive layout
-- List view: Single-column full-width rows
-- State persists during session (not localStorage)
 
 ---
 
@@ -369,48 +616,28 @@ const toggleFavorite = (threadId: string) => {
 
 ---
 
-### 5. Pagination
+### 5. Infinite Scroll Loading Indicator
 
 **Display:**
 ```typescript
-{totalPages > 1 && (
-  <div className="flex items-center justify-center gap-2 mt-8">
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-      disabled={currentPage === 1}
-    >
-      Previous
-    </Button>
-    <span className="text-sm text-muted-foreground">
-      Page {currentPage} of {totalPages}
-    </span>
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-      disabled={currentPage === totalPages}
-    >
-      Next
-    </Button>
+{hasMore && (
+  <div 
+    ref={loadMoreRef}
+    className="flex items-center justify-center mt-8 py-4"
+  >
+    {isLoadingMore && (
+      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+    )}
   </div>
 )}
 ```
 
-**Constants:**
-```typescript
-const ITEMS_PER_PAGE = 20;
-```
-
-**Calculation:**
-```typescript
-const totalPages = Math.ceil(filteredThreads.length / ITEMS_PER_PAGE);
-const paginatedThreads = useMemo(() => {
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  return filteredThreads.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-}, [filteredThreads, currentPage]);
-```
+**How It Works:**
+1. `hasMore` - True if `filteredThreads.length > displayCount`
+2. `loadMoreRef` - Div element that triggers IntersectionObserver
+3. When ref becomes visible → `loadMore()` fires → `displayCount` increases
+4. Spinner animates while `isLoadingMore` is true
+5. 300ms delay prevents rapid successive loads
 
 ---
 
