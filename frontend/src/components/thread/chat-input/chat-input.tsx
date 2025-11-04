@@ -250,8 +250,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       'notion': notionIcon?.icon_url,
     }), [googleDriveIcon, slackIcon, notionIcon]);
 
-    // Fetch slash commands
-    const { data: slashCommands = [] } = useSlashCommands(sandboxId);
+    // Fetch slash commands (no longer needs sandboxId)
+    const { data: slashCommands = [] } = useSlashCommands();
 
     // Filter slash commands based on current input
     const filteredSlashCommands = useMemo(() => {
