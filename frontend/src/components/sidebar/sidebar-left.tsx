@@ -139,12 +139,11 @@ function UserProfileSection({ user }: { user: any }) {
 
 // Route to view mapping
 const routeMap: Record<string, string> = {
-  '/chats': '/library', // Right-click opens library
+  '/chats': '/chats',
   '/agents': '/agents',
   '/triggers': '/triggers',
-  '/workspaces': '/workspaces',
-  '/knowledge': '/knowledge',
   '/library': '/library',
+  '/knowledge': '/knowledge',
   '/inbox': '/inbox',
 };
 
@@ -185,7 +184,7 @@ export function SidebarLeft({
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const [activeView, setActiveView] = useState<'chats' | 'agents' | 'starred' | 'workspaces' | 'knowledge' | 'inbox'>('chats');
+  const [activeView, setActiveView] = useState<'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
   const [user, setUser] = useState<{
     name: string;
@@ -208,7 +207,7 @@ export function SidebarLeft({
   // Update active view based on pathname
   useEffect(() => {
     if (pathname?.includes('/triggers')) {
-      setActiveView('starred');
+      setActiveView('triggers');
     } else if (pathname?.includes('/knowledge')) {
       setActiveView('knowledge');
     }
@@ -384,8 +383,8 @@ export function SidebarLeft({
                 {[
                   { view: 'chats' as const, icon: MessageCircle, label: 'Chats' },
                   { view: 'agents' as const, icon: Bot, label: 'Workers' },
-                  { view: 'starred' as const, icon: Zap, label: 'Triggers' },
-                  { view: 'workspaces' as const, icon: Folder, label: 'Workspaces' },
+                  { view: 'triggers' as const, icon: Zap, label: 'Triggers' },
+                  { view: 'library' as const, icon: Folder, label: 'Library' },
                   { view: 'knowledge' as const, icon: Database, label: 'Knowledge' },
                   { view: 'inbox' as const, icon: Bell, label: 'Inbox' },
                 ].map(({ view, icon: Icon, label }) => (
@@ -459,7 +458,7 @@ export function SidebarLeft({
                   {[
                     { view: 'chats' as const, icon: MessageCircle, label: 'Chats' },
                     { view: 'agents' as const, icon: Bot, label: 'Workers' },
-                    { view: 'starred' as const, icon: Zap, label: 'Triggers' }
+                    { view: 'triggers' as const, icon: Zap, label: 'Triggers' }
                   ].map(({ view, icon: Icon, label }) => (
                     <Link
                       key={view}
@@ -488,7 +487,7 @@ export function SidebarLeft({
                 {/* Additional buttons row */}
                 <div className="flex justify-between items-center gap-2">
                   {[
-                    { view: 'workspaces' as const, icon: Folder, label: 'Workspaces' },
+                    { view: 'library' as const, icon: Folder, label: 'Library' },
                     { view: 'knowledge' as const, icon: Database, label: 'Knowledge' },
                     { view: 'inbox' as const, icon: Bell, label: 'Inbox' }
                   ].map(({ view, icon: Icon, label }) => (
@@ -521,16 +520,16 @@ export function SidebarLeft({
               <div className="px-6 flex-1 overflow-hidden">
                 {activeView === 'chats' && <NavAgents />}
                 {activeView === 'agents' && <NavAgentsView />}
-                {activeView === 'starred' && (
+                {activeView === 'triggers' && (
                   <>
                     <NavGlobalConfig />
                     <NavTriggerRuns />
                   </>
                 )}
-                {activeView === 'workspaces' && (
+                {activeView === 'library' && (
                   <div className="p-4 text-center text-muted-foreground">
                     <Folder className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Workspaces placeholder</p>
+                    <p className="text-sm">Library placeholder</p>
                   </div>
                 )}
                 {activeView === 'knowledge' && (
