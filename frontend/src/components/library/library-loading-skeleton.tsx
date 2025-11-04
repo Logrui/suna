@@ -13,27 +13,28 @@ interface LibraryLoadingSkeletonProps {
 export const LibraryLoadingSkeleton = ({ viewMode = 'grid', count = 6 }: LibraryLoadingSkeletonProps) => {
   if (viewMode === 'grid') {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Array.from({ length: count }).map((_, index) => (
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, index) => (
           <div key={`skeleton-${index}`} className="rounded-xl border border-border/30 overflow-hidden">
-            {/* Thumbnail */}
-            <div className="h-32 bg-muted/20 animate-pulse" />
-            
             {/* Content */}
-            <div className="p-4 space-y-3">
-              {/* Title */}
-              <Skeleton className="h-4 w-32" />
-              
-              {/* Metadata row */}
+            <div className="p-5 space-y-4">
+              {/* Title and metadata row */}
               <div className="flex items-center justify-between">
-                <Skeleton className="h-3 w-16" />
-                <Skeleton className="h-6 w-6 rounded-full" />
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-7 w-7 rounded-full" />
               </div>
               
-              {/* File list skeleton */}
-              <div className="space-y-1">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-3 w-32" />
+              {/* Timestamp */}
+              <Skeleton className="h-4 w-28" />
+              
+              {/* File grid - 2-3 file squares */}
+              <div className="grid grid-cols-3 gap-3 mt-4">
+                {Array.from({ length: 3 }).map((_, fileIdx) => (
+                  <div key={`file-${fileIdx}`} className="space-y-2">
+                    <Skeleton className="h-48 w-full rounded-lg" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
