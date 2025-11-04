@@ -71,7 +71,12 @@ export function injectPrompt(promptContent: string, userArgs: string): string {
 
 ---
 
-## Step 2: Create Data Fetching Hook
+## Step 2: Create Initialization & Data Fetching Hook
+
+This hook will:
+1. Auto-create the `/Knowledge/prompts/` directory on first load
+2. Create 4 example markdown files if they don't exist
+3. Fetch and cache all commands
 
 **File**: `frontend/src/hooks/useSlashCommands.ts`
 
@@ -84,11 +89,90 @@ import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '@/lib/api';
 import { parseMarkdownCommand, SlashCommand } from '@/lib/slashCommands';
 
+const EXAMPLE_COMMANDS = [
+  {
+    filename: 'summarize.md',
+    content: `---
+description: "Summarize content into 5 bullet points."
+---
+
+Summarize the following content in 5 bullet points, focusing on key takeaways and important numbers or dates.`,
+  },
+  {
+    filename: 'draft-email.md',
+    content: `---
+description: "Draft a professional email."
+---
+
+Draft a professional email for the following scenario. Keep it to 2-3 paragraphs, use a formal tone, and include a clear call-to-action.`,
+  },
+  {
+    filename: 'brainstorm.md',
+    content: `---
+description: "Generate 10 creative ideas."
+---
+
+Generate 10 creative ideas for the following topic. Be diverse, think outside the box, and explain each idea briefly.`,
+  },
+  {
+    filename: 'explain-simple.md',
+    content: `---
+description: "Explain complex concepts simply."
+---
+
+Explain the following in simple terms that a 10-year-old could understand. Avoid technical jargon and use real-world examples if possible.`,
+  },
+];
+
+/**
+ * Initialize example commands if they don't exist
+ */
+async function initializeExampleCommands() {
+  try {
+    // First, try to list files in the directory (this will tell us if it exists)
+    const listRes = await fetch(`${API_URL}/files?path=Knowledge/prompts`);
+    
+    if (!listRes.ok) {
+      // Directory likely doesn't exist, we need to create files
+      console.log('Initializing example slash commands...');
+      
+      // Create each example file
+      for (const example of EXAMPLE_COMMANDS) {
+        try {
+          const createRes = await fetch(`${API_URL}/files`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              path: `Knowledge/prompts/${example.filename}`,
+              content: example.content,
+            }),
+          });
+
+          if (createRes.ok) {
+            console.log(`✓ Created example command: ${example.filename}`);
+          } else {
+            console.error(`Failed to create ${example.filename}:`, await createRes.text());
+          }
+        } catch (err) {
+          console.error(`Error creating example command ${example.filename}:`, err);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error during initialization:', err);
+  }
+}
+
 export function useSlashCommands() {
   return useQuery<SlashCommand[], Error>({
     queryKey: ['slash-commands'],
     queryFn: async () => {
       try {
+        // Initialize example commands on first load
+        await initializeExampleCommands();
+
         // 1. List files in the designated prompts directory
         const listRes = await fetch(`${API_URL}/files?path=Knowledge/prompts`);
         if (!listRes.ok) {
