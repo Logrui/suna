@@ -42,6 +42,9 @@ import { BillingModal } from '@/components/billing/billing-modal';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { ContextUsageIndicator } from '../ContextUsageIndicator';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { useSlashCommands } from '@/hooks/useSlashCommands';
+import { detectCommand, injectPrompt } from '@/lib/slashCommands';
+import { SlashCommandAutocomplete } from '@/components/slash-commands/SlashCommandAutocomplete';
 
 import posthog from 'posthog-js';
 
@@ -209,6 +212,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const ENABLE_SUNA_AGENT_MODES = false;
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
 
+    // Slash commands state
+    const [showSlashCommands, setShowSlashCommands] = useState(false);
+    const [slashCommandFilter, setSlashCommandFilter] = useState('');
+    const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+
     const {
       selectedModel,
       setSelectedModel: handleModelChange,
@@ -240,7 +248,20 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       'googledrive': googleDriveIcon?.icon_url,
       'slack': slackIcon?.icon_url,
       'notion': notionIcon?.icon_url,
-    }), [googleDriveIcon, slackIcon, notionIcon]);    // Show usage preview logic:
+    }), [googleDriveIcon, slackIcon, notionIcon]);
+
+    // Fetch slash commands
+    const { data: slashCommands = [] } = useSlashCommands(sandboxId);
+
+    // Filter slash commands based on current input
+    const filteredSlashCommands = useMemo(() => {
+      if (!slashCommandFilter) return slashCommands;
+      return slashCommands.filter(cmd => 
+        cmd.name.toLowerCase().includes(slashCommandFilter.toLowerCase())
+      );
+    }, [slashCommands, slashCommandFilter]);
+
+    // Show usage preview logic:
     // - Always show to free users when showToLowCreditUsers is true
     // - For paid users, only show when they're at 70% or more of their cost limit (30% or below remaining)
     const shouldShowUsage = useMemo(() => {
@@ -424,6 +445,15 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
 
       let message = value;
 
+      // Check for slash command and inject prompt
+      const detectedCommand = detectCommand(message);
+      if (detectedCommand) {
+        const command = slashCommands.find(cmd => cmd.name === detectedCommand.name);
+        if (command) {
+          message = injectPrompt(message, command);
+        }
+      }
+
       if (uploadedFiles.length > 0) {
         const fileInfo = uploadedFiles
           .map((file) => `[Uploaded File: ${file.path}]`)
@@ -456,7 +486,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       // For now, keep the text visible until stream starts
 
       setUploadedFiles([]);
-    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange]);
+    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange, slashCommands]);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
@@ -467,9 +497,53 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       if (isControlled && controlledOnChange) {
         controlledOnChange(newValue);
       }
+
+      // Detect slash command
+      if (newValue.startsWith('/') && !newValue.includes('\n')) {
+        const parts = newValue.slice(1).split(' ');
+        const commandFilter = parts[0] || '';
+        setSlashCommandFilter(commandFilter);
+        setShowSlashCommands(true);
+        setSelectedCommandIndex(0);
+      } else {
+        setShowSlashCommands(false);
+        setSlashCommandFilter('');
+      }
     }, [isControlled, controlledOnChange]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Handle slash command autocomplete navigation
+      if (showSlashCommands && filteredSlashCommands.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedCommandIndex(prev => 
+            prev < filteredSlashCommands.length - 1 ? prev + 1 : prev
+          );
+          return;
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedCommandIndex(prev => prev > 0 ? prev - 1 : 0);
+          return;
+        } else if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          // Select the highlighted command
+          const selectedCommand = filteredSlashCommands[selectedCommandIndex];
+          if (selectedCommand) {
+            setLocalValue('/' + selectedCommand.name + ' ');
+            setShowSlashCommands(false);
+            setSlashCommandFilter('');
+            textareaRef.current?.focus();
+          }
+          return;
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setShowSlashCommands(false);
+          setSlashCommandFilter('');
+          return;
+        }
+      }
+
+      // Original Enter key handling
       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault();
         if (
@@ -481,7 +555,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           handleSubmit(e as unknown as React.FormEvent);
         }
       }
-    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, handleSubmit]);
+    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, handleSubmit, showSlashCommands, filteredSlashCommands, selectedCommandIndex]);
 
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!e.clipboardData) return;
@@ -519,6 +593,26 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         controlledOnChange(newValue);
       }
     }, [localValue, isControlled, controlledOnChange]);
+
+    const handleSlashCommandSelect = useCallback((command: any) => {
+      const newValue = '/' + command.name + ' ';
+      setLocalValue(newValue);
+      setShowSlashCommands(false);
+      setSlashCommandFilter('');
+      
+      // Notify parent in controlled mode
+      if (isControlled && controlledOnChange) {
+        controlledOnChange(newValue);
+      }
+      
+      // Focus textarea
+      textareaRef.current?.focus();
+    }, [isControlled, controlledOnChange]);
+
+    const handleSlashCommandClose = useCallback(() => {
+      setShowSlashCommands(false);
+      setSlashCommandFilter('');
+    }, []);
 
     const removeUploadedFile = useCallback(async (index: number) => {
       const fileToRemove = uploadedFiles[index];
@@ -591,7 +685,14 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     }, [mounted, isLoggedIn, hideAgentSelection, selectedAgentId, onAgentSelect, selectedModel, handleModelChange, modelOptions, subscriptionStatus, canAccessModel, refreshCustomModels]);
 
     const renderTextArea = useMemo(() => (
-      <div className="flex flex-col gap-1 px-2">
+      <div className="flex flex-col gap-1 px-2 relative">
+        <SlashCommandAutocomplete
+          isOpen={showSlashCommands}
+          commands={filteredSlashCommands}
+          selectedIndex={selectedCommandIndex}
+          onSelect={handleSlashCommandSelect}
+          onClose={handleSlashCommandClose}
+        />
         <Textarea
           ref={textareaRef}
           value={value}
@@ -607,7 +708,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           rows={1}
         />
       </div>
-    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted]);
+    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted, showSlashCommands, filteredSlashCommands, selectedCommandIndex, handleSlashCommandSelect, handleSlashCommandClose]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
