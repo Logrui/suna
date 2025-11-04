@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2, BookOpen, Star, FileText, ChevronDown } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -19,6 +19,10 @@ import {
   useProjects
 } from '@/hooks/react-query/sidebar/use-sidebar';
 
+// Pagination constants
+const THREADS_PER_PAGE = 8;
+const MAX_FILES_PER_THREAD = 3;
+
 // ============= SUB-COMPONENTS =============
 
 // Date group header
@@ -32,14 +36,15 @@ const DateGroupHeader: React.FC<{ dateGroup: string; count: number }> = ({ dateG
   );
 };
 
-// Thread list item with file list
+// Thread list item with file list and loading tracking
 const ThreadListItem: React.FC<{
   thread: ThreadWithProject;
   isActive: boolean;
   isFavorite: boolean;
   onThreadClick: (threadId: string, url: string) => void;
   onToggleFavorite: (threadId: string) => void;
-}> = ({ thread, isActive, isFavorite, onThreadClick, onToggleFavorite }) => {
+  onFileLoadingChange?: (threadId: string, isLoading: boolean) => void;
+}> = ({ thread, isActive, isFavorite, onThreadClick, onToggleFavorite, onFileLoadingChange }) => {
   const [showAllFiles, setShowAllFiles] = useState(false);
   const router = useRouter();
 
@@ -75,7 +80,14 @@ const ThreadListItem: React.FC<{
     retry: false,
   });
 
-  const maxFilesShown = 3;
+  // Notify parent of loading status changes
+  useEffect(() => {
+    if (onFileLoadingChange) {
+      onFileLoadingChange(thread.threadId, filesLoading);
+    }
+  }, [filesLoading, thread.threadId, onFileLoadingChange]);
+
+  const maxFilesShown = MAX_FILES_PER_THREAD;
   const displayedFiles = files.slice(0, showAllFiles ? files.length : maxFilesShown);
   const hasMoreFiles = files.length > maxFilesShown;
 
@@ -180,14 +192,30 @@ const ThreadListItem: React.FC<{
   );
 };
 
-// Loading skeleton
+// Loading skeleton - matches Library thread card style with files
 const LoadingSkeleton = () => (
-  <div className="space-y-1">
-    {Array.from({ length: 3 }).map((_, index) => (
-      <div key={`skeleton-${index}`} className="flex items-center gap-3 px-2 py-2">
-        <div className="h-10 w-10 bg-muted/10 border-[1.5px] border-border rounded-2xl animate-pulse"></div>
-        <div className="h-4 bg-muted rounded flex-1 animate-pulse"></div>
-        <div className="h-4 w-8 bg-muted rounded animate-pulse"></div>
+  <div className="space-y-3 px-3 py-4">
+    {Array.from({ length: 8 }).map((_, index) => (
+      <div key={`skeleton-${index}`} className="space-y-2">
+        {/* Main thread card */}
+        <div className="flex items-center gap-3 px-2 py-2.5">
+          <div className="h-10 w-10 bg-muted/10 border-[1.5px] border-border rounded-2xl animate-pulse flex-shrink-0"></div>
+          <div className="flex-1 space-y-1">
+            <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+          </div>
+          <div className="h-3 w-12 bg-muted rounded animate-pulse flex-shrink-0"></div>
+          <div className="h-5 w-5 bg-muted rounded-full animate-pulse flex-shrink-0"></div>
+        </div>
+        
+        {/* File items underneath */}
+        <div className="ml-8 space-y-1">
+          {Array.from({ length: 2 }).map((_, fileIdx) => (
+            <div key={`file-${fileIdx}`} className="flex items-center gap-2 px-2 py-1">
+              <div className="h-3 w-3 bg-muted/60 rounded animate-pulse flex-shrink-0"></div>
+              <div className="h-3 bg-muted/60 rounded flex-1 animate-pulse"></div>
+            </div>
+          ))}
+        </div>
       </div>
     ))}
   </div>
@@ -208,12 +236,19 @@ export function NavLibrary() {
   const router = useRouter();
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch data
   const { data: threads = [], isLoading: threadsLoading } = useThreads();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   
-  const isLoading = threadsLoading || projectsLoading;
+  const initialDataLoading = threadsLoading || projectsLoading;
+
+  // Pagination state
+  const [displayedThreadCount, setDisplayedThreadCount] = useState(THREADS_PER_PAGE);
+
+  // Favorite management
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   // Process threads with project info
   const threadsWithProjects = useMemo(() => {
@@ -226,8 +261,95 @@ export function NavLibrary() {
     return groupThreadsByDate(threadsWithProjects);
   }, [threadsWithProjects]);
 
-  // Favorite management
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  // Get flat list of all threads
+  const allThreads = useMemo(() => {
+    return Object.values(groupedThreads).flat();
+  }, [groupedThreads]);
+
+  // Get paginated threads (only first N)
+  const paginatedThreads = useMemo(() => {
+    return allThreads.slice(0, displayedThreadCount);
+  }, [allThreads, displayedThreadCount]);
+
+  // Get paginated grouped threads
+  const paginatedGroupedThreads = useMemo(() => {
+    const result: typeof groupedThreads = {};
+    paginatedThreads.forEach((thread) => {
+      // Find which date group this thread belongs to
+      Object.entries(groupedThreads).forEach(([dateGroup, threads]) => {
+        if (threads.find(t => t.threadId === thread.threadId)) {
+          if (!result[dateGroup]) result[dateGroup] = [];
+          result[dateGroup].push(thread);
+        }
+      });
+    });
+    return result;
+  }, [paginatedThreads, groupedThreads]);
+
+  // Track file loading status for all displayed threads
+  const [filesLoadingState, setFilesLoadingState] = useState<Map<string, boolean>>(new Map());
+  const [forceShowContent, setForceShowContent] = useState(false);
+
+  const updateFileLoading = useCallback((threadId: string, isLoading: boolean) => {
+    setFilesLoadingState(prev => {
+      const next = new Map(prev);
+      next.set(threadId, isLoading);
+      return next;
+    });
+  }, []);
+
+  // Fallback timeout - show content after 2 seconds even if files aren't loaded
+  useEffect(() => {
+    if (!initialDataLoading && paginatedThreads.length > 0) {
+      const timeout = setTimeout(() => {
+        setForceShowContent(true);
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [initialDataLoading, paginatedThreads.length]);
+
+  // Check if all files are loaded
+  const allFilesLoaded = useMemo(() => {
+    // Force show after timeout
+    if (forceShowContent) return true;
+    
+    // Wait for initial data
+    if (initialDataLoading) return false;
+    
+    // If no threads, we're ready
+    if (paginatedThreads.length === 0) return true;
+    
+    // Check if any displayed thread is actively loading files
+    for (const thread of paginatedThreads) {
+      const isLoading = filesLoadingState.get(thread.threadId);
+      // Only wait if we know it's actively loading (true), not undefined
+      if (isLoading === true) {
+        return false;
+      }
+    }
+    
+    // Everything is loaded or queries are disabled
+    return true;
+  }, [paginatedThreads, initialDataLoading, filesLoadingState, forceShowContent]);
+
+  // Handle scroll for pagination
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // When user scrolls near bottom (within 200px), load more threads
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        setDisplayedThreadCount(prev => 
+          Math.min(prev + THREADS_PER_PAGE, allThreads.length)
+        );
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [allThreads.length]);
 
   // Handle thread click
   const handleThreadClick = (threadId: string, url: string) => {
@@ -256,11 +378,14 @@ export function NavLibrary() {
   };
 
   // Render
-  const dateGroups = Object.entries(groupedThreads);
+  const dateGroups = Object.entries(paginatedGroupedThreads);
   
   return (
-    <div className="overflow-y-auto max-h-[calc(100vh-280px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32">
-      {isLoading ? (
+    <div 
+      ref={scrollContainerRef}
+      className="overflow-y-auto max-h-[calc(100vh-280px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32"
+    >
+      {!allFilesLoaded ? (
         <LoadingSkeleton />
       ) : dateGroups.length === 0 ? (
         <EmptyState />
@@ -278,6 +403,7 @@ export function NavLibrary() {
                     isFavorite={favorites.has(thread.threadId)}
                     onThreadClick={handleThreadClick}
                     onToggleFavorite={handleToggleFavorite}
+                    onFileLoadingChange={updateFileLoading}
                   />
                 ))}
               </div>

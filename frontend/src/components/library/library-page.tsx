@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getThreads, getProjects } from '@/lib/api';
 import { LibraryPageHeader } from './library-page-header';
 import { ThreadCard } from './thread-card';
+import { LibraryLoadingSkeleton } from './library-loading-skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, Search, Star, Loader2, Images } from 'lucide-react';
@@ -252,9 +253,7 @@ export function LibraryPage() {
       {/* Content */}
       <div className="container mx-auto max-w-7xl px-4 py-2">
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground">Loading threads...</p>
-          </div>
+          <LibraryLoadingSkeleton viewMode={viewMode} count={displayCount} />
         ) : filteredThreads.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <p className="text-muted-foreground mb-2">
