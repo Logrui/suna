@@ -36,21 +36,19 @@ Slash commands are user-created custom prompts. Type `/command-name` in chat →
 
 ## Storage
 
-Commands are stored using the **existing Suna file storage API** (accessible via `/api/files/...`).
+Commands are stored as **Markdown files** in a designated folder.
 
-**Storage location:** User's workspace, `/slash-commands/` folder
+**Storage location:** `Knowledge/prompts/` folder
 
-**File format:** JSON (one command per file)
+**File format:** Plain markdown
 
-```json
-{
-  "name": "summarize",
-  "prompt": "Summarize in 5 bullet points...",
-  "description": "Quick summarization"
-}
+```markdown
+# Summarize
+
+Summarize in 5 bullet points, focusing on key takeaways
 ```
 
-**Filename:** `{command-name}.json` (e.g., `summarize.json`)
+**Filename:** `{command-name}.md` (e.g., `summarize.md`)
 
 ---
 
@@ -123,16 +121,18 @@ frontend/src/
 ### Fetch Commands
 
 ```typescript
-// Get list of command files
-const response = await fetch('/api/files?path=/slash-commands');
+// List files in Knowledge/prompts folder
+const response = await fetch('/api/files?path=Knowledge/prompts');
 const files = await response.json();
 
-// Load each command JSON file
+// Load each MD file
 const commands = await Promise.all(
-  files.map(file => 
-    fetch(`/api/files?path=/slash-commands/${file.name}`)
-      .then(r => r.json())
-  )
+  files
+    .filter(f => f.name.endsWith('.md'))
+    .map(file => 
+      fetch(`/api/files/content?path=Knowledge/prompts/${file.name}`)
+        .then(r => r.text())
+    )
 );
 ```
 
@@ -143,8 +143,8 @@ const commands = await Promise.all(
 await fetch('/api/files', {
   method: 'POST',
   body: JSON.stringify({
-    path: `/slash-commands/${commandName}.json`,
-    content: JSON.stringify(command)
+    path: `Knowledge/prompts/${commandName}.md`,
+    content: commandContent
   })
 });
 ```
@@ -156,7 +156,7 @@ await fetch('/api/files', {
 await fetch('/api/files', {
   method: 'DELETE',
   body: JSON.stringify({
-    path: `/slash-commands/${commandName}.json`
+    path: `Knowledge/prompts/${commandName}.md`
   })
 });
 ```
