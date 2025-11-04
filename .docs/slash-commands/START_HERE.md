@@ -1,114 +1,114 @@
-# 🚀 Slash Commands Documentation
+# 🚀 Slash Commands - Start Here
 
-## Start Here
+## What Are Slash Commands?
 
-Choose your documentation level:
+Custom prompts stored as **Markdown files** that users can reuse in chat.
 
-### **Quick Start** ⚡ (30 minutes)
-👉 Read **`README_SIMPLE.md`**
+### Example
 
-Contains everything you need to implement:
-- Overview
-- 5 step-by-step code examples
-- Testing code
-- Files to create
-
-This is the **full, working implementation** - copy/paste ready.
+1. User creates command in settings
+2. Saved as: `Knowledge/prompts/summarize.md`
+3. User types in chat: `/summarize this article`
+4. System reads the MD file and injects its content
+5. Agent receives: `[prompt content]\n\nthis article`
 
 ---
 
-### **Detailed Spec** 📖 (1 hour)
-👉 Read **`01_SPECIFICATIONS_SIMPLE.md`**
+## Which Files to Read?
 
-More details on:
-- How it works
-- Storage via file API
-- Features breakdown
+### If you have 20 minutes: 
+📖 Read **`README_SIMPLE.md`**
+- Has all the code examples you need
+- Step-by-step implementation
+- Copy/paste ready
+
+### If you have 5 minutes:
+� Read **`CORRECTION_SUMMARY.md`**
+- Quick overview of the approach
+- How it actually works
+
+### If you want details:
+📖 Read **`01_SPECIFICATIONS_SIMPLE.md`**
+- Detailed feature spec
 - More examples
 
 ---
 
-## What Are Slash Commands?
+## Quick Summary
 
-Users create custom prompts and reuse them in chat:
-
+### Frontend Scans Folder
 ```
-User creates:
-  name: summarize
-  prompt: Summarize in 5 bullet points
-
-User types in chat:
-  /summarize this article about AI
-
-Agent receives:
-  Summarize in 5 bullet points
-  
-  this article about AI
+Knowledge/prompts/
+├─ summarize.md
+├─ draft-email.md
+└─ brainstorm.md
 ```
 
----
+### User Types Command
+```
+/summarize this article
+```
 
-## Implementation Overview
-
-### Storage
-Commands stored in user's workspace as JSON files in `/slash-commands/` folder
-
-### API
-Uses existing Suna file storage API
-
-### Components Needed
-1. `SlashCommandAutocomplete` - Dropdown UI
-2. `SlashCommandModal` - Create/Edit form
-3. `SlashCommandManager` - List commands in settings
-4. Two hooks for fetching and managing commands
-5. Message processor function
-
-### Effort
-**~2-3 days** for one developer
+### System Injects Content
+```
+[Read summarize.md]
+[Inject content into message]
+[Send to agent]
+```
 
 ---
 
-## Legacy Documentation
+## Implementation (7 Steps)
 
-These are the original (overly complex) docs - you don't need them:
-- `00_README.md` - Complex overview
-- `01_SPECIFICATIONS.md` - 2000+ line spec
-- `02_IMPLEMENTATION_ROADMAP.md` - Week-by-week plan
-- `03_TECHNICAL_REFERENCE.md` - API reference
-- `04_UI_UX_DESIGN_GUIDE.md` - Design system
-- `DOCUMENTATION_SUMMARY.md` - Meta guide
+1. **Message processor** - Parse `/command` and inject content
+2. **Fetch hook** - Scan `Knowledge/prompts/` folder
+3. **Manager hook** - Create/Edit/Delete MD files
+4. **Autocomplete component** - Show matching commands
+5. **Modal component** - Create/Edit form
+6. **Manager component** - Settings UI
+7. **Chat integration** - Add autocomplete to chat input
 
-**Why not use these?**
-- Too complicated for MVP
-- Assume LocalStorage instead of file API
-- Overly detailed
+All code is in `README_SIMPLE.md`
 
 ---
 
-## Quick File Reference
+## Files to Create
 
-### Read These
-1. `README_SIMPLE.md` - **All the code you need**
-2. `01_SPECIFICATIONS_SIMPLE.md` - **Background + examples**
-
-### Ignore These (Legacy)
-- `00_README.md`
-- `01_SPECIFICATIONS.md`
-- `02_IMPLEMENTATION_ROADMAP.md`
-- `03_TECHNICAL_REFERENCE.md`
-- `04_UI_UX_DESIGN_GUIDE.md`
-- `DOCUMENTATION_SUMMARY.md`
+```
+frontend/src/
+├─ lib/slashCommands.ts
+├─ hooks/
+│  ├─ useSlashCommands.ts
+│  └─ useSlashCommandManager.ts
+└─ components/slash-commands/
+   ├─ SlashCommandAutocomplete.tsx
+   ├─ SlashCommandModal.tsx
+   └─ SlashCommandManager.tsx
+```
 
 ---
 
-## TL;DR
+## Next Steps
 
-1. Create 2 hooks (fetch commands, CRUD operations)
-2. Create message processor (inject prompt into message)
-3. Create 3 components (autocomplete, modal, manager)
-4. Add to chat input
-5. Commands stored in `/workspace/slash-commands/`
-6. Uses existing Suna file storage API
+1. ✅ Read `README_SIMPLE.md` (20 min)
+2. ✅ Create the 6 files (copy code examples)
+3. ✅ Add to chat input
+4. ✅ Add to settings
+5. ✅ Test
 
-Done! ✅
+Done in ~2-3 days!
+
+---
+
+## Key Points
+
+✅ Markdown files in `Knowledge/prompts/`  
+✅ Frontend scans folder  
+✅ Uses existing file storage API  
+✅ No backend changes  
+✅ Simple and straightforward  
+
+---
+
+👉 **Now go read `README_SIMPLE.md`** for the complete implementation!
 
