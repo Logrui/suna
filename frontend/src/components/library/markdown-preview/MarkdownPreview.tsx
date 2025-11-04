@@ -1,16 +1,13 @@
 /**
  * Markdown Preview Component
  * Displays a truncated preview of markdown files in thread cards
- * Uses the same rendering logic as the file viewer modal for consistency
+ * Shows first N lines with formatting preserved but HTML stripped
  */
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
 import { cn } from '@/lib/utils';
-import { CodeRenderer } from '@/components/file-renderers/code-renderer';
 
 interface MarkdownPreviewProps {
   /** Raw markdown content to preview */
@@ -53,123 +50,102 @@ function truncateMarkdown(
 }
 
 /**
- * Custom renderers matching the file viewer modal styling
+ * Custom renderers for preview mode with proper formatting
  */
 const previewComponents = {
-  // Code blocks - use the same CodeRenderer as modal
-  code(props: any) {
-    const { className, children, ...rest } = props;
-    const match = /language-(\w+)/.exec(className || '');
-    const language = match ? match[1] : '';
-    const code = String(children).replace(/\n$/, '');
-    
-    const isInline = !className || !match;
-    
-    if (isInline) {
+  // Headings: render with proper sizing and spacing
+  h1: ({ children }: any) => <h1 className="text-2xl font-semibold mb-2 mt-3 first:mt-0">{children}</h1>,
+  h2: ({ children }: any) => <h2 className="text-xl font-semibold mb-2 mt-3 first:mt-0">{children}</h2>,
+  h3: ({ children }: any) => <h3 className="text-lg font-semibold mb-1.5 mt-2.5 first:mt-0">{children}</h3>,
+  h4: ({ children }: any) => <h4 className="text-base font-semibold mb-1.5 mt-2 first:mt-0">{children}</h4>,
+  h5: ({ children }: any) => <h5 className="text-base font-medium mb-1 mt-2 first:mt-0">{children}</h5>,
+  h6: ({ children }: any) => <h6 className="text-base font-medium mb-1 mt-2 first:mt-0">{children}</h6>,
+
+  // Inline elements
+  strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }: any) => <em className="italic">{children}</em>,
+
+  // Links: render with accent color
+  a: ({ children, href }: any) => <span className="text-blue-400 underline">{children}</span>,
+
+  // Paragraphs: block-level with spacing
+  p: ({ children }: any) => <p className="mb-2 leading-relaxed">{children}</p>,
+
+  // Line breaks
+  br: () => <br />,
+
+  // Lists: proper formatting
+  ul: ({ children }: any) => <ul className="list-disc list-inside mb-2 space-y-0.5">{children}</ul>,
+  ol: ({ children }: any) => <ol className="list-decimal list-inside mb-2 space-y-0.5">{children}</ol>,
+  li: ({ children }: any) => <li className="leading-relaxed">{children}</li>,
+
+  // Code blocks and inline code
+  code: ({ node, inline, className, children, ...props }: any) => {
+    if (inline) {
       return (
-        <code className="bg-muted/50 px-1.5 py-0.5 rounded text-sm font-mono" {...rest}>
-          {children}
-        </code>
+        <code className="bg-muted/50 px-1.5 py-0.5 rounded text-sm font-mono">{children}</code>
       );
     }
-    
+
+    // For code blocks, show with proper formatting
     return (
-      <CodeRenderer
-        content={code}
-        language={language}
-      />
+      <pre className="bg-muted/50 p-2 rounded mb-2 overflow-x-auto">
+        <code className="text-sm font-mono">{children}</code>
+      </pre>
     );
   },
 
-  // Headings - matching modal styles
-  h1: ({ node, ...props }: any) => (
-    <h1 className="text-2xl font-medium my-4 first:mt-0" {...props} />
-  ),
-  h2: ({ node, ...props }: any) => (
-    <h2 className="text-xl font-medium my-3 first:mt-0" {...props} />
-  ),
-  h3: ({ node, ...props }: any) => (
-    <h3 className="text-lg font-medium my-2 first:mt-0" {...props} />
-  ),
-  h4: ({ node, ...props }: any) => (
-    <h4 className="text-base font-medium my-2 first:mt-0" {...props} />
-  ),
-  h5: ({ node, ...props }: any) => (
-    <h5 className="text-base font-medium my-2 first:mt-0" {...props} />
-  ),
-  h6: ({ node, ...props }: any) => (
-    <h6 className="text-base font-medium my-2 first:mt-0" {...props} />
-  ),
-
-  // Links
-  a: ({ node, ...props }: any) => (
-    <a className="text-primary hover:underline" {...props} />
-  ),
-
-  // Paragraphs
-  p: ({ node, ...props }: any) => (
-    <p className="my-2 leading-relaxed" {...props} />
-  ),
-
-  // Lists
-  ul: ({ node, ...props }: any) => (
-    <ul className="list-disc pl-5 my-2" {...props} />
-  ),
-  ol: ({ node, ...props }: any) => (
-    <ol className="list-decimal pl-5 my-2" {...props} />
-  ),
-  li: ({ node, ...props }: any) => (
-    <li className="my-1" {...props} />
-  ),
-
   // Blockquotes
-  blockquote: ({ node, ...props }: any) => (
-    <blockquote className="border-l-4 border-muted pl-4 italic my-2" {...props} />
+  blockquote: ({ children }: any) => (
+    <blockquote className="border-l-2 border-muted-foreground/30 pl-3 mb-2 italic text-muted-foreground">
+      {children}
+    </blockquote>
   ),
 
-  // Tables - matching modal styles
-  table: ({ node, ...props }: any) => (
-    <div className="overflow-x-auto my-3">
-      <table className="w-full border-collapse text-sm" {...props} />
-    </div>
-  ),
-  th: ({ node, ...props }: any) => (
-    <th
-      className="border border-slate-300 dark:border-zinc-700 px-3 py-2 text-left font-semibold bg-slate-100 dark:bg-zinc-800"
-      {...props}
-    />
-  ),
-  td: ({ node, ...props }: any) => (
-    <td
-      className="border border-slate-300 dark:border-zinc-700 px-3 py-2"
-      {...props}
-    />
-  ),
-
-  // Pre - no background for code blocks
-  pre: ({ node, ...props }: any) => (
-    <pre className="p-0 my-2 bg-transparent" {...props} />
-  ),
-
-  // Images - simple placeholder for preview
-  img: ({ node, ...props }: any) => (
-    <div className="text-sm text-muted-foreground my-2 p-2 bg-muted/30 rounded border border-dashed">
-      [Image: {props.alt || 'untitled'}]
+  // Tables - properly formatted
+  table: ({ children }: any) => (
+    <div className="overflow-x-auto mb-3">
+      <table className="min-w-full border-collapse border border-border/30 text-sm">
+        {children}
+      </table>
     </div>
   ),
   
-  // Inline formatting
-  strong: ({ node, ...props }: any) => (
-    <strong className="font-semibold" {...props} />
+  thead: ({ children }: any) => (
+    <thead className="bg-muted/30">
+      {children}
+    </thead>
   ),
-  em: ({ node, ...props }: any) => (
-    <em className="italic" {...props} />
+  
+  tbody: ({ children }: any) => (
+    <tbody>
+      {children}
+    </tbody>
   ),
+  
+  tr: ({ children }: any) => (
+    <tr className="border-b border-border/20">
+      {children}
+    </tr>
+  ),
+  
+  th: ({ children }: any) => (
+    <th className="border border-border/20 px-3 py-1.5 text-left font-semibold">
+      {children}
+    </th>
+  ),
+  
+  td: ({ children }: any) => (
+    <td className="border border-border/20 px-3 py-1.5">
+      {children}
+    </td>
+  ),
+  
+  // Images - show placeholder
+  img: ({ alt }: any) => <div className="text-sm text-muted-foreground mb-1">[Image: {alt || 'untitled'}]</div>,
   
   // Horizontal rule
-  hr: ({ node, ...props }: any) => (
-    <hr className="my-4 border-muted-foreground/20" {...props} />
-  ),
+  hr: () => <hr className="my-2 border-muted-foreground/20" />,
 };
 
 /**
@@ -191,15 +167,14 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   return (
     <div
       className={cn(
-        'markdown prose prose-sm dark:prose-invert max-w-none',
-        'text-lg leading-relaxed',
+        'text-lg leading-relaxed text-foreground prose prose-invert max-w-none',
+        'break-words overflow-hidden',
         '[&>*:first-child]:mt-0',
         className
       )}
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
         components={previewComponents}
       >
         {truncated}
