@@ -45,12 +45,12 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
 
   return (
     <div
-      className="absolute bottom-full left-0 mb-2 w-full max-w-md bg-popover border border-border rounded-lg shadow-lg overflow-hidden z-50"
+      className="absolute bottom-full left-0 mb-2 w-full max-w-md bg-popover border border-border rounded-md shadow-lg overflow-hidden z-50"
       role="listbox"
     >
       <div
         ref={listRef}
-        className="max-h-64 overflow-y-auto"
+        className="max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/50"
       >
         {commands.map((command, index) => (
           <div
@@ -59,7 +59,7 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
             role="option"
             aria-selected={index === selectedIndex}
             className={cn(
-              'px-4 py-3 cursor-pointer transition-colors',
+              'px-2 py-1 cursor-pointer transition-colors',
               'hover:bg-accent focus:bg-accent',
               index === selectedIndex && 'bg-accent',
               'border-b border-border last:border-b-0'
@@ -70,18 +70,18 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
               // This would require passing a setSelectedIndex callback
             }}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-1.5">
               <div className="flex-shrink-0 mt-0.5">
-                <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs font-mono text-primary">/</span>
+                <div className="w-4 h-4 rounded bg-primary/10 flex items-center justify-center">
+                  <span className="text-[9px] font-mono text-primary">/</span>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-foreground">
+                <div className="text-[13px] font-medium text-foreground">
                   /{command.name}
                 </div>
                 {command.description && (
-                  <div className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
+                  <div className="text-[11px] text-muted-foreground line-clamp-1">
                     {command.description}
                   </div>
                 )}
@@ -91,8 +91,8 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
         ))}
       </div>
       
-      <div className="px-4 py-2 bg-muted/50 border-t border-border">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="px-2 py-1 bg-muted/50 border-t border-border">
+        <div className="flex items-center justify-between text-[9px] text-muted-foreground">
           <span>↑↓ Navigate</span>
           <span>↵ Select</span>
           <span>Esc Close</span>
