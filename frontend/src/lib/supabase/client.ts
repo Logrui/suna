@@ -28,7 +28,15 @@ export function createClient() {
  * Create a separate Supabase client for Realtime subscriptions.
  * 
  * WebSocket connections cannot be proxied through Next.js rewrites, so this client
- * connects directly to the Supabase backend (localhost:8888 or production Supabase).
+ * needs special handling:
+ * 
+ * - Browser (via Cloudflare Tunnel): Must connect to Kong directly via a separate URL
+ * - Docker internal: Can use http://kong.kortix.syhc.dev (same as regular client)
+ * - Local dev: Uses localhost:8888
+ * 
+ * Set NEXT_PUBLIC_REALTIME_URL to your Kong endpoint accessible from the browser:
+ * - For Cloudflare Tunnel: https://kong-kortix.syhc.dev (or similar direct Kong route)
+ * - For local: http://localhost:8888
  * 
  * Usage:
  * ```typescript
@@ -53,11 +61,25 @@ export function createClient() {
  * ```
  */
 export function createRealtimeClient() {
-  // Always connect directly to Supabase backend for WebSocket connections
-  const directSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:8888'
+  // For realtime, we need a URL that supports WebSocket upgrades from the browser
+  // Option 1: NEXT_PUBLIC_REALTIME_URL (direct Kong URL accessible from browser)
+  // Option 2: NEXT_PUBLIC_SUPABASE_URL (fallback, works for Docker internal)
+  // Option 3: localhost:8888 (local dev default)
+  const realtimeUrl = 
+    process.env.NEXT_PUBLIC_REALTIME_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 
+    'http://localhost:8888'
 
-  return createBrowserClient(
-    directSupabaseUrl,
+  console.log('[createRealtimeClient] Configuration:', {
+    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    realtimeUrl,
+    windowOrigin: typeof window !== 'undefined' ? window.location.origin : 'SSR',
+    note: 'WebSocket will attempt to upgrade at: ' + realtimeUrl + '/realtime/v1/websocket',
+  })
+
+  const client = createBrowserClient(
+    realtimeUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
@@ -71,4 +93,8 @@ export function createRealtimeClient() {
       },
     }
   )
+
+  console.log('[createRealtimeClient] Client created, WebSocket will connect to:', realtimeUrl)
+
+  return client
 }
