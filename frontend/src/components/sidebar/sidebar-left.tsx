@@ -10,6 +10,7 @@ import { NavAgentsView } from '@/components/sidebar/nav-agents-view';
 import { NavGlobalConfig } from '@/components/sidebar/nav-global-config';
 import { NavTriggerRuns } from '@/components/sidebar/nav-trigger-runs';
 import { NavKnowledgeBase } from '@/components/sidebar/nav-knowledge-base';
+import { NavLibrary } from '@/components/sidebar/nav-library';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { CTACard } from '@/components/sidebar/cta';
@@ -526,12 +527,7 @@ export function SidebarLeft({
                     <NavTriggerRuns />
                   </>
                 )}
-                {activeView === 'library' && (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <Folder className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Library placeholder</p>
-                  </div>
-                )}
+                {activeView === 'library' && <NavLibrary />}
                 {activeView === 'knowledge' && (
                   <NavKnowledgeBase />
                 )}

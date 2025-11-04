@@ -7,11 +7,11 @@ import { LibraryPageHeader } from './library-page-header';
 import { ThreadCard } from './thread-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, Search, Star, Loader2 } from 'lucide-react';
+import { LayoutGrid, List, Search, Star, Loader2, Images } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ThreadWithProject } from '@/hooks/react-query/sidebar/use-sidebar';
 
-type ViewMode = 'grid' | 'list';
+type ViewMode = 'grid' | 'gallery' | 'list';
 type FilterMode = 'all' | 'favorites';
 
 const ITEMS_PER_PAGE = 5; // Load 5 threads at a time
@@ -171,56 +171,79 @@ export function LibraryPage() {
 
           {/* Toolbar */}
           <div className="pb-4">
-            <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search threads..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+            <div className="flex items-center justify-between gap-4">
+              {/* Filters - LEFT ALIGNED */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={filterMode === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterMode('all')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={filterMode === 'favorites' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterMode('favorites')}
+                >
+                  <Star className="w-4 h-4 mr-1" />
+                  Favorites
+                </Button>
+              </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant={filterMode === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterMode('all')}
-            >
-              All
-            </Button>
-            <Button
-              variant={filterMode === 'favorites' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterMode('favorites')}
-            >
-              <Star className="w-4 h-4 mr-1" />
-              Favorites
-          </Button>
-        </div>
+              {/* Search + View Toggle - RIGHT ALIGNED */}
+              <div className="flex items-center gap-4">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search threads..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
 
-        {/* View Mode Toggle - Hidden for now, Manus only uses list view */}
-        {/* <div className="flex items-center gap-1 border rounded-md">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="rounded-r-none"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-            className="rounded-l-none"
-          >
-            <List className="w-4 h-4" />
-          </Button>
-        </div> */}
+                {/* View Mode Toggle - Icon-Only Segmented Control (SELECTED) */}
+                <div className="flex items-center gap-0.5 bg-card border border-border/50 rounded-xl p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className={cn(
+                      "rounded-lg transition-all",
+                      viewMode === 'grid' && "bg-muted text-foreground"
+                    )}
+                    title="Grid view"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('gallery')}
+                    className={cn(
+                      "rounded-lg transition-all",
+                      viewMode === 'gallery' && "bg-muted text-foreground"
+                    )}
+                    title="Gallery view"
+                  >
+                    <Images className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className={cn(
+                      "rounded-lg transition-all",
+                      viewMode === 'list' && "bg-muted text-foreground"
+                    )}
+                    title="List view"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -249,18 +272,47 @@ export function LibraryPage() {
           </div>
         ) : (
           <>
-            {/* Thread List - Manus Style */}
-            <div className="flex flex-col gap-3 md:gap-[12px]">
-              {displayedThreads.map((thread) => (
-                <ThreadCard
-                  key={thread.threadId}
-                  thread={thread}
-                  isFavorite={favorites.has(thread.threadId)}
-                  onToggleFavorite={toggleFavorite}
-                  viewMode={viewMode}
-                />
-              ))}
-            </div>
+            {/* Thread List - Grid, Gallery, or List based on viewMode */}
+            {viewMode === 'list' ? (
+              // LIST VIEW - Vertical stack (minimal metadata)
+              <div className="flex flex-col gap-2">
+                {displayedThreads.map((thread) => (
+                  <ThreadCard
+                    key={thread.threadId}
+                    thread={thread}
+                    isFavorite={favorites.has(thread.threadId)}
+                    onToggleFavorite={toggleFavorite}
+                    viewMode={viewMode}
+                  />
+                ))}
+              </div>
+            ) : viewMode === 'gallery' ? (
+              // GALLERY VIEW - Responsive tile grid
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {displayedThreads.map((thread) => (
+                  <ThreadCard
+                    key={thread.threadId}
+                    thread={thread}
+                    isFavorite={favorites.has(thread.threadId)}
+                    onToggleFavorite={toggleFavorite}
+                    viewMode={viewMode}
+                  />
+                ))}
+              </div>
+            ) : (
+              // GRID VIEW - Horizontal cards with files
+              <div className="flex flex-col gap-3 md:gap-[12px]">
+                {displayedThreads.map((thread) => (
+                  <ThreadCard
+                    key={thread.threadId}
+                    thread={thread}
+                    isFavorite={favorites.has(thread.threadId)}
+                    onToggleFavorite={toggleFavorite}
+                    viewMode={viewMode}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Infinite Scroll Trigger & Loading Spinner */}
             {hasMore && (
