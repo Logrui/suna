@@ -433,6 +433,55 @@ async def delete_entry(
         logger.error(f"Error deleting entry: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to delete entry")
 
+@router.get("/entries/{entry_id}/content")
+async def get_entry_content(
+    entry_id: str,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """Get the content of a knowledge base entry."""
+    try:
+        client = await db.client
+        account_id = user_id
+        
+        # Verify ownership and get file path
+        entry_result = await client.table('knowledge_base_entries').select(
+            'entry_id, filename, file_path, account_id'
+        ).eq('entry_id', entry_id).eq('account_id', account_id).execute()
+        
+        if not entry_result.data:
+            raise HTTPException(status_code=404, detail="Entry not found")
+        
+        entry = entry_result.data[0]
+        file_path = entry['file_path']
+        filename = entry['filename']
+        
+        # Download file from S3
+        try:
+            file_bytes = await client.storage.from_('file-uploads').download(file_path)
+        except Exception as e:
+            logger.error(f"Error downloading file from S3: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to download file content")
+        
+        # Decode to text
+        try:
+            content = file_bytes.decode('utf-8', errors='ignore')
+        except Exception as e:
+            logger.error(f"Error decoding file content: {str(e)}")
+            content = ""
+        
+        return {
+            "content": content,
+            "filename": filename,
+            "entry_id": entry_id,
+            "length": len(content)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting entry content: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve entry content")
+
 @router.patch("/entries/{entry_id}", response_model=EntryResponse)
 async def update_entry(
     entry_id: str,

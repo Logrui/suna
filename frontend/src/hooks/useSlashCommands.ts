@@ -227,8 +227,27 @@ export function useSlashCommands() {
         const entries = await entriesRes.json();
         console.log('[SlashCommands] useSlashCommands: Fetched entries:', entries.length);
         
+        // Fetch content for each entry in parallel
+        const entriesWithContent = await Promise.all(
+          entries.map(async (entry: any) => {
+            try {
+              const contentRes = await fetch(`${API_URL}/knowledge-base/entries/${entry.entry_id}/content`, { headers });
+              if (contentRes.ok) {
+                const { content } = await contentRes.json();
+                return { ...entry, content };
+              } else {
+                console.warn(`[SlashCommands] Failed to fetch content for ${entry.filename}:`, contentRes.status);
+                return entry;
+              }
+            } catch (err) {
+              console.error(`[SlashCommands] Error fetching content for ${entry.filename}:`, err);
+              return entry;
+            }
+          })
+        );
+        
         // Convert entries to SlashCommand format
-        const commands: SlashCommand[] = entries.map((entry: any) => ({
+        const commands: SlashCommand[] = entriesWithContent.map((entry: any) => ({
           name: entry.filename.replace(/\.(txt|md)$/i, ''), // Remove file extension
           description: entry.summary || '',
           prompt: entry.content || '',
