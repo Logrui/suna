@@ -61,7 +61,7 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
             className={cn(
               'px-2 py-1 cursor-pointer transition-colors',
               'hover:bg-accent focus:bg-accent',
-              index === selectedIndex && 'bg-accent',
+              index === selectedIndex && 'bg-accent/100',
               'border-b border-border last:border-b-0'
             )}
             onClick={() => onSelect(command)}
@@ -72,16 +72,27 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
           >
             <div className="flex items-start gap-1.5">
               <div className="flex-shrink-0 mt-0.5">
-                <div className="w-4 h-4 rounded bg-primary/10 flex items-center justify-center">
-                  <span className="text-[9px] font-mono text-primary">/</span>
+                <div className={cn(
+                  "w-4 h-4 rounded flex items-center justify-center transition-colors",
+                  index === selectedIndex 
+                    ? "bg-primary/80 text-primary-foreground" 
+                    : "bg-primary/10 text-primary"
+                )}>
+                  <span className="text-[9px] font-mono">/</span>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-foreground">
+                <div className={cn(
+                  "text-[13px] font-medium transition-colors",
+                  index === selectedIndex ? "text-foreground" : "text-foreground"
+                )}>
                   /{command.name}
                 </div>
                 {command.description && (
-                  <div className="text-[11px] text-muted-foreground line-clamp-1">
+                  <div className={cn(
+                    "text-[11px] line-clamp-1 transition-colors",
+                    index === selectedIndex ? "text-foreground/70" : "text-muted-foreground"
+                  )}>
                     {command.description}
                   </div>
                 )}

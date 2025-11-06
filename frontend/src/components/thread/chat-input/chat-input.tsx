@@ -543,6 +543,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             setLocalValue('/' + selectedCommand.name + ' ');
             setShowSlashCommands(false);
             setSlashCommandFilter('');
+            setActiveSlashCommand(selectedCommand); // Store command for prompt injection
             textareaRef.current?.focus();
           }
           return;
