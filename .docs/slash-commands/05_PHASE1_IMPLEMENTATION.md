@@ -1,6 +1,34 @@
 # Phase 1: Implementation - Basic Slash Commands Working
 
-This guide will walk you through implementing the entire Phase 1 to get a working autocomplete dropdown showing example commands.
+## ✅ COMPLETED - Current Status
+
+**Implementation Date**: November 4, 2025  
+**Branch**: `feature/slash-commands`  
+**Status**: Fully functional MVP with refined UI
+
+### What's Working
+
+✅ **Storage**: Commands stored in Knowledge Base `Suna` folder as `.txt` files  
+✅ **Auto-initialization**: Creates `Suna` folder with 4 example commands on first use  
+✅ **Autocomplete UI**: Compact dropdown with keyboard navigation (↑↓ navigate, ↵ select, Esc close)  
+✅ **Filtering**: Real-time filtering as user types after `/`  
+✅ **Prompt Injection**: Commands inject their full prompt into message before sending  
+✅ **UI Refinements**: Compact design with custom scrollbar matching chat elements  
+
+### Key Implementation Details
+
+- **Folder Name**: `Suna` (stored in Knowledge Base)
+- **File Format**: Plain text `.txt` files
+- **Metadata**: Command description stored in entry `summary` field
+- **Example Commands**: summarize, draft-email, brainstorm, explain-simple
+- **API Used**: Knowledge Base API (`/knowledge-base/folders`, `/knowledge-base/folders/{id}/entries`, `/knowledge-base/folders/{id}/upload`)
+- **No Nested Folders**: API doesn't support `parent_folder_id`, so using single folder
+
+---
+
+## Original Implementation Guide
+
+This guide documents how the feature was implemented.
 
 **Goal**: Type `/` in chat input and see autocomplete with example commands.
 

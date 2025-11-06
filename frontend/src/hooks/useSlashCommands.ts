@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
 
 const API_URL = getApiUrl();
-const SLASH_COMMANDS_FOLDER_NAME = 'Slash Commands';
+const PROMPTS_FOLDER_NAME = 'Suna';
 
 const EXAMPLE_COMMANDS = [
   {
@@ -58,55 +58,84 @@ async function initializeSlashCommands() {
     // Get all folders
     const foldersRes = await fetch(`${API_URL}/knowledge-base/folders`, { headers });
     if (!foldersRes.ok) {
-      console.error('Failed to fetch folders');
+      console.error('[SlashCommands] Failed to fetch folders:', foldersRes.status, foldersRes.statusText);
       return null;
     }
     
     const folders = await foldersRes.json();
-    let slashCommandsFolder = folders.find((f: any) => f.name === SLASH_COMMANDS_FOLDER_NAME);
+    console.log('[SlashCommands] Fetched folders:', folders.map((f: any) => f.name));
     
-    // Create folder if it doesn't exist
-    if (!slashCommandsFolder) {
-      console.log('Creating Slash Commands folder...');
-      const createFolderRes = await fetch(`${API_URL}/knowledge-base/folders`, {
+    // Check if Suna folder exists
+    let promptsFolder = folders.find((f: any) => f.name === PROMPTS_FOLDER_NAME);
+    
+    // Create Suna folder if it doesn't exist
+    if (!promptsFolder) {
+      console.log('[SlashCommands] Creating Suna folder...');
+      const createPromptsFolderRes = await fetch(`${API_URL}/knowledge-base/folders`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          name: SLASH_COMMANDS_FOLDER_NAME,
+          name: PROMPTS_FOLDER_NAME,
           description: 'Custom slash command prompts for quick access in chat',
         }),
       });
       
-      if (!createFolderRes.ok) {
-        console.error('Failed to create Slash Commands folder');
+      if (!createPromptsFolderRes.ok) {
+        const errorText = await createPromptsFolderRes.text();
+        console.error('[SlashCommands] Failed to create Suna folder:', createPromptsFolderRes.status, errorText);
         return null;
       }
       
-      slashCommandsFolder = await createFolderRes.json();
-      console.log('✓ Created Slash Commands folder');
+      promptsFolder = await createPromptsFolderRes.json();
+      console.log('[SlashCommands] ✓ Created Suna folder:', promptsFolder.folder_id);
+    } else {
+      console.log('[SlashCommands] Suna folder already exists:', promptsFolder.folder_id);
     }
     
-    const folderId = slashCommandsFolder.folder_id;
+    const folderId = promptsFolder.folder_id;
     
     // Get existing entries in the folder
     const entriesRes = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/entries`, { headers });
     if (!entriesRes.ok) {
-      console.error('Failed to fetch folder entries');
+      console.error('[SlashCommands] Failed to fetch folder entries:', entriesRes.status, entriesRes.statusText);
       return folderId;
     }
     
     const entries = await entriesRes.json();
+    console.log('[SlashCommands] Existing entries:', entries.length, 'files');
+    if (entries.length > 0) {
+      console.log('[SlashCommands] Entry details:', entries.map((e: any) => ({
+        filename: e.filename,
+        summary: e.summary?.substring(0, 50) || '(no summary)',
+        hasContent: !!e.content,
+        contentLength: e.content?.length || 0,
+        entryId: e.entry_id,
+      })));
+    }
     
-    // Create example commands if folder is empty
-    if (entries.length === 0) {
-      console.log('Creating example slash commands...');
+    // Check which example commands are missing and create only those
+    const existingFilenames = new Set(entries.map((e: any) => e.filename.toLowerCase()));
+    const missingCommands = EXAMPLE_COMMANDS.filter(cmd => {
+      const mdFilename = `${cmd.name}.md`.toLowerCase();
+      return !existingFilenames.has(mdFilename);
+    });
+    
+    console.log('[SlashCommands] Existing files:', Array.from(existingFilenames));
+    console.log('[SlashCommands] Missing commands to create:', missingCommands.map(c => c.name));
+    
+    if (missingCommands.length > 0) {
+      console.log(`[SlashCommands] Creating ${missingCommands.length} missing slash commands...`);
       
-      for (const example of EXAMPLE_COMMANDS) {
+      for (const example of missingCommands) {
         try {
-          // Create a text file with the command content
-          const blob = new Blob([example.content], { type: 'text/plain' });
+          console.log(`[SlashCommands] Uploading ${example.name}.md...`);
+          
+          // Create a markdown file with the command content
+          const blob = new Blob([example.content], { type: 'text/markdown' });
           const formData = new FormData();
-          formData.append('file', blob, `${example.name}.txt`);
+          formData.append('file', blob, `${example.name}.md`);
+          
+          console.log(`[SlashCommands] File size: ${blob.size} bytes, MIME: text/markdown`);
           
           const uploadRes = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/upload`, {
             method: 'POST',
@@ -116,31 +145,51 @@ async function initializeSlashCommands() {
             body: formData,
           });
           
+          console.log(`[SlashCommands] Upload response for ${example.name}.md:`, uploadRes.status, uploadRes.statusText);
+          
           if (uploadRes.ok) {
             const result = await uploadRes.json();
+            console.log(`[SlashCommands] Upload result for ${example.name}.md:`, {
+              entry_id: result.entry_id,
+              filename: result.filename,
+              success: result.success,
+            });
             
             // Update the entry summary to store the description
             if (result.entry_id) {
-              await fetch(`${API_URL}/knowledge-base/${result.entry_id}`, {
+              console.log(`[SlashCommands] Updating summary for entry ${result.entry_id}...`);
+              
+              const updateRes = await fetch(`${API_URL}/knowledge-base/${result.entry_id}`, {
                 method: 'PUT',
                 headers,
                 body: JSON.stringify({
                   summary: example.description,
                 }),
               });
+              console.log(`[SlashCommands] Update summary response for ${example.name}.md:`, updateRes.status, updateRes.statusText);
+              
+              if (!updateRes.ok) {
+                const updateError = await updateRes.text();
+                console.warn(`[SlashCommands] Warning: Failed to update summary:`, updateError);
+              }
             }
             
-            console.log(`✓ Created example command: ${example.name}`);
+            console.log(`[SlashCommands] ✓ Created example command: ${example.name}.md`);
+          } else {
+            const errorText = await uploadRes.text();
+            console.error(`[SlashCommands] Failed to create ${example.name}.md:`, uploadRes.status, errorText);
           }
         } catch (err) {
-          console.error(`Error creating example command ${example.name}:`, err);
+          console.error(`[SlashCommands] Error creating example command ${example.name}:`, err);
         }
       }
+    } else {
+      console.log('[SlashCommands] All example commands already exist, skipping upload');
     }
     
     return folderId;
   } catch (err) {
-    console.error('Error initializing slash commands:', err);
+    console.error('[SlashCommands] Error initializing slash commands:', err);
     return null;
   }
 }
@@ -150,11 +199,13 @@ export function useSlashCommands() {
     queryKey: ['slash-commands'],
     queryFn: async () => {
       try {
+        console.log('[SlashCommands] useSlashCommands: Fetching commands...');
+        
         // Initialize folder and examples if needed
         const folderId = await initializeSlashCommands();
         
         if (!folderId) {
-          // Return fallback commands if initialization failed
+          console.warn('[SlashCommands] useSlashCommands: Initialization failed, returning fallback commands');
           return EXAMPLE_COMMANDS.map(ex => ({
             name: ex.name,
             description: ex.description,
@@ -164,15 +215,17 @@ export function useSlashCommands() {
         
         const headers = await getAuthHeaders();
         
-        // Fetch all entries in the Slash Commands folder
+        // Fetch all entries in the Suna folder
+        console.log('[SlashCommands] useSlashCommands: Fetching entries from folder:', folderId);
         const entriesRes = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/entries`, { headers });
         
         if (!entriesRes.ok) {
-          console.error('Failed to fetch slash command entries');
+          console.error('[SlashCommands] useSlashCommands: Failed to fetch slash command entries:', entriesRes.status);
           return [];
         }
         
         const entries = await entriesRes.json();
+        console.log('[SlashCommands] useSlashCommands: Fetched entries:', entries.length);
         
         // Convert entries to SlashCommand format
         const commands: SlashCommand[] = entries.map((entry: any) => ({
@@ -181,9 +234,15 @@ export function useSlashCommands() {
           prompt: entry.content || '',
         }));
         
+        console.log('[SlashCommands] useSlashCommands: Converted to commands:', commands.map(c => ({
+          name: c.name,
+          descriptionLength: c.description.length,
+          promptLength: c.prompt.length,
+        })));
+        
         return commands;
       } catch (err) {
-        console.error('Error fetching slash commands:', err);
+        console.error('[SlashCommands] useSlashCommands: Error fetching slash commands:', err);
         // Return fallback commands on error
         return EXAMPLE_COMMANDS.map(ex => ({
           name: ex.name,

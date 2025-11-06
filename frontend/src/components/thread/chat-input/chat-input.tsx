@@ -43,7 +43,6 @@ import { AgentConfigurationDialog } from '@/components/agents/agent-configuratio
 import { ContextUsageIndicator } from '../ContextUsageIndicator';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useSlashCommands } from '@/hooks/useSlashCommands';
-import { detectCommand, injectPrompt } from '@/lib/slashCommands';
 import { SlashCommandAutocomplete } from '@/components/slash-commands/SlashCommandAutocomplete';
 
 import posthog from 'posthog-js';
@@ -216,6 +215,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [showSlashCommands, setShowSlashCommands] = useState(false);
     const [slashCommandFilter, setSlashCommandFilter] = useState('');
     const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+    const [activeSlashCommand, setActiveSlashCommand] = useState<any>(null); // Track which command is active in the input
 
     const {
       selectedModel,
@@ -445,13 +445,19 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
 
       let message = value;
 
-      // Check for slash command and inject prompt
-      const detectedCommand = detectCommand(message);
-      if (detectedCommand) {
-        const command = slashCommands.find(cmd => cmd.name === detectedCommand.name);
-        if (command) {
-          message = injectPrompt(message, command);
-        }
+      // Check if there's an active slash command that needs prompt injection
+      if (activeSlashCommand && message.startsWith('/' + activeSlashCommand.name)) {
+        // Extract the user's text after the command
+        const commandPattern = new RegExp(`^\\/${activeSlashCommand.name}\\s*`);
+        const userText = message.replace(commandPattern, '').trim();
+        
+        // Inject the prompt before the user's text
+        message = userText 
+          ? `${activeSlashCommand.prompt}\n\n${userText}`
+          : activeSlashCommand.prompt;
+        
+        // Clear the active command
+        setActiveSlashCommand(null);
       }
 
       if (uploadedFiles.length > 0) {
@@ -498,6 +504,11 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         controlledOnChange(newValue);
       }
 
+      // Clear active command if user removes it or changes it
+      if (activeSlashCommand && !newValue.startsWith('/' + activeSlashCommand.name)) {
+        setActiveSlashCommand(null);
+      }
+
       // Detect slash command
       if (newValue.startsWith('/') && !newValue.includes('\n')) {
         const parts = newValue.slice(1).split(' ');
@@ -509,7 +520,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         setShowSlashCommands(false);
         setSlashCommandFilter('');
       }
-    }, [isControlled, controlledOnChange]);
+    }, [isControlled, controlledOnChange, activeSlashCommand]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Handle slash command autocomplete navigation
@@ -599,6 +610,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       setLocalValue(newValue);
       setShowSlashCommands(false);
       setSlashCommandFilter('');
+      setActiveSlashCommand(command); // Store the command for later injection
       
       // Notify parent in controlled mode
       if (isControlled && controlledOnChange) {
@@ -693,22 +705,42 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           onSelect={handleSlashCommandSelect}
           onClose={handleSlashCommandClose}
         />
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={animatedPlaceholder}
-          className={cn(
-            'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none',
-            isDraggingOver ? 'opacity-40' : '',
+        <div className="relative">
+          {/* Highlighted overlay for slash command */}
+          {activeSlashCommand && value.startsWith('/' + activeSlashCommand.name) && (
+            <div 
+              className="absolute inset-0 pointer-events-none px-0.5 pb-6 pt-4 whitespace-pre-wrap break-words"
+              style={{
+                font: 'inherit',
+                lineHeight: 'inherit',
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+              }}
+            >
+              <span className="bg-primary/10 text-primary rounded px-1 font-medium">
+                /{activeSlashCommand.name}
+              </span>
+              <span className="opacity-0">{value.slice(('/' + activeSlashCommand.name).length)}</span>
+            </div>
           )}
-          disabled={loading || (disabled && !isAgentRunning) || hasSubmitted}
-          rows={1}
-        />
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={animatedPlaceholder}
+            className={cn(
+              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none relative z-10',
+              isDraggingOver ? 'opacity-40' : '',
+              activeSlashCommand && value.startsWith('/' + activeSlashCommand.name) ? 'caret-primary' : '',
+            )}
+            disabled={loading || (disabled && !isAgentRunning) || hasSubmitted}
+            rows={1}
+          />
+        </div>
       </div>
-    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted, showSlashCommands, filteredSlashCommands, selectedCommandIndex, handleSlashCommandSelect, handleSlashCommandClose]);
+    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted, showSlashCommands, filteredSlashCommands, selectedCommandIndex, handleSlashCommandSelect, handleSlashCommandClose, activeSlashCommand]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
