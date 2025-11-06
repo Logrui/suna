@@ -94,7 +94,7 @@ services:
       args:
         - NEXT_PUBLIC_ENV_MODE=local
         - NEXT_PUBLIC_SUPABASE_URL=http://kong.kortix.syhc.dev/
-        - NEXT_PUBLIC_REALTIME_URL=http://kong.kortix.syhc.dev/
+        - NEXT_PUBLIC_REALTIME_URL=https://kong.kortix.syhc.dev/
         - NEXT_PUBLIC_BACKEND_URL=http://backend:8000/api
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWRlbW8iLCJpYXQiOjE2NDE3NjkyMDAsImV4cCI6MTc5OTUzNTYwMH0.3oxoyIq4gsDgKv97f3OU7EPTAOOyXaq_yqci_5kDjTY
     ports:
@@ -102,7 +102,7 @@ services:
     environment:
       - NEXT_PUBLIC_ENV_MODE=local
       - NEXT_PUBLIC_SUPABASE_URL=http://kong.kortix.syhc.dev/
-      - NEXT_PUBLIC_REALTIME_URL=http://kong.kortix.syhc.dev/
+      - NEXT_PUBLIC_REALTIME_URL=https://kong.kortix.syhc.dev/
       - NEXT_PUBLIC_BACKEND_URL=http://backend:8000/api
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWRlbW8iLCJpYXQiOjE2NDE3NjkyMDAsImV4cCI6MTc5OTUzNTYwMH0.3oxoyIq4gsDgKv97f3OU7EPTAOOyXaq_yqci_5kDjTY
     depends_on:

@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export function createClient() {
   // Use window.location.origin for browser requests so all Supabase API calls (auth, REST)
@@ -78,7 +79,9 @@ export function createRealtimeClient() {
     note: 'WebSocket will attempt to upgrade at: ' + realtimeUrl + '/realtime/v1/websocket',
   })
 
-  const client = createBrowserClient(
+  // Use createSupabaseClient (from @supabase/supabase-js) instead of createBrowserClient
+  // This gives us full control over the URL and doesn't override it with window.location.origin
+  const client = createSupabaseClient(
     realtimeUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
