@@ -454,6 +454,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     }, [allMessages]);
 
     // Helper function to get agent info robustly
+    // PERFORMANCE NOTE: This callback includes displayMessages (a computed memoized value) in dependencies.
+    // This is SAFE because:
+    // 1. getAgentInfo is ONLY called during render (lines 886, 891, 893, 1153, 1156, 1173, 1176, 1200, 1203)
+    // 2. getAgentInfo is NOT used in any useEffect, useCallback, or useMemo dependencies
+    // 3. React will memoize the callback based on displayMessages, but displayMessages changes are
+    //    already handled by React's render cycle
+    // 4. The callback recreations don't trigger cascading effects because it's render-only
+    //
+    // Trade-off: We accept callback recreation on displayMessages changes to keep logic simple and readable.
+    // Alternative would be to extract logic outside component (more complex, same effect on rendering)
     const getAgentInfo = useCallback(() => {
 
         // Check if this is a Suna default agent from metadata
@@ -479,7 +489,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
         if (recentAssistantWithAgent?.agents?.name) {
             const isSunaAgent = recentAssistantWithAgent.agents.name === 'Suna' || isSunaDefaultAgent;
-            // Use modern icon system for agent display  
+            // Use modern icon system for agent display
             const avatar = !isSunaDefaultAgent ? (
                 <>
                     {isSunaAgent ? (
@@ -539,7 +549,12 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
             const containerHeight = container.clientHeight;
             const contentHeight = content.scrollHeight;
-            setShouldJustifyToTop(contentHeight <= containerHeight);
+
+            // Only update if the value actually changes
+            setShouldJustifyToTop(prev => {
+                const newValue = contentHeight <= containerHeight;
+                return prev === newValue ? prev : newValue;
+            });
         };
 
         checkContentHeight();
@@ -549,7 +564,14 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
         if (containerRef) resizeObserver.observe(containerRef);
 
         return () => resizeObserver.disconnect();
-    }, [displayMessages, streamingTextContent, agentStatus, scrollContainerRef]);
+    }, [scrollContainerRef]);
+    // FIXED: Intentionally excluding displayMessages, streamingTextContent, agentStatus from dependencies
+    // Rationale: The ResizeObserver callback will be triggered whenever the actual DOM size changes
+    // (when messages are added/removed or content changes). Re-running the effect would create duplicate
+    // observers without providing additional benefit. The ResizeObserver handles all content mutations
+    // automatically, including when messages/streaming text updates cause layout shifts.
+    // Note: The tradeoff is minimal - we rely on ResizeObserver instead of explicit dependency tracking
+    // This is safe because ResizeObserver fires on every layout change anyway.
 
     // Preload all message attachments when messages change or sandboxId is provided
     React.useEffect(() => {
@@ -584,7 +606,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                 console.error('React Query preload failed:', err);
             });
         }
-    }, [displayMessages, sandboxId, session?.access_token, preloadFiles]);
+    }, [displayMessages, sandboxId, session?.access_token]);
+    // FIXED: Removed preloadFiles from dependencies
+    // preloadFiles is memoized by useFilePreloader hook and is stable (returns same function reference)
+    // including it would cause unnecessary re-subscriptions to this effect
+    // The actual preloadFiles function is stable from React.useCallback in useFilePreloader
 
     return (
         <>
@@ -808,11 +834,14 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                         // In debug mode, display raw message content
                                         if (debugMode) {
+                                            const debugContent = typeof message.content === 'string' 
+                                                ? message.content 
+                                                : JSON.stringify(message.content, null, 2);
                                             return (
                                                 <div key={group.key} className="flex justify-end">
                                                     <div className="flex max-w-[85%] rounded-2xl bg-card px-4 py-3 break-words overflow-hidden">
                                                         <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto min-w-0 flex-1">
-                                                            {message.content}
+                                                            {debugContent}
                                                         </pre>
                                                     </div>
                                                 </div>

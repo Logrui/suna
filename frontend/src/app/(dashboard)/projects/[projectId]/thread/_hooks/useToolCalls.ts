@@ -90,6 +90,7 @@ export function useToolCalls(
   const userClosedPanelRef = useRef(false);
   const userNavigatedRef = useRef(false); // Track if user manually navigated
   const isMobile = useIsMobile();
+  const lastProcessedMessagesRef = useRef<UnifiedMessage[]>([]); // Track last processed messages to prevent infinite loops
 
   const toggleSidePanel = useCallback(() => {
     setIsSidePanelOpen((prevIsOpen) => {
@@ -113,6 +114,28 @@ export function useToolCalls(
   const assistantMessageToToolIndex = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
+    // INFINITE LOOP PREVENTION: Reference equality guard
+    // Problem: Every render, a new messages array is created even if content is identical.
+    //          Without this guard, we'd process messages on EVERY render (infinite loop potential)
+    // Solution: Use useRef to track the last processed messages array by reference
+    // How it works:
+    // - If messages reference hasn't changed → skip processing (same array instance)
+    // - If messages reference changed → process new messages and update ref
+    // Why this works:
+    // - React passes new array reference only when messages actually change
+    // - Memoization in parent components should prevent gratuitous array recreation
+    // - This single reference check is sufficient (we don't need deep equality)
+    // Performance impact: Minimal - just a reference comparison
+    // Edge case: If parent creates new array on every render, this won't help (parent issue)
+    const messagesHaveChanged = lastProcessedMessagesRef.current !== messages;
+
+    if (!messagesHaveChanged) {
+      return; // Messages haven't changed, skip processing
+    }
+
+    // Update ref to track we've processed these messages
+    lastProcessedMessagesRef.current = messages;
+    
     const historicalToolPairs: ToolCallInput[] = [];
     const messageIdToIndex = new Map<string, number>();
     const assistantMessages = messages.filter(m => m.type === 'assistant' && m.message_id);
@@ -239,7 +262,7 @@ export function useToolCalls(
         setAutoOpenedPanel(true);
       }
     }
-  }, [messages, isSidePanelOpen, autoOpenedPanel, agentStatus, isMobile, compact]);
+  }, [messages, agentStatus, isMobile, compact]);
 
   // Reset user navigation flag when agent stops
   useEffect(() => {

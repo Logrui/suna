@@ -78,14 +78,21 @@ def _classify_task_type(tool_name: str) -> str:
 
 
 def _get_timeout_for_task(task_type: str) -> int:
-    """Get adaptive timeout based on task type (Pattern 2 enhancement)"""
+    """Get adaptive timeout based on task type (Pattern 2 enhancement)
+    
+    Increased timeouts (6x-4x multiplier) to accommodate real-world long-running tool executions:
+    - File operations can take 30-60+ seconds
+    - Code execution requires time for compilation/interpretation
+    - Search operations with complex queries may timeout
+    - Increased from original: research(10→60), computation(30→120), writing(20→90), general(15→60)
+    """
     timeouts = {
-        'research': 10,      # Search tasks: quicker timeout
-        'computation': 30,   # Compute tasks: longer timeout
-        'writing': 20,       # Writing tasks: medium timeout
-        'general': 15        # Default
+        'research': 60,      # Search tasks: 10s → 60s (6x) for complex searches
+        'computation': 120,  # Compute tasks: 30s → 120s (4x) for file ops, code execution
+        'writing': 90,       # Writing tasks: 20s → 90s (4.5x) for document generation
+        'general': 60        # Default: 15s → 60s (4x) for other operations
     }
-    return timeouts.get(task_type, 15)
+    return timeouts.get(task_type, 60)
 
 
 def _get_degradation_level(iteration: int) -> int:
@@ -765,7 +772,7 @@ class AgentRunner:
                     llm_temperature=0,
                     llm_max_tokens=max_tokens,
                     tool_choice="auto",
-                    max_xml_tool_calls=1,
+                    max_xml_tool_calls=0,
                     temporary_message=temporary_message,
                     latest_user_message_content=latest_user_message_content,
                     processor_config=ProcessorConfig(
@@ -963,7 +970,7 @@ class AgentRunner:
                                 llm_temperature=0,
                                 llm_max_tokens=None,
                                 tool_choice="auto",
-                                max_xml_tool_calls=1,
+                                max_xml_tool_calls=0,
                                 temporary_message=None,
                                 latest_user_message_content=None,
                                 processor_config=ProcessorConfig(

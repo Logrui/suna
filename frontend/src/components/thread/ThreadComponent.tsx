@@ -55,11 +55,11 @@ interface ThreadComponentProps {
   threadId: string;
   compact?: boolean;
   configuredAgentId?: string; // When set, only allow selection of this specific agent
+  searchParams?: Record<string, string | string[]>;
 }
 
-export function ThreadComponent({ projectId, threadId, compact = false, configuredAgentId }: ThreadComponentProps) {
+export function ThreadComponent({ projectId, threadId, compact = false, configuredAgentId, searchParams = {} }: ThreadComponentProps) {
   const isMobile = useIsMobile();
-  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   // State
@@ -98,6 +98,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const initialLayoutAppliedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastStreamStartedRef = useRef<string | null>(null); // Track last runId we started streaming for
+  const lastProcessedConfiguredAgentIdRef = useRef<string | undefined>(undefined); // Track last configuredAgentId to avoid loops
 
   // Sidebar
   const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebar();
@@ -226,6 +227,9 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     }
   }, []);
 
+  // FIXED: Issue #1 - Removed selectedAgentId from dependencies to prevent infinite loops
+  // selectedAgentId is a SIDE EFFECT of setSelectedAgent, not a source of truth
+  // Only setSelectedAgent when configuredAgentId actually changes, not when selectedAgentId changes
   useEffect(() => {
     if (agents.length > 0) {
       // If configuredAgentId is provided, use it as the forced selection
@@ -233,17 +237,19 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       const threadAgentId = threadAgentData?.agent?.agent_id;
       const agentIdToUse = configuredAgentId || threadAgentId;
 
-      console.log(`[ThreadComponent] Agent initialization - configuredAgentId: ${configuredAgentId}, threadAgentId: ${threadAgentId}, selectedAgentId: ${selectedAgentId}`);
+      console.log(`[ThreadComponent] Agent initialization - configuredAgentId: ${configuredAgentId}, threadAgentId: ${threadAgentId}`);
 
       initializeFromAgents(agents, agentIdToUse);
 
-      // If configuredAgentId is provided, force selection and override any existing selection
-      if (configuredAgentId && selectedAgentId !== configuredAgentId) {
-        console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${selectedAgentId})`);
+      // Only force selection if configuredAgentId has CHANGED from last processing
+      // This prevents re-triggering when selectedAgentId updates as a side effect
+      if (configuredAgentId && lastProcessedConfiguredAgentIdRef.current !== configuredAgentId) {
+        console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${lastProcessedConfiguredAgentIdRef.current})`);
         setSelectedAgent(configuredAgentId);
+        lastProcessedConfiguredAgentIdRef.current = configuredAgentId;
       }
     }
-  }, [threadAgentData, agents, initializeFromAgents, configuredAgentId, selectedAgentId, setSelectedAgent]);
+  }, [threadAgentData, agents, initializeFromAgents, configuredAgentId, setSelectedAgent]);
 
   const { data: subscriptionData } = useSharedSubscription();
   const subscriptionStatus: SubscriptionStatus =
@@ -652,6 +658,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     compact,
   ]);
 
+  // FIXED: Issue #2 - Separated stream startup logic from stream completion logic
+  // to prevent interdependent effects that trigger each other
+  // This effect ONLY starts streaming based on runId and flags
+  // The completion is handled separately to avoid re-triggering this effect
   useEffect(() => {
     // Prevent duplicate streaming calls for the same runId
     if (agentRunId && lastStreamStartedRef.current === agentRunId) {
@@ -688,18 +698,28 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     agentStatus,
   ]);
 
+  // FIXED: Issue #2 - Handle stream completion separately to avoid effect interdependence
+  // This effect ONLY resets status when stream completes, using a ref-based guard
+  // to prevent this status change from re-triggering the startup effect above
   useEffect(() => {
-    if (
-      (streamHookStatus === 'completed' ||
-        streamHookStatus === 'stopped' ||
-        streamHookStatus === 'agent_not_running' ||
-        streamHookStatus === 'error') &&
-      (agentStatus === 'running' || agentStatus === 'connecting')
-    ) {
-      setAgentStatus('idle');
-      setAgentRunId(null);
-      // Reset the stream tracking ref when stream completes
-      lastStreamStartedRef.current = null;
+    // Only update status when stream has ACTUALLY completed, not on every status change
+    const isStreamTerminal =
+      streamHookStatus === 'completed' ||
+      streamHookStatus === 'stopped' ||
+      streamHookStatus === 'agent_not_running' ||
+      streamHookStatus === 'error';
+
+    const isStatusActive = agentStatus === 'running' || agentStatus === 'connecting';
+
+    if (isStreamTerminal && isStatusActive) {
+      // Use a guard to ensure we only reset once per completion
+      // This prevents the status change from re-triggering the startup effect
+      if (lastStreamStartedRef.current !== null) {
+        console.log(`[ThreadComponent] Stream completed with status: ${streamHookStatus}, resetting state`);
+        setAgentStatus('idle');
+        setAgentRunId(null);
+        lastStreamStartedRef.current = null;
+      }
     }
   }, [streamHookStatus, agentStatus, setAgentStatus, setAgentRunId]);
 
@@ -741,7 +761,9 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   }, [projectName]);
 
   useEffect(() => {
-    const debugParam = searchParams.get('debug');
+    const debugParam = Array.isArray(searchParams.debug) 
+      ? searchParams.debug[0] 
+      : searchParams.debug;
     setDebugMode(debugParam === 'true');
   }, [searchParams]);
 

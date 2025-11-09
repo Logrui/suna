@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils';
 import { getToolTitle } from '../utils';
 import { useVapiCallRealtime } from '@/hooks/useVapiCallRealtime';
 import { useQuery } from '@tanstack/react-query';
-import { createClient, createRealtimeClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
+import { getRealtimeClient } from '@/lib/supabase/realtime-client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface MonitorCallData {
@@ -112,7 +113,7 @@ export function MonitorCallToolView({
 
     console.log('[MonitorCallToolView] Setting up real-time subscription for:', initialData.call_id);
     const dataClient = createClient(); // For data fetching
-    const realtimeClient = createRealtimeClient(); // For WebSocket subscription
+    const realtimeClient = getRealtimeClient(); // For WebSocket subscription
     let channel: RealtimeChannel;
 
     const setupSubscription = async () => {

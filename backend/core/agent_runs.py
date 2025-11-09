@@ -1014,10 +1014,12 @@ async def stream_agent_run(
             # 4. Main loop to process messages from the queue
             while not terminate_stream:
                 try:
-                    # Add 30-second timeout to send keepalive pings for long-running tasks
+                    # Timeout increased to 300 seconds to support longer-running tasks
+                    # (searching, research, complex computations, etc.)
+                    # Keepalive pings are sent on timeout to keep connection alive
                     queue_item = await asyncio.wait_for(
                         message_queue.get(),
-                        timeout=30.0
+                        timeout=300.0  # 5 minutes - allows long-running tasks to complete
                     )
 
                     if queue_item["type"] == "new_response":

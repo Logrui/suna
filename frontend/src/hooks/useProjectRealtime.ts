@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { createRealtimeClient } from '@/lib/supabase/client';
+import { getRealtimeClient } from '@/lib/supabase/realtime-client';
 import { threadKeys } from '@/hooks/react-query/threads/keys';
 import { Project } from '../app/(dashboard)/projects/[projectId]/thread/_types';
 
@@ -16,7 +16,13 @@ export function useProjectRealtime(projectId?: string) {
   useEffect(() => {
     if (!projectId) return;
 
-    const supabase = createRealtimeClient();
+    let supabase;
+    try {
+      supabase = getRealtimeClient();
+    } catch (err) {
+      console.warn('[useProjectRealtime] Realtime client not yet initialized, skipping subscription:', err);
+      return;
+    }
 
     // Subscribe to project changes
     const channel = supabase
@@ -30,18 +36,18 @@ export function useProjectRealtime(projectId?: string) {
           filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
-          
+
           // Check if sandbox data was updated
           const newData = payload.new as Project;
           const oldData = payload.old as Project;
-          if (newData?.sandbox && (!oldData?.sandbox || 
+          if (newData?.sandbox && (!oldData?.sandbox ||
               JSON.stringify(newData.sandbox) !== JSON.stringify(oldData.sandbox))) {
-            
+
             // Invalidate specific project query
             queryClient.invalidateQueries({
               queryKey: threadKeys.project(projectId)
             });
-            
+
           }
         }
       )
@@ -51,5 +57,9 @@ export function useProjectRealtime(projectId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [projectId, queryClient]);
+  }, [projectId]);
+  // FIXED: Removed queryClient from dependencies
+  // queryClient is a stable reference from useQueryClient() hook provided by TanStack Query
+  // It never changes during component lifetime, so including it causes unnecessary re-subscriptions
+  // The queryClient reference in the closure is captured correctly on first render
 }

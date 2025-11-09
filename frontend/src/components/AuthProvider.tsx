@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { initializeRealtimeClient } from '@/lib/supabase/realtime-client';
 import { User, Session } from '@supabase/supabase-js';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
@@ -36,7 +37,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } = await supabase.auth.getSession();
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
+
+        // Initialize realtime client with auth syncing
+        try {
+          await initializeRealtimeClient(supabase);
+          console.log('[AuthProvider] ✅ Realtime client initialized with auth syncing');
+        } catch (err) {
+          console.error('[AuthProvider] ❌ Failed to initialize realtime client:', err);
+        }
       } catch (error) {
+        console.error('[AuthProvider] ❌ Failed to get initial session:', error);
       } finally {
         setIsLoading(false);
       }

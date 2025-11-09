@@ -1,0 +1,1 @@
+was a small issue with the new custom Real Time manager leading to Application error when page was refreshed

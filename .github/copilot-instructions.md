@@ -3,6 +3,9 @@
 ## Documentation Constraints (HARD LIMIT)
 
 **⚠️ CRITICAL: Maximum 3 markdown files per request - This is a hard limit, not a guideline.**
+**⚠️ CRITICAL: NEVER CREATE FILES OR ADDITIONAL BEFORE ASKING THE USER - IF THE USER ASKS FOR ONE NEW DOC - CREATE ONLY ONE NEW DOC**
+**⚠️ CRITICAL: ALWAYS SUMMARIZE IN CHAT FINDINGS OR INVESTIGATIONS BY DEFAULT UNLESS EXPLICIT USER REQUESTS OTHERWISE**
+
 
 - **Never create more than 3 markdown files per request** - Consolidate instead
 - **Check total count first** - Count existing docs before creating new ones

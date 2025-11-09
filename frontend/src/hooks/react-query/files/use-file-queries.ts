@@ -283,7 +283,11 @@ export function useDirectoryQuery(
 export function useFilePreloader() {
   const queryClient = useQueryClient();
   const { session } = useAuth();
-  
+
+  // FIXED: useCallback properly memoizes preloadFiles based on stable dependencies
+  // This ensures that consumers can safely remove preloadFiles from their effect dependencies
+  // The function reference only changes when queryClient or session.access_token changes
+  // which are both stable from their respective hooks
   const preloadFiles = React.useCallback(async (
     sandboxId: string,
     filePaths: string[]
@@ -292,21 +296,21 @@ export function useFilePreloader() {
       console.warn('Cannot preload files: No authentication token available');
       return;
     }
-    
+
     const uniquePaths = [...new Set(filePaths)];
-    
+
     const preloadPromises = uniquePaths.map(async (path) => {
       const normalizedPath = normalizePath(path);
       const contentType = getContentTypeFromPath(path);
-      
+
       // Check if already cached
       const queryKey = fileQueryKeys.content(sandboxId, normalizedPath, contentType);
       const existingData = queryClient.getQueryData(queryKey);
-      
+
       if (existingData) {
         return existingData;
       }
-      
+
       // Prefetch the file
       return queryClient.prefetchQuery({
         queryKey,
@@ -314,10 +318,10 @@ export function useFilePreloader() {
         staleTime: contentType === 'blob' ? 5 * 60 * 1000 : 2 * 60 * 1000,
       });
     });
-    
+
     await Promise.all(preloadPromises);
   }, [queryClient, session?.access_token]);
-  
+
   return { preloadFiles };
 }
 

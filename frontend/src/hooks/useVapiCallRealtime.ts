@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { createRealtimeClient } from '@/lib/supabase/client';
+import { getRealtimeClient } from '@/lib/supabase/realtime-client';
 
 interface VapiCall {
   id: string;
@@ -22,11 +22,11 @@ export function useVapiCallRealtime(callId?: string, threadId?: string) {
   useEffect(() => {
     if (!callId && !threadId) return;
 
-    const supabase = createRealtimeClient();
+    const supabase = getRealtimeClient();
     const channelName = callId ? `vapi-call-${callId}` : `vapi-calls-thread-${threadId}`;
 
     console.log(`[Vapi Realtime] Setting up subscription for ${channelName}`);
-    
+
     const channel = supabase
       .channel(channelName)
       .on(
@@ -44,7 +44,7 @@ export function useVapiCallRealtime(callId?: string, threadId?: string) {
             status: (payload.new as VapiCall)?.status,
             transcriptLength: Array.isArray((payload.new as VapiCall)?.transcript) ? (payload.new as VapiCall).transcript.length : 'not array'
           });
-          
+
           const newData = payload.new as VapiCall;
           const oldData = payload.old as VapiCall;
 
@@ -56,7 +56,7 @@ export function useVapiCallRealtime(callId?: string, threadId?: string) {
             if (newData.transcript) {
               const oldTranscriptLength = Array.isArray(oldData?.transcript) ? oldData.transcript.length : 0;
               const newTranscriptLength = Array.isArray(newData.transcript) ? newData.transcript.length : 0;
-              
+
               if (newTranscriptLength !== oldTranscriptLength) {
                 console.log(`[Vapi Realtime] Transcript updated: ${oldTranscriptLength} → ${newTranscriptLength} messages`);
               }
@@ -73,7 +73,7 @@ export function useVapiCallRealtime(callId?: string, threadId?: string) {
               queryKey: ['vapi-call', newData.call_id],
               exact: true
             });
-            
+
             queryClient.invalidateQueries({
               queryKey: ['vapi-call-monitor', newData.call_id],
               exact: true
@@ -85,7 +85,7 @@ export function useVapiCallRealtime(callId?: string, threadId?: string) {
                 exact: true
               });
             }
-            
+
             setTimeout(() => {
               queryClient.refetchQueries({
                 queryKey: ['vapi-call', newData.call_id],
@@ -104,6 +104,10 @@ export function useVapiCallRealtime(callId?: string, threadId?: string) {
       console.log(`[Vapi Realtime] Unsubscribed from ${channelName}`);
       supabase.removeChannel(channel);
     };
-  }, [callId, threadId, queryClient]);
+  }, [callId, threadId]);
+  // FIXED: Removed queryClient from dependencies
+  // queryClient is a stable reference from useQueryClient() hook provided by TanStack Query
+  // It never changes during component lifetime, so including it causes unnecessary re-subscriptions
+  // Note: setTimeout and queryClient methods are all stable references; the closure captures them correctly
 }
 

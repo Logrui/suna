@@ -250,6 +250,14 @@ async def make_llm_api_call(
         
         # logger.debug(f"LiteLLM parameters saved to: {filename}")
         
+        # Log the actual parameters being sent to LiteLLM (for debugging)
+        logger.info(f"📤 LiteLLM call params keys: {list(params.keys())}")
+        if "max_tokens" in params:
+            logger.info(f"⚠️ LiteLLM max_tokens parameter: {params.get('max_tokens')}")
+        else:
+            logger.info(f"✓ No max_tokens in LiteLLM params (will use provider defaults)")
+        logger.debug(f"Full LiteLLM params: {params}")
+        
         response = await provider_router.acompletion(**params)
         
         # For streaming responses, we need to handle errors that occur during iteration

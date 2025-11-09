@@ -40,6 +40,7 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
   const messagesLoadedRef = useRef(false);
   const agentRunsCheckedRef = useRef(false);
   const hasInitiallyScrolled = useRef<boolean>(false);
+  const lastMessagesQueryDataRef = useRef<ApiMessageType[] | null>(null); // Track previous query data to prevent infinite loops
   
 
   const threadQuery = useThreadQuery(threadId);
@@ -56,6 +57,7 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
     agentRunsCheckedRef.current = false;
     messagesLoadedRef.current = false;
     initialLoadCompleted.current = false;
+    lastMessagesQueryDataRef.current = null; // Reset query data tracker for new thread
     
     // Clear messages on thread change; fresh data will set messages
     setMessages([]);
@@ -180,14 +182,20 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
   // Force message reload when thread changes or new data arrives
   useEffect(() => {
     if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
-      // (debug logs removed)
+      // Check if query data has actually changed to prevent infinite loops
+      const dataHasChanged = lastMessagesQueryDataRef.current !== messagesQuery.data;
       
-      // Always reload messages when thread data changes or we have more raw messages than processed
-      const shouldReload = messages.length === 0 || messagesQuery.data.length > messages.length + 50; // Allow for status messages
+      if (!dataHasChanged) {
+        return; // Data hasn't changed, don't process
+      }
+      
+      // Update the ref to track we've processed this data
+      lastMessagesQueryDataRef.current = messagesQuery.data;
+      
+      // Only reload if we have no local messages (initial load) or significantly more data from server
+      const shouldReload = messages.length === 0 || messagesQuery.data.length > messages.length + 50;
       
       if (shouldReload) {
-        // (debug logs removed)
-        
         const unifiedMessages = (messagesQuery.data || [])
           .filter((msg) => msg.type !== 'status')
           .map((msg: ApiMessageType) => ({
@@ -220,14 +228,11 @@ export function useThreadData(threadId: string, projectId: string): UseThreadDat
             return aTime - bTime;
           });
           
-          // Messages set only from server merge; no cross-thread cache
           return merged;
         });
-      } else {
-        // (debug logs removed)
       }
     }
-  }, [messagesQuery.data, messagesQuery.status, isLoading, messages.length, threadId]);
+  }, [messagesQuery.data, messagesQuery.status, isLoading, threadId]);
 
   return {
     messages,

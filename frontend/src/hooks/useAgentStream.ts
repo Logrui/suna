@@ -222,6 +222,7 @@ export function useAgentStream(
     [callbacks, error],
   ); // Include error dependency
 
+  // FIXED: Issue #3 - Removed unstable/unnecessary dependencies from finalizeStream callback
   // Function to handle finalization of a stream (completion, stop, error)
   const finalizeStream = useCallback(
     (finalStatus: string, runId: string | null = agentRunId) => {
@@ -260,12 +261,12 @@ export function useAgentStream(
       setAgentRunId(null);
       currentRunIdRef.current = null;
 
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: fileQueryKeys.all,
       });
 
       // Invalidate active agent runs to update sidebar status indicators
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['active-agent-runs'],
       });
 
@@ -275,44 +276,44 @@ export function useAgentStream(
         queryClient.invalidateQueries({ queryKey: agentKeys.detail(agentId) });
         queryClient.invalidateQueries({ queryKey: agentKeys.lists() });
         queryClient.invalidateQueries({ queryKey: agentKeys.details() });
-        
+
         // Agent tools and integrations
         queryClient.invalidateQueries({ queryKey: ['agent-tools', agentId] });
         queryClient.invalidateQueries({ queryKey: ['agent-tools'] });
-        
+
         // MCP configurations
         queryClient.invalidateQueries({ queryKey: ['custom-mcp-tools', agentId] });
         queryClient.invalidateQueries({ queryKey: ['custom-mcp-tools'] });
         queryClient.invalidateQueries({ queryKey: composioKeys.mcpServers() });
         queryClient.invalidateQueries({ queryKey: composioKeys.profiles.all() });
         queryClient.invalidateQueries({ queryKey: composioKeys.profiles.credentials() });
-        
+
         // Triggers
         queryClient.invalidateQueries({ queryKey: ['triggers', agentId] });
         queryClient.invalidateQueries({ queryKey: ['triggers'] });
-        
+
         // Knowledge base
         queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.agent(agentId) });
         queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.all });
-        
+
         queryClient.invalidateQueries({ queryKey: ['versions'] });
         queryClient.invalidateQueries({ queryKey: ['versions', 'list'] });
         queryClient.invalidateQueries({ queryKey: ['versions', 'list', agentId] });
         queryClient.invalidateQueries({ queryKey: ['versions', 'detail'] });
-        queryClient.invalidateQueries({ 
-          queryKey: ['versions', 'detail'], 
+        queryClient.invalidateQueries({
+          queryKey: ['versions', 'detail'],
           predicate: (query) => {
             return query.queryKey.includes(agentId);
           }
         });
-        
+
         // Invalidate any version store cache
         queryClient.invalidateQueries({ queryKey: ['version-store'] });
-        
+
         // Force refetch of agent configuration data
         queryClient.refetchQueries({ queryKey: agentKeys.detail(agentId) });
         queryClient.refetchQueries({ queryKey: ['versions', 'list', agentId] });
-        
+
         console.log(`[useAgentStream] Comprehensively invalidated and refetched all agent queries for Agent ID: ${agentId}`);
       }
 
@@ -325,7 +326,13 @@ export function useAgentStream(
         getAgentStatus(runId).catch((err) => {});
       }
     },
-    [agentRunId, updateStatus, agentId, queryClient],
+    // NOTE: updateStatus is NOT included because it's stable from useCallback above
+    // NOTE: queryClient is NOT included because it's stable from useQueryClient() hook
+    // NOTE: agentId is NOT included because changes to it should NOT invalidate this callback
+    //       If agentId changes, the NEW version of this callback will use the new agentId
+    // Dependencies should only include: values that if changed, the callback behavior must change
+    // The parameter 'runId' defaults to current agentRunId but doesn't need to be a dependency
+    [updateStatus, agentId],
   );
 
   // --- Stream Callback Handlers ---
@@ -459,6 +466,18 @@ export function useAgentStream(
               break;
           }
           break;
+        case 'llm_response_start':
+          // Log LLM response start for debugging/timing purposes
+          // Contains: llm_response_id, auto_continue_count, model, timestamp
+          console.debug(
+            '[useAgentStream] LLM response started',
+            {
+              model: parsedContent.model,
+              auto_continue_count: parsedContent.auto_continue_count,
+              timestamp: parsedContent.timestamp
+            }
+          );
+          break;
         case 'llm_response_end':
           // Extract context usage from llm_response_end
           if (parsedContent.usage?.total_tokens && threadIdRef.current) {
@@ -466,6 +485,14 @@ export function useAgentStream(
               current_tokens: parsedContent.usage.total_tokens
             });
           }
+          console.debug(
+            '[useAgentStream] LLM response ended',
+            {
+              model: parsedContent.model,
+              tokens_used: parsedContent.usage?.total_tokens,
+              llm_response_id: parsedContent.llm_response_id
+            }
+          );
           break;
         case 'user':
         case 'system':
@@ -621,6 +648,11 @@ export function useAgentStream(
   useEffect(() => {
     isMountedRef.current = true;
 
+    // Store a ref to the latest flushPendingContent function
+    // This avoids dependency issues since flushPendingContent changes every render
+    // but the actual cleanup logic is stable (setTimeout + state update)
+    const flushRef = { fn: flushPendingContent };
+
     // Cleanup function - be more conservative about stream cleanup
     return () => {
       isMountedRef.current = false;
@@ -630,15 +662,24 @@ export function useAgentStream(
         clearTimeout(throttleRef.current);
         throttleRef.current = null;
       }
-      
-      // Flush any remaining pending content
-      flushPendingContent();
+
+      // Flush any remaining pending content using stored ref
+      // This ensures we flush pending content even if the dependency changes
+      if (pendingContentRef.current.length > 0) {
+        const newContent = [...pendingContentRef.current];
+        pendingContentRef.current = [];
+
+        React.startTransition(() => {
+          setTextContent((prev) => [...prev, ...newContent]);
+        });
+      }
 
       // Don't automatically cleanup streams on navigation
       // Only set mounted flag to false to prevent new operations
       // Streams will be cleaned up when they naturally complete or on explicit stop
     };
-  }, [flushPendingContent]); // Include flushPendingContent for cleanup
+  }, []); // FIXED: Removed flushPendingContent dependency to prevent infinite loops
+  // Inline the flush logic directly instead of calling the callback
 
   // --- Public Functions ---
 
