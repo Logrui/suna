@@ -140,3 +140,88 @@ curl.exe -X GET "https://kortix.syhc.dev/api/health" `
 - ✅ **Identical API structure** between self-hosted and official
 - 📊 **Status values:** `running` → `completed` or `failed`
 - ⏱️ **Timestamps:** ISO 8601 format UTC
+
+---
+
+## File Upload with Agent Runs
+
+### Overview
+
+Files can be uploaded alongside agent tasks. They're automatically placed in `/workspace/uploads/` where the agent can access them.
+
+### Basic File Upload
+
+```powershell
+curl.exe -X POST "https://kortix.syhc.dev/api/agent/start" `
+  -H "X-API-Key: pk_cLYtpCsc8raT3KyJzZRdbBSxPjJQluO0:sk_p6g2PzCygtl8PlwJVGeCartqgIymjhdQ" `
+  -F "prompt=Summarize this file in a paragraph" `
+  -F "files=@C:\temp\file_to_send.md"
+```
+
+**Response:**
+```json
+{
+  "thread_id": "ded15a97-b849-44ee-ba71-4d881355a8ce",
+  "agent_run_id": "de43b79f-14cb-4432-93dd-9a66f078639b",
+  "status": "running"
+}
+```
+
+### File Storage & Access
+
+- **Location:** `/workspace/uploads/{filename}`
+- **Agent access:** Files are immediately available for commands like `cat`, `grep`, `ls`
+
+### Real-World Test Case
+
+**File:** Core Philosophy document (9.8 KB Markdown)  
+**Task:** Summarize in a paragraph  
+**Duration:** ~10 seconds  
+**Result:** ✅ Successfully processed
+
+### Advanced Patterns
+
+#### Multiple Files
+
+```powershell
+curl.exe -X POST "https://kortix.syhc.dev/api/agent/start" `
+  -H "X-API-Key: pk_cLYtpCsc8raT3KyJzZRdbBSxPjJQluO0:sk_p6g2PzCygtl8PlwJVGeCartqgIymjhdQ" `
+  -F "prompt=Compare these files" `
+  -F "files=@C:\temp\file1.md" `
+  -F "files=@C:\temp\file2.md"
+```
+
+#### With Agent Selection
+
+```powershell
+curl.exe -X POST "https://kortix.syhc.dev/api/agent/start" `
+  -H "X-API-Key: pk_cLYtpCsc8raT3KyJzZRdbBSxPjJQluO0:sk_p6g2PzCygtl8PlwJVGeCartqgIymjhdQ" `
+  -F "prompt=Review this code" `
+  -F "agent_id=security-auditor-id" `
+  -F "files=@C:\temp\app.py"
+```
+
+#### On Existing Thread
+
+```powershell
+curl.exe -X POST "https://kortix.syhc.dev/api/agent/start" `
+  -H "X-API-Key: pk_cLYtpCsc8raT3KyJzZRdbBSxPjJQluO0:sk_p6g2PzCygtl8PlwJVGeCartqgIymjhdQ" `
+  -F "thread_id=ded15a97-b849-44ee-ba71-4d881355a8ce" `
+  -F "prompt=Analyze this related document" `
+  -F "files=@C:\temp\related.txt"
+```
+
+### Common Use Cases
+
+- **Document Summarization:** `-F "prompt=Summarize in 3 bullet points" -F "files=@report.pdf"`
+- **Code Review:** `-F "prompt=Review for security issues" -F "files=@app.py"`
+- **Data Analysis:** `-F "prompt=Analyze and provide insights" -F "files=@data.csv"`
+- **File Comparison:** `-F "prompt=Compare versions" -F "files=@v1.txt" -F "files=@v2.txt"`
+
+### Key Takeaways
+
+✅ Use `-F` flag for file uploads (form data)  
+✅ Files stored at `/workspace/uploads/` in agent sandbox  
+✅ Multiple files supported in single request  
+✅ Works with agent selection and existing threads  
+✅ Agent has full command-line access to files
