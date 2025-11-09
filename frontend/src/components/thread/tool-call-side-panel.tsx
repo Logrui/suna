@@ -315,6 +315,8 @@ export function ToolCallSidePanel({
   }, []);
 
   // Handle view toggle visibility and auto-switching logic
+  // FIXED: Removed currentView from effect to prevent infinite loop
+  // Using currentViewRef.current for comparison prevents triggering re-renders
   React.useEffect(() => {
     const safeIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
     const currentSnapshot = toolCallSnapshots[safeIndex];
@@ -327,7 +329,7 @@ export function ToolCallSidePanel({
         setCurrentView('tools');
       }
       // Switch to browser view when navigating to the latest browser tool
-      if (isCurrentSnapshotBrowserTool && currentViewRef.current === 'tools' && safeIndex === toolCallSnapshots.length - 1) {
+      else if (isCurrentSnapshotBrowserTool && currentViewRef.current === 'tools' && safeIndex === toolCallSnapshots.length - 1) {
         setCurrentView('browser');
       }
     } else if (agentStatus === 'running') {
@@ -345,9 +347,8 @@ export function ToolCallSidePanel({
         if (isStreamingBrowserTool && currentViewRef.current === 'tools') {
           setCurrentView('browser');
         }
-        
         // Switch to tools view when a non-browser tool starts streaming and we're in browser view
-        if (!isStreamingBrowserTool && currentViewRef.current === 'browser') {
+        else if (!isStreamingBrowserTool && currentViewRef.current === 'browser') {
           setCurrentView('tools');
         }
       }
@@ -368,47 +369,53 @@ export function ToolCallSidePanel({
     }));
   }, [toolCalls]);
 
+  // FIXED: Simplified snapshot management to prevent infinite loops
+  // Removed toolCallSnapshots.length from dependencies to prevent cascading updates
   React.useEffect(() => {
     const hadSnapshots = toolCallSnapshots.length > 0;
     const hasNewSnapshots = newSnapshots.length > toolCallSnapshots.length;
-    setToolCallSnapshots(newSnapshots);
+    
+    // Only update if snapshots actually changed (by reference or length)
+    if (hasNewSnapshots || toolCallSnapshots.length !== newSnapshots.length) {
+      setToolCallSnapshots(newSnapshots);
 
-    if (!isInitialized && newSnapshots.length > 0) {
-      const completedCount = newSnapshots.filter(s =>
-        s.toolCall.toolResult?.content &&
-        s.toolCall.toolResult.content !== 'STREAMING'
-      ).length;
+      if (!isInitialized && newSnapshots.length > 0) {
+        const completedCount = newSnapshots.filter(s =>
+          s.toolCall.toolResult?.content &&
+          s.toolCall.toolResult.content !== 'STREAMING'
+        ).length;
 
-      if (completedCount > 0) {
-        let lastCompletedIndex = -1;
-        for (let i = newSnapshots.length - 1; i >= 0; i--) {
-          const snapshot = newSnapshots[i];
-          if (snapshot.toolCall.toolResult?.content &&
-            snapshot.toolCall.toolResult.content !== 'STREAMING') {
-            lastCompletedIndex = i;
-            break;
+        if (completedCount > 0) {
+          let lastCompletedIndex = -1;
+          for (let i = newSnapshots.length - 1; i >= 0; i--) {
+            const snapshot = newSnapshots[i];
+            if (snapshot.toolCall.toolResult?.content &&
+              snapshot.toolCall.toolResult.content !== 'STREAMING') {
+              lastCompletedIndex = i;
+              break;
+            }
           }
+          setInternalIndex(Math.max(0, lastCompletedIndex));
+        } else {
+          setInternalIndex(Math.max(0, newSnapshots.length - 1));
         }
-        setInternalIndex(Math.max(0, lastCompletedIndex));
-      } else {
-        setInternalIndex(Math.max(0, newSnapshots.length - 1));
-      }
-      setIsInitialized(true);
-    } else if (hasNewSnapshots && navigationMode === 'live') {
-      // When in live mode and new snapshots arrive, always follow the true latest index.
-      // Display stability for streaming is handled separately by displayToolCall logic.
-      setInternalIndex(newSnapshots.length - 1);
-    } else if (hasNewSnapshots && navigationMode === 'manual') {
-      // When in manual mode and new snapshots arrive, check if we should auto-switch to live
-      // This happens when the user was at the latest snapshot before new ones arrived
-      const wasAtLatest = internalIndex === toolCallSnapshots.length - 1;
-      if (wasAtLatest && agentStatus === 'running') {
-        // Auto-switch to live mode when new snapshots arrive and we were at the latest
-        setNavigationMode('live');
+        setIsInitialized(true);
+      } else if (hasNewSnapshots && navigationMode === 'live') {
+        // When in live mode and new snapshots arrive, always follow the true latest index.
+        // Display stability for streaming is handled separately by displayToolCall logic.
         setInternalIndex(newSnapshots.length - 1);
+      } else if (hasNewSnapshots && navigationMode === 'manual') {
+        // When in manual mode and new snapshots arrive, check if we should auto-switch to live
+        // This happens when the user was at the latest snapshot before new ones arrived
+        const wasAtLatest = internalIndex === toolCallSnapshots.length - 1;
+        if (wasAtLatest && agentStatus === 'running') {
+          // Auto-switch to live mode when new snapshots arrive and we were at the latest
+          setNavigationMode('live');
+          setInternalIndex(newSnapshots.length - 1);
+        }
       }
     }
-  }, [toolCalls, navigationMode, toolCallSnapshots.length, isInitialized, internalIndex, agentStatus]);
+  }, [toolCalls, navigationMode, isInitialized, internalIndex, agentStatus]);
 
   React.useEffect(() => {
     // This is used to sync the internal index to the current index

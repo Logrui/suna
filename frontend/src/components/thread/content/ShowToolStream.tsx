@@ -83,13 +83,15 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [shouldShowContent, setShouldShowContent] = useState(false);
     const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-    // Use ref to store stable start time - only set once!
+    // FIXED: Use ref to store stable start time - only set once with useEffect!
     const stableStartTimeRef = useRef<number | null>(null);
 
-    // Set stable start time only once
-    if (showExpanded && !stableStartTimeRef.current) {
+    // FIXED: Set stable start time only once using useEffect to avoid state updates during render
+    useEffect(() => {
+      if (showExpanded && !stableStartTimeRef.current) {
         stableStartTimeRef.current = Date.now();
-    }
+      }
+    }, [showExpanded]);
 
     const rawToolName = extractToolNameFromStream(content);
     const toolName = getUserFriendlyToolName(rawToolName || '');

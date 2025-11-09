@@ -322,12 +322,14 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       initializeFromAgents(agents, agentIdToUse);
 
       // If configuredAgentId is provided, force selection and override any existing selection
+      // FIXED: Remove selectedAgentId from dependencies to prevent infinite loop
+      // The check inside ensures we only set once when needed
       if (configuredAgentId && selectedAgentId !== configuredAgentId) {
         console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${selectedAgentId})`);
         setSelectedAgent(configuredAgentId);
       }
     }
-  }, [threadAgentData, agents, initializeFromAgents, configuredAgentId, selectedAgentId, setSelectedAgent]);
+  }, [threadAgentData, agents, initializeFromAgents, configuredAgentId, setSelectedAgent]);
 
   // Always call unconditionally
   const sharedSubscription = useSharedSubscription();

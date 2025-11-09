@@ -112,6 +112,9 @@ export function useToolCalls(
   // Create a map of assistant message IDs to their tool call indices for faster lookup
   const assistantMessageToToolIndex = useRef<Map<string, number>>(new Map());
 
+  // FIXED: Improved dependency management to prevent infinite loops
+  // Removed isSidePanelOpen and autoOpenedPanel from dependencies since they are updated
+  // conditionally and can cause cascading re-renders
   useEffect(() => {
     const historicalToolPairs: ToolCallInput[] = [];
     const messageIdToIndex = new Map<string, number>();
@@ -226,20 +229,41 @@ export function useToolCalls(
     });
 
     assistantMessageToToolIndex.current = messageIdToIndex;
-    setToolCalls(historicalToolPairs);
+    
+    // Only update toolCalls if they actually changed
+    setToolCalls(prev => {
+      if (prev.length === historicalToolPairs.length && 
+          prev.every((tool, i) => tool.assistantCall.timestamp === historicalToolPairs[i]?.assistantCall.timestamp)) {
+        return prev; // No changes, prevent re-render
+      }
+      return historicalToolPairs;
+    });
 
     if (historicalToolPairs.length > 0) {
       if (agentStatus === 'running' && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
-      } else if (isSidePanelOpen && !userClosedPanelRef.current && !userNavigatedRef.current) {
-        setCurrentToolIndex(historicalToolPairs.length - 1);
-      } else if (!isSidePanelOpen && !autoOpenedPanel && !userClosedPanelRef.current && !isMobile && !compact) {
-        setCurrentToolIndex(historicalToolPairs.length - 1);
-        setIsSidePanelOpen(true);
-        setAutoOpenedPanel(true);
+      } else if (!autoOpenedPanel && !userClosedPanelRef.current && !isMobile && !compact) {
+        // Use callback form to avoid reading isSidePanelOpen from closure
+        setIsSidePanelOpen(prev => {
+          if (!prev) {
+            setCurrentToolIndex(historicalToolPairs.length - 1);
+            setAutoOpenedPanel(true);
+            return true;
+          }
+          return prev;
+        });
+      } else if (!userNavigatedRef.current) {
+        // Update to latest when panel is already open
+        setCurrentToolIndex(prev => {
+          // Only update if we're not at the latest already
+          if (prev !== historicalToolPairs.length - 1) {
+            return historicalToolPairs.length - 1;
+          }
+          return prev;
+        });
       }
     }
-  }, [messages, isSidePanelOpen, autoOpenedPanel, agentStatus, isMobile, compact]);
+  }, [messages, agentStatus, isMobile, compact, autoOpenedPanel]);
 
   // Reset user navigation flag when agent stops
   useEffect(() => {
