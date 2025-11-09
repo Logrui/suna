@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant User
+    participant Next.js Frontend
+    participant FastAPI Backend
+    participant Supabase (Postgres)
+    participant Supabase (Realtime)
+
+    User->>Next.js Frontend: Loads a project thread page
+
+    Next.js Frontend->>Next.js Frontend: `ThreadComponent.tsx` mounts
+    Note over Next.js Frontend: Calls `useProjectRealtime(projectId)` hook
+
+    Next.js Frontend->>Supabase (Realtime): Establishes WebSocket connection to<br/>`wss://<your-domain>/realtime/v1/websocket`
+    Note over Next.js Frontend,Supabase (Realtime): `frontend/src/lib/supabase/client.ts` creates the client
+
+    Supabase (Realtime)-->>Next.js Frontend: WebSocket connection established
+
+    Next.js Frontend->>Supabase (Realtime): Subscribes to `projects` table changes<br/>(via WebSocket)
+    Note over Next.js Frontend,Supabase (Realtime): `useProjectRealtime.ts` defines the subscription
+
+    Supabase (Realtime)->>Supabase (Postgres): Listens for database changes (logical replication)
+
+    rect rgb(255, 240, 240)
+    Note over User,FastAPI Backend: Meanwhile, an agent is running...
+    User->>FastAPI Backend: User interacts with the agent
+    FastAPI Backend->>FastAPI Backend: Agent performs a task (e.g., runs code)
+    Note over FastAPI Backend: The agent's action modifies the project's sandbox state
+    FastAPI Backend->>Supabase (Postgres): `UPDATE projects SET sandbox = ... WHERE project_id = ...`
+    end
+
+    Supabase (Postgres)-->>Supabase (Realtime): Notifies Realtime server of the change
+
+    Supabase (Realtime)-->>Next.js Frontend: Pushes the updated `project` data<br/>(via WebSocket)
+
+    Next.js Frontend->>Next.js Frontend: Receives payload in `useProjectRealtime` hook
+    Note over Next.js Frontend: The hook invalidates the React Query cache for the project
+
+    Next.js Frontend->>Next.js Frontend: React Query refetches the project data
+    Note over Next.js Frontend: The UI updates automatically to show the new sandbox state
+
+    Next.js Frontend-->>User: User sees the updated sandbox state in the UI

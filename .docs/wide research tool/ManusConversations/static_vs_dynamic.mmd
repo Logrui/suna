@@ -1,0 +1,31 @@
+graph TD
+    subgraph Static Parallelism
+        A[User Request] --> B{Pre-defined Tool<br/>get_stock_price};
+        B --> C1[Subtask 1: get_stock_price for AAPL];
+        B --> C2[Subtask 2: get_stock_price for GOOG];
+        B --> C_N[Subtask N: get_stock_price for ...];
+        C1 --> D{Return Price};
+        C2 --> D;
+        C_N --> D;
+        D --> E[Aggregated List of Prices];
+    end
+
+    subgraph Dynamic Parallelism
+        F[User Request] --> G{Main Agent Defines Task};
+        G -- Defines --> H(Prompt Template<br/>Find CEO of input);
+        G -- Defines --> I(Output Schema<br/>ceo_name: ...)
+        G --> J{Invoke `map` tool};
+
+        J --> K1[Sub-Agent 1<br/>Task defined by H & I];
+        J --> K2[Sub-Agent 2<br/>Task defined by H & I];
+        J --> K_N[Sub-Agent N<br/>Task defined by H & I];
+
+        K1 --> L{Return Structured JSON};
+        K2 --> L;
+        K_N --> L;
+        L --> M[Aggregated List of<br/>Custom JSON Objects];
+    end
+
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+    style G fill:#c9f,stroke:#333,stroke-width:4px
+    style J fill:#f9f,stroke:#333,stroke-width:2px

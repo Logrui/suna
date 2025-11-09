@@ -2,6 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 Critical Constraint: Documentation Hard Limit
+
+**⚠️ MAXIMUM 3 MARKDOWN FILES PER REQUEST - Non-negotiable**
+
+When creating or updating documentation:
+- Never create more than 3 `.md` files in any single response
+- If you're approaching 3 files, consolidate instead of adding new files
+- Each file must serve a distinct, non-overlapping purpose
+- Use descriptive filenames: `QUICK_REFERENCE.md`, `COMPLETE_GUIDE.md`, `TROUBLESHOOTING.md`
+
+See `.github/instructions/documentation.instructions.md` for complete documentation rules.
+
 ## Project Overview
 
 Kortix (formerly Suna) is an open-source platform for building, managing, and training autonomous AI agents. The project consists of:
