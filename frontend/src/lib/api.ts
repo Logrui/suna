@@ -1221,9 +1221,23 @@ export const streamAgent = (
             // Notify about the message
             callbacks.onMessage(rawData);
 
-            // Clean up
-            cleanupEventSource(agentRunId, 'agent run completed');
-            callbacks.onClose();
+            // ⚠️ CRITICAL FIX: Do NOT close the EventSource here!
+            // 
+            // The issue: When the backend sends all messages (including tool results and completion),
+            // the EventSource may buffer multiple messages. If we immediately close the EventSource
+            // upon receiving "completed", we discard any remaining buffered messages.
+            //
+            // The solution: Let the backend close the SSE connection naturally after sending all messages.
+            // The backend's stream generator will return after yielding the completion message (see
+            // backend/core/agent_runs.py lines 1034-1036), which closes the connection. This will
+            // trigger onerror/onclose on the client side AFTER all messages have been processed.
+            //
+            // This prevents the "Agent Chat Premature Termination" bug where tool results were lost
+            // because the EventSource was closed before they could be processed.
+            
+            // Don't call cleanup here - let the backend close the connection
+            // cleanupEventSource(agentRunId, 'agent run completed');
+            // callbacks.onClose();
 
             return;
           }

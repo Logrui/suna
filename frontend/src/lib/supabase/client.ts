@@ -1,4 +1,4 @@
-import { createBrowserClient } from '@supabase/ssr'
+﻿import { createBrowserClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export function createClient() {
@@ -96,6 +96,80 @@ export function createRealtimeClient() {
       },
     }
   )
+
+  // Add comprehensive WebSocket debugging
+  if (typeof window !== 'undefined') {
+    const wsUrl = realtimeUrl.replace(/^http/, 'ws') + '/realtime/v1/websocket'
+    const wsProtocol = realtimeUrl.startsWith('https') ? 'wss://' : 'ws://'
+    const expectedWsUrl = wsUrl.replace(/^ws:\/\//, wsProtocol).replace(/^wss:\/\//, wsProtocol)
+    
+    console.log('[createRealtimeClient] WebSocket configuration:', {
+      realtimeUrl,
+      constructedWsUrl: wsUrl,
+      expectedProtocol: wsProtocol,
+      expectedFullUrl: expectedWsUrl,
+      pageProtocol: window.location.protocol,
+      shouldBeSecure: window.location.protocol === 'https:',
+    })
+
+    // Hook into connection state changes via the connection state
+    const checkConnection = () => {
+      const state = (client.realtime as any).connection?.getState?.() || 'unknown';
+      console.log('[createRealtimeClient] Current connection state:', state);
+      return state;
+    };
+
+    // Log initial state after a brief delay
+    setTimeout(() => {
+      const state = checkConnection();
+      console.log('[createRealtimeClient] Initial WebSocket state after creation:', state);
+    }, 100);
+
+    // Monitor for connection attempts by checking the internal connection object
+    try {
+      const realtime = client.realtime as any;
+      
+      // Try to access the underlying WebSocket connection for debugging
+      if (realtime.conn) {
+        console.log('[createRealtimeClient] WebSocket connection object detected:', {
+          hasConn: !!realtime.conn,
+          connState: realtime.conn.readyState,
+        });
+      }
+
+      // Hook into the connection via channel subscriptions for state tracking
+      const originalChannel = client.channel.bind(client);
+      client.channel = (name: string, opts?: any) => {
+        console.log('[createRealtimeClient]  Creating channel:', name, opts);
+        const channel = originalChannel(name, opts);
+        
+        // Override subscribe to log connection attempts
+        const originalSubscribe = channel.subscribe.bind(channel);
+        channel.subscribe = (callback?: any, timeout?: number) => {
+          console.log('[createRealtimeClient]  Subscribing to channel:', name);
+          console.log('[createRealtimeClient] WebSocket state before subscribe:', checkConnection());
+          
+          const result = originalSubscribe(callback, timeout);
+          
+          // Log state after subscribe attempt
+          setTimeout(() => {
+            console.log('[createRealtimeClient] WebSocket state after subscribe:', checkConnection());
+          }, 500);
+          
+          return result;
+        };
+
+        // Track channel state changes
+        channel.on('system' as any, {} as any, (payload: any) => {
+          console.log('[createRealtimeClient] Channel system event:', { channel: name, payload });
+        });
+
+        return channel;
+      };
+    } catch (err) {
+      console.warn('[createRealtimeClient] Could not attach advanced debug hooks:', err);
+    }
+  }
 
   console.log('[createRealtimeClient] Client created, WebSocket will connect to:', realtimeUrl)
 

@@ -3,6 +3,9 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   output: (process.env.NEXT_OUTPUT as 'standalone') || undefined,
   
+  // Enable source maps for easier debugging in browser console
+  productionBrowserSourceMaps: true,
+  
   async rewrites() {
     // Supabase URL detection:
     // - For local dev (localhost): use localhost:8888
