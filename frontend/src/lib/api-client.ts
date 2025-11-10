@@ -77,7 +77,10 @@ export const apiClient = {
         headers['X-Refresh-Token'] = session.refresh_token;
       }
 
-      const response = await fetch(url, {
+      // Prepend API_URL if url is relative
+      const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
+
+      const response = await fetch(fullUrl, {
         ...fetchOptions,
         headers,
         signal: controller.signal,

@@ -32,6 +32,7 @@ import sys
 from core.services import email_api
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
+from core import models_api
 
 
 if sys.platform == "win32":
@@ -199,6 +200,9 @@ api_router.include_router(template_api.router, prefix="/templates")
 
 api_router.include_router(transcription_api.router)
 api_router.include_router(email_api.router)
+
+# Include model management router (LM Studio + Ollama)
+api_router.include_router(models_api.router)
 
 from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)

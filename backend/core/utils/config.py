@@ -307,6 +307,7 @@ class Configuration:
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
     OLLAMA_ENABLED: Optional[bool] = False
     OLLAMA_API_BASE: Optional[str] = None  # Override for Docker: e.g., http://host.docker.internal:11434
+    LM_STUDIO_API_BASE: Optional[str] = None  # Override for Docker: e.g., http://host.docker.internal:1234
     OR_SITE_URL: Optional[str] = "https://kortix.ai"
     OR_APP_NAME: Optional[str] = "Kortix AI"
     

@@ -1,4 +1,4 @@
-﻿# Main Branch vs Merge Base Diff Analysis
+# Main Branch vs Merge Base Diff Analysis
 
 **Generated:** 2025-11-09 17:15:57
 
@@ -336,7 +336,7 @@ Files changed on Main since divergence (upstream updates). Review for conflicts 
 - frontend/src/lib/site.ts
 - frontend/src/middleware.ts
 
-## Deleted Files (250)
+## Deleted Files (250) - we dont care about these, its fine if we keep dead code for now
 
 Files removed from Main since divergence (upstream removals).
 

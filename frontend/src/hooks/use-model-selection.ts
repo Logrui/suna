@@ -5,6 +5,7 @@ import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAvailableModels } from '@/lib/api';
+import { getLocalModels } from '@/lib/api/models';
 
 export interface ModelOption {
   id: string;
@@ -15,6 +16,8 @@ export interface ModelOption {
   recommended?: boolean;
   capabilities?: string[];
   contextWindow?: number;
+  isLocal?: boolean;
+  provider?: string;
 }
 
 // Helper function to get default model from API data
@@ -37,8 +40,8 @@ const getDefaultModel = (models: ModelOption[], hasActiveSubscription: boolean):
 };
 
 export const useModelSelection = () => {
-  // Fetch models directly in this hook
-  const { data: modelsData, isLoading } = useQuery({
+  // Fetch cloud models
+  const { data: modelsData, isLoading: isLoadingCloud } = useQuery({
     queryKey: ['models', 'available'],
     queryFn: getAvailableModels,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -46,28 +49,130 @@ export const useModelSelection = () => {
     retry: 2,
   });
 
+  // Fetch local models (LM Studio + Ollama)
+  const { data: localModelsData, isLoading: isLoadingLocal } = useQuery({
+    queryKey: ['local-models'],
+    queryFn: async () => {
+      console.log('🔧 useModelSelection: Fetching local models...');
+      const response = await getLocalModels();
+      console.log('🔧 useModelSelection: Local models response:', response);
+      
+      // Handle error response properly
+      if (!response.success || !response.data) {
+        console.error('🔧 useModelSelection: Failed to fetch local models:', response.error);
+        throw new Error(response.error?.message || 'Failed to fetch local models');
+      }
+      
+      console.log('🔧 useModelSelection: Local models data:', response.data);
+      return response.data;
+    },
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
   const { data: subscriptionData } = useSubscriptionData();
   const { selectedModel, setSelectedModel } = useModelStore();
 
-  // Transform API data to ModelOption format
+  const isLoading = isLoadingCloud || isLoadingLocal;
+
+  // Transform API data to ModelOption format, merging cloud and local models
   const availableModels = useMemo<ModelOption[]>(() => {
-    if (!modelsData?.models) return [];
+    const models: ModelOption[] = [];
     
-    return modelsData.models.map(model => ({
-      id: model.id, // Always use the actual model ID
-      label: model.display_name || model.short_name || model.id,
-      requiresSubscription: model.requires_subscription || false,
-      priority: model.priority || 0,
-      recommended: model.recommended || false,
-      capabilities: model.capabilities || [],
-      contextWindow: model.context_window || 128000,
-    })).sort((a, b) => {
+    // Add cloud models first
+    if (modelsData?.models) {
+      const cloudModels = modelsData.models.map(model => ({
+        id: model.id, // Always use the actual model ID
+        label: model.display_name || model.short_name || model.id,
+        requiresSubscription: model.requires_subscription || false,
+        priority: model.priority || 0,
+        recommended: model.recommended || false,
+        capabilities: model.capabilities || [],
+        contextWindow: model.context_window || 128000,
+        isLocal: false,
+        provider: 'cloud'
+      }));
+      models.push(...cloudModels);
+    }
+
+    // Add local models and remove any duplicates
+    if (localModelsData) {
+      console.log('🔧 useModelSelection: Processing local models:', localModelsData);
+      
+      // Process Ollama models
+      if (localModelsData.ollama) {
+        console.log('🔧 useModelSelection: Found', localModelsData.ollama.length, 'Ollama models');
+        
+        // Remove any cloud models that match local Ollama models by name
+        localModelsData.ollama.forEach(localModel => {
+          const modelNameLower = localModel.name.toLowerCase();
+          for (let i = models.length - 1; i >= 0; i--) {
+            if (models[i].label && models[i].label.toLowerCase().includes(modelNameLower)) {
+              console.log('🔧 useModelSelection: Removing duplicate cloud model:', models[i].id, '(matches local:', localModel.id, ')');
+              models.splice(i, 1);
+            }
+          }
+        });
+        
+        // Add Ollama models with high priority
+        localModelsData.ollama.forEach(model => {
+          console.log('🔧 useModelSelection: Adding Ollama model:', model.id);
+          models.push({
+            id: model.id, // e.g., "ollama:qwen3-coder:30b"
+            label: model.name, // e.g., "qwen3-coder:30b"
+            requiresSubscription: false,
+            priority: 100, // High priority for local models
+            recommended: false,
+            capabilities: [],
+            contextWindow: model.context_window || 128000,
+            isLocal: true,
+            provider: 'ollama'
+          });
+        });
+      }
+      
+      // Process LM Studio models
+      if (localModelsData.lmstudio) {
+        console.log('🔧 useModelSelection: Found', localModelsData.lmstudio.length, 'LM Studio models');
+        
+        // Remove any cloud models that match local LM Studio models
+        localModelsData.lmstudio.forEach(localModel => {
+          const modelNameLower = localModel.name.toLowerCase();
+          for (let i = models.length - 1; i >= 0; i--) {
+            if (models[i].label && models[i].label.toLowerCase().includes(modelNameLower)) {
+              console.log('🔧 useModelSelection: Removing duplicate cloud model:', models[i].id, '(matches local:', localModel.id, ')');
+              models.splice(i, 1);
+            }
+          }
+        });
+        
+        // Add LM Studio models with high priority
+        localModelsData.lmstudio.forEach(model => {
+          console.log('🔧 useModelSelection: Adding LM Studio model:', model.id);
+          models.push({
+            id: model.id, // e.g., "lmstudio:hermes-2-pro"
+            label: model.name, // e.g., "hermes-2-pro"
+            requiresSubscription: false,
+            priority: 100, // High priority for local models
+            recommended: false,
+            capabilities: [],
+            contextWindow: model.context_window || 128000,
+            isLocal: true,
+            provider: 'lmstudio'
+          });
+        });
+      }
+    }
+
+    // Sort all models by priority (local models will be first due to priority 100)
+    return models.sort((a, b) => {
       // Sort by recommended first, then priority, then name
       if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
       if (a.priority !== b.priority) return b.priority - a.priority;
       return a.label.localeCompare(b.label);
     });
-  }, [modelsData]);
+  }, [modelsData, localModelsData]);
 
   // Get accessible models based on subscription
   const accessibleModels = useMemo(() => {

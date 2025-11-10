@@ -471,7 +471,7 @@ const GuestMenu: React.FC<UnifiedConfigMenuProps> = memo(function GuestMenu() {
                     </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
-                    <p>Log in to change agent</p>
+                    <p>Model Selection Requires Login</p>
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>

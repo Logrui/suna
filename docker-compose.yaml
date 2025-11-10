@@ -55,6 +55,9 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
+      # Local AI Model APIs (accessible from Docker containers)
+      - OLLAMA_API_BASE=http://host.docker.internal:11434
+      - LM_STUDIO_API_BASE=http://host.docker.internal:1234
     depends_on:
       redis:
         condition: service_healthy
@@ -79,6 +82,9 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
+      # Local AI Model APIs (accessible from Docker containers)
+      - OLLAMA_API_BASE=http://host.docker.internal:11434
+      - LM_STUDIO_API_BASE=http://host.docker.internal:1234
     depends_on:
       redis:
         condition: service_healthy
