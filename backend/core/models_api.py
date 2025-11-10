@@ -24,6 +24,7 @@ from core.utils.logger import logger
 from core.websocket import broadcaster
 from core.ai_models.lmstudio_client import LMStudioClient
 from core.ai_models.ollama_client import OllamaClient
+from core.ai_models.excluded_models import is_model_excluded, get_excluded_count
 
 
 # Request/Response Models
@@ -242,7 +243,61 @@ class LocalModelsResponse(BaseModel):
     ollama: List[LocalModel] = []
 
 
-# Endpoints
+# Ollama model context window mapping (since Ollama API doesn't provide this)
+OLLAMA_CONTEXT_WINDOWS = {
+    "qwen3-coder:30b": 131_072,
+    "qwen3-coder": 131_072,
+    "devstral": 4_096,
+    "devstral:latest": 4_096,
+    "mistral-small3.2": 32_768,
+    "mistral-small3.2:latest": 32_768,
+    "phi4-mini": 4_096,
+    "phi4-mini:latest": 4_096,
+    "codellama:13b-instruct": 100_000,
+    "codellama": 100_000,
+    "mistral:7b-instruct": 32_768,
+    "mistral": 32_768,
+    "gpt-oss": 131_072,
+    "gpt-oss:latest": 131_072,
+    "deepseek-coder:33b": 4_096,
+    "deepseek-coder": 4_096,
+    "embeddinggemma": 512,
+    "embeddinggemma:latest": 512,
+    "qwen2.5-coder:14b": 131_072,
+    "qwen2.5-coder": 131_072,
+    "qwen2.5-coder:7b-instruct": 131_072,
+    "llama3.1:8b-instruct-q8_0": 128_000,
+    "llama3.1": 128_000,
+    "codegemma:7b": 8_192,
+    "codegemma": 8_192,
+    "llama3.2": 128_000,
+    "llama3.2:latest": 128_000,
+    "qwen3:8b": 131_072,
+    "qwen3": 131_072,
+    "gemma3:4b": 8_192,
+    "gemma3": 8_192,
+    "deepseek-r1": 64_000,
+    "deepseek-r1:latest": 64_000,
+}
+
+
+def get_ollama_context_window(model_name: str) -> int:
+    """
+    Get context window for Ollama model by name.
+    Tries exact match first, then matches by prefix.
+    """
+    # Try exact match first
+    if model_name in OLLAMA_CONTEXT_WINDOWS:
+        return OLLAMA_CONTEXT_WINDOWS[model_name]
+    
+    # Try prefix match (for versioned models)
+    for key, value in OLLAMA_CONTEXT_WINDOWS.items():
+        if model_name.startswith(key):
+            return value
+    
+    # Default to 4k if not found
+    return 4_096
+
 
 @router.get("/local", response_model=LocalModelsResponse)
 async def list_local_models():
@@ -270,18 +325,23 @@ async def list_local_models():
             # Prefix with provider for easy detection in frontend
             prefixed_id = f"lmstudio:{model_id}"
             
+            # Skip excluded models
+            if is_model_excluded(prefixed_id, "lmstudio"):
+                logger.debug(f"Skipping excluded LM Studio model: {prefixed_id}")
+                continue
+            
             lmstudio_models.append(
                 LocalModel(
                     id=prefixed_id,
                     name=model_id,
                     provider="lmstudio",
                     loaded=model.get("loaded", False),
-                    context_window=model.get("context_window"),
+                    context_window=model.get("max_context_length") or model.get("context_window"),
                     quantization=model.get("quantization")
                 )
             )
         
-        logger.info(f"Listed {len(lmstudio_models)} LM Studio models")
+        logger.info(f"Listed {len(lmstudio_models)} LM Studio models (after filtering excluded models)")
         
     except Exception as e:
         logger.warning(f"Could not list LM Studio models: {e}")
@@ -296,18 +356,23 @@ async def list_local_models():
             # Prefix with provider for easy detection in frontend
             prefixed_id = f"ollama:{model_id}"
             
+            # Skip excluded models
+            if is_model_excluded(prefixed_id, "ollama"):
+                logger.debug(f"Skipping excluded Ollama model: {prefixed_id}")
+                continue
+            
             ollama_models.append(
                 LocalModel(
                     id=prefixed_id,
                     name=model_id,
                     provider="ollama",
                     loaded=model.get("loaded", False),
-                    context_window=model.get("context_window"),
+                    context_window=get_ollama_context_window(model_id),
                     quantization=model.get("quantization")
                 )
             )
         
-        logger.info(f"Listed {len(ollama_models)} Ollama models")
+        logger.info(f"Listed {len(ollama_models)} Ollama models (after filtering excluded models)")
         
     except Exception as e:
         logger.warning(f"Could not list Ollama models: {e}")
