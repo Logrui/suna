@@ -12,6 +12,8 @@ When creating or updating documentation:
 - Each file must serve a distinct, non-overlapping purpose
 - Use descriptive filenames: `QUICK_REFERENCE.md`, `COMPLETE_GUIDE.md`, `TROUBLESHOOTING.md`
 
+**IMPORTANT:** See `.github/CLAUDE_CONSTRAINT_REMINDER.md` for detailed enforcement and examples.
+
 See `.github/instructions/documentation.instructions.md` for complete documentation rules.
 
 ## Project Overview
