@@ -423,6 +423,20 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     const [shouldJustifyToTop, setShouldJustifyToTop] = useState(false);
     const { session } = useAuth();
 
+    // Fix: Stable ref for tool stream start time to avoid Date.now() on every render
+    const toolStreamStartTimeRef = useRef<number>(Date.now());
+
+    // Fix: Stable ref for ResizeObserver to avoid recreating on every render
+    const resizeObserverRef = useRef<ResizeObserver | null>(null);
+    const isResizeObserverSetupRef = useRef<boolean>(false);
+
+    // Fix: Update toolStreamStartTime when streaming starts
+    useEffect(() => {
+        if (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') {
+            toolStreamStartTimeRef.current = Date.now();
+        }
+    }, [streamHookStatus]);
+
     // Collect unique agent IDs from messages to prefetch from cache
     const agentIds = useMemo(() => {
         const ids = new Set<string>();
@@ -530,7 +544,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
     // No auto-scroll needed with flex-column-reverse - CSS handles it
 
-    // Smart justify-content based on content height
+    // Fix: Smart justify-content based on content height with stable ResizeObserver
     useEffect(() => {
         const checkContentHeight = () => {
             const container = (scrollContainerRef || messagesContainerRef).current;
@@ -539,16 +553,33 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
             const containerHeight = container.clientHeight;
             const contentHeight = content.scrollHeight;
-            setShouldJustifyToTop(contentHeight <= containerHeight);
+            const newValue = contentHeight <= containerHeight;
+
+            // Fix: Only update state if the value actually changes to prevent infinite loops
+            setShouldJustifyToTop(prev => prev !== newValue ? newValue : prev);
         };
 
-        checkContentHeight();
-        const resizeObserver = new ResizeObserver(checkContentHeight);
-        if (contentRef.current) resizeObserver.observe(contentRef.current);
-        const containerRef = (scrollContainerRef || messagesContainerRef).current;
-        if (containerRef) resizeObserver.observe(containerRef);
+        // Fix: Set up ResizeObserver only once
+        if (!isResizeObserverSetupRef.current) {
+            resizeObserverRef.current = new ResizeObserver(checkContentHeight);
+            isResizeObserverSetupRef.current = true;
 
-        return () => resizeObserver.disconnect();
+            if (contentRef.current) resizeObserverRef.current.observe(contentRef.current);
+            const containerRef = (scrollContainerRef || messagesContainerRef).current;
+            if (containerRef) resizeObserverRef.current.observe(containerRef);
+        }
+
+        // Check height on every render (but observer stays the same)
+        checkContentHeight();
+
+        // Cleanup on unmount
+        return () => {
+            if (resizeObserverRef.current) {
+                resizeObserverRef.current.disconnect();
+                resizeObserverRef.current = null;
+                isResizeObserverSetupRef.current = false;
+            }
+        };
     }, [displayMessages, streamingTextContent, agentStatus, scrollContainerRef]);
 
     // Preload all message attachments when messages change or sandboxId is provided
@@ -1032,7 +1063,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                         messageId={visibleMessages && visibleMessages.length > 0 ? visibleMessages[visibleMessages.length - 1].message_id : "playback-streaming"}
                                                                                         onToolClick={handleToolClick}
                                                                                         showExpanded={true}
-                                                                                        startTime={Date.now()}
+                                                                                        startTime={toolStreamStartTimeRef.current}
                                                                                     />
                                                                                 )}
                                                                             </>
@@ -1104,7 +1135,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                                 messageId="streamingTextContent"
                                                                                                 onToolClick={handleToolClick}
                                                                                                 showExpanded={true}
-                                                                                                startTime={Date.now()} // Tool just started now
+                                                                                                startTime={toolStreamStartTimeRef.current}
                                                                                             />
                                                                                         )}
                                                                                     </>

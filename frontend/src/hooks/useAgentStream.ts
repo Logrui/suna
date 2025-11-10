@@ -90,19 +90,29 @@ export function useAgentStream(
   const [textContent, setTextContent] = useState<
     { content: string; sequence?: number }[]
   >([]);
-  
+
   // Add throttled state updates for smoother streaming
   const throttleRef = useRef<NodeJS.Timeout | null>(null);
   const pendingContentRef = useRef<{ content: string; sequence?: number }[]>([]);
-  
+
+  // Performance: Maximum buffer size to prevent unbounded array growth
+  const MAX_BUFFER_ITEMS = 1000;
+
   // Throttled content update function for smoother streaming
   const flushPendingContent = useCallback(() => {
     if (pendingContentRef.current.length > 0) {
       const newContent = [...pendingContentRef.current];
       pendingContentRef.current = [];
-      
+
       React.startTransition(() => {
-        setTextContent((prev) => [...prev, ...newContent]);
+        setTextContent((prev) => {
+          const combined = [...prev, ...newContent];
+          // Performance: Limit buffer size to prevent unbounded growth
+          if (combined.length > MAX_BUFFER_ITEMS) {
+            return combined.slice(-MAX_BUFFER_ITEMS);
+          }
+          return combined;
+        });
       });
     }
   }, []);
@@ -131,8 +141,26 @@ export function useAgentStream(
   const orderedTextContent = useMemo(() => {
     // Use a more efficient approach for streaming performance
     if (textContent.length === 0) return '';
-    
-    // Sort once and concatenate efficiently
+
+    // Performance optimization: Check if array is already sorted (common case during streaming)
+    let isSorted = true;
+    for (let i = 1; i < textContent.length; i++) {
+      if ((textContent[i].sequence ?? 0) < (textContent[i - 1].sequence ?? 0)) {
+        isSorted = false;
+        break;
+      }
+    }
+
+    // Fast path: If already sorted, just concatenate
+    if (isSorted) {
+      let result = '';
+      for (let i = 0; i < textContent.length; i++) {
+        result += textContent[i].content;
+      }
+      return result;
+    }
+
+    // Slow path: Sort then concatenate (only when needed)
     const sorted = textContent.slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
     let result = '';
     for (let i = 0; i < sorted.length; i++) {
@@ -260,60 +288,43 @@ export function useAgentStream(
       setAgentRunId(null);
       currentRunIdRef.current = null;
 
-      queryClient.invalidateQueries({ 
-        queryKey: fileQueryKeys.all,
-      });
-
+      // Performance: Reduced query invalidations from 20+ to 5 specific ones
       // Invalidate active agent runs to update sidebar status indicators
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ['active-agent-runs'],
+        exact: true,
       });
 
       if (agentId) {
-        // Core agent data
-        queryClient.invalidateQueries({ queryKey: agentKeys.all });
-        queryClient.invalidateQueries({ queryKey: agentKeys.detail(agentId) });
-        queryClient.invalidateQueries({ queryKey: agentKeys.lists() });
-        queryClient.invalidateQueries({ queryKey: agentKeys.details() });
-        
-        // Agent tools and integrations
-        queryClient.invalidateQueries({ queryKey: ['agent-tools', agentId] });
-        queryClient.invalidateQueries({ queryKey: ['agent-tools'] });
-        
-        // MCP configurations
-        queryClient.invalidateQueries({ queryKey: ['custom-mcp-tools', agentId] });
-        queryClient.invalidateQueries({ queryKey: ['custom-mcp-tools'] });
-        queryClient.invalidateQueries({ queryKey: composioKeys.mcpServers() });
-        queryClient.invalidateQueries({ queryKey: composioKeys.profiles.all() });
-        queryClient.invalidateQueries({ queryKey: composioKeys.profiles.credentials() });
-        
-        // Triggers
-        queryClient.invalidateQueries({ queryKey: ['triggers', agentId] });
-        queryClient.invalidateQueries({ queryKey: ['triggers'] });
-        
-        // Knowledge base
-        queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.agent(agentId) });
-        queryClient.invalidateQueries({ queryKey: knowledgeBaseKeys.all });
-        
-        queryClient.invalidateQueries({ queryKey: ['versions'] });
-        queryClient.invalidateQueries({ queryKey: ['versions', 'list'] });
-        queryClient.invalidateQueries({ queryKey: ['versions', 'list', agentId] });
-        queryClient.invalidateQueries({ queryKey: ['versions', 'detail'] });
-        queryClient.invalidateQueries({ 
-          queryKey: ['versions', 'detail'], 
-          predicate: (query) => {
-            return query.queryKey.includes(agentId);
-          }
+        // Only invalidate specific agent detail query (triggers refetch automatically)
+        queryClient.invalidateQueries({
+          queryKey: agentKeys.detail(agentId),
+          exact: true,
         });
-        
-        // Invalidate any version store cache
-        queryClient.invalidateQueries({ queryKey: ['version-store'] });
-        
-        // Force refetch of agent configuration data
-        queryClient.refetchQueries({ queryKey: agentKeys.detail(agentId) });
-        queryClient.refetchQueries({ queryKey: ['versions', 'list', agentId] });
-        
-        console.log(`[useAgentStream] Comprehensively invalidated and refetched all agent queries for Agent ID: ${agentId}`);
+
+        // Invalidate file queries for this thread/agent (files may have been modified)
+        queryClient.invalidateQueries({
+          queryKey: fileQueryKeys.all,
+        });
+
+        // Invalidate knowledge base for this specific agent
+        queryClient.invalidateQueries({
+          queryKey: knowledgeBaseKeys.agent(agentId),
+          exact: true,
+        });
+
+        // Invalidate version list for this agent (versions may have changed)
+        queryClient.invalidateQueries({
+          queryKey: ['versions', 'list', agentId],
+          exact: true,
+        });
+
+        console.log(`[useAgentStream] Invalidated 5 specific queries for Agent ID: ${agentId}`);
+      } else {
+        // No agentId: Only invalidate file queries
+        queryClient.invalidateQueries({
+          queryKey: fileQueryKeys.all,
+        });
       }
 
       if (

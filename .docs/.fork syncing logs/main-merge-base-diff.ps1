@@ -1,11 +1,11 @@
-# Fork Sync Diff Analysis Script
-# Purpose: Generate comprehensive diff analysis between main and dev branches
-# Usage: .\analyze-diff.ps1
-# Output: Creates timestamped reports in the current directory
+# Main Branch vs Merge Base Diff Analysis Script
+# Purpose: Compare main branch to its merge base with dev to identify divergence
+# Usage: .\main-merge-base-diff.ps1
+# Output: Creates timestamped reports comparing main -> merge-base
 
 param(
-    [string]$BranchA = "dev",
-    [string]$BranchB = "main",
+    [string]$BranchA = "main",
+    [string]$BranchB = "dev",
     [string]$OutputDir = ".",
     [switch]$Detailed,
     [switch]$MarkdownOnly,
@@ -30,11 +30,48 @@ $colors = @{
     Renamed  = "Cyan"
     Header   = "Magenta"
     Summary  = "Blue"
+    Info     = "Cyan"
 }
 
 function Write-ColorOutput {
     param($Message, $Color = "White")
     Write-Host $Message -ForegroundColor $Color
+}
+
+function Get-MergeBase {
+    param([string]$Branch1, [string]$Branch2)
+    
+    try {
+        $mergeBase = git merge-base $Branch1 $Branch2
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to find merge base"
+        }
+        return $mergeBase.Trim()
+    }
+    catch {
+        Write-ColorOutput "Error finding merge base: $_" -Color Red
+        exit 1
+    }
+}
+
+function Get-CommitInfo {
+    param([string]$CommitHash)
+    
+    try {
+        $info = git show --quiet --format="%H|%an|%ae|%ad|%s" --date=short $CommitHash
+        $parts = $info -split '\|'
+        return @{
+            Hash      = $parts[0]
+            Author    = $parts[1]
+            Email     = $parts[2]
+            Date      = $parts[3]
+            Subject   = $parts[4]
+        }
+    }
+    catch {
+        Write-ColorOutput "Error retrieving commit info: $_" -Color Red
+        return $null
+    }
 }
 
 function Filter-FilesList {
@@ -67,9 +104,9 @@ function Filter-FilesList {
 }
 
 function Get-DiffSummary {
-    param([string]$BranchA, [string]$BranchB)
+    param([string]$Branch, [string]$CommitHash)
     
-    $diff = git diff $BranchA $BranchB --name-status
+    $diff = git diff $CommitHash $Branch --name-status
     
     $summary = @{
         Added    = 0
@@ -176,19 +213,49 @@ function Apply-Filters {
 }
 
 function Export-DiffReport {
-    param($Summary, $Files, $OutputPath)
+    param($MergeBaseInfo, $MainInfo, $Files, $OutputPath)
     
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $report = @()
     
-    $report += "# Diff Analysis Report"
+    $report += "# Main Branch vs Merge Base Diff Analysis"
     $report += ""
     $report += "**Generated:** $timestamp"
-    $report += "**Comparing:** $BranchA to $BranchB"
+    $report += ""
+    
+    # Merge base info
+    $report += "## Merge Base Information"
+    $report += ""
+    $report += "- Hash: ``$($MergeBaseInfo.Hash)``"
+    $report += "- Author: $($MergeBaseInfo.Author) `<$($MergeBaseInfo.Email)`>"
+    $report += "- Date: $($MergeBaseInfo.Date)"
+    $report += "- Subject: $($MergeBaseInfo.Subject)"
+    $report += ""
+    
+    # Main info
+    $report += "## Current Main Branch"
+    $report += ""
+    $report += "- Hash: ``$($MainInfo.Hash)``"
+    $report += "- Author: $($MainInfo.Author) `<$($MainInfo.Email)`>"
+    $report += "- Date: $($MainInfo.Date)"
+    $report += "- Subject: $($MainInfo.Subject)"
+    $report += ""
+    
+    # Divergence explanation
+    $report += "## What These Changes Mean"
+    $report += ""
+    $report += "This report shows **all changes made to the Main branch since it diverged from Dev**."
+    $report += ""
+    $report += "The merge base is the last commit where Main and Dev were at the same point. All files listed below were:"
+    $report += ""
+    $report += "- **Added:** Files that exist on Main but don't exist at the merge base (new upstream features)"
+    $report += "- **Modified:** Files that were changed on Main compared to the merge base (upstream updates)"
+    $report += "- **Deleted:** Files that were removed from Main (upstream removals)"
+    $report += "- **Renamed:** Files that were renamed on Main (refactoring)"
     $report += ""
     
     # Summary section
-    $report += "## Summary"
+    $report += "## Summary of Changes"
     $report += ""
     $report += "| Type | Count |"
     $report += "|------|-------|"
@@ -203,8 +270,9 @@ function Export-DiffReport {
     
     # Added files
     if ($Files.Added.Count -gt 0) {
-        $report += "## Added Files ($($Files.Added.Count)) - New Files that Kortix/Suna has but Logrui/Suna does not have yet - SAFE - (keep theirs) - add all from Main
-"
+        $report += "## Added Files ($($Files.Added.Count))"
+        $report += ""
+        $report += "New files added to Main since divergence (upstream additions)."
         $report += ""
         foreach ($file in $Files.Added | Sort-Object) {
             $report += "- $file"
@@ -214,7 +282,9 @@ function Export-DiffReport {
     
     # Modified files
     if ($Files.Modified.Count -gt 0) {
-        $report += "## Modified Files ($($Files.Modified.Count)) - either modified by Kortix Team or modified by us for Logrui/Suna - will need a second diff to know for sure - need to identify which are modified by us. The ones untouched by us as new updates from the Kortix Suna Team"
+        $report += "## Modified Files ($($Files.Modified.Count))"
+        $report += ""
+        $report += "Files changed on Main since divergence (upstream updates). Review for conflicts with local changes on Dev."
         $report += ""
         foreach ($file in $Files.Modified | Sort-Object) {
             $report += "- $file"
@@ -224,7 +294,9 @@ function Export-DiffReport {
     
     # Deleted files
     if ($Files.Deleted.Count -gt 0) {
-        $report += "## Deleted Files ($($Files.Deleted.Count)) - Files that we potentially add in our fork or simply just deleted from Kortix Suna Team - need to verify each one"
+        $report += "## Deleted Files ($($Files.Deleted.Count))"
+        $report += ""
+        $report += "Files removed from Main since divergence (upstream removals)."
         $report += ""
         foreach ($file in $Files.Deleted | Sort-Object) {
             $report += "- $file"
@@ -237,7 +309,7 @@ function Export-DiffReport {
         $report += "## Renamed Files ($($Files.Renamed.Count))"
         $report += ""
         foreach ($rename in $Files.Renamed) {
-            $report += "- $($rename.Old) -> $($rename.New) (Similarity: $($rename.Score)%)"
+            $report += "- `$($rename.Old)` → `$($rename.New)` (Similarity: $($rename.Score)%)"
         }
         $report += ""
     }
@@ -253,32 +325,32 @@ function Export-CSVReport {
     
     foreach ($file in $Files.Added) {
         $csvData += [PSCustomObject]@{
-            Type = "Added"
-            Path = $file
+            Type    = "Added"
+            Path    = $file
             OldPath = ""
         }
     }
     
     foreach ($file in $Files.Modified) {
         $csvData += [PSCustomObject]@{
-            Type = "Modified"
-            Path = $file
+            Type    = "Modified"
+            Path    = $file
             OldPath = ""
         }
     }
     
     foreach ($file in $Files.Deleted) {
         $csvData += [PSCustomObject]@{
-            Type = "Deleted"
-            Path = $file
+            Type    = "Deleted"
+            Path    = $file
             OldPath = ""
         }
     }
     
     foreach ($rename in $Files.Renamed) {
         $csvData += [PSCustomObject]@{
-            Type = "Renamed"
-            Path = $rename.New
+            Type    = "Renamed"
+            Path    = $rename.New
             OldPath = $rename.Old
         }
     }
@@ -289,12 +361,25 @@ function Export-CSVReport {
 
 # Main execution
 try {
-    Write-ColorOutput "`n=== Fork Sync Diff Analysis ===" -Color $colors.Header
-    Write-ColorOutput "Comparing branches: $BranchA -> $BranchB`n" -Color $colors.Header
+    Write-ColorOutput "`n=== Main Branch vs Merge Base Analysis ===" -Color $colors.Header
+    Write-ColorOutput "Branches: $BranchA and $BranchB`n" -Color $colors.Header
+    
+    # Find merge base
+    Write-ColorOutput "Finding merge base between $BranchA and $BranchB..." -Color $colors.Summary
+    $mergeBase = Get-MergeBase -Branch1 $BranchA -Branch2 $BranchB
+    Write-ColorOutput "Merge base commit: $mergeBase`n" -Color $colors.Info
+    
+    # Get commit info
+    Write-ColorOutput "Retrieving commit information..." -Color $colors.Summary
+    $mergeBaseInfo = Get-CommitInfo -CommitHash $mergeBase
+    $mainHeadInfo = Get-CommitInfo -CommitHash $BranchA
+    
+    Write-ColorOutput "Merge base: $($mergeBaseInfo.Subject) ($($mergeBaseInfo.Date))" -Color $colors.Info
+    Write-ColorOutput "Main HEAD: $($mainHeadInfo.Subject) ($($mainHeadInfo.Date))`n" -Color $colors.Info
     
     # Get diff data
     Write-ColorOutput "Analyzing differences..." -Color $colors.Summary
-    $diffData = Get-DiffSummary -BranchA $BranchA -BranchB $BranchB
+    $diffData = Get-DiffSummary -Branch $BranchA -CommitHash $mergeBase
     $files = Get-FilesByType -RawDiff $diffData.RawDiff
     
     # Apply filters if specified
@@ -326,19 +411,19 @@ try {
     
     # Create timestamped output files
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $reportFolder = Join-Path $OutputDir "diff_report_$timestamp"
+    $reportFolder = Join-Path $OutputDir "main-merge-base-diff_$timestamp"
     
     # Create the output folder
     if (-not (Test-Path $reportFolder)) {
         New-Item -ItemType Directory -Path $reportFolder | Out-Null
     }
     
-    $markdownReport = Join-Path $reportFolder "dev-main-analyze-diff-report.md"
-    $csvReport = Join-Path $reportFolder "dev-main-analyze-diff-report.csv"
+    $markdownReport = Join-Path $reportFolder "analyze-diff-main-merge-base.md"
+    $csvReport = Join-Path $reportFolder "analyze-diff-main-merge-base.csv"
     
     # Export reports
     Write-ColorOutput "Exporting Markdown report..." -Color $colors.Summary
-    $mdPath = Export-DiffReport -Summary $diffData -Files $displayFiles -OutputPath $markdownReport
+    $mdPath = Export-DiffReport -MergeBaseInfo $mergeBaseInfo -MainInfo $mainHeadInfo -Files $displayFiles -OutputPath $markdownReport
     Write-ColorOutput "Saved to: $mdPath`n" -Color $colors.Added
     
     Write-ColorOutput "Exporting CSV report..." -Color $colors.Summary

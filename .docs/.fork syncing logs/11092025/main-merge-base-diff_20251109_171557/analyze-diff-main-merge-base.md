@@ -1,19 +1,45 @@
-﻿# Diff Analysis Report
+﻿# Main Branch vs Merge Base Diff Analysis
 
-**Generated:** 2025-11-09 15:55:25
-**Comparing:** dev to main
+**Generated:** 2025-11-09 17:15:57
 
-## Summary
+## Merge Base Information
+
+- Hash: `184b7c85006ff0473898a30d557433c8c95acd68`
+- Author: Marko Kraemer <73443200+markokraemer@users.noreply.github.com>
+- Date: 2025-10-31
+- Subject: Update README.md
+
+## Current Main Branch
+
+- Hash: `783b750a559cc3c608996517af0607b5dff552f9`
+- Author: Bobbie <126939298+escapade-mckv@users.noreply.github.com>
+- Date: 2025-11-09
+- Subject: Merge pull request #2079 from escapade-mckv/plan-based-enforcements
+
+## What These Changes Mean
+
+This report shows **all changes made to the Main branch since it diverged from Dev**.
+
+The merge base is the last commit where Main and Dev were at the same point. All files listed below were:
+
+- **Added:** Files that exist on Main but don't exist at the merge base (new upstream features)
+- **Modified:** Files that were changed on Main compared to the merge base (upstream updates)
+- **Deleted:** Files that were removed from Main (upstream removals)
+- **Renamed:** Files that were renamed on Main (refactoring)
+
+## Summary of Changes
 
 | Type | Count |
 |------|-------|
-| Added | 90 |
-| Modified | 224 |
-| Deleted | 215 |
-| Renamed | 84 |
-| **Total** | **613** |
+| Added | 91 |
+| Modified | 198 |
+| Deleted | 250 |
+| Renamed | 82 |
+| **Total** | **621** |
 
-## Added Files (90)
+## Added Files (91)
+
+New files added to Main since divergence (upstream additions).
 
 - backend/core/agent_setup.py
 - backend/core/billing/free_tier_service.py
@@ -25,6 +51,7 @@
 - backend/supabase/migrations/20251102090935_revert_free_tier_grant.sql
 - backend/supabase/migrations/20251106090733_allow_negative_credits.sql
 - backend/supabase/migrations/20251106184128_tier_downgrade_fields.sql
+- frontend/next
 - frontend/public/manifest.json
 - frontend/public/plan-icons/basic.svg
 - frontend/public/robots.txt
@@ -106,20 +133,18 @@
 - frontend/src/stores/subscription-store.tsx
 - frontend/src/stores/suna-modes-store.ts
 
-## Modified Files (224)
+## Modified Files (198)
+
+Files changed on Main since divergence (upstream updates). Review for conflicts with local changes on Dev.
 
 - backend/.env.example
-- backend/.gitignore
 - backend/api.py
 - backend/core/agent_loader.py
 - backend/core/agent_runs.py
 - backend/core/agent_service.py
 - backend/core/agent_tools.py
-- backend/core/agentpress/error_processor.py
 - backend/core/agentpress/response_processor.py
 - backend/core/agentpress/thread_manager.py
-- backend/core/agentpress/xml_tool_parser.py
-- backend/core/ai_models/ai_models.py
 - backend/core/ai_models/manager.py
 - backend/core/ai_models/registry.py
 - backend/core/api.py
@@ -131,36 +156,23 @@
 - backend/core/billing/trial_service.py
 - backend/core/billing/webhook_service.py
 - backend/core/composio_integration/api.py
-- backend/core/composio_integration/composio_profile_service.py
 - backend/core/credits.py
-- backend/core/knowledge_base/api.py
-- backend/core/knowledge_base/file_processor.py
 - backend/core/prompts/prompt.py
 - backend/core/run.py
-- backend/core/sandbox/docker/docker-compose.yml
 - backend/core/sandbox/sandbox.py
 - backend/core/services/llm.py
 - backend/core/templates/utils.py
 - backend/core/threads.py
 - backend/core/tools/sb_files_tool.py
-- backend/core/tools/sb_kb_tool.py
 - backend/core/tools/sb_presentation_tool.py
-- backend/core/tools/sb_upload_file_tool.py
 - backend/core/tools/task_list_tool.py
 - backend/core/triggers/api.py
 - backend/core/utils/auth_utils.py
 - backend/core/utils/config.py
-- backend/core/utils/icon_generator.py
 - backend/core/utils/limits_checker.py
-- backend/core/utils/project_helpers.py
 - backend/core/utils/scripts/fix_missing_subscription.py
 - backend/core/utils/tool_discovery.py
 - backend/run_agent_background.py
-- backend/supabase/config.toml
-- docker-compose.yaml
-- frontend/.env.example
-- frontend/Dockerfile
-- frontend/next.config.ts
 - frontend/package.json
 - frontend/package-lock.json
 - frontend/public/plan-icons/plus.svg
@@ -217,7 +229,6 @@
 - frontend/src/components/agents/config/model-selector.tsx
 - frontend/src/components/agents/create-version-button.tsx
 - frontend/src/components/agents/custom-agents-page/publish-dialog.tsx
-- frontend/src/components/agents/custom-agents-page/tabs-navigation.tsx
 - frontend/src/components/agents/docs-agent/editor.tsx
 - frontend/src/components/agents/docs-agent/editor/controls/color-picker.tsx
 - frontend/src/components/agents/docs-agent/editor/controls/font-selector.tsx
@@ -229,7 +240,6 @@
 - frontend/src/components/agents/json-import-dialog.tsx
 - frontend/src/components/agents/marketplace-agent-preview-dialog.tsx
 - frontend/src/components/agents/mcp/configured-mcp-list.tsx
-- frontend/src/components/agents/mcp/custom-mcp-dialog.tsx
 - frontend/src/components/agents/mcp/tools-manager.tsx
 - frontend/src/components/agents/new-agent-dialog.tsx
 - frontend/src/components/agents/tools/granular-tool-configuration.tsx
@@ -254,7 +264,6 @@
 - frontend/src/components/GithubSignIn.tsx
 - frontend/src/components/home/theme-toggle.tsx
 - frontend/src/components/knowledge-base/knowledge-base-manager.tsx
-- frontend/src/components/knowledge-base/knowledge-base-page.tsx
 - frontend/src/components/knowledge-base/unified-kb-entry-modal.tsx
 - frontend/src/components/maintenance/maintenance-page.tsx
 - frontend/src/components/onboarding/index.ts
@@ -297,19 +306,15 @@
 - frontend/src/components/thread/tool-views/designer-tool/DesignerToolView.tsx
 - frontend/src/components/thread/tool-views/discover-mcp-tools-for-agent/discover-mcp-tools-for-agent.tsx
 - frontend/src/components/thread/tool-views/docs-tool/_utils.tsx
-- frontend/src/components/thread/tool-views/docs-tool/DocsToolView.tsx
-- frontend/src/components/thread/tool-views/docs-tool/ListDocumentsToolView.tsx
 - frontend/src/components/thread/tool-views/file-operation/FileEditToolView.tsx
 - frontend/src/components/thread/tool-views/file-operation/FileOperationToolView.tsx
 - frontend/src/components/thread/tool-views/presentation-tools/ExportToolView.tsx
 - frontend/src/components/thread/tool-views/presentation-tools/ListPresentationTemplatesToolView.tsx
 - frontend/src/components/thread/tool-views/presentation-tools/PresentationViewerProvider.tsx
 - frontend/src/components/thread/tool-views/search-mcp-servers-for-agent/search-mcp-servers-for-agent.tsx
-- frontend/src/components/thread/tool-views/see-image-tool/_utils.ts
 - frontend/src/components/thread/tool-views/sheets-tools/luckysheet-viewer.tsx
 - frontend/src/components/thread/tool-views/sheets-tools/sheets-tool-view.tsx
 - frontend/src/components/thread/tool-views/types.ts
-- frontend/src/components/thread/tool-views/utils/presentation-utils.ts
 - frontend/src/components/thread/tool-views/vapi-call/MakeCallToolView.tsx
 - frontend/src/components/thread/tool-views/vapi-call/MonitorCallToolView.tsx
 - frontend/src/components/thread/tool-views/wrapper/ToolViewRegistry.tsx
@@ -329,55 +334,122 @@
 - frontend/src/lib/error-handler.ts
 - frontend/src/lib/home.tsx
 - frontend/src/lib/site.ts
-- frontend/src/lib/supabase/client.ts
-- frontend/src/lib/supabase/server.ts
 - frontend/src/middleware.ts
 
-## Deleted Files (215)
+## Deleted Files (250)
 
-- .claude/settings.local.json
-- ALL_MIGRATIONS.sql
-- backend/core/agentpress/continue.py
-- backend/core/ai_models/ollama_client.py
-- backend/core/templates/presentations/gamer gray/metadata.json
-- backend/core/templates/presentations/gamer gray/pdf/prompt_engineering_fundamentals.pdf
-- backend/core/templates/presentations/gamer gray/slide_01.html
-- backend/core/templates/presentations/gamer gray/slide_02.html
-- backend/core/templates/presentations/gamer gray/slide_03.html
-- backend/core/templates/presentations/gamer gray/slide_04.html
-- backend/core/templates/presentations/gamer gray/slide_05.html
-- backend/core/templates/presentations/gamer gray/slide_06.html
-- backend/core/templates/presentations/gamer gray/slide_07.html
-- backend/core/templates/presentations/gamer gray/uploads/code.png
-- backend/core/templates/presentations/gamer gray/uploads/Container.png
-- files-to-protect.txt
-- frontend/public/Frame 50.svg
-- frontend/public/kortix-logo.svg
-- frontend/public/kortix-logo-white.svg
-- frontend/public/thumbnail-dark.png
-- frontend/public/thumbnail-light.png
-- frontend/src/app/(dashboard)/(personalAccount)/loading.tsx
-- frontend/src/app/(dashboard)/(personalAccount)/settings/billing/page.tsx
-- frontend/src/app/(dashboard)/(personalAccount)/settings/env-manager/page.tsx
-- frontend/src/app/(dashboard)/(personalAccount)/settings/layout.tsx
-- frontend/src/app/(dashboard)/(personalAccount)/settings/page.tsx
-- frontend/src/app/(dashboard)/(personalAccount)/settings/teams/page.tsx
-- frontend/src/app/(dashboard)/(personalAccount)/settings/transactions/page.tsx
-- frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/page.tsx
-- frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/settings/billing/page.tsx
-- frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/settings/layout.tsx
-- frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/settings/members/page.tsx
-- frontend/src/app/(dashboard)/(teamAccount)/[accountSlug]/settings/page.tsx
+Files removed from Main since divergence (upstream removals).
+
+- apps/mobile_old/.gitignore
+- apps/mobile_old/api/chat-api.ts
+- apps/mobile_old/api/error-handlers.ts
+- apps/mobile_old/api/file-api.ts
+- apps/mobile_old/api/project-api.ts
+- apps/mobile_old/api/sandbox-file-api.ts
+- apps/mobile_old/app.json
+- apps/mobile_old/app/_layout.tsx
+- apps/mobile_old/app/index.tsx
+- apps/mobile_old/assets/images/adaptive-icon.png
+- apps/mobile_old/assets/images/favicon.png
+- apps/mobile_old/assets/images/icon.png
+- apps/mobile_old/assets/images/kortix-logo-square.svg
+- apps/mobile_old/assets/images/kortix-splash.png
+- apps/mobile_old/components/AttachmentGroup.tsx
+- apps/mobile_old/components/AuthOverlay.tsx
+- apps/mobile_old/components/ChatActionModal.tsx
+- apps/mobile_old/components/ChatContainer.tsx
+- apps/mobile_old/components/ChatHeader.tsx
+- apps/mobile_old/components/ChatInput.tsx
+- apps/mobile_old/components/DeleteConfirmationModal.tsx
+- apps/mobile_old/components/FileAttachment.tsx
+- apps/mobile_old/components/FileBrowser/FileBrowserModal.tsx
+- apps/mobile_old/components/FileBrowser/FileItem.tsx
+- apps/mobile_old/components/FileBrowser/FileViewer.tsx
+- apps/mobile_old/components/FileBrowser/index.tsx
+- apps/mobile_old/components/file-renderers/HTMLRenderer.tsx
+- apps/mobile_old/components/file-renderers/index.tsx
+- apps/mobile_old/components/KeyboardAvoidingContainer.tsx
+- apps/mobile_old/components/LeftPanel.tsx
+- apps/mobile_old/components/MessageActionModal.tsx
+- apps/mobile_old/components/MessageThread.tsx
+- apps/mobile_old/components/PanelContainer.tsx
+- apps/mobile_old/components/renderers/CodeRenderer.tsx
+- apps/mobile_old/components/renderers/CsvRenderer.tsx
+- apps/mobile_old/components/renderers/file-operation-utils.tsx
+- apps/mobile_old/components/renderers/HtmlRenderer.tsx
+- apps/mobile_old/components/renderers/index.tsx
+- apps/mobile_old/components/renderers/MarkdownRenderer.tsx
+- apps/mobile_old/components/RightPanel.tsx
+- apps/mobile_old/components/SettingsDrawer.tsx
+- apps/mobile_old/components/ShareModal.tsx
+- apps/mobile_old/components/Skeleton.tsx
+- apps/mobile_old/components/TimePlaybackControls.tsx
+- apps/mobile_old/components/ToolCallRenderer.tsx
+- apps/mobile_old/components/ToolViews/AskToolView.tsx
+- apps/mobile_old/components/ToolViews/BrowserToolView.tsx
+- apps/mobile_old/components/ToolViews/CommandToolView.tsx
+- apps/mobile_old/components/ToolViews/CompleteToolView.tsx
+- apps/mobile_old/components/ToolViews/DataProviderEndpointsToolView.tsx
+- apps/mobile_old/components/ToolViews/ExecuteDataProviderCallToolView.tsx
+- apps/mobile_old/components/ToolViews/ExposePortToolView.tsx
+- apps/mobile_old/components/ToolViews/FileOperationToolView.tsx
+- apps/mobile_old/components/ToolViews/GenericToolView.tsx
+- apps/mobile_old/components/ToolViews/index.tsx
+- apps/mobile_old/components/ToolViews/SeeImageToolView.tsx
+- apps/mobile_old/components/ToolViews/StrReplaceToolView.tsx
+- apps/mobile_old/components/ToolViews/TerminateCommandToolView.tsx
+- apps/mobile_old/components/ToolViews/ToolHeader.tsx
+- apps/mobile_old/components/ToolViews/ToolViewContext.tsx
+- apps/mobile_old/components/ToolViews/ToolViewRegistry.tsx
+- apps/mobile_old/components/ToolViews/WebCrawlToolView.tsx
+- apps/mobile_old/components/ToolViews/WebScrapeToolView.tsx
+- apps/mobile_old/components/ToolViews/WebSearchToolView.tsx
+- apps/mobile_old/components/Typography.tsx
+- apps/mobile_old/components/ui/Card.tsx
+- apps/mobile_old/components/ui/TabSwitcher.tsx
+- apps/mobile_old/components/ui/TerminalView.tsx
+- apps/mobile_old/constants/Colors.ts
+- apps/mobile_old/constants/CommonStyles.ts
+- apps/mobile_old/constants/Fonts.ts
+- apps/mobile_old/constants/SafeArea.ts
+- apps/mobile_old/constants/Server.ts
+- apps/mobile_old/constants/SiteConfig.ts
+- apps/mobile_old/constants/SupabaseConfig.ts
+- apps/mobile_old/eslint.config.js
+- apps/mobile_old/hooks/useAuth.tsx
+- apps/mobile_old/hooks/useChatContext.tsx
+- apps/mobile_old/hooks/useChatHooks.tsx
+- apps/mobile_old/hooks/useColorScheme.ts
+- apps/mobile_old/hooks/useColorScheme.web.ts
+- apps/mobile_old/hooks/useFileBrowser.tsx
+- apps/mobile_old/hooks/useFileBrowserHooks.tsx
+- apps/mobile_old/hooks/useImageContent.tsx
+- apps/mobile_old/hooks/usePanelContext.tsx
+- apps/mobile_old/hooks/useReactQueryFocus.ts
+- apps/mobile_old/hooks/useThemeColor.ts
+- apps/mobile_old/package.json
+- apps/mobile_old/package-lock.json
+- apps/mobile_old/providers/AppProviders.tsx
+- apps/mobile_old/scripts/reset-project.js
+- apps/mobile_old/stores/file-browser-store.ts
+- apps/mobile_old/stores/query-client.ts
+- apps/mobile_old/stores/ui-store.ts
+- apps/mobile_old/tsconfig.json
+- apps/mobile_old/utils/file-parser.ts
+- apps/mobile_old/utils/file-upload.ts
+- apps/mobile_old/utils/index.ts
+- apps/mobile_old/utils/markdown-renderer.tsx
+- apps/mobile_old/utils/message-parser.ts
+- apps/mobile_old/utils/metadata-parser.ts
+- apps/mobile_old/utils/safe-json-parser.ts
+- apps/mobile_old/utils/tool-result-parser.ts
+- apps/mobile_old/utils/xml-parser.ts
 - frontend/src/app/(dashboard)/composio-test/page.tsx
-- frontend/src/app/(dashboard)/library/page.tsx
 - frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/index.ts
 - frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/UpgradeDialog.tsx
 - frontend/src/app/(dashboard)/projects/[projectId]/thread/_hooks/index.ts
 - frontend/src/app/(dashboard)/projects/[projectId]/thread/_types/index.ts
 - frontend/src/app/(home)/changelog/page.tsx
-- frontend/src/app/api/auth/sync/route.ts
-- frontend/src/app/api/proxy/auth/[...slug]/route.ts
-- frontend/src/app/api/test-auth/route.ts
 - frontend/src/app/docs/architecture/page.tsx
 - frontend/src/app/docs/contributing/page.tsx
 - frontend/src/app/docs/introduction/page.tsx
@@ -452,31 +524,9 @@
 - frontend/src/components/home/ui/orbiting-circle.tsx
 - frontend/src/components/home/ui/reasoning.tsx
 - frontend/src/components/home/ui/response-stream.tsx
-- frontend/src/components/knowledge-base/databases-tab.tsx
-- frontend/src/components/knowledge-base/kb-tabs-navigation.tsx
-- frontend/src/components/library/file-card.tsx
-- frontend/src/components/library/file-icons/FileIcon.tsx
-- frontend/src/components/library/file-icons/icons/ArchiveIcon.tsx
-- frontend/src/components/library/file-icons/icons/CodeIcon.tsx
-- frontend/src/components/library/file-icons/icons/DefaultIcon.tsx
-- frontend/src/components/library/file-icons/icons/DocumentIcon.tsx
-- frontend/src/components/library/file-icons/icons/index.ts
-- frontend/src/components/library/file-icons/icons/PdfIcon.tsx
-- frontend/src/components/library/file-icons/icons/SpreadsheetIcon.tsx
-- frontend/src/components/library/file-icons/index.ts
-- frontend/src/components/library/library-loading-skeleton.tsx
-- frontend/src/components/library/library-page.tsx
-- frontend/src/components/library/library-page-header.tsx
-- frontend/src/components/library/markdown-preview/index.ts
-- frontend/src/components/library/markdown-preview/MarkdownPreview.tsx
-- frontend/src/components/library/thread-card.tsx
 - frontend/src/components/maintenance-alert.tsx
 - frontend/src/components/nav-user.tsx
-- frontend/src/components/page-header.tsx
 - frontend/src/components/payment/paywall-dialog.tsx
-- frontend/src/components/sidebar/nav-knowledge-base.tsx
-- frontend/src/components/sidebar/nav-library.tsx
-- frontend/src/components/slash-commands/SlashCommandAutocomplete.tsx
 - frontend/src/components/ui/docs-body.tsx
 - frontend/src/components/ui/docs-bullets.tsx
 - frontend/src/components/ui/docs-card.tsx
@@ -520,10 +570,7 @@
 - frontend/src/hooks/useBillingError.ts
 - frontend/src/hooks/use-file-content.ts
 - frontend/src/hooks/use-image-content.ts
-- frontend/src/hooks/useProjectRealtime.ts
 - frontend/src/hooks/use-query.ts
-- frontend/src/hooks/useSlashCommands.ts
-- frontend/src/hooks/useVapiCallRealtime.ts
 - frontend/src/lib/actions/invitations.ts
 - frontend/src/lib/actions/members.ts
 - frontend/src/lib/actions/personal-account.ts
@@ -534,11 +581,7 @@
 - frontend/src/lib/api-server.ts
 - frontend/src/lib/cache-init.ts
 - frontend/src/lib/full-invitation-url.ts
-- frontend/src/lib/get-api-url.ts
-- frontend/src/lib/slashCommands.ts
 - frontend/src/lib/stores/agent-version-store.ts
-- frontend/src/lib/utils/fileTypeDetector.test.ts
-- frontend/src/lib/utils/fileTypeDetector.ts
 - frontend/src/lib/versioning/index.ts
 - frontend/src/lib/versioning/infrastructure/api-client.ts
 - frontend/src/lib/versioning/infrastructure/container.ts
@@ -547,94 +590,89 @@
 - frontend/src/lib/versioning/services/version-service.ts
 - frontend/src/lib/versioning/types.ts
 - frontend/src/providers/modal-providers.tsx
-- generate-jwt-tokens.js
-- run_migrations.py
-- suna.code-workspace
 
-## Renamed Files (84)
+## Renamed Files (82)
 
-- backend/core/templates/presentations/gamer -> gray/image.png (Similarity: 100%)
-- .docs/feature -> planning/daytona (Similarity: 100%)
-- frontend/src/providers/react-query-provider.tsx -> frontend/src/app/react-query-provider.tsx (Similarity: 054%)
-- frontend/src/assets/animations/loading.json -> frontend/src/assets/animations/loading-black.json (Similarity: 092%)
-- frontend/public/animations/loading.json -> frontend/src/assets/animations/loading-white.json (Similarity: 100%)
-- frontend/src/components/home/sections/pricing-section.tsx -> frontend/src/components/billing/pricing/pricing-section.tsx (Similarity: 062%)
-- frontend/src/components/home/sections/footer-section.tsx -> frontend/src/components/home/footer-section.tsx (Similarity: 097%)
-- frontend/src/components/home/sections/new/hero-section.tsx -> frontend/src/components/home/hero-section.tsx (Similarity: 088%)
-- frontend/src/components/home/sections/navbar.tsx -> frontend/src/components/home/navbar.tsx (Similarity: 099%)
-- frontend/src/components/home/sections/new/wordmark-footer.tsx -> frontend/src/components/home/wordmark-footer.tsx (Similarity: 099%)
-- frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/ThreadLayout.tsx -> frontend/src/components/thread/layout/thread-layout.tsx (Similarity: 085%)
-- frontend/src/app/(dashboard)/projects/[projectId]/thread/_components/ThreadError.tsx -> frontend/src/components/thread/thread-error.tsx (Similarity: 064%)
-- frontend/src/components/home/ui/AnimatedBg.tsx -> frontend/src/components/ui/animated-bg.tsx (Similarity: 099%)
-- frontend/src/components/home/ui/flickering-grid.tsx -> frontend/src/components/ui/flickering-grid.tsx (Similarity: 099%)
-- frontend/src/hooks/react-query/account/use-account-deletion.ts -> frontend/src/hooks/account/use-account-deletion.ts (Similarity: 100%)
-- frontend/src/hooks/use-accounts.ts -> frontend/src/hooks/account/use-accounts.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/admin/use-admin-users.ts -> frontend/src/hooks/admin/use-admin-users.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/agents/keys.ts -> frontend/src/hooks/agents/keys.ts (Similarity: 055%)
-- frontend/src/hooks/react-query/agents/use-agent-export-import.ts -> frontend/src/hooks/agents/use-agent-export-import.ts (Similarity: 098%)
-- frontend/src/hooks/react-query/agents/use-agent-icon-generation.ts -> frontend/src/hooks/agents/use-agent-icon-generation.ts (Similarity: 091%)
-- frontend/src/hooks/react-query/agents/use-agent-tools.ts -> frontend/src/hooks/agents/use-agent-tools.ts (Similarity: 094%)
-- frontend/src/hooks/react-query/agents/use-agent-upcoming-runs.ts -> frontend/src/hooks/agents/use-agent-upcoming-runs.ts (Similarity: 093%)
-- frontend/src/hooks/use-agent-version-data.ts -> frontend/src/hooks/agents/use-agent-version-data.ts (Similarity: 084%)
-- frontend/src/lib/versioning/hooks/use-versions.ts -> frontend/src/hooks/agents/use-agent-versions.ts (Similarity: 054%)
-- frontend/src/hooks/react-query/agents/use-custom-mcp-tools.ts -> frontend/src/hooks/agents/use-custom-mcp-tools.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/agents/use-json-import.ts -> frontend/src/hooks/agents/use-json-import.ts (Similarity: 099%)
-- frontend/src/hooks/use-model-selection.ts -> frontend/src/hooks/agents/use-model-selection.ts (Similarity: 080%)
-- frontend/src/hooks/useAgentStream.ts -> frontend/src/hooks/agents/useAgentStream.ts (Similarity: 092%)
-- frontend/src/hooks/react-query/agents/utils.ts -> frontend/src/hooks/agents/utils.ts (Similarity: 092%)
-- frontend/src/hooks/react-query/phone-verification.ts -> frontend/src/hooks/auth/phone-verification.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/admin/use-admin-billing.ts -> frontend/src/hooks/billing/use-admin-billing.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/billing/use-cancel-trial.ts -> frontend/src/hooks/billing/use-cancel-trial.ts (Similarity: 093%)
-- frontend/src/app/(dashboard)/projects/[projectId]/thread/_hooks/useBilling.ts -> frontend/src/hooks/billing/use-thread-billing.ts (Similarity: 052%)
-- frontend/src/hooks/react-query/billing/use-transactions.ts -> frontend/src/hooks/billing/use-transactions.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/billing/use-trial-status.ts -> frontend/src/hooks/billing/use-trial-status.ts (Similarity: 093%)
-- frontend/src/hooks/react-query/composio/keys.ts -> frontend/src/hooks/composio/keys.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/composio/use-composio-mutations.ts -> frontend/src/hooks/composio/use-composio-mutations.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/composio/use-composio-profiles.ts -> frontend/src/hooks/composio/use-composio-profiles.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/composio/use-composio-triggers.ts -> frontend/src/hooks/composio/use-composio-triggers.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/composio/use-composio.ts -> frontend/src/hooks/composio/use-composio.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/composio/utils.ts -> frontend/src/hooks/composio/utils.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/dashboard/keys.ts -> frontend/src/hooks/dashboard/keys.ts (Similarity: 069%)
-- frontend/src/hooks/react-query/dashboard/utils.ts -> frontend/src/hooks/dashboard/utils.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/files/keys.ts -> frontend/src/hooks/files/keys.ts (Similarity: 072%)
-- frontend/src/hooks/use-cached-file.ts -> frontend/src/hooks/files/use-cached-file.ts (Similarity: 098%)
-- frontend/src/hooks/react-query/files/use-file-content.ts -> frontend/src/hooks/files/use-file-content.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/files/use-file-mutations.ts -> frontend/src/hooks/files/use-file-mutations.ts (Similarity: 098%)
-- frontend/src/hooks/react-query/files/use-file-queries.ts -> frontend/src/hooks/files/use-file-queries.ts (Similarity: 097%)
-- frontend/src/hooks/react-query/files/use-image-content.ts -> frontend/src/hooks/files/use-image-content.ts (Similarity: 100%)
-- frontend/src/hooks/use-presentation-viewer.ts -> frontend/src/hooks/files/use-presentation-viewer.ts (Similarity: 100%)
-- frontend/src/hooks/useVncPreloader.ts -> frontend/src/hooks/files/useVncPreloader.ts (Similarity: 099%)
-- .docs/wide -> research (Similarity: 100%)
-- frontend/src/hooks/react-query/knowledge-base/keys.ts -> frontend/src/hooks/knowledge-base/keys.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/knowledge-base/use-folders.ts -> frontend/src/hooks/knowledge-base/use-folders.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/knowledge-base/use-knowledge-base-queries.ts -> frontend/src/hooks/knowledge-base/use-knowledge-base-queries.ts (Similarity: 098%)
-- frontend/src/hooks/react-query/mcp/use-credential-profiles.ts -> frontend/src/hooks/mcp/use-credential-profiles.ts (Similarity: 098%)
-- frontend/src/hooks/react-query/mcp/use-mcp-servers.ts -> frontend/src/hooks/mcp/use-mcp-servers.ts (Similarity: 094%)
-- frontend/src/hooks/use-onboarding.ts -> frontend/src/hooks/onboarding/use-onboarding.ts (Similarity: 093%)
-- frontend/src/hooks/react-query/secure-mcp/use-secure-mcp.ts -> frontend/src/hooks/secure-mcp/use-secure-mcp.ts (Similarity: 099%)
-- frontend/src/hooks/react-query/sidebar/use-sidebar.ts -> frontend/src/hooks/sidebar/use-sidebar.ts (Similarity: 058%)
-- frontend/src/hooks/react-query/threads/keys.ts -> frontend/src/hooks/threads/keys.ts (Similarity: 050%)
-- frontend/src/app/(dashboard)/projects/[projectId]/thread/_hooks/useThreadData.ts -> frontend/src/hooks/threads/page/use-thread-data.ts (Similarity: 087%)
-- frontend/src/app/(dashboard)/projects/[projectId]/thread/_hooks/useKeyboardShortcuts.ts -> frontend/src/hooks/threads/page/use-thread-keyboard-shortcuts.ts (Similarity: 097%)
-- frontend/src/app/(dashboard)/projects/[projectId]/thread/_hooks/useToolCalls.ts -> frontend/src/hooks/threads/page/use-thread-tool-calls.ts (Similarity: 098%)
-- frontend/src/hooks/use-thread-agent-status.ts -> frontend/src/hooks/threads/use-thread-agent-status.ts (Similarity: 096%)
-- .docs/wide -> research (Similarity: 091%)
-- frontend/src/hooks/react-query/threads/utils.ts -> frontend/src/hooks/threads/utils.ts (Similarity: 063%)
-- frontend/src/hooks/react-query/tools/use-tools-metadata.ts -> frontend/src/hooks/tools/use-tools-metadata.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/triggers/index.ts -> frontend/src/hooks/triggers/index.ts (Similarity: 100%)
-- frontend/src/hooks/react-query/triggers/use-agent-triggers.ts -> frontend/src/hooks/triggers/use-agent-triggers.ts (Similarity: 092%)
-- frontend/src/hooks/react-query/triggers/use-all-triggers.ts -> frontend/src/hooks/triggers/use-all-triggers.ts (Similarity: 093%)
-- frontend/src/hooks/react-query/triggers/use-oauth-integrations.ts -> frontend/src/hooks/triggers/use-oauth-integrations.ts (Similarity: 098%)
-- frontend/src/hooks/react-query/triggers/use-trigger-providers.ts -> frontend/src/hooks/triggers/use-trigger-providers.ts (Similarity: 092%)
-- frontend/src/hooks/use-github-stars.ts -> frontend/src/hooks/utils/use-github-stars.ts (Similarity: 100%)
-- frontend/src/hooks/use-media-query.ts -> frontend/src/hooks/utils/use-media-query.ts (Similarity: 100%)
-- frontend/src/hooks/use-mobile.ts -> frontend/src/hooks/utils/use-mobile.ts (Similarity: 100%)
-- frontend/src/hooks/use-suna-modes-persistence.ts -> frontend/src/hooks/utils/use-suna-modes-persistence.ts (Similarity: 100%)
-- frontend/src/lib/stores/agent-selection-store.ts -> frontend/src/stores/agent-selection-store.ts (Similarity: 100%)
-- frontend/src/lib/versioning/stores/version-store.ts -> frontend/src/stores/agent-version-store.ts (Similarity: 084%)
-- frontend/src/lib/stores/auth-tracking.ts -> frontend/src/stores/auth-tracking.ts (Similarity: 100%)
-- frontend/src/lib/stores/context-usage-store.ts -> frontend/src/stores/context-usage-store.ts (Similarity: 100%)
-- frontend/src/lib/stores/model-store.ts -> frontend/src/stores/model-store.ts (Similarity: 100%)
-- frontend/src/lib/stores/use-document-modal-store.ts -> frontend/src/stores/use-document-modal-store.ts (Similarity: 100%)
-- frontend/src/lib/stores/use-editor-store.ts -> frontend/src/stores/use-editor-store.ts (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 054%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 092%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 062%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 097%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 088%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 085%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 064%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 055%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 091%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 093%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 084%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 054%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 080%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 092%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 092%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 093%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 052%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 093%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 069%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 072%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 098%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 093%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 099%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 058%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 050%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 087%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 097%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 098%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 096%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 091%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 064%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 092%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 084%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
+- $(System.Collections.Hashtable.Old) â†’ $(System.Collections.Hashtable.New) (Similarity: 100%)
 

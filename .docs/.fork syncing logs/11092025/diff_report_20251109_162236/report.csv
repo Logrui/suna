@@ -89,6 +89,7 @@
 "Added","frontend/src/stores/pricing-modal-store.ts",""
 "Added","frontend/src/stores/subscription-store.tsx",""
 "Added","frontend/src/stores/suna-modes-store.ts",""
+"Modified",".gitignore",""
 "Modified","backend/.env.example",""
 "Modified","backend/.gitignore",""
 "Modified","backend/api.py",""

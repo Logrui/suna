@@ -98,6 +98,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const initialLayoutAppliedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastStreamStartedRef = useRef<string | null>(null); // Track last runId we started streaming for
+  const scrollListenerAttachedRef = useRef(false); // Track if scroll listener is attached to prevent duplicates
 
   // Sidebar
   const { state: leftSidebarState, setOpen: setLeftSidebarOpen } = useSidebar();
@@ -782,6 +783,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   }, [isSidePanelOpen]);
 
   // Scroll detection for show/hide scroll-to-bottom button
+  // Effect 1: Attach scroll listener once (no dependencies) to prevent re-attachment on every message change
   useEffect(() => {
     const handleScroll = () => {
       if (!scrollContainerRef.current) return;
@@ -794,21 +796,48 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       // With flex-column-reverse, scrollTop becomes NEGATIVE when scrolling up
       // Show button when scrollTop < -threshold (scrolled up enough from bottom)
       const shouldShow = scrollTop < -threshold && scrollHeight > clientHeight;
-      setShowScrollToBottom(shouldShow);
+
+      // Equality check: Only update state if value changed to prevent unnecessary re-renders
+      setShowScrollToBottom(prev => prev !== shouldShow ? shouldShow : prev);
     };
 
     const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
+    if (scrollContainer && !scrollListenerAttachedRef.current) {
       scrollContainer.addEventListener('scroll', handleScroll, {
         passive: true,
       });
+      scrollListenerAttachedRef.current = true;
+
       // Check initial state
       setTimeout(() => handleScroll(), 100);
 
       return () => {
         scrollContainer.removeEventListener('scroll', handleScroll);
+        scrollListenerAttachedRef.current = false;
       };
     }
+    // Empty dependency array: listener attached once and persists for component lifetime
+  }, []);
+
+  // Effect 2: Check scroll position when messages change (debounced)
+  useEffect(() => {
+    // Debounce scroll position check with 200ms delay to avoid excessive checks during streaming
+    const timeoutId = setTimeout(() => {
+      if (!scrollContainerRef.current) return;
+
+      const scrollTop = scrollContainerRef.current.scrollTop;
+      const scrollHeight = scrollContainerRef.current.scrollHeight;
+      const clientHeight = scrollContainerRef.current.clientHeight;
+      const threshold = 100;
+
+      const shouldShow = scrollTop < -threshold && scrollHeight > clientHeight;
+
+      // Only update state if value changed
+      setShowScrollToBottom(prev => prev !== shouldShow ? shouldShow : prev);
+    }, 200);
+
+    // Cleanup timeout on effect cleanup
+    return () => clearTimeout(timeoutId);
   }, [messages, initialLoadCompleted]);
 
   if (!initialLoadCompleted || isLoading) {

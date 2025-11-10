@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react';
 import { toast } from 'sonner';
 import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
 import { UnifiedMessage, ParsedMetadata, StreamingToolCall, AgentStatus } from '../_types';
@@ -111,7 +111,12 @@ export function useToolCalls(
 
   // Create a map of assistant message IDs to their tool call indices for faster lookup
   const assistantMessageToToolIndex = useRef<Map<string, number>>(new Map());
+  // Store previous toolCalls for comparison
+  const previousToolCallsRef = useRef<string>('');
 
+  // Effect 1: Process messages and extract tool calls
+  // FIXED: Removed circular dependencies (isSidePanelOpen, autoOpenedPanel) from dependency array
+  // These states are managed in a separate effect to avoid circular updates
   useEffect(() => {
     const historicalToolPairs: ToolCallInput[] = [];
     const messageIdToIndex = new Map<string, number>();
@@ -131,14 +136,14 @@ export function useToolCalls(
       if (resultMessage) {
         let toolName = 'unknown';
         let isSuccess = true;
-        
+
         // First try to parse the new format from the tool message
         const toolContentParsed = parseToolContent(resultMessage.content);
-        
+
         if (toolContentParsed) {
           // New format detected
           toolName = toolContentParsed.toolName.replace(/_/g, '-').toLowerCase();
-          
+
           // Extract success status from the result
           if (toolContentParsed.result && typeof toolContentParsed.result === 'object') {
             isSuccess = toolContentParsed.result.success !== false;
@@ -154,7 +159,7 @@ export function useToolCalls(
                 return assistantMsg.content;
               }
             })();
-            
+
             const extractedToolName = extractToolName(assistantContent);
             if (extractedToolName) {
               toolName = extractedToolName;
@@ -183,7 +188,7 @@ export function useToolCalls(
                 return resultMessage.content;
               }
             })();
-            
+
             if (toolResultContent && typeof toolResultContent === 'string') {
               const toolResultMatch = toolResultContent.match(/ToolResult\s*\(\s*success\s*=\s*(True|False|true|false)/i);
               if (toolResultMatch) {
@@ -225,21 +230,53 @@ export function useToolCalls(
       }
     });
 
-    assistantMessageToToolIndex.current = messageIdToIndex;
-    setToolCalls(historicalToolPairs);
+    // FIXED: Add equality check to prevent unnecessary updates
+    // Only update toolCalls if they've actually changed
+    const newToolCallsString = JSON.stringify(historicalToolPairs);
+    if (previousToolCallsRef.current !== newToolCallsString) {
+      previousToolCallsRef.current = newToolCallsString;
+      assistantMessageToToolIndex.current = messageIdToIndex;
+      setToolCalls(historicalToolPairs);
+    }
+  }, [messages]); // FIXED: Only depends on messages now
 
-    if (historicalToolPairs.length > 0) {
-      if (agentStatus === 'running' && !userNavigatedRef.current) {
-        setCurrentToolIndex(historicalToolPairs.length - 1);
-      } else if (isSidePanelOpen && !userClosedPanelRef.current && !userNavigatedRef.current) {
-        setCurrentToolIndex(historicalToolPairs.length - 1);
-      } else if (!isSidePanelOpen && !autoOpenedPanel && !userClosedPanelRef.current && !isMobile && !compact) {
-        setCurrentToolIndex(historicalToolPairs.length - 1);
+  // Effect 2: Manage panel state and navigation based on tool calls
+  // FIXED: Separated panel management from message processing to avoid circular dependencies
+  // This effect watches toolCalls.length instead of messages for panel logic
+  useEffect(() => {
+    if (toolCalls.length === 0) return;
+
+    // FIXED: Use startTransition to batch multiple state updates together
+    // This improves performance and reduces re-renders
+    startTransition(() => {
+      const shouldUpdateIndex =
+        (agentStatus === 'running' && !userNavigatedRef.current) ||
+        (!userNavigatedRef.current && !userClosedPanelRef.current);
+
+      if (shouldUpdateIndex) {
+        setCurrentToolIndex(toolCalls.length - 1);
+      }
+    });
+  }, [toolCalls.length, agentStatus]); // FIXED: Only depends on toolCalls.length and agentStatus
+
+  // Effect 3: Auto-open panel for new tool calls
+  // FIXED: Separated auto-open logic into its own effect to avoid circular dependency
+  useEffect(() => {
+    if (
+      toolCalls.length > 0 &&
+      !isSidePanelOpen &&
+      !autoOpenedPanel &&
+      !userClosedPanelRef.current &&
+      !isMobile &&
+      !compact
+    ) {
+      // FIXED: Batch state updates with startTransition
+      startTransition(() => {
         setIsSidePanelOpen(true);
         setAutoOpenedPanel(true);
-      }
+      });
     }
-  }, [messages, isSidePanelOpen, autoOpenedPanel, agentStatus, isMobile, compact]);
+  }, [toolCalls.length, isSidePanelOpen, autoOpenedPanel, isMobile, compact]);
 
   // Reset user navigation flag when agent stops
   useEffect(() => {
