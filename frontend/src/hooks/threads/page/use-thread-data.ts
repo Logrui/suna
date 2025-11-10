@@ -188,7 +188,9 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
     agentRunsQuery.data
   ]);
 
-  // Force message reload when thread changes or new data arrives
+  // FIXED: Force message reload when thread changes or new data arrives
+  // Removed messages.length from dependencies to prevent potential infinite loop
+  // The shouldReload check inside the effect still uses messages.length but won't trigger re-runs
   useEffect(() => {
     if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
       // (debug logs removed)
@@ -238,7 +240,7 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
         // (debug logs removed)
       }
     }
-  }, [messagesQuery.data, messagesQuery.status, isLoading, messages.length, threadId]);
+  }, [messagesQuery.data, messagesQuery.status, isLoading, threadId]);
 
   return {
     messages,

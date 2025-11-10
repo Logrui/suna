@@ -19,6 +19,8 @@ import type { MarketplaceTemplate } from './installation/types';
 import { MarketplaceAgentPreviewDialog } from './marketplace-agent-preview-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+// FIXED: Added missing import for AgentCountLimitDialog
+import { AgentCountLimitDialog } from './agent-count-limit-dialog';
 
 interface AgentCreationModalProps {
   open: boolean;
@@ -33,6 +35,9 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
   const [selectedOption, setSelectedOption] = useState<'scratch' | 'chat' | 'template' | null>(null);
   const [showChatStep, setShowChatStep] = useState(false);
   const [chatDescription, setChatDescription] = useState('');
+  // FIXED: Added missing state variables for agent limit error handling
+  const [showAgentLimitDialog, setShowAgentLimitDialog] = useState(false);
+  const [agentLimitError, setAgentLimitError] = useState<{ current_count: number; limit: number; tier_name: string } | null>(null);
 
   const createNewAgentMutation = useCreateNewAgent();
   const { data: templates, isLoading } = useKortixTeamTemplates();
@@ -297,6 +302,17 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
         onInstall={handlePreviewInstall}
         isInstalling={false}
       />
+
+      {/* FIXED: Added AgentCountLimitDialog component */}
+      {agentLimitError && (
+        <AgentCountLimitDialog
+          open={showAgentLimitDialog}
+          onOpenChange={setShowAgentLimitDialog}
+          currentCount={agentLimitError.current_count}
+          limit={agentLimitError.limit}
+          tierName={agentLimitError.tier_name}
+        />
+      )}
     </>
   );
 }
