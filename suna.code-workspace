@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../daytona"
+		},
+		{
+			"path": "../suna-main"
 		}
 	],
 	"settings": {}
