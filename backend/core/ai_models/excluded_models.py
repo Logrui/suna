@@ -9,10 +9,13 @@ Models are excluded based on context window size (<100K) or other criteria.
 # Format: "provider:model-name" or just "model-name" for automatic matching
 EXCLUDED_MODELS_SMALL_CONTEXT = {
     # LM Studio
-    "lmstudio:hermes-2-pro-mistral-7b",  # 32K context
-    "lmstudio:qwen2.5-coder-32b-instruct",  # 32K context
-    "lmstudio:qwen/qwen2.5-coder-32b",  # 32K context
-    "lmstudio:text-embedding-nomic-embed-text-v1.5",  # 2K - embedding model
+    "lm_studio:hermes-2-pro-mistral-7b",  # 32K context
+    "lm_studio:qwen2.5-coder-32b-instruct",  # 32K context
+    "lm_studio:qwen/qwen2.5-coder-32b",  # 32K context
+    "lm_studio:text-embedding-nomic-embed-text-v1.5",  # 2K - embedding model
+    "lm_studio:granite-20b-code-instruct",  # 8K context
+    "lm_studio:xlam-2-32b-fc-r",  # 32K context
+    "lm_studio:internlm_januscoder-14b",  # 32K context
     
     # Ollama
     "ollama:devstral:latest",  # 4K context
@@ -48,7 +51,7 @@ def is_model_excluded(model_id: str, provider: str = None) -> bool:
     
     Args:
         model_id: The model ID (can be prefixed or not)
-        provider: Optional provider name (e.g., "ollama", "lmstudio")
+        provider: Optional provider name (e.g., "ollama", "lm_studio")
         
     Returns:
         True if model should be excluded, False otherwise

@@ -130,6 +130,31 @@ class LMStudioClient:
             logger.error(f"Unexpected error unloading model: {e}")
             raise
     
+    async def get_context_window(self, model_id: str) -> Optional[int]:
+        """
+        Get the context window size for a specific LM Studio model.
+        
+        Args:
+            model_id: ID of the model (e.g., "google/gemma-3-27b")
+            
+        Returns:
+            Context window size in tokens, or None if not available
+        """
+        try:
+            model_info = await self.get_model_info(model_id)
+            max_context = model_info.get("max_context_length")
+            
+            if max_context and isinstance(max_context, int):
+                logger.debug(f"LM Studio model {model_id} has context window: {max_context}")
+                return max_context
+            
+            logger.warning(f"LM Studio model {model_id} missing max_context_length in API response")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Could not fetch context window for LM Studio model {model_id}: {e}")
+            return None
+    
     async def is_available(self) -> bool:
         """
         Check if LM Studio server is available.

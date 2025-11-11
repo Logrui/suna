@@ -3,6 +3,7 @@ from .registry import registry
 from .ai_models import Model, ModelCapability
 from core.utils.logger import logger
 from .registry import PREMIUM_MODEL_ID, FREE_MODEL_ID
+import asyncio
 
 class ModelManager:
     def __init__(self):
@@ -63,8 +64,15 @@ class ModelManager:
         model = self.get_model(model_id)
         if not model:
             logger.warning(f"Model '{model_id}' not found in registry, using basic params")
+            
+            # Handle local models (lm_studio:* and ollama:*) by converting format for litellm
+            litellm_model_id = model_id
+            if ":" in litellm_model_id:
+                litellm_model_id = litellm_model_id.replace(":", "/")
+                logger.debug(f"Converted local model format: {model_id} -> {litellm_model_id}")
+            
             return {
-                "model": model_id,
+                "model": litellm_model_id,
                 "num_retries": 5,
                 **override_params
             }
@@ -128,8 +136,78 @@ class ModelManager:
         
         return None
     
-    def get_context_window(self, model_id: str, default: int = 31_000) -> int:
-        return self.registry.get_context_window(model_id, default)
+    async def get_context_window_async(self, model_id: str, default: int = 128_000) -> int:
+        """
+        Get context window for a model, with dynamic lookup for LM Studio models.
+        
+        Args:
+            model_id: Model identifier (e.g., "lm_studio/google/gemma-3-27b")
+            default: Fallback value if model not found
+            
+        Returns:
+            Context window size in tokens
+        """
+        # First check registry
+        model = self.get_model(model_id)
+        if model:
+            return model.context_window
+        
+        # For LM Studio models, query the API dynamically
+        if model_id.startswith("lm_studio/") or model_id.startswith("lm_studio:"):
+            try:
+                from .lmstudio_client import LMStudioClient
+                
+                # Extract the model name (remove lm_studio/ or lm_studio: prefix)
+                lm_model_id = model_id.split("/", 1)[1] if "/" in model_id else model_id.split(":", 1)[1]
+                
+                client = LMStudioClient()
+                context_window = await client.get_context_window(lm_model_id)
+                
+                if context_window:
+                    logger.info(f"Dynamically fetched context window for {model_id}: {context_window}")
+                    return context_window
+                else:
+                    logger.warning(f"Could not fetch context window for {model_id}, using default: {default}")
+                    return default
+                    
+            except Exception as e:
+                logger.error(f"Error querying LM Studio for {model_id}: {e}, using default: {default}")
+                return default
+        
+        # Fallback to default
+        return default
+    
+    def get_context_window(self, model_id: str, default: int = 128_000) -> int:
+        """
+        Synchronous wrapper for get_context_window_async.
+        
+        Note: This will use the default for LM Studio models if called from sync context.
+        Prefer using get_context_window_async() for dynamic LM Studio lookups.
+        """
+        # Check registry first (fast path)
+        model = self.get_model(model_id)
+        if model:
+            return model.context_window
+        
+        # For LM Studio models in sync context, try to run async lookup
+        if model_id.startswith("lm_studio/") or model_id.startswith("lm_studio:"):
+            try:
+                # Try to get or create event loop
+                try:
+                    loop = asyncio.get_running_loop()
+                    # We're in an async context, but this is a sync function
+                    # Fall back to default to avoid blocking
+                    logger.warning(f"get_context_window called for LM Studio model {model_id} in async context, using default: {default}")
+                    return default
+                except RuntimeError:
+                    # No running loop, we can create one
+                    return asyncio.run(self.get_context_window_async(model_id, default))
+            except Exception as e:
+                logger.error(f"Error in sync LM Studio lookup for {model_id}: {e}, using default: {default}")
+                return default
+        
+        # Fallback
+        return default
     
     def check_token_limit(
         self,

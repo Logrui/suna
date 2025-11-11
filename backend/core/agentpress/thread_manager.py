@@ -405,7 +405,7 @@ class ThreadManager:
                             estimated_total_tokens = estimated_total  # Store for response processor
                             
                             # Calculate threshold (same logic as context_manager.py)
-                            context_window = model_manager.get_context_window(llm_model)
+                            context_window = await model_manager.get_context_window_async(llm_model)
                             
                             if context_window >= 1_000_000:
                                 max_tokens = context_window - 300_000

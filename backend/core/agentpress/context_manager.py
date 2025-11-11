@@ -725,8 +725,8 @@ class ContextManager:
         
         Caching should be applied ONCE at the end by the caller, not during compression.
         """
-        # Get model-specific token limits from constants
-        context_window = model_manager.get_context_window(llm_model)
+        # Get model-specific token limits from constants - use async for dynamic LM Studio lookups
+        context_window = await model_manager.get_context_window_async(llm_model)
         
         # Reserve tokens for output generation and safety margin
         if context_window >= 1_000_000:  # Very large context models (Gemini)

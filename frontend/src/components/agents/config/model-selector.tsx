@@ -169,9 +169,9 @@ export function AgentModelSelector({
       }
       
       // Remove any existing cloud models that match local LM Studio models
-      if (localModelsData.lmstudio) {
-        console.log('[model-selector] Found', localModelsData.lmstudio.length, 'LM Studio models to process');
-        localModelsData.lmstudio.forEach(localModel => {
+      if (localModelsData.lm_studio) {
+        console.log('[model-selector] Found', localModelsData.lm_studio.length, 'LM Studio models to process');
+        localModelsData.lm_studio.forEach(localModel => {
           const modelNameLower = localModel.name.toLowerCase();
           for (const [existingId, existingModel] of modelMap.entries()) {
             if (existingModel.label && existingModel.label.toLowerCase().includes(modelNameLower)) {
@@ -183,11 +183,11 @@ export function AgentModelSelector({
       }
 
       // Add LM Studio models with proper branding
-      if (localModelsData.lmstudio) {
-        localModelsData.lmstudio.forEach(model => {
+      if (localModelsData.lm_studio) {
+        localModelsData.lm_studio.forEach(model => {
           console.log('[model-selector] Adding LM Studio model:', model.id);
           modelMap.set(model.id, {
-            id: model.id, // e.g., "lmstudio:hermes-2-pro"
+            id: model.id, // e.g., "lm_studio:hermes-2-pro"
             label: model.name, // e.g., "hermes-2-pro"
             requiresSubscription: false,
             priority: 100, // High priority for local models
@@ -197,7 +197,7 @@ export function AgentModelSelector({
             contextWindow: model.context_window || 128000,
             isCustom: false,
             isLocal: true,
-            provider: 'lmstudio'
+            provider: 'lm_studio'
           });
         });
       }
@@ -328,7 +328,7 @@ export function AgentModelSelector({
       setIsOpen(false);
       
       // Trigger model warmup for local models (LM Studio, Ollama)
-      if (isLocalMode() && (modelId.includes('lmstudio') || modelId.includes('ollama'))) {
+      if (isLocalMode() && (modelId.includes('lm_studio') || modelId.includes('ollama'))) {
         setIsWarmingUp(true);
         warmupModel(modelId)
           .then(response => {

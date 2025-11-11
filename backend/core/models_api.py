@@ -31,18 +31,18 @@ from core.ai_models.excluded_models import is_model_excluded, get_excluded_count
 class WarmupRequest(BaseModel):
     """Request to warm up (load) a model."""
     model_id: str
-    provider: str  # "lmstudio" or "ollama"
+    provider: str  # "lm_studio" or "ollama"
 
 
 class UnloadRequest(BaseModel):
     """Request to unload a model."""
     model_id: str
-    provider: str  # "lmstudio" or "ollama"
+    provider: str  # "lm_studio" or "ollama"
 
 
 class UnloadProviderRequest(BaseModel):
     """Request to unload all models from a provider."""
-    provider: str  # "lmstudio" or "ollama"
+    provider: str  # "lm_studio" or "ollama"
 
 
 class WarmupResponse(BaseModel):
@@ -89,7 +89,7 @@ ollama_client = OllamaClient()
 
 def get_provider_client(provider: str):
     """Get the appropriate client for a provider."""
-    if provider == "lmstudio":
+    if provider == "lm_studio":
         return lmstudio_client
     elif provider == "ollama":
         return ollama_client
@@ -127,12 +127,9 @@ async def _trigger_model_load(model_id: str, provider: str) -> None:
         # Get provider client and load model
         # Model auto-loads into GPU on first inference request
         try:
-            if provider == "lmstudio":
-                base_url = "http://localhost:1234"
-            elif provider == "ollama":
-                base_url = "http://localhost:11434"
-            else:
-                raise ValueError(f"Unknown provider: {provider}")
+            # Get the configured base URL from the provider client
+            client = get_provider_client(provider)
+            base_url = client.base_url
             
             # Make dummy inference request to trigger load
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -158,7 +155,7 @@ async def _trigger_model_load(model_id: str, provider: str) -> None:
             logger.info(f"Model {model_id} loaded successfully in {load_time_ms}ms")
             
         except httpx.ConnectError as e:
-            error_msg = f"Cannot connect to {provider} (port {'1234' if provider == 'lmstudio' else '11434'})"
+            error_msg = f"Cannot connect to {provider} (port {'1234' if provider == 'lm_studio' else '11434'})"
             await broadcaster.broadcast_model_load_failed(
                 model_id=model_id,
                 provider=provider,
@@ -206,11 +203,15 @@ async def _unload_model(model_id: str, provider: str) -> None:
         )
         
         # Call provider-specific unload endpoint
-        if provider == "lmstudio":
+        if provider == "lm_studio":
             try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
-                    await client.post(
-                        "http://localhost:1234/api/v0/models/unload",
+                # Get the configured base URL from the provider client
+                client_instance = get_provider_client(provider)
+                base_url = client_instance.base_url
+                
+                async with httpx.AsyncClient(timeout=10.0) as http_client:
+                    await http_client.post(
+                        f"{base_url}/api/v0/models/unload",
                         json={"model": model_id}
                     )
                 logger.info(f"Model {model_id} unloaded from {provider}")
@@ -231,7 +232,7 @@ class LocalModel(BaseModel):
     """Local model metadata."""
     id: str  # Full model ID with provider prefix
     name: str  # Display name
-    provider: str  # "lmstudio" or "ollama"
+    provider: str  # "lm_studio" or "ollama"
     loaded: bool  # Whether model is currently loaded
     context_window: Optional[int] = None
     quantization: Optional[str] = None
@@ -239,7 +240,7 @@ class LocalModel(BaseModel):
 
 class LocalModelsResponse(BaseModel):
     """Response with list of available local models."""
-    lmstudio: List[LocalModel] = []
+    lm_studio: List[LocalModel] = []
     ollama: List[LocalModel] = []
 
 
@@ -306,7 +307,7 @@ async def list_local_models():
     
     Returns models with provider metadata for correct icon/branding display.
     Model IDs are prefixed with provider for easy detection:
-    - lmstudio:model-name
+    - lm_studio:model-name
     - ollama:model-name
     
     Returns:
@@ -323,10 +324,10 @@ async def list_local_models():
         for model in models:
             model_id = model.get("id") or model.get("model_name", "unknown")
             # Prefix with provider for easy detection in frontend
-            prefixed_id = f"lmstudio:{model_id}"
+            prefixed_id = f"lm_studio:{model_id}"
             
             # Skip excluded models
-            if is_model_excluded(prefixed_id, "lmstudio"):
+            if is_model_excluded(prefixed_id, "lm_studio"):
                 logger.debug(f"Skipping excluded LM Studio model: {prefixed_id}")
                 continue
             
@@ -334,7 +335,7 @@ async def list_local_models():
                 LocalModel(
                     id=prefixed_id,
                     name=model_id,
-                    provider="lmstudio",
+                    provider="lm_studio",
                     loaded=model.get("loaded", False),
                     context_window=model.get("max_context_length") or model.get("context_window"),
                     quantization=model.get("quantization")
@@ -378,7 +379,7 @@ async def list_local_models():
         logger.warning(f"Could not list Ollama models: {e}")
     
     return LocalModelsResponse(
-        lmstudio=lmstudio_models,
+        lm_studio=lmstudio_models,
         ollama=ollama_models
     )
 
@@ -396,7 +397,7 @@ async def warmup_model(request: WarmupRequest, background_tasks: BackgroundTasks
     
     Args:
         model_id: ID of model to load
-        provider: "lmstudio" or "ollama"
+        provider: "lm_studio" or "ollama"
     
     Returns:
         Immediate response with status and estimated load time
@@ -404,11 +405,11 @@ async def warmup_model(request: WarmupRequest, background_tasks: BackgroundTasks
     try:
         # Validate provider
         provider = request.provider.lower()
-        if provider not in ["lmstudio", "ollama"]:
-            raise HTTPException(status_code=400, detail="Provider must be 'lmstudio' or 'ollama'")
+        if provider not in ["lm_studio", "ollama"]:
+            raise HTTPException(status_code=400, detail="Provider must be 'lm_studio' or 'ollama'")
         
         # Check provider availability
-        if provider == "lmstudio":
+        if provider == "lm_studio":
             is_available = await lmstudio_client.is_available()
         else:
             is_available = await ollama_client.is_available()
@@ -448,7 +449,7 @@ async def unload_model(request: UnloadRequest):
     
     Args:
         model_id: ID of model to unload
-        provider: "lmstudio" or "ollama"
+        provider: "lm_studio" or "ollama"
     
     Returns:
         Immediate response with status
@@ -456,8 +457,8 @@ async def unload_model(request: UnloadRequest):
     try:
         # Validate provider
         provider = request.provider.lower()
-        if provider not in ["lmstudio", "ollama"]:
-            raise HTTPException(status_code=400, detail="Provider must be 'lmstudio' or 'ollama'")
+        if provider not in ["lm_studio", "ollama"]:
+            raise HTTPException(status_code=400, detail="Provider must be 'lm_studio' or 'ollama'")
         
         # Spawn async task for background unloading (don't wait for it)
         asyncio.create_task(_unload_model(request.model_id, provider))
@@ -487,19 +488,19 @@ async def unload_provider(request: UnloadProviderRequest):
     Returns immediately while unloading all models asynchronously.
     
     Args:
-        provider: "lmstudio" or "ollama"
+        provider: "lm_studio" or "ollama"
     
     Returns:
         Immediate response with list of models being unloaded
     """
     try:
         provider = request.provider.lower()
-        if provider not in ["lmstudio", "ollama"]:
-            raise HTTPException(status_code=400, detail="Provider must be 'lmstudio' or 'ollama'")
+        if provider not in ["lm_studio", "ollama"]:
+            raise HTTPException(status_code=400, detail="Provider must be 'lm_studio' or 'ollama'")
         
         # Get list of loaded models
         try:
-            if provider == "lmstudio":
+            if provider == "lm_studio":
                 models_response = await lmstudio_client.list_models()
                 # Filter to loaded models
                 loaded_models = [m["id"] for m in models_response if m.get("state") == "loaded"]
@@ -547,7 +548,7 @@ async def get_model_status(model_id: str):
         # Determine if model is currently loading
         status = "unloaded"
         
-        for provider in ["lmstudio", "ollama"]:
+        for provider in ["lm_studio", "ollama"]:
             key = f"{provider}:{model_id}"
             if key in _loading_models:
                 status = "loading"

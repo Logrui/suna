@@ -1,16 +1,16 @@
 import { apiClient } from '@/lib/api-client';
 
 export interface LocalModel {
-  id: string;          // e.g., "lmstudio:hermes-2-pro"
+  id: string;          // e.g., "lm_studio:hermes-2-pro"
   name: string;        // e.g., "hermes-2-pro"
-  provider: 'lmstudio' | 'ollama';
+  provider: 'lm_studio' | 'ollama';
   loaded: boolean;
   context_window?: number;
   quantization?: string;
 }
 
 export interface LocalModelsResponse {
-  lmstudio: LocalModel[];
+  lm_studio: LocalModel[];
   ollama: LocalModel[];
 }
 

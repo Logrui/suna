@@ -133,11 +133,11 @@ export const useModelSelection = () => {
       }
       
       // Process LM Studio models
-      if (localModelsData.lmstudio) {
-        console.log('🔧 useModelSelection: Found', localModelsData.lmstudio.length, 'LM Studio models');
+      if (localModelsData.lm_studio) {
+        console.log('🔧 useModelSelection: Found', localModelsData.lm_studio.length, 'LM Studio models');
         
         // Remove any cloud models that match local LM Studio models
-        localModelsData.lmstudio.forEach(localModel => {
+        localModelsData.lm_studio.forEach(localModel => {
           const modelNameLower = localModel.name.toLowerCase();
           for (let i = models.length - 1; i >= 0; i--) {
             if (models[i].label && models[i].label.toLowerCase().includes(modelNameLower)) {
@@ -148,10 +148,10 @@ export const useModelSelection = () => {
         });
         
         // Add LM Studio models with high priority
-        localModelsData.lmstudio.forEach(model => {
+        localModelsData.lm_studio.forEach(model => {
           console.log('🔧 useModelSelection: Adding LM Studio model:', model.id);
           models.push({
-            id: model.id, // e.g., "lmstudio:hermes-2-pro"
+            id: model.id, // e.g., "lm_studio:hermes-2-pro"
             label: model.name, // e.g., "hermes-2-pro"
             requiresSubscription: false,
             priority: 100, // High priority for local models
@@ -159,7 +159,7 @@ export const useModelSelection = () => {
             capabilities: [],
             contextWindow: model.context_window || 128000,
             isLocal: true,
-            provider: 'lmstudio'
+            provider: 'lm_studio'
           });
         });
       }

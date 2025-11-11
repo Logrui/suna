@@ -116,18 +116,23 @@ class OllamaClient:
         """
         Extract context window from model_info.
         
-        The field name varies by architecture:
-        - llama.context_length
-        - qwen2.context_length
-        - gemma2.context_length
+        NOTE: Ollama's /api/show endpoint does NOT return context window information.
+        The 'modelinfo' field is always null. Context window (num_ctx) is a runtime 
+        parameter set during generation, not a model property.
+        
+        We default to 128K (131072) which matches modern models like:
+        - Llama 3.1 (128K native)
+        - Qwen2 (128K native)
+        - Mistral (128K extended)
+        - DeepSeek (128K native)
         
         Args:
             model_info: Dictionary from /api/show
             
         Returns:
-            Context window size in tokens (default: 4000 if not found)
+            Context window size in tokens (default: 131072 = 128K)
         """
-        # Try to get architecture
+        # Try to get architecture (in case Ollama API changes in future)
         architecture = model_info.get("general.architecture", "")
         
         # Try architecture-specific field first
@@ -146,9 +151,13 @@ class OllamaClient:
                 logger.debug(f"Found context window via {context_field}: {context_window}")
                 return int(context_window)
         
-        # Final fallback
-        logger.warning(f"Could not find context window in model_info, using default 4000")
-        return 4_000
+        # Default to 128K for modern models
+        # This is reasonable because:
+        # 1. Most modern models support 128K+ context
+        # 2. Ollama doesn't expose this info in the API
+        # 3. The actual limit is enforced at runtime via num_ctx parameter
+        logger.debug(f"Using default context window of 128K (131072 tokens) for Ollama model")
+        return 131_072  # 128K
     
     def is_chat_model(self, capabilities: Optional[List[str]]) -> bool:
         """

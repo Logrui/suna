@@ -108,9 +108,18 @@ class Model:
     
     def get_litellm_params(self, **override_params) -> Dict[str, Any]:
         """Get complete LiteLLM parameters for this model, including all configuration."""
+        # Convert model ID format for litellm compatibility
+        model_id = self.id
+        
+        # litellm expects format like "lm_studio/model-name" or "ollama/model-name"
+        # Our internal format uses "lm_studio:model-name" or "ollama:model-name" 
+        # Convert the delimiter from colon to slash for litellm
+        if ":" in model_id:
+            model_id = model_id.replace(":", "/")
+        
         # Start with intelligent defaults
         params = {
-            "model": self.id,
+            "model": model_id,
             "num_retries": 5,
         }
         

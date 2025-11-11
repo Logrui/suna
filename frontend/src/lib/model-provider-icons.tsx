@@ -11,29 +11,29 @@ export type ModelProvider =
   | 'moonshotai'
   | 'bedrock'
   | 'openrouter'
-  | 'lmstudio'
+  | 'lm_studio'
   | 'ollama';
 
 /**
  * Get the provider from a model ID
  * 
  * Supports multiple formats:
- * - Prefixed: "lmstudio:hermes-2-pro" or "ollama:neural-chat"
- * - Contained: "model-lmstudio" or "ollama-model"
+ * - Prefixed: "lm_studio:hermes-2-pro" or "ollama:neural-chat"
+ * - Contained: "model-lm_studio" or "ollama-model"
  * - Fallback: "provider/model" format
  */
 export function getModelProvider(modelId: string): ModelProvider {
   const lowerModelId = modelId.toLowerCase();
   
   // Debug logging
-  if (lowerModelId.includes('ollama') || lowerModelId.includes('lmstudio')) {
+  if (lowerModelId.includes('ollama') || lowerModelId.includes('lm_studio')) {
     console.log('[getModelProvider] Detecting local model:', modelId, '→ lowercase:', lowerModelId);
   }
   
   // Check for prefixed format (highest priority)
-  if (lowerModelId.startsWith('lmstudio:') || lowerModelId.startsWith('lmstudio-')) {
-    console.log('[getModelProvider] Matched lmstudio prefix:', modelId);
-    return 'lmstudio';
+  if (lowerModelId.startsWith('lm_studio:') || lowerModelId.startsWith('lm_studio-')) {
+    console.log('[getModelProvider] Matched lm_studio prefix:', modelId);
+    return 'lm_studio';
   }
   if (lowerModelId.startsWith('ollama:') || lowerModelId.startsWith('ollama-')) {
     console.log('[getModelProvider] Matched ollama prefix:', modelId);
@@ -41,8 +41,8 @@ export function getModelProvider(modelId: string): ModelProvider {
   }
   
   // Check for contained strings
-  if (lowerModelId.includes('lmstudio')) {
-    return 'lmstudio';
+  if (lowerModelId.includes('lm_studio')) {
+    return 'lm_studio';
   }
   if (lowerModelId.includes('ollama')) {
     return 'ollama';
@@ -73,7 +73,7 @@ export function getModelProvider(modelId: string): ModelProvider {
   const parts = modelId.split('/');
   if (parts.length > 1) {
     const provider = parts[0].toLowerCase();
-    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter', 'lmstudio', 'ollama'].includes(provider)) {
+    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter', 'lm_studio', 'ollama'].includes(provider)) {
       return provider as ModelProvider;
     }
   }
@@ -107,7 +107,7 @@ export function ModelProviderIcon({
     moonshotai: '/images/models/Moonshot.svg',
     bedrock: '/images/models/Anthropic.svg', // Bedrock uses Anthropic models primarily
     openrouter: '/images/models/OAI.svg', // Default to OpenAI icon for OpenRouter
-    lmstudio: '/images/models/lmstudio.svg',
+    lm_studio: '/images/models/lmstudio.svg',
     ollama: '/images/models/ollama.svg',
   };
 
@@ -166,7 +166,7 @@ export function getModelProviderName(modelId: string): string {
     moonshotai: 'Moonshot AI',
     bedrock: 'AWS Bedrock',
     openrouter: 'OpenRouter',
-    lmstudio: 'LM Studio',
+    lm_studio: 'LM Studio',
     ollama: 'Ollama',
   };
 

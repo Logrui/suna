@@ -509,7 +509,7 @@ class ModelRegistry:
             return True
         return False
     
-    def get_context_window(self, model_id: str, default: int = 31_000) -> int:
+    def get_context_window(self, model_id: str, default: int = 64_000) -> int:
         model = self.get(model_id)
         return model.context_window if model else default
     
@@ -611,8 +611,8 @@ class ModelRegistry:
             return
         
         # Check if API base is configured
-        if not config.OPENAI_COMPATIBLE_API_BASE:
-            logger.warning("OPENAI_COMPATIBLE_API_BASE not set, skipping Ollama discovery")
+        if not config.OLLAMA_API_BASE:
+            logger.warning("OLLAMA_API_BASE not set, skipping Ollama discovery")
             return
         
         try:
@@ -699,7 +699,7 @@ class ModelRegistry:
                         priority=priority,
                         enabled=True,
                         config=ModelConfig(
-                            api_base=config.OPENAI_COMPATIBLE_API_BASE,
+                            api_base=config.OLLAMA_API_BASE,
                         ),
                         fallback_models=[
                             "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
@@ -724,5 +724,93 @@ class ModelRegistry:
             logger.error(f"Ollama model discovery failed: {e}")
             logger.info("Falling back to generic OpenAI-compatible registration")
             self._register_generic_openai_compatible()
+
+    async def initialize_lm_studio_models(self):
+        """
+        Discover and register LM Studio models dynamically.
+        
+        This method should be called during application startup (after async services are ready).
+        If LM Studio discovery fails, models will still be accessible via the API but won't be in the registry.
+        """
+        from core.utils.logger import logger
+        
+        try:
+            from .lmstudio_client import LMStudioClient
+            
+            logger.info("Starting LM Studio model discovery...")
+            client = LMStudioClient()
+            
+            # List all models
+            models_data = await client.list_models()
+            
+            if not models_data:
+                logger.warning("No LM Studio models found")
+                return
+            
+            # Track registered count
+            registered_count = 0
+            
+            # Process each model
+            for model_data in models_data:
+                try:
+                    # LM Studio returns "id" field, not "name"
+                    model_id = model_data.get("id") or model_data.get("model_name")
+                    if not model_id:
+                        continue
+                    
+                    # Extract context window - LM Studio uses different field names
+                    context_window = model_data.get("max_context_length") or model_data.get("context_window", 64_000)
+                    
+                    # Use model name as display name
+                    display_name = model_id
+                    
+                    # LM Studio models get priority 70+ (higher than Ollama's 50-63)
+                    # This reflects that LM Studio typically has more capable models
+                    base_priority = 70
+                    priority = base_priority
+                    
+                    # Register the model with lm_studio provider
+                    model_registry_id = f"lm_studio/{model_id}"
+                    
+                    self.register(Model(
+                        id=model_registry_id,
+                        name=display_name,
+                        provider=ModelProvider.OPENAI,  # LM Studio is OpenAI-compatible
+                        aliases=[model_id, f"lm_studio:{model_id}"],
+                        context_window=context_window,
+                        capabilities=[
+                            ModelCapability.CHAT,
+                            ModelCapability.FUNCTION_CALLING,
+                        ],
+                        pricing=ModelPricing(
+                            input_cost_per_million_tokens=0.0,
+                            output_cost_per_million_tokens=0.0
+                        ),
+                        tier_availability=["free", "paid"],
+                        priority=priority,
+                        enabled=True,
+                        config=ModelConfig(
+                            api_base=config.LM_STUDIO_API_BASE or "http://localhost:1234",
+                        ),
+                        fallback_models=[
+                            "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+                            "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
+                        ]
+                    ))
+                    
+                    registered_count += 1
+                    logger.debug(f"Registered LM Studio model: {display_name} (context: {context_window}, priority: {priority})")
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to register LM Studio model {model_id}: {e}")
+                    continue
+            
+            if registered_count > 0:
+                logger.info(f"Successfully registered {registered_count} LM Studio models")
+            else:
+                logger.warning("No LM Studio models were registered")
+                
+        except Exception as e:
+            logger.error(f"LM Studio model discovery failed: {e}")
 
 registry = ModelRegistry() 
