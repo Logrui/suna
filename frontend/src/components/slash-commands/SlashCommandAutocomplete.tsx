@@ -1,8 +1,10 @@
 // frontend/src/components/slash-commands/SlashCommandAutocomplete.tsx
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { SlashCommand } from '@/lib/slashCommands';
 import { cn } from '@/lib/utils';
+import { CommandsKbEntryModal } from './commands-kb-entry-modal';
+import { type Folder } from '@/hooks/react-query/knowledge-base/use-folders';
 
 interface SlashCommandAutocompleteProps {
   isOpen: boolean;
@@ -10,6 +12,8 @@ interface SlashCommandAutocompleteProps {
   selectedIndex: number;
   onSelect: (command: SlashCommand) => void;
   onClose: () => void;
+  sunaFolder?: Folder;
+  onCommandCreated?: () => void;
 }
 
 export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> = ({
@@ -18,9 +22,12 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
   selectedIndex,
   onSelect,
   onClose,
+  sunaFolder,
+  onCommandCreated,
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const selectedItemRef = useRef<HTMLDivElement>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Auto-scroll to keep selected item visible
   useEffect(() => {
@@ -101,6 +108,32 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
           </div>
         ))}
       </div>
+      
+      {/* Create New Shortcut Button */}
+      {sunaFolder && (
+        <CommandsKbEntryModal
+          folders={[sunaFolder]}
+          sunaFolderId={sunaFolder.folder_id}
+          onUploadComplete={() => {
+            if (onCommandCreated) {
+              onCommandCreated();
+            }
+          }}
+          trigger={
+            <button
+              className={cn(
+                "w-full px-2 py-2 text-left text-[13px] font-medium transition-colors",
+                "bg-muted/50 hover:bg-muted border-t border-border",
+                "text-muted-foreground hover:text-foreground",
+                "flex items-center gap-2"
+              )}
+            >
+              <span className="flex-shrink-0">+</span>
+              <span>Create a new Shortcut</span>
+            </button>
+          }
+        />
+      )}
       
       <div className="px-2 py-1 bg-muted/50 border-t border-border">
         <div className="flex items-center justify-between text-[9px] text-muted-foreground">

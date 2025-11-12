@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useModelSelection } from '@/hooks/use-model-selection';
 import { useFileDelete } from '@/hooks/react-query/files';
 import { useQueryClient } from '@tanstack/react-query';
+import { useKnowledgeFolders } from '@/hooks/react-query/knowledge-base/use-folders';
 import { ToolCallInput } from './floating-tool-preview';
 import { ChatSnack } from './chat-snack';
 import { Brain, Zap, Database, ArrowDown, Wrench } from 'lucide-react';
@@ -253,6 +254,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     // Fetch slash commands (no longer needs sandboxId)
     const { data: slashCommands = [] } = useSlashCommands();
 
+    // Fetch knowledge base folders to get Suna folder for creating new commands
+    const { folders } = useKnowledgeFolders();
+    const sunaFolder = useMemo(() => folders.find(f => f.name === 'Suna'), [folders]);
+
     // Filter slash commands based on current input
     const filteredSlashCommands = useMemo(() => {
       if (!slashCommandFilter) return slashCommands;
@@ -451,10 +456,19 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         const commandPattern = new RegExp(`^\\/${activeSlashCommand.name}\\s*`);
         const userText = message.replace(commandPattern, '').trim();
         
-        // Inject the prompt before the user's text
-        message = userText 
-          ? `${activeSlashCommand.prompt}\n\n${userText}`
-          : activeSlashCommand.prompt;
+        // Handle GitHub-format commands differently
+        if (activeSlashCommand.isGitHubFormat && activeSlashCommand.instructionFile) {
+          // GitHub format: Inject instruction file reference before user message
+          const instructionReference = `Follow instructions in ${activeSlashCommand.instructionFile}`;
+          message = userText 
+            ? `${instructionReference}\n\n${userText}`
+            : instructionReference;
+        } else {
+          // Standard format: Inject the full prompt before user message
+          message = userText 
+            ? `${activeSlashCommand.prompt}\n\n${userText}`
+            : activeSlashCommand.prompt;
+        }
         
         // Clear the active command
         setActiveSlashCommand(null);
@@ -705,6 +719,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           selectedIndex={selectedCommandIndex}
           onSelect={handleSlashCommandSelect}
           onClose={handleSlashCommandClose}
+          sunaFolder={sunaFolder}
+          onCommandCreated={() => {
+            // Refetch slash commands when a new one is created
+            // This will trigger the useSlashCommands hook to refresh
+            // The query client will automatically invalidate and refetch
+          }}
         />
         <div className="relative">
           {/* Highlighted overlay for slash command */}
