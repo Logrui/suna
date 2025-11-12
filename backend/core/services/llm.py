@@ -140,7 +140,35 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
     logger.info(f"Configured LiteLLM Router with {len(fallbacks)} Bedrock-only fallback rules")
 
 def _configure_openai_compatible(params: Dict[str, Any], model_name: str, api_key: Optional[str], api_base: Optional[str]) -> None:
-    """Configure OpenAI-compatible provider setup."""
+    """Configure OpenAI-compatible provider setup for local and custom models."""
+    
+    # Handle LM Studio models
+    if model_name.startswith("lm_studio/"):
+        lm_studio_base = getattr(config, 'LM_STUDIO_API_BASE', None) if config else None
+        if not lm_studio_base:
+            lm_studio_base = "http://host.docker.internal:1234"  # Default fallback
+        
+        # LM Studio uses OpenAI-compatible /v1 endpoints
+        if not lm_studio_base.endswith('/v1'):
+            lm_studio_base = f"{lm_studio_base}/v1"
+        
+        params["api_base"] = lm_studio_base
+        params["api_key"] = "lm-studio"  # LM Studio doesn't require a real key
+        logger.debug(f"Configured LM Studio model with API base: {lm_studio_base}")
+        return
+    
+    # Handle Ollama models
+    if model_name.startswith("ollama/"):
+        ollama_base = getattr(config, 'OLLAMA_API_BASE', None) if config else None
+        if not ollama_base:
+            ollama_base = "http://host.docker.internal:11434"  # Default fallback
+        
+        params["api_base"] = ollama_base
+        params["api_key"] = "ollama"  # Ollama doesn't require a real key
+        logger.debug(f"Configured Ollama model with API base: {ollama_base}")
+        return
+    
+    # Handle openai-compatible models (existing logic)
     if not model_name.startswith("openai-compatible/"):
         return
     
