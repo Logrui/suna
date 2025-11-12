@@ -234,13 +234,13 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       const threadAgentId = threadAgentData?.agent?.agent_id;
       const agentIdToUse = configuredAgentId || threadAgentId;
 
-      console.log(`[ThreadComponent] Agent initialization - configuredAgentId: ${configuredAgentId}, threadAgentId: ${threadAgentId}, selectedAgentId: ${selectedAgentId}`);
+      // console.log(`[ThreadComponent] Agent initialization - configuredAgentId: ${configuredAgentId}, threadAgentId: ${threadAgentId}, selectedAgentId: ${selectedAgentId}`);
 
       initializeFromAgents(agents, agentIdToUse);
 
       // If configuredAgentId is provided, force selection and override any existing selection
       if (configuredAgentId && selectedAgentId !== configuredAgentId) {
-        console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${selectedAgentId})`);
+        // console.log(`[ThreadComponent] Forcing selection to configured agent: ${configuredAgentId} (was: ${selectedAgentId})`);
         setSelectedAgent(configuredAgentId);
       }
     }

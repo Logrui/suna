@@ -53,9 +53,9 @@ export const useModelSelection = () => {
   const { data: localModelsData, isLoading: isLoadingLocal } = useQuery({
     queryKey: ['local-models'],
     queryFn: async () => {
-      console.log('🔧 useModelSelection: Fetching local models...');
+      // console.log('🔧 useModelSelection: Fetching local models...');
       const response = await getLocalModels();
-      console.log('🔧 useModelSelection: Local models response:', response);
+      // console.log('🔧 useModelSelection: Local models response:', response);
       
       // Handle error response properly
       if (!response.success || !response.data) {
@@ -63,7 +63,7 @@ export const useModelSelection = () => {
         throw new Error(response.error?.message || 'Failed to fetch local models');
       }
       
-      console.log('🔧 useModelSelection: Local models data:', response.data);
+      // console.log('🔧 useModelSelection: Local models data:', response.data);
       return response.data;
     },
     staleTime: 2 * 60 * 1000,
@@ -98,18 +98,18 @@ export const useModelSelection = () => {
 
     // Add local models and remove any duplicates
     if (localModelsData) {
-      console.log('🔧 useModelSelection: Processing local models:', localModelsData);
+      // console.log('🔧 useModelSelection: Processing local models:', localModelsData);
       
       // Process Ollama models
       if (localModelsData.ollama) {
-        console.log('🔧 useModelSelection: Found', localModelsData.ollama.length, 'Ollama models');
+        // console.log('🔧 useModelSelection: Found', localModelsData.ollama.length, 'Ollama models');
         
         // Remove any cloud models that match local Ollama models by name
         localModelsData.ollama.forEach(localModel => {
           const modelNameLower = localModel.name.toLowerCase();
           for (let i = models.length - 1; i >= 0; i--) {
             if (models[i].label && models[i].label.toLowerCase().includes(modelNameLower)) {
-              console.log('🔧 useModelSelection: Removing duplicate cloud model:', models[i].id, '(matches local:', localModel.id, ')');
+              // console.log('🔧 useModelSelection: Removing duplicate cloud model:', models[i].id, '(matches local:', localModel.id, ')');
               models.splice(i, 1);
             }
           }
@@ -117,7 +117,7 @@ export const useModelSelection = () => {
         
         // Add Ollama models with high priority
         localModelsData.ollama.forEach(model => {
-          console.log('🔧 useModelSelection: Adding Ollama model:', model.id);
+          // console.log('🔧 useModelSelection: Adding Ollama model:', model.id);
           models.push({
             id: model.id, // e.g., "ollama:qwen3-coder:30b"
             label: model.name, // e.g., "qwen3-coder:30b"
@@ -134,14 +134,14 @@ export const useModelSelection = () => {
       
       // Process LM Studio models
       if (localModelsData.lm_studio) {
-        console.log('🔧 useModelSelection: Found', localModelsData.lm_studio.length, 'LM Studio models');
+        // console.log('🔧 useModelSelection: Found', localModelsData.lm_studio.length, 'LM Studio models');
         
         // Remove any cloud models that match local LM Studio models
         localModelsData.lm_studio.forEach(localModel => {
           const modelNameLower = localModel.name.toLowerCase();
           for (let i = models.length - 1; i >= 0; i--) {
             if (models[i].label && models[i].label.toLowerCase().includes(modelNameLower)) {
-              console.log('🔧 useModelSelection: Removing duplicate cloud model:', models[i].id, '(matches local:', localModel.id, ')');
+              // console.log('🔧 useModelSelection: Removing duplicate cloud model:', models[i].id, '(matches local:', localModel.id, ')');
               models.splice(i, 1);
             }
           }
@@ -149,7 +149,7 @@ export const useModelSelection = () => {
         
         // Add LM Studio models with high priority
         localModelsData.lm_studio.forEach(model => {
-          console.log('🔧 useModelSelection: Adding LM Studio model:', model.id);
+          // console.log('🔧 useModelSelection: Adding LM Studio model:', model.id);
           models.push({
             id: model.id, // e.g., "lm_studio:hermes-2-pro"
             label: model.name, // e.g., "hermes-2-pro"

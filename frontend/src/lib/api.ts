@@ -1908,7 +1908,7 @@ export const createCheckoutSession = async (
     }
     
     
-    const requestBody = { ...request, tolt_referral: window.tolt_referral };
+    const requestBody = { ...request, tolt_referral: (window as any).tolt_referral };
     
     // Use the new billing v2 API endpoint
     const response = await fetch(`${API_URL}/billing/create-checkout-session`, {

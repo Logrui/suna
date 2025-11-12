@@ -4,10 +4,11 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 import { Toaster } from '@/components/ui/sonner';
-import { Analytics } from '@vercel/analytics/react';
-import { GoogleAnalytics } from '@next/third-parties/google';
-import { SpeedInsights } from '@vercel/speed-insights/next';
-import Script from 'next/script';
+// Disabled for self-hosted deployment - these are for Vercel cloud deployments
+// import { Analytics } from '@vercel/analytics/react';
+// import { GoogleAnalytics } from '@next/third-parties/google';
+// import { SpeedInsights } from '@vercel/speed-insights/next';
+// import Script from 'next/script';
 import { PostHogIdentify } from '@/components/posthog-identify';
 import '@/lib/polyfills';
 import { roobert } from './fonts/roobert';
@@ -100,7 +101,8 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning className={`${roobert.variable} ${roobertMono.variable}`}>
-      <head>
+      {/* Disabled analytics/tracking for self-hosted deployment */}
+      {/* <head>
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -109,18 +111,18 @@ export default function RootLayout({
           })(window,document,'script','dataLayer','GTM-PCHSN4M2');`}
         </Script>
         <Script async src="https://cdn.tolt.io/tolt.js" data-tolt={process.env.NEXT_PUBLIC_TOLT_REFERRAL_ID}></Script>
-      </head>
+      </head> */}
 
       <body className="antialiased font-sans bg-background">
-        <noscript>
+        {/* Disabled Google Tag Manager for self-hosted deployment */}
+        {/* <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-PCHSN4M2"
             height="0"
             width="0"
             style={{ display: 'none', visibility: 'hidden' }}
           />
-        </noscript>
-        {/* End Google Tag Manager (noscript) */}
+        </noscript> */}
 
         <ThemeProvider
           attribute="class"
@@ -132,9 +134,10 @@ export default function RootLayout({
             {children}
             <Toaster />
           </Providers>
-          <Analytics />
-          <GoogleAnalytics gaId="G-6ETJFB3PT3" />
-          <SpeedInsights />
+          {/* Disabled Vercel Analytics for self-hosted deployment */}
+          {/* <Analytics /> */}
+          {/* <GoogleAnalytics gaId="G-6ETJFB3PT3" /> */}
+          {/* <SpeedInsights /> */}
           <PostHogIdentify />
         </ThemeProvider>
       </body>

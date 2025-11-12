@@ -63,14 +63,14 @@ async function initializeSlashCommands() {
     }
     
     const folders = await foldersRes.json();
-    console.log('[SlashCommands] Fetched folders:', folders.map((f: any) => f.name));
+    // console.log('[SlashCommands] Fetched folders:', folders.map((f: any) => f.name));
     
     // Check if Suna folder exists
     let promptsFolder = folders.find((f: any) => f.name === PROMPTS_FOLDER_NAME);
     
     // Create Suna folder if it doesn't exist
     if (!promptsFolder) {
-      console.log('[SlashCommands] Creating Suna folder...');
+      // console.log('[SlashCommands] Creating Suna folder...');
       const createPromptsFolderRes = await fetch(`${API_URL}/knowledge-base/folders`, {
         method: 'POST',
         headers,
@@ -87,9 +87,9 @@ async function initializeSlashCommands() {
       }
       
       promptsFolder = await createPromptsFolderRes.json();
-      console.log('[SlashCommands] ✓ Created Suna folder:', promptsFolder.folder_id);
+      // console.log('[SlashCommands] ✓ Created Suna folder:', promptsFolder.folder_id);
     } else {
-      console.log('[SlashCommands] Suna folder already exists:', promptsFolder.folder_id);
+      // console.log('[SlashCommands] Suna folder already exists:', promptsFolder.folder_id);
     }
     
     const folderId = promptsFolder.folder_id;
@@ -102,15 +102,15 @@ async function initializeSlashCommands() {
     }
     
     const entries = await entriesRes.json();
-    console.log('[SlashCommands] Existing entries:', entries.length, 'files');
+    // console.log('[SlashCommands] Existing entries:', entries.length, 'files');
     if (entries.length > 0) {
-      console.log('[SlashCommands] Entry details:', entries.map((e: any) => ({
-        filename: e.filename,
-        summary: e.summary?.substring(0, 50) || '(no summary)',
-        hasContent: !!e.content,
-        contentLength: e.content?.length || 0,
-        entryId: e.entry_id,
-      })));
+      // console.log('[SlashCommands] Entry details:', entries.map((e: any) => ({
+      //   filename: e.filename,
+      //   summary: e.summary?.substring(0, 50) || '(no summary)',
+      //   hasContent: !!e.content,
+      //   contentLength: e.content?.length || 0,
+      //   entryId: e.entry_id,
+      // })));
     }
     
     // Check which example commands are missing and create only those
@@ -124,7 +124,7 @@ async function initializeSlashCommands() {
     console.log('[SlashCommands] Missing commands to create:', missingCommands.map(c => c.name));
     
     if (missingCommands.length > 0) {
-      console.log(`[SlashCommands] Creating ${missingCommands.length} missing slash commands...`);
+      // console.log(`[SlashCommands] Creating ${missingCommands.length} missing slash commands...`);
       
       for (const example of missingCommands) {
         try {
@@ -199,7 +199,7 @@ export function useSlashCommands() {
     queryKey: ['slash-commands'],
     queryFn: async () => {
       try {
-        console.log('[SlashCommands] useSlashCommands: Fetching commands...');
+        // console.log('[SlashCommands] useSlashCommands: Fetching commands...');
         
         // Initialize folder and examples if needed
         const folderId = await initializeSlashCommands();
@@ -216,7 +216,7 @@ export function useSlashCommands() {
         const headers = await getAuthHeaders();
         
         // Fetch all entries in the Suna folder
-        console.log('[SlashCommands] useSlashCommands: Fetching entries from folder:', folderId);
+        // console.log('[SlashCommands] useSlashCommands: Fetching entries from folder:', folderId);
         const entriesRes = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/entries`, { headers });
         
         if (!entriesRes.ok) {
@@ -225,7 +225,7 @@ export function useSlashCommands() {
         }
         
         const entries = await entriesRes.json();
-        console.log('[SlashCommands] useSlashCommands: Fetched entries:', entries.length);
+        // console.log('[SlashCommands] useSlashCommands: Fetched entries:', entries.length);
         
         // Fetch content for each entry in parallel
         const entriesWithContent = await Promise.all(
@@ -253,11 +253,11 @@ export function useSlashCommands() {
           prompt: entry.content || '',
         }));
         
-        console.log('[SlashCommands] useSlashCommands: Converted to commands:', commands.map(c => ({
-          name: c.name,
-          descriptionLength: c.description.length,
-          promptLength: c.prompt.length,
-        })));
+        // console.log('[SlashCommands] useSlashCommands: Converted to commands:', commands.map(c => ({
+        //   name: c.name,
+        //   descriptionLength: c.description.length,
+        //   promptLength: c.prompt.length,
+        // })));
         
         return commands;
       } catch (err) {
