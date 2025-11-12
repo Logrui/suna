@@ -6,7 +6,7 @@
  * Configuration for slash commands storage
  * Change this single constant to update the folder name throughout the app
  */
-export const SLASH_COMMANDS_FOLDER_NAME = 'Suna';
+export const SLASH_COMMANDS_FOLDER_NAME = 'Prompts';
 
 /**
  * Slash Command Interface

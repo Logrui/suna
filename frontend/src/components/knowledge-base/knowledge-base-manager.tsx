@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SLASH_COMMANDS_FOLDER_NAME } from '../slash-commands/types';
 import {
     FolderIcon,
     FileIcon,
@@ -48,6 +49,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
 
 const API_URL = getApiUrl();
+const PROMPTS_FOLDER_NAME = SLASH_COMMANDS_FOLDER_NAME;
 
 interface TreeItem {
     id: string;
@@ -168,7 +170,10 @@ export function KnowledgeBaseManager({
     // Build tree structure and auto-expand all folders for assignment mode
     React.useEffect(() => {
         const buildTree = () => {
-            const tree: TreeItem[] = folders.map(folder => {
+            // Filter out Prompts folder from display
+            const filteredFolders = folders.filter(folder => folder.name !== PROMPTS_FOLDER_NAME);
+            
+            const tree: TreeItem[] = filteredFolders.map(folder => {
                 const existingFolder = treeData.find(item => item.id === folder.folder_id);
                 // Auto-expand all folders in assignment mode, preserve state otherwise
                 const isExpanded = enableAssignments ? true : (existingFolder?.expanded || false);
