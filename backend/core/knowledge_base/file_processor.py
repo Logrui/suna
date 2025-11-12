@@ -64,7 +64,8 @@ class FileProcessor:
         folder_id: str,
         file_content: bytes, 
         filename: str, 
-        mime_type: str
+        mime_type: str,
+        skip_summary: bool = False
     ) -> Dict[str, Any]:
         try:
             if len(file_content) > self.MAX_FILE_SIZE:
@@ -97,14 +98,17 @@ class FileProcessor:
                 s3_path, file_content, {"content-type": mime_type}
             )
             
-            # Extract content for summary
-            content = self._extract_content(file_content, filename, mime_type)
-            if not content:
-                # If no content could be extracted, create a basic file info summary
-                content = f"File: {filename} ({len(file_content)} bytes, {mime_type})"
-            
-            # Generate LLM summary
-            summary = await self._generate_summary(content, filename)
+            # Extract content for summary (or skip if not needed)
+            if skip_summary:
+                summary = f"File: {filename}"
+            else:
+                content = self._extract_content(file_content, filename, mime_type)
+                if not content:
+                    # If no content could be extracted, create a basic file info summary
+                    content = f"File: {filename} ({len(file_content)} bytes, {mime_type})"
+                
+                # Generate LLM summary
+                summary = await self._generate_summary(content, filename)
             
             # Save to database
             entry_data = {
@@ -125,7 +129,8 @@ class FileProcessor:
                 'success': True,
                 'entry_id': entry_id,
                 'filename': filename,
-                'summary_length': len(summary)
+                'summary_length': len(summary),
+                'summary_skipped': skip_summary
             }
             
         except Exception as e:

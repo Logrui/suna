@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from pydantic import BaseModel, Field, validator
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, require_agent_access, AuthorizedAgentAccess
 from core.services.supabase import DBConnection
@@ -86,6 +86,28 @@ class EntryResponse(BaseModel):
 
 class UpdateEntryRequest(BaseModel):
     summary: str = Field(..., min_length=1, max_length=1000)
+
+class CreateTextEntryRequest(BaseModel):
+    """Request model for creating a text entry without LLM processing (for slash commands)."""
+    filename: str = Field(..., min_length=1, max_length=255)
+    content: str = Field(..., min_length=1)
+    summary: Optional[str] = Field(None, max_length=10000)  # Optional user-provided summary
+    mime_type: Optional[str] = Field(None)  # Optional mime_type (defaults to text/plain or text/markdown based on filename)
+    
+    @validator('filename')
+    def validate_filename(cls, v):
+        is_valid, error_message = FileNameValidator.validate_name(v, "file")
+        if not is_valid:
+            raise ValueError(error_message)
+        return FileNameValidator.sanitize_name(v)
+
+class CreateTextEntryResponse(BaseModel):
+    """Response model for text entry creation."""
+    entry_id: str
+    filename: str
+    file_size: int
+    summary: str
+    created_at: str
 
 class AgentAssignmentRequest(BaseModel):
     folder_ids: List[str]
@@ -296,9 +318,17 @@ async def delete_folder(
 async def upload_file(
     folder_id: str,
     file: UploadFile = File(...),
+    skip_summary: bool = False,
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
-    """Upload a file to a knowledge base folder."""
+    """Upload a file to a knowledge base folder.
+    
+    Args:
+        folder_id: Target folder ID
+        file: File to upload
+        skip_summary: If True, skips LLM summary generation (useful for prompt files)
+        user_id: Authenticated user ID
+    """
     try:
         client = await db.client
         account_id = user_id
@@ -334,7 +364,8 @@ async def upload_file(
             folder_id=folder_id,
             file_content=file_content,
             filename=final_filename,
-            mime_type=file.content_type or 'application/octet-stream'
+            mime_type=file.content_type or 'application/octet-stream',
+            skip_summary=skip_summary
         )
         
         if not result['success']:
@@ -355,6 +386,114 @@ async def upload_file(
     except Exception as e:
         logger.error(f"Error uploading file: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to upload file")
+
+# Text entry creation (for slash commands - NO LLM processing)
+@router.post("/folders/{folder_id}/create-text-entry", response_model=CreateTextEntryResponse)
+async def create_text_entry(
+    folder_id: str,
+    request: CreateTextEntryRequest,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """
+    Create a text entry WITHOUT LLM summary generation.
+    
+    This endpoint is optimized for slash commands and other use cases where
+    automatic LLM processing is not needed. The entry is created directly
+    without any AI processing overhead.
+    
+    Args:
+        folder_id: Target folder ID
+        request: CreateTextEntryRequest with filename, content, and optional summary
+        user_id: Authenticated user ID
+        
+    Returns:
+        CreateTextEntryResponse with entry details
+    """
+    try:
+        client = await db.client
+        account_id = user_id
+        
+        # Verify folder ownership
+        folder_result = await client.table('knowledge_base_folders').select(
+            'folder_id'
+        ).eq('folder_id', folder_id).eq('account_id', account_id).execute()
+        
+        if not folder_result.data:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        
+        # Validate and sanitize filename
+        final_filename = await validate_file_name_unique_in_folder(request.filename, folder_id)
+        
+        # Generate unique entry ID
+        import uuid
+        entry_id = str(uuid.uuid4())
+        
+        # Prepare content as bytes
+        content_bytes = request.content.encode('utf-8')
+        content_size = len(content_bytes)
+        
+        # Determine mime_type based on filename or use provided value
+        if request.mime_type:
+            mime_type = request.mime_type
+        else:
+            # Determine mime_type based on file extension
+            filename_lower = final_filename.lower()
+            if filename_lower.endswith('.md'):
+                mime_type = 'text/markdown'
+            elif filename_lower.endswith('.txt'):
+                mime_type = 'text/plain'
+            else:
+                # Default to text/plain for other text entries
+                mime_type = 'text/plain'
+        
+        # Check total file size limit
+        await check_total_file_size_limit(account_id, content_size)
+        
+        # Upload to S3
+        s3_path = f"knowledge-base/{folder_id}/{entry_id}/{file_processor.sanitize_filename(final_filename)}"
+        
+        await client.storage.from_('file-uploads').upload(
+            s3_path, content_bytes, {"content-type": mime_type}
+        )
+        
+        # Use provided summary or create a descriptive one
+        summary = request.summary or f"Simple Text Entry: {final_filename} - This file is a {mime_type} file"
+        
+        # Save to database (NO LLM processing)
+        entry_data = {
+            'entry_id': entry_id,
+            'folder_id': folder_id,
+            'account_id': account_id,
+            'filename': final_filename,
+            'file_path': s3_path,
+            'file_size': content_size,
+            'mime_type': mime_type,
+            'summary': summary,
+            'is_active': True
+        }
+        
+        result = await client.table('knowledge_base_entries').insert(entry_data).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to create entry")
+        
+        created_entry = result.data[0]
+        
+        return CreateTextEntryResponse(
+            entry_id=created_entry['entry_id'],
+            filename=created_entry['filename'],
+            file_size=created_entry['file_size'],
+            summary=created_entry['summary'],
+            created_at=created_entry['created_at']
+        )
+        
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating text entry: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create text entry")
 
 # Entries
 @router.get("/folders/{folder_id}/entries", response_model=List[EntryResponse])

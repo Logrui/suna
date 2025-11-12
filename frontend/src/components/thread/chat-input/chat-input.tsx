@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
 import { useAgentSelection } from '@/lib/stores/agent-selection-store';
+import { SLASH_COMMANDS_FOLDER_NAME } from '@/components/slash-commands/types';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { handleFiles, FileUploadHandler } from './file-upload-handler';
@@ -44,7 +45,7 @@ import { AgentConfigurationDialog } from '@/components/agents/agent-configuratio
 import { ContextUsageIndicator } from '../ContextUsageIndicator';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useSlashCommands } from '@/hooks/useSlashCommands';
-import { SlashCommandAutocomplete } from '@/components/slash-commands/SlashCommandAutocomplete';
+import { SlashCommandAutocomplete } from '@/components/slash-commands/slash-commands';
 
 import posthog from 'posthog-js';
 
@@ -254,9 +255,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     // Fetch slash commands (no longer needs sandboxId)
     const { data: slashCommands = [] } = useSlashCommands();
 
-    // Fetch knowledge base folders to get Suna folder for creating new commands
+    // Fetch knowledge base folders to get prompts folder for creating new commands
     const { folders } = useKnowledgeFolders();
-    const sunaFolder = useMemo(() => folders.find(f => f.name === 'Suna'), [folders]);
+    const promptsFolder = useMemo(() => folders.find(f => f.name === SLASH_COMMANDS_FOLDER_NAME), [folders]);
 
     // Filter slash commands based on current input
     const filteredSlashCommands = useMemo(() => {
@@ -719,7 +720,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           selectedIndex={selectedCommandIndex}
           onSelect={handleSlashCommandSelect}
           onClose={handleSlashCommandClose}
-          sunaFolder={sunaFolder}
+          promptsFolder={promptsFolder}
           onCommandCreated={() => {
             // Refetch slash commands when a new one is created
             // This will trigger the useSlashCommands hook to refresh

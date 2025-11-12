@@ -1,12 +1,11 @@
 // frontend/src/hooks/useSlashCommands.ts
 
 import { useQuery } from '@tanstack/react-query';
-import { SlashCommand } from '@/lib/slashCommands';
+import { SlashCommand, SLASH_COMMANDS_FOLDER_NAME } from '@/components/slash-commands/types';
 import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
 
 const API_URL = getApiUrl();
-const PROMPTS_FOLDER_NAME = 'Suna';
 
 const EXAMPLE_COMMANDS = [
   {
@@ -65,24 +64,24 @@ async function initializeSlashCommands() {
     const folders = await foldersRes.json();
     // console.log('[SlashCommands] Fetched folders:', folders.map((f: any) => f.name));
     
-    // Check if Suna folder exists
-    let promptsFolder = folders.find((f: any) => f.name === PROMPTS_FOLDER_NAME);
+    // Check if prompts folder exists
+    let promptsFolder = folders.find((f: any) => f.name === SLASH_COMMANDS_FOLDER_NAME);
     
-    // Create Suna folder if it doesn't exist
+    // Create prompts folder if it doesn't exist
     if (!promptsFolder) {
-      // console.log('[SlashCommands] Creating Suna folder...');
+      // console.log('[SlashCommands] Creating prompts folder...');
       const createPromptsFolderRes = await fetch(`${API_URL}/knowledge-base/folders`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          name: PROMPTS_FOLDER_NAME,
+          name: SLASH_COMMANDS_FOLDER_NAME,
           description: 'Custom slash command prompts for quick access in chat',
         }),
       });
       
       if (!createPromptsFolderRes.ok) {
         const errorText = await createPromptsFolderRes.text();
-        console.error('[SlashCommands] Failed to create Suna folder:', createPromptsFolderRes.status, errorText);
+        console.error('[SlashCommands] Failed to create prompts folder:', createPromptsFolderRes.status, errorText);
         return null;
       }
       

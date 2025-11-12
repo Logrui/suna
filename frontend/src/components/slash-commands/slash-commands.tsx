@@ -1,7 +1,7 @@
-// frontend/src/components/slash-commands/SlashCommandAutocomplete.tsx
+// frontend/src/components/slash-commands/slash-commands.tsx
 
 import React, { useEffect, useRef, useState } from 'react';
-import { SlashCommand } from '@/lib/slashCommands';
+import { SlashCommand } from './types';
 import { cn } from '@/lib/utils';
 import { CommandsKbEntryModal } from './commands-kb-entry-modal';
 import { type Folder } from '@/hooks/react-query/knowledge-base/use-folders';
@@ -12,7 +12,7 @@ interface SlashCommandAutocompleteProps {
   selectedIndex: number;
   onSelect: (command: SlashCommand) => void;
   onClose: () => void;
-  sunaFolder?: Folder;
+  promptsFolder?: Folder;
   onCommandCreated?: () => void;
 }
 
@@ -22,7 +22,7 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
   selectedIndex,
   onSelect,
   onClose,
-  sunaFolder,
+  promptsFolder,
   onCommandCreated,
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
@@ -110,10 +110,10 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
       </div>
       
       {/* Create New Shortcut Button */}
-      {sunaFolder && (
+      {promptsFolder && (
         <CommandsKbEntryModal
-          folders={[sunaFolder]}
-          sunaFolderId={sunaFolder.folder_id}
+          folders={[promptsFolder]}
+          promptsFolderId={promptsFolder.folder_id}
           onUploadComplete={() => {
             if (onCommandCreated) {
               onCommandCreated();
@@ -134,14 +134,6 @@ export const SlashCommandAutocomplete: React.FC<SlashCommandAutocompleteProps> =
           }
         />
       )}
-      
-      <div className="px-2 py-1 bg-muted/50 border-t border-border">
-        <div className="flex items-center justify-between text-[9px] text-muted-foreground">
-          <span>↑↓ Navigate</span>
-          <span>↵ Select</span>
-          <span>Esc Close</span>
-        </div>
-      </div>
     </div>
   );
 };

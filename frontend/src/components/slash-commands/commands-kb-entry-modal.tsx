@@ -42,7 +42,7 @@ interface FileUploadStatus {
 interface CommandsKbEntryModalProps {
     folders: Folder[];
     onUploadComplete: () => void;
-    sunaFolderId: string; // Pre-set to Suna folder ID
+    promptsFolderId: string; // Pre-set to prompts folder ID
     trigger?: React.ReactNode;
     defaultTab?: 'upload' | 'text';
 }
@@ -52,7 +52,7 @@ const API_URL = getApiUrl();
 export function CommandsKbEntryModal({
     folders,
     onUploadComplete,
-    sunaFolderId,
+    promptsFolderId,
     trigger,
     defaultTab = 'text'
 }: CommandsKbEntryModalProps) {
@@ -121,8 +121,8 @@ export function CommandsKbEntryModal({
     };
 
     const handleFileUpload = async () => {
-        if (!sunaFolderId) {
-            toast.error('Suna folder not found');
+        if (!promptsFolderId) {
+            toast.error('Prompts folder not found');
             return;
         }
 
@@ -154,7 +154,7 @@ export function CommandsKbEntryModal({
                     const formData = new FormData();
                     formData.append('file', file);
 
-                    const response = await fetch(`${API_URL}/knowledge-base/folders/${sunaFolderId}/upload`, {
+                    const response = await fetch(`${API_URL}/knowledge-base/folders/${promptsFolderId}/upload?skip_summary=true`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${session.access_token}`,
@@ -219,8 +219,8 @@ export function CommandsKbEntryModal({
     };
 
     const handleTextCreate = async () => {
-        if (!sunaFolderId) {
-            toast.error('Suna folder not found');
+        if (!promptsFolderId) {
+            toast.error('Prompts folder not found');
             return;
         }
 
@@ -244,29 +244,31 @@ export function CommandsKbEntryModal({
                 throw new Error('No session found');
             }
 
-            const finalFilename = commandName.includes('.') ? commandName.trim() : `${commandName.trim()}.txt`;
-            const textBlob = new Blob([prompt], { type: 'text/plain' });
-            const file = new File([textBlob], finalFilename, { type: 'text/plain' });
+            const finalFilename = commandName.includes('.') ? commandName.trim() : `${commandName.trim()}.md`;
 
-            const formData = new FormData();
-            formData.append('file', file);
+            // Determine mime_type based on filename
+            const mimeType = finalFilename.toLowerCase().endsWith('.md') 
+                ? 'text/markdown' 
+                : 'text/plain';
 
-            const response = await fetch(`${API_URL}/knowledge-base/folders/${sunaFolderId}/upload`, {
+            // Use the new optimized endpoint for slash commands (no LLM processing)
+            const response = await fetch(`${API_URL}/knowledge-base/folders/${promptsFolderId}/create-text-entry`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
                 },
-                body: formData
+                body: JSON.stringify({
+                    filename: finalFilename,
+                    content: prompt,
+                    mime_type: mimeType,
+                    summary: prompt // Quick summary instead of LLM processing
+                })
             });
 
             if (response.ok) {
                 const result = await response.json();
                 toast.success('Slash command created successfully');
-
-                if (result.filename_changed) {
-                    toast.info(`Command was renamed to "${result.final_filename}" to avoid conflicts`);
-                }
-
                 onUploadComplete();
                 resetAndClose();
             } else {
@@ -274,8 +276,8 @@ export function CommandsKbEntryModal({
                 toast.error(errorData?.detail || 'Failed to create slash command');
             }
         } catch (error) {
-            console.error('Error creating slash command:', error);
-            toast.error('Failed to create slash command');
+            console.error('Error creating new slash command', error);
+            toast.error('Failed to create new slash command', error);
         } finally {
             setIsCreatingText(false);
         }

@@ -45,6 +45,7 @@ import { useKnowledgeFolders, type Folder, type Entry } from '@/hooks/react-quer
 import { FileNameValidator } from '@/lib/validation';
 import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
+import { SLASH_COMMANDS_FOLDER_NAME } from './types';
 
 const API_URL = getApiUrl();
 
@@ -132,8 +133,8 @@ export function CommandsBaseManager({
 
     const { folders, recentFiles, loading: foldersLoading, refetch: refetchFolders } = useKnowledgeFolders();
 
-    // Get Suna folder
-    const sunaFolder = folders.find(f => f.name === 'Suna');
+    // Get prompts folder
+    const promptsFolder = folders.find(f => f.name === SLASH_COMMANDS_FOLDER_NAME);
 
     // DND Sensors
     const sensors = useSensors(
@@ -143,55 +144,55 @@ export function CommandsBaseManager({
         })
     );
 
-    // Build tree structure for Suna folder only
+    // Build tree structure for prompts folder only
     React.useEffect(() => {
         const buildTree = () => {
-            if (!sunaFolder) {
+            if (!promptsFolder) {
                 setTreeData([]);
                 return;
             }
 
             const tree: TreeItem[] = [{
-                id: sunaFolder.folder_id,
+                id: promptsFolder.folder_id,
                 type: 'folder' as const,
-                name: sunaFolder.name,
-                data: sunaFolder,
-                children: folderEntries[sunaFolder.folder_id]?.map(entry => ({
+                name: promptsFolder.name,
+                data: promptsFolder,
+                children: folderEntries[promptsFolder.folder_id]?.map(entry => ({
                     id: entry.entry_id,
                     type: 'file' as const,
                     name: entry.filename,
-                    parentId: sunaFolder.folder_id,
+                    parentId: promptsFolder.folder_id,
                     data: entry,
                 })) || [],
-                expanded: true, // Always expand Suna folder
+                expanded: true, // Always expand prompts folder
             }];
             setTreeData(tree);
         };
 
         buildTree();
-    }, [folders, folderEntries, sunaFolder]);
+    }, [folders, folderEntries, promptsFolder]);
 
-    // Auto-fetch Suna folder entries
+    // Auto-fetch prompts folder entries
     React.useEffect(() => {
-        if (!foldersLoading && sunaFolder && !folderEntries[sunaFolder.folder_id]) {
-            fetchFolderEntries(sunaFolder.folder_id);
+        if (!foldersLoading && promptsFolder && !folderEntries[promptsFolder.folder_id]) {
+            fetchFolderEntries(promptsFolder.folder_id);
         }
-    }, [sunaFolder, foldersLoading, folderEntries]);
+    }, [promptsFolder, foldersLoading, folderEntries]);
 
     // Handle URL params for sidebar navigation
     React.useEffect(() => {
-        if (foldersLoading || !sunaFolder) return;
+        if (foldersLoading || !promptsFolder) return;
 
         // Handle file navigation from sidebar
-        if (initialFileId && sunaFolder.folder_id) {
+        if (initialFileId && promptsFolder.folder_id) {
             // Make sure folder is loaded first
-            if (!folderEntries[sunaFolder.folder_id]) {
-                fetchFolderEntries(sunaFolder.folder_id);
+            if (!folderEntries[promptsFolder.folder_id]) {
+                fetchFolderEntries(promptsFolder.folder_id);
             }
             
             // Find the file in folder entries and open preview
             setTimeout(() => {
-                const entries = folderEntries[sunaFolder.folder_id];
+                const entries = folderEntries[promptsFolder.folder_id];
                 if (entries) {
                     const file = entries.find(e => e.entry_id === initialFileId);
                     if (file) {
@@ -203,7 +204,7 @@ export function CommandsBaseManager({
                 }
             }, 500);
         }
-    }, [initialFileId, foldersLoading, sunaFolder, folderEntries]);
+    }, [initialFileId, foldersLoading, promptsFolder, folderEntries]);
 
     // File handling functions
     const handleFileSelect = (item: TreeItem) => {
@@ -419,8 +420,8 @@ export function CommandsBaseManager({
 
     // Handle file drops
     const handleNativeFileDrop = async (files: FileList, folderId: string) => {
-        if (!sunaFolder) {
-            toast.error('Suna folder not found');
+        if (!promptsFolder) {
+            toast.error('Prompts folder not found');
             return;
         }
 
@@ -625,10 +626,10 @@ export function CommandsBaseManager({
                             {headerDescription}
                         </p>
                     </div>
-                    {sunaFolder && (
+                    {promptsFolder && (
                         <CommandsKbEntryModal
-                            folders={[sunaFolder]}
-                            sunaFolderId={sunaFolder.folder_id}
+                            folders={[promptsFolder]}
+                            promptsFolderId={promptsFolder.folder_id}
                             onUploadComplete={() => {
                                 refetchFolders();
                             }}
@@ -714,10 +715,10 @@ export function CommandsBaseManager({
                             <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
                                 {emptyStateMessage || "Create your first slash command to get started with custom prompts."}
                             </p>
-                            {sunaFolder && (
+                            {promptsFolder && (
                                 <CommandsKbEntryModal
-                                    folders={[sunaFolder]}
-                                    sunaFolderId={sunaFolder.folder_id}
+                                    folders={[promptsFolder]}
+                                    promptsFolderId={promptsFolder.folder_id}
                                     onUploadComplete={() => {
                                         refetchFolders();
                                     }}
