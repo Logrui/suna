@@ -363,6 +363,11 @@ export function KnowledgeBaseManager({
     };
 
     const fetchFolderEntries = async (folderId: string) => {
+        if (!folderId) {
+            console.error('[KBManager] fetchFolderEntries called with undefined folderId');
+            return;
+        }
+        
         setLoadingFolders(prev => ({ ...prev, [folderId]: true }));
 
         try {
@@ -613,10 +618,23 @@ export function KnowledgeBaseManager({
 
             if (response.ok) {
                 toast.success('Summary updated successfully');
+                
+                // Find parent folder to refresh its entries
                 const fileItem = treeData.flatMap(folder => folder.children || []).find(file => file.id === editSummaryModal.fileId);
-                if (fileItem?.parentId) {
-                    await fetchFolderEntries(fileItem.parentId);
+                const parentFolderId = fileItem?.parentId;
+                
+                if (parentFolderId) {
+                    await fetchFolderEntries(parentFolderId);
+                } else {
+                    // Fallback: find parent folder by searching all folders
+                    const parentFolder = treeData.find(folder => 
+                        folder.children?.some(child => child.id === editSummaryModal.fileId)
+                    );
+                    if (parentFolder?.id) {
+                        await fetchFolderEntries(parentFolder.id);
+                    }
                 }
+                
                 refetchFolders();
             } else {
                 const errorData = await response.json().catch(() => null);
@@ -1201,6 +1219,7 @@ export function KnowledgeBaseManager({
                                                 }
                                             }}
                                             onDownloadFile={(fileId, fileName) => {
+                                                console.log('[KBManager] onDownloadFile called:', { fileId, fileName });
                                                 downloadFile(fileId, fileName);
                                             }}
                                             onDownloadFolder={(folderId, folderName) => {

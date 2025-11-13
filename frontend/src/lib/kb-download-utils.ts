@@ -14,26 +14,39 @@ export async function downloadFile(entryId: string, fileName: string) {
 
         if (!session?.access_token) {
             toast.error('Authentication required');
+            console.error('No access token available for download');
             return;
         }
 
         // Get file content from API
-        const response = await fetch(`${API_URL}/knowledge-base/entries/${entryId}/content`, {
+        const endpoint = `${API_URL}/knowledge-base/entries/${entryId}/content`;
+        console.log('Downloading from:', endpoint);
+        
+        const response = await fetch(endpoint, {
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,
             }
         });
 
         if (!response.ok) {
-            toast.error('Failed to download file');
+            const errorText = await response.text();
+            console.error(`Download failed: ${response.status} ${response.statusText}`, errorText);
+            toast.error(`Failed to download file: ${response.statusText}`);
             return;
         }
 
         const data = await response.json();
         const content = data.content;
 
-        // Create blob and download
-        const blob = new Blob([content], { type: 'text/plain' });
+        if (!content) {
+            console.error('No content in response');
+            toast.error('File content is empty');
+            return;
+        }
+
+        // Create blob and download with generic octet-stream type
+        // Browser will handle download based on file extension
+        const blob = new Blob([content], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -46,7 +59,7 @@ export async function downloadFile(entryId: string, fileName: string) {
         toast.success('File downloaded successfully');
     } catch (error) {
         console.error('Error downloading file:', error);
-        toast.error('Error downloading file');
+        toast.error(`Error downloading file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

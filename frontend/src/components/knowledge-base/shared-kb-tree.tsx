@@ -384,13 +384,20 @@ export function SharedTreeItem({
                                         onEditChange={onEditChange}
                                         onEditKeyPress={onEditKeyPress}
                                         onEditSummary={onEditSummary}
+                                        onMoveFile={onMoveFile}
+                                        onDownloadFile={onDownloadFile}
+                                        onDownloadFolder={onDownloadFolder}
+                                        onNativeFileDrop={onNativeFileDrop}
                                         editInputRef={editInputRef}
                                         editingFolder={editingFolder}
                                         editingName={editingName}
+                                        validationError={validationError}
+                                        uploadStatus={uploadStatus}
                                         assignments={assignments}
                                         onToggleAssignment={onToggleAssignment}
                                         assignmentIndeterminate={assignmentIndeterminate}
                                         movingFiles={movingFiles}
+                                        isLoadingEntries={isLoadingEntries}
                                     />
                                 ))
                             ) : (
@@ -502,6 +509,11 @@ export function SharedTreeItem({
                                             <DropdownMenuItem
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    console.log('[KB Tree] Download button clicked:', { 
+                                                        fileId: item.id, 
+                                                        fileName: item.name,
+                                                        hasHandler: !!onDownloadFile 
+                                                    });
                                                     onDownloadFile?.(item.id, item.name);
                                                 }}
                                             >

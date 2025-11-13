@@ -185,6 +185,11 @@ export function PromptsTab() {
     };
 
     const fetchFolderEntries = async (folderId: string) => {
+        if (!folderId) {
+            console.error('[PromptsTab] fetchFolderEntries called with undefined folderId');
+            return;
+        }
+        
         setLoadingFolders(prev => ({ ...prev, [folderId]: true }));
 
         try {
@@ -605,6 +610,7 @@ export function PromptsTab() {
                                                 }
                                             }}
                                             onDownloadFile={(fileId, fileName) => {
+                                                console.log('[PromptsTab] onDownloadFile called:', { fileId, fileName });
                                                 downloadFile(fileId, fileName);
                                             }}
                                             onDownloadFolder={(folderId, folderName) => {
