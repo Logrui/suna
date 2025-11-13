@@ -42,10 +42,12 @@ import { SharedTreeItem, FileDragOverlay } from './shared-kb-tree';
 import { KBFilePreviewModal } from './kb-file-preview-modal';
 import { EditSummaryModal } from './edit-summary-modal';
 import { KBDeleteConfirmDialog } from './kb-delete-confirm-dialog';
+import { MoveFileModal } from './move-file-modal';
 import { useKnowledgeFolders, type Folder, type Entry } from '@/hooks/react-query/knowledge-base/use-folders';
 import { FileNameValidator } from '@/lib/validation';
 import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
+import { downloadFile, downloadFolderAsZip } from '@/lib/kb-download-utils';
 import { CommandsKbEntryModal } from '../slash-commands/commands-kb-entry-modal';
 import { useKbHandlers } from '@/hooks/use-kb-handlers';
 
@@ -101,6 +103,18 @@ export function PromptsTab() {
     });
 
     const [editSummaryEntry, setEditSummaryEntry] = useState<Entry | null>(null);
+
+    const [moveFileModal, setMoveFileModal] = useState<{
+        isOpen: boolean;
+        fileId: string | null;
+        fileName: string;
+        currentFolderId: string;
+    }>({
+        isOpen: false,
+        fileId: null,
+        fileName: '',
+        currentFolderId: '',
+    });
 
     // Use shared KB handlers hook
     const { renamingFolderId, setRenamingFolderId, renameValue, setRenameValue, renameInputRef, movingFiles, handleRenameFolder, handleDeleteFile, handleMoveFile } = useKbHandlers();
@@ -576,6 +590,26 @@ export function PromptsTab() {
                                             enableEdit={true}
                                             enableAssignment={false}
                                             onDelete={handleDelete}
+                                            onMoveFile={(fileId, fileName) => {
+                                                const file = Object.values(folderEntries).flat().find(f => f.entry_id === fileId);
+                                                if (file) {
+                                                    const currentFolderId = Object.entries(folderEntries).find(([_, files]) => files.find(f => f.entry_id === fileId))?.[0];
+                                                    if (currentFolderId) {
+                                                        setMoveFileModal({
+                                                            isOpen: true,
+                                                            fileId,
+                                                            fileName,
+                                                            currentFolderId,
+                                                        });
+                                                    }
+                                                }
+                                            }}
+                                            onDownloadFile={(fileId, fileName) => {
+                                                downloadFile(fileId, fileName);
+                                            }}
+                                            onDownloadFolder={(folderId, folderName) => {
+                                                downloadFolderAsZip(folderId, folderName);
+                                            }}
                                             onNativeFileDrop={handleNativeFileDrop}
                                             uploadStatus={uploadStatus[item.id]}
                                             isLoadingEntries={loadingFolders[item.id]}
@@ -698,6 +732,35 @@ export function PromptsTab() {
                             toast.error('Error updating summary');
                             console.error(error);
                         }
+                    }}
+                />
+            )}
+
+            {moveFileModal.fileId && (
+                <MoveFileModal
+                    isOpen={moveFileModal.isOpen}
+                    onClose={() => {
+                        setMoveFileModal({
+                            isOpen: false,
+                            fileId: null,
+                            fileName: '',
+                            currentFolderId: '',
+                        });
+                    }}
+                    fileName={moveFileModal.fileName}
+                    currentFolderId={moveFileModal.currentFolderId}
+                    folders={folders}
+                    isMoving={movingFiles[moveFileModal.fileId] || false}
+                    onMove={async (targetFolderId) => {
+                        if (!moveFileModal.fileId) return;
+                        await handleMoveFile(
+                            moveFileModal.fileId,
+                            moveFileModal.currentFolderId,
+                            targetFolderId,
+                            folderEntries,
+                            setFolderEntries
+                        );
+                        await refetchFolders();
                     }}
                 />
             )}

@@ -8,7 +8,7 @@ export const DatabasesTab = () => {
           Databases
         </div>
         <p className="text-sm text-muted-foreground">
-          Database management coming soon
+          Google Drive, OneDrive, External Databases, and RAG Support coming soon
         </p>
       </div>
     </div>

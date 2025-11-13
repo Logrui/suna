@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
+import { getApiUrl } from '../get-api-url';
 
 export type Thread = {
   thread_id: string;
@@ -177,7 +178,7 @@ export const createThread = async (projectId: string): Promise<Thread> => {
     throw new Error('You must be logged in to create a thread');
   }
 
-  const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const API_URL = getApiUrl();
 
   // Use backend API endpoint - it handles project creation as well
   const response = await fetch(`${API_URL}/threads`, {
@@ -218,7 +219,7 @@ export const addUserMessage = async (
       throw new NoAccessTokenAvailableError();
     }
 
-    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const API_URL = getApiUrl();
 
     // Use backend API endpoint with auth handling
     const response = await fetch(`${API_URL}/threads/${threadId}/messages/add`, {
@@ -251,7 +252,7 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
-    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const API_URL = getApiUrl();
 
     // Build headers with optional auth token
     const headers: Record<string, string> = {
@@ -271,12 +272,33 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
+      
+      // Detect if we got HTML instead of JSON (404, 403, or redirect error pages)
+      if (errorText.includes('<!DOCTYPE') || errorText.includes('<html') || errorText.startsWith('<')) {
+        const statusMessage = response.status === 404 
+          ? 'Thread not found. It may have been deleted or you do not have access to it.'
+          : response.status === 403
+          ? 'You do not have permission to access this thread.'
+          : `Server error (${response.status})`;
+        console.error('Received HTML error page instead of JSON:', { status: response.status, statusText: response.statusText });
+        handleApiError(new Error(statusMessage), { operation: 'load messages', resource: `messages for thread ${threadId}` });
+        throw new Error(`Error getting messages: ${statusMessage}`);
+      }
+      
       console.error('Error fetching messages:', errorText);
       handleApiError(new Error(errorText), { operation: 'load messages', resource: `messages for thread ${threadId}` });
       throw new Error(`Error getting messages: ${errorText}`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      const responseText = await response.text().catch(() => 'unknown');
+      console.error('Failed to parse response as JSON:', { error: parseError, responsePreview: responseText.substring(0, 100) });
+      handleApiError(new Error('Invalid response format from server'), { operation: 'parse messages', resource: `messages for thread ${threadId}` });
+      throw new Error(`Error parsing messages response: ${parseError instanceof Error ? parseError.message : 'Invalid JSON'}`);
+    }
     const allMessages = data.messages || [];
 
     // Filter out cost and summary messages (backend doesn't filter these)

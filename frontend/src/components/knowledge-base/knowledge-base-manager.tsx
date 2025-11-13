@@ -43,10 +43,12 @@ import { UnifiedKbEntryModal } from './unified-kb-entry-modal';
 import { KBFilePreviewModal } from './kb-file-preview-modal';
 import { EditSummaryModal } from './edit-summary-modal';
 import { KBDeleteConfirmDialog } from './kb-delete-confirm-dialog';
+import { MoveFileModal } from './move-file-modal';
 import { useKnowledgeFolders, type Folder, type Entry } from '@/hooks/react-query/knowledge-base/use-folders';
 import { FileNameValidator } from '@/lib/validation';
 import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
+import { downloadFile, downloadFolderAsZip } from '@/lib/kb-download-utils';
 
 const API_URL = getApiUrl();
 const PROMPTS_FOLDER_NAME = SLASH_COMMANDS_FOLDER_NAME;
@@ -155,6 +157,18 @@ export function KnowledgeBaseManager({
     }>({
         isOpen: false,
         file: null,
+    });
+
+    const [moveFileModal, setMoveFileModal] = useState<{
+        isOpen: boolean;
+        fileId: string | null;
+        fileName: string;
+        currentFolderId: string;
+    }>({
+        isOpen: false,
+        fileId: null,
+        fileName: '',
+        currentFolderId: '',
     });
 
     const { folders, recentFiles, loading: foldersLoading, refetch: refetchFolders } = useKnowledgeFolders();
@@ -1172,6 +1186,26 @@ export function KnowledgeBaseManager({
                                             } : undefined}
                                             onDelete={handleDelete}
                                             onEditSummary={handleEditSummary}
+                                            onMoveFile={(fileId, fileName) => {
+                                                const file = Object.values(folderEntries).flat().find(f => f.entry_id === fileId);
+                                                if (file) {
+                                                    const currentFolderId = Object.entries(folderEntries).find(([_, files]) => files.find(f => f.entry_id === fileId))?.[0];
+                                                    if (currentFolderId) {
+                                                        setMoveFileModal({
+                                                            isOpen: true,
+                                                            fileId,
+                                                            fileName,
+                                                            currentFolderId,
+                                                        });
+                                                    }
+                                                }
+                                            }}
+                                            onDownloadFile={(fileId, fileName) => {
+                                                downloadFile(fileId, fileName);
+                                            }}
+                                            onDownloadFolder={(folderId, folderName) => {
+                                                downloadFolderAsZip(folderId, folderName);
+                                            }}
                                             editingFolder={editingFolder}
                                             editingName={editingName}
                                             onStartEdit={handleStartEdit}
@@ -1249,6 +1283,28 @@ export function KnowledgeBaseManager({
                     onClose={handleCloseFilePreview}
                     file={filePreviewModal.file}
                     onEditSummary={handleEditSummary}
+                />
+            )}
+
+            {moveFileModal.fileId && (
+                <MoveFileModal
+                    isOpen={moveFileModal.isOpen}
+                    onClose={() => {
+                        setMoveFileModal({
+                            isOpen: false,
+                            fileId: null,
+                            fileName: '',
+                            currentFolderId: '',
+                        });
+                    }}
+                    fileName={moveFileModal.fileName}
+                    currentFolderId={moveFileModal.currentFolderId}
+                    folders={folders}
+                    isMoving={movingFiles[moveFileModal.fileId] || false}
+                    onMove={async (targetFolderId) => {
+                        if (!moveFileModal.fileId) return;
+                        await handleMoveFile(moveFileModal.fileId, targetFolderId);
+                    }}
                 />
             )}
         </div>

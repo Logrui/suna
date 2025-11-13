@@ -319,13 +319,14 @@ async def create_thread(
 @router.get("/threads/{thread_id}/messages", summary="Get Thread Messages", operation_id="get_thread_messages")
 async def get_thread_messages(
     thread_id: str,
-    user_id: str = Depends(verify_and_get_user_id_from_jwt),
+    auth: AuthorizedThreadAccess = Depends(require_thread_access),
     order: str = Query("desc", description="Order by created_at: 'asc' or 'desc'")
 ):
-    """Get all messages for a thread, fetching in batches of 1000 from the DB to avoid large queries."""
+    """Get all messages for a thread, fetching in batches of 1000 from the DB to avoid large queries.
+    Supports both authenticated and anonymous access (for public threads)."""
     logger.debug(f"Fetching all messages for thread: {thread_id}, order={order}")
     client = await utils.db.client
-    await verify_and_authorize_thread_access(client, thread_id, user_id)
+    # Access already verified by require_thread_access dependency
     try:
         batch_size = 1000
         offset = 0

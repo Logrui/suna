@@ -1,11 +1,14 @@
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, validator
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, require_agent_access, AuthorizedAgentAccess
 from core.services.supabase import DBConnection
 from .file_processor import FileProcessor
 from core.utils.logger import logger
 from .validation import FileNameValidator, ValidationError, validate_folder_name_unique, validate_file_name_unique_in_folder
+import io
+import zipfile
 
 # Constants
 MAX_TOTAL_FILE_SIZE = 100 * 1024 * 1024 * 1024  # 100GB total limit per user
@@ -788,3 +791,63 @@ async def move_file(
     except Exception as e:
         logger.error(f"Error moving file: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to move file")
+
+
+@router.get("/folders/{folder_id}/download-zip")
+async def download_folder_as_zip(
+    folder_id: str,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """Download all files in a folder as a ZIP file."""
+    try:
+        client = await db.client
+        account_id = user_id
+        
+        # Verify folder ownership
+        folder_result = await client.table('knowledge_base_folders').select(
+            'folder_id, name'
+        ).eq('folder_id', folder_id).eq('account_id', account_id).execute()
+        
+        if not folder_result.data:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        
+        folder_name = folder_result.data[0]['name']
+        
+        # Get all entries in folder
+        entries_result = await client.table('knowledge_base_entries').select(
+            'entry_id, filename, file_path, account_id'
+        ).eq('folder_id', folder_id).eq('is_active', True).execute()
+        
+        if not entries_result.data:
+            raise HTTPException(status_code=400, detail="Folder is empty")
+        
+        # Create ZIP file in memory
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for entry in entries_result.data:
+                try:
+                    # Download file from S3
+                    file_bytes = await client.storage.from_('file-uploads').download(entry['file_path'])
+                    
+                    # Add to ZIP
+                    zip_file.writestr(entry['filename'], file_bytes)
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to add {entry['filename']} to ZIP: {str(e)}")
+                    # Continue with other files
+                    continue
+        
+        zip_buffer.seek(0)
+        
+        return StreamingResponse(
+            iter([zip_buffer.getvalue()]),
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={folder_name}.zip"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating ZIP file: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create ZIP file")
