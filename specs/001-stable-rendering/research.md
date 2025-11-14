@@ -12,7 +12,8 @@ This research document addresses the technical decisions and implementation appr
 
 1. **Root cause is NOT in f01c371f changes** - The commit only had malformed error handling, no backend batching
 2. **Baseline architecture has streaming issues** - The problem exists in the current `22a36feb` baseline
-3. **Comprehensive analysis required** - Need full file-by-file streaming flow analysis before Phase 1
+3. **Origin unknown** - Could be backend (message generation/Redis), frontend (receiving/rendering), or both
+4. **Comprehensive analysis required** - Need full file-by-file streaming flow analysis before Phase 1
 
 **Required Analysis Before Phase 1**:
 
@@ -43,12 +44,14 @@ ShowToolStream.tsx (individual tool display)
 ```
 
 **Key Questions to Answer**:
-1. Where do render loops originate? (useAgentStream deps? ThreadContent re-renders?)
-2. How should message batching work? (Backend throttling? Frontend debouncing?)
-3. Which components need React.memo? (ShowToolStream? ThreadContent?)
-4. What backend throttling is required? (50ms batching? 100ms?)
-5. Are there stale closures in useAgentStream? (Dependency array issues?)
-6. Is Redis pub/sub causing message spam? (Too many events?)
+1. **Is this a backend or frontend issue?** (Message generation spam vs render loop?)
+2. **Backend investigation**: Is response_processor yielding too many messages? Is Redis pub/sub flooding?
+3. **Frontend investigation**: Are React components re-rendering excessively? Stale closures in useAgentStream?
+4. **Where do render loops originate?** (useAgentStream deps? ThreadContent re-renders? ShowToolStream updates?)
+5. **How should message batching work?** (Backend throttling? Frontend debouncing? Both?)
+6. **Which components need React.memo?** (ShowToolStream? ThreadContent? Both?)
+7. **What backend throttling is required?** (50ms batching? 100ms? Per-message or per-batch?)
+8. **Are there dependency array issues?** (Stale closures? Missing deps? Over-specified deps?)
 
 **Files Requiring Deep Analysis**:
 - `backend/core/agentpress/response_processor.py` - Message yielding logic

@@ -113,7 +113,8 @@ Create a hybrid `feature/stable-rendering` branch that combines the stable basel
 **⚠️ CRITICAL DISCOVERY**: Message stream still failing with baseline + cherry-picked edits. This confirms:
 1. The f01c371f changes did NOT contain the streaming fix
 2. Root cause is in the baseline streaming architecture
-3. Phase 1+ implementations are necessary to achieve stable streaming
+3. **Origin unknown** - Could be backend issue (message spam), frontend issue (render loop), or both
+4. Phase 1+ implementations are necessary to achieve stable streaming
 
 **📋 ACTION REQUIRED FOR PHASE 1**: Before implementing frontend optimizations, we need a comprehensive file-by-file analysis of the entire streaming data flow:
 
@@ -127,8 +128,11 @@ Create a hybrid `feature/stable-rendering` branch that combines the stable basel
   - Streaming: Redis pub/sub configuration, SSE implementation, message batching logic
 
 This analysis will identify:
-- Where render loops originate
-- How message batching should work
+- **Is this a backend or frontend issue?** (Or both?)
+- **Backend**: Is response_processor yielding too many messages? Redis flooding?
+- **Frontend**: Are components re-rendering excessively? Stale closures?
+- Where render loops originate (if frontend issue)
+- How message batching should work (backend, frontend, or both)
 - Which components need memoization
 - What backend throttling is required
 
