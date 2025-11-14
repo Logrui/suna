@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, Database, Plus } from 'lucide-react';
+import { BookOpen, Database, Plus, Zap } from 'lucide-react';
 import { FancyTabs, TabConfig } from '@/components/ui/fancy-tabs';
 
 interface KBTabsNavigationProps {
@@ -17,6 +17,11 @@ const kbTabs: TabConfig[] = [
     label: 'Knowledge Base',
   },
   {
+    value: 'prompts',
+    icon: Zap,
+    label: 'Prompts',
+  },
+  {
     value: 'databases',
     icon: Database,
     label: 'Databases',
@@ -28,7 +33,7 @@ export const KBTabsNavigation = ({ activeTab, onTabChange, onAddDatabase }: KBTa
     if (onAddDatabase) {
       return [
         ...kbTabs,
-        { value: 'add-database', icon: Plus, label: 'Add New Database' }
+        { value: 'add-database', icon: Plus, label: 'Add New' }
       ];
     }
     return kbTabs;

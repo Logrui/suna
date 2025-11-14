@@ -6,6 +6,7 @@ import { KnowledgeBasePageHeader } from './knowledge-base-header';
 import { KnowledgeBaseManager } from './knowledge-base-manager';
 import { KBTabsNavigation } from './kb-tabs-navigation';
 import { DatabasesTab } from './databases-tab';
+import { PromptsTab } from './prompts-tab';
 
 export function KnowledgeBasePage() {
     const router = useRouter();
@@ -62,6 +63,10 @@ export function KnowledgeBasePage() {
                             initialFolderId={folderIdFromUrl || undefined}
                             initialFileId={fileIdFromUrl || undefined}
                         />
+                    )}
+
+                    {activeTab === "prompts" && (
+                        <PromptsTab />
                     )}
 
                     {activeTab === "databases" && (

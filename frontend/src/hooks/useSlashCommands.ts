@@ -1,12 +1,11 @@
 // frontend/src/hooks/useSlashCommands.ts
 
 import { useQuery } from '@tanstack/react-query';
-import { SlashCommand } from '@/lib/slashCommands';
+import { SlashCommand, SLASH_COMMANDS_FOLDER_NAME } from '@/components/slash-commands/types';
 import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
 
 const API_URL = getApiUrl();
-const PROMPTS_FOLDER_NAME = 'Suna';
 
 const EXAMPLE_COMMANDS = [
   {
@@ -65,24 +64,24 @@ async function initializeSlashCommands() {
     const folders = await foldersRes.json();
     // console.log('[SlashCommands] Fetched folders:', folders.map((f: any) => f.name));
     
-    // Check if Suna folder exists
-    let promptsFolder = folders.find((f: any) => f.name === PROMPTS_FOLDER_NAME);
+    // Check if prompts folder exists
+    let promptsFolder = folders.find((f: any) => f.name === SLASH_COMMANDS_FOLDER_NAME);
     
-    // Create Suna folder if it doesn't exist
+    // Create prompts folder if it doesn't exist
     if (!promptsFolder) {
-      // console.log('[SlashCommands] Creating Suna folder...');
+      // console.log('[SlashCommands] Creating prompts folder...');
       const createPromptsFolderRes = await fetch(`${API_URL}/knowledge-base/folders`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          name: PROMPTS_FOLDER_NAME,
+          name: SLASH_COMMANDS_FOLDER_NAME,
           description: 'Custom slash command prompts for quick access in chat',
         }),
       });
       
       if (!createPromptsFolderRes.ok) {
         const errorText = await createPromptsFolderRes.text();
-        console.error('[SlashCommands] Failed to create Suna folder:', createPromptsFolderRes.status, errorText);
+        console.error('[SlashCommands] Failed to create prompts folder:', createPromptsFolderRes.status, errorText);
         return null;
       }
       
@@ -247,17 +246,39 @@ export function useSlashCommands() {
         );
         
         // Convert entries to SlashCommand format
-        const commands: SlashCommand[] = entriesWithContent.map((entry: any) => ({
-          name: entry.filename.replace(/\.(txt|md)$/i, ''), // Remove file extension
-          description: entry.summary || '',
-          prompt: entry.content || '',
-        }));
+        // Handles both standard (.md/.txt) and GitHub-format (.prompt.md) commands
+        const commands: SlashCommand[] = entriesWithContent.map((entry: any) => {
+          const filename = entry.filename;
+          const isGitHubFormat = /\.prompt\.md$/i.test(filename);
+          
+          let commandName: string;
+          let description: string;
+          
+          if (isGitHubFormat) {
+            // Extract command name from "[command-name].prompt.md" format
+            commandName = filename.replace(/\.prompt\.md$/i, '');
+            // If no summary, generate one from instruction file reference
+            description = entry.summary || `Follow instructions in ${filename}`;
+          } else {
+            // Standard format: remove .txt or .md extension
+            commandName = filename.replace(/\.(txt|md)$/i, '');
+            description = entry.summary || '';
+          }
+          
+          return {
+            name: commandName,
+            description: description,
+            prompt: entry.content || '',
+            isGitHubFormat: isGitHubFormat,
+            instructionFile: isGitHubFormat ? filename : undefined,
+          };
+        });
         
-        // console.log('[SlashCommands] useSlashCommands: Converted to commands:', commands.map(c => ({
-        //   name: c.name,
-        //   descriptionLength: c.description.length,
-        //   promptLength: c.prompt.length,
-        // })));
+        console.log('[SlashCommands] useSlashCommands: Converted to commands:', commands.map(c => ({
+          name: c.name,
+          descriptionLength: c.description.length,
+          promptLength: c.prompt.length,
+        })));
         
         return commands;
       } catch (err) {

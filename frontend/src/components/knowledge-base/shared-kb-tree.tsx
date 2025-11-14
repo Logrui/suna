@@ -58,6 +58,9 @@ interface SharedTreeItemProps {
     onEditChange?: (name: string) => void;
     onEditKeyPress?: (e: React.KeyboardEvent) => void;
     onEditSummary?: (id: string, name: string, summary: string) => void;
+    onMoveFile?: (fileId: string, fileName: string) => void;
+    onDownloadFile?: (fileId: string, fileName: string) => void;
+    onDownloadFolder?: (folderId: string, folderName: string) => void;
     editInputRef?: React.RefObject<HTMLInputElement>;
     onNativeFileDrop?: (files: FileList, folderId: string) => void;
 
@@ -105,6 +108,9 @@ export function SharedTreeItem({
     onEditChange,
     onEditKeyPress,
     onEditSummary,
+    onMoveFile,
+    onDownloadFile,
+    onDownloadFolder,
     editInputRef,
     onNativeFileDrop,
     editingFolder,
@@ -329,6 +335,15 @@ export function SharedTreeItem({
                                             <DropdownMenuItem
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    onDownloadFolder?.(item.id, item.name);
+                                                }}
+                                            >
+                                                <FileIcon className="h-3 w-3 mr-2" />
+                                                Download All
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     onDelete?.(item.id, item.type);
                                                 }}
                                                 className="text-destructive"
@@ -369,13 +384,20 @@ export function SharedTreeItem({
                                         onEditChange={onEditChange}
                                         onEditKeyPress={onEditKeyPress}
                                         onEditSummary={onEditSummary}
+                                        onMoveFile={onMoveFile}
+                                        onDownloadFile={onDownloadFile}
+                                        onDownloadFolder={onDownloadFolder}
+                                        onNativeFileDrop={onNativeFileDrop}
                                         editInputRef={editInputRef}
                                         editingFolder={editingFolder}
                                         editingName={editingName}
+                                        validationError={validationError}
+                                        uploadStatus={uploadStatus}
                                         assignments={assignments}
                                         onToggleAssignment={onToggleAssignment}
                                         assignmentIndeterminate={assignmentIndeterminate}
                                         movingFiles={movingFiles}
+                                        isLoadingEntries={isLoadingEntries}
                                     />
                                 ))
                             ) : (
@@ -474,6 +496,29 @@ export function SharedTreeItem({
                                             >
                                                 <FileTextIcon className="h-3 w-3 mr-2" />
                                                 Edit Summary
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onMoveFile?.(item.id, item.name);
+                                                }}
+                                            >
+                                                <FolderIcon className="h-3 w-3 mr-2" />
+                                                Move to Folder
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    console.log('[KB Tree] Download button clicked:', { 
+                                                        fileId: item.id, 
+                                                        fileName: item.name,
+                                                        hasHandler: !!onDownloadFile 
+                                                    });
+                                                    onDownloadFile?.(item.id, item.name);
+                                                }}
+                                            >
+                                                <FileIcon className="h-3 w-3 mr-2" />
+                                                Download
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 onClick={(e) => {
