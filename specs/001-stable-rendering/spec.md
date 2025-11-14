@@ -1,9 +1,7 @@
 # Feature Specification: Stable Rendering & Streaming
 
-**Feature Branch**: `001-stable-rendering`  
-**Created**: 2025-11-13  
-**Status**: Draft  
-**Input**: User description: "Create the hybrid `feature/stable-rendering` branch by merging the stable baseline from `dev` with the working features from `feature/malformed-tool-call-handler`, but only after reestablishing reliable streaming and eliminating render-loop errors (especially React's maximum depth issue)."
+**Feature**: 001-stable-rendering | **Date**: 2025-11-13  
+**Branch**: `001-stable-rendering` | **Status**: Ready for Implementation: "Create the hybrid `feature/stable-rendering` branch by merging the stable baseline from `dev` with the working features from `feature/malformed-tool-call-handler`, but only after reestablishing reliable streaming and eliminating render-loop errors (especially React's maximum depth issue)."
 
 **Implementation Approach**: 
 1. **Phase 0** (Baseline): Diff and cherry-pick safe improvements from `feature/malformed-tool-call-handler` (see plan.md)

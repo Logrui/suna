@@ -1,7 +1,7 @@
 # Implementation Tasks: Stable Rendering & Streaming
 
 **Feature**: 001-stable-rendering | **Date**: 2025-11-13  
-**Branch**: `feature/stable-rendering` | **Status**: Ready for Implementation
+**Branch**: `001-stable-rendering` | **Status**: Ready for Implementation
 
 **Overview**: Execute 7 phases of implementation to establish reliable streaming and eliminate React render loop errors. Start with Phase 0 baseline analysis, then proceed through frontend optimization, backend buffering, error boundaries, debug endpoints, network resilience, and validation.
 
