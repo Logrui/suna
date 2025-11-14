@@ -1,6 +1,6 @@
 # Implementation Plan: Stable Rendering & Streaming
 
-**Branch**: `001-stable-rendering` | **Date**: 2025-11-13 | **Spec**: [spec.md](./spec.md)
+**Branch**: `001-stable-rendering` | **Baseline Commit**: `22a36feb` (2025-11-13 00:44:22) from `feature/workflows-restoration` | **Date**: 2025-11-13 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/001-stable-rendering/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
