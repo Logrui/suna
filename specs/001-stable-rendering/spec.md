@@ -4,8 +4,9 @@
 **Branch**: `001-stable-rendering` | **Baseline Commit**: `22a36feb` (2025-11-13 00:44:22) from `feature/workflows-restoration` | **Status**: Ready for Implementation: "Cherry-pick carefully from `feature/workflows-restoration` baseline to establish stable rendering and eliminate render-loop errors (especially React's maximum depth issue)."
 
 **Implementation Approach**: 
-1. **Phase 0** (Baseline): Diff and cherry-pick safe improvements from `feature/malformed-tool-call-handler` (see plan.md)
-2. **Phases 1-6** (Improvements): Implement render optimization, backend buffering, error boundaries, debug endpoints, network resilience, and testing
+1. **Phase 0** (Baseline): Diff and cherry-pick safe improvements from `feature/malformed-tool-call-handler` (see plan.md) ✅ COMPLETE
+2. **Phase 0.5** (Investigation): Root cause analysis of 7 identified problem areas through iterative testing 🔍 IN PROGRESS
+3. **Phases 1-6** (Improvements): Implement targeted fixes based on Phase 0.5 findings, then proceed with optimization, error boundaries, debug endpoints, network resilience, and testing
 
 ## Clarifications
 
@@ -20,6 +21,97 @@
 - Q: What are the critical failure scenarios that could break the streaming system and need explicit handling? → A: All failure modes with graceful degradation - network disconnection/reconnection, malformed streaming responses, concurrent streams/rapid inputs, plus safely handling extremely long and complex tool calls in Suna's XML/JSON hybrid format.
 - Q: What specific testing strategy should be used to validate the stable rendering across different conversation scenarios? → A: Manual testing with a checklist of conversation types and tool call scenarios - automation is difficult for this complex UI behavior, requires human browser testing.
 
+### Session 2025-11-14 - Phase 0.5 Investigation
+
+**Context**: After Phase 0 completion, streaming still fails. Deep-dive code analysis identified 7 critical problem areas requiring investigation before proceeding with optimization phases.
+
+- Q: What is the root cause of streaming failures? → A: Under investigation - could be backend (tool exception swallowing, error propagation), frontend (dependency arrays, startTransition delays), or both (race conditions, Redis message loss). Phase 0.5 uses iterative testing to identify root cause.
+- Q: Should we proceed with Phase 1 frontend optimization before knowing the root cause? → A: No - Phase 1 is blocked until Phase 0.5 completes. Can't optimize rendering if root cause is backend. Risk of wasted effort on wrong layer.
+- Q: How do we handle the investigation phase in our workflow? → A: Phase 0.5 is NOT a linear task list - it's discovery and investigation requiring human-in-the-loop decision making. Each problem area goes through: logging → testing → analysis → solution options → human decision → implementation → verification.
+
+## Expected User Experience
+
+### Current State (Before Phase 0.5 Fixes)
+
+**Symptom**: User sends a message, sees initial streaming response, then stream abruptly ends after tool call starts. No error message displayed.
+
+**User Perception**:
+- "The AI stopped responding mid-conversation"
+- "Tool calls seem to break the chat"
+- "I don't know if it's still processing or if it failed"
+- Confusion and frustration - no feedback on what went wrong
+
+**Impact**: Complete loss of trust in system reliability. Users cannot complete tasks requiring tool usage.
+
+### Target State (After Phase 0.5 Fixes)
+
+**Expected Behavior**:
+1. **Tool Execution Errors**: If a tool fails, user sees inline error message: "Tool execution failed: [error details]" with option to retry or continue conversation
+2. **Backend Errors**: If backend crashes, user sees toast notification: "Connection lost. Retrying..." with automatic recovery attempts
+3. **Stream Completion**: All messages delivered before completion signal, no lost content
+4. **Final Content Rendering**: Last chunks of streaming text always render, never lost due to timing issues
+5. **Graceful Degradation**: During network issues, UI shows pulsing animation with "Connecting..." status, maintains state through retries
+
+**User Perception**:
+- "The system tells me what's happening"
+- "Errors are clear and actionable"
+- "I can retry when things fail"
+- Confidence that system is working as intended
+
+## Expected Developer Experience
+
+### Current State (Before Phase 0.5 Fixes)
+
+**Symptom**: Developer sees "stream failed" but no clear error in logs. Langfuse has minimal details. Hard to debug.
+
+**Developer Challenges**:
+- Silent exceptions in tool execution - no error yielded to stream
+- Backend errors not reliably reaching frontend
+- Race conditions between completion signal and message delivery
+- Callback dependencies causing mid-stream handler loss
+- Redis pub/sub messages potentially lost or reordered
+- Frontend buffer overflow with no backpressure
+- React.startTransition delaying critical final updates
+
+**Debugging Experience**:
+- "Where did the exception occur?"
+- "Did the error reach Redis? Did it reach the frontend?"
+- "Are messages being lost or just delayed?"
+- Hours spent adding logging to trace message flow
+
+### Target State (After Phase 0.5 Fixes)
+
+**Expected Capabilities**:
+1. **Comprehensive Logging**: Tool execution wrapped in try/except, all exceptions logged and yielded to stream
+2. **Error Propagation**: Backend errors reliably pushed to Redis with retry logic, frontend receives and displays all errors
+3. **Message Ordering**: Sequence numbers logged, gaps detected, completion waits for message flush
+4. **Stable Callbacks**: Critical callbacks use refs to prevent mid-stream recreation
+5. **Redis Reliability**: Operations awaited or properly batched with ordering guarantees
+6. **Buffer Monitoring**: Frontend buffer warns at capacity, implements backpressure or migrates to backend-only
+7. **Render Completion**: Explicit flush before stream finalization, no startTransition delays
+
+**Debugging Experience**:
+- Clear error messages with stack traces in logs
+- Sequence numbers show exactly which messages were delivered
+- Timing logs reveal race conditions
+- Buffer warnings indicate overflow before data loss
+- "I can see exactly where and why it failed"
+
+### Investigation Workflow (Phase 0.5)
+
+**Developer Process**:
+1. **Select Problem Area**: Choose from 7 identified issues based on priority
+2. **Add Instrumentation**: Add logging, timing, sequence tracking
+3. **Run Tests**: Manual tests with intentionally failing tools, slow networks, rapid inputs
+4. **Analyze Results**: Review logs, identify patterns, confirm or rule out hypothesis
+5. **Generate Options**: Create 3-5 solution approaches with tradeoffs
+6. **Human Decision**: Choose approach based on complexity, performance, maintainability
+7. **Implement Fix**: Make targeted changes, avoid over-engineering
+8. **Verify Fix**: Test with same scenarios, confirm issue resolved
+9. **Document**: Update problem areas doc with findings and chosen solution
+
+**Key Principle**: Iterative discovery, not linear execution. Multiple investigations can run in parallel. Human decisions required at key points.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Uninterrupted streaming (Priority: P1)
@@ -33,6 +125,22 @@ A user sends prompts and expects the assistant responses to stream continuously 
 **Acceptance Scenarios**:
 1. **Given** the assistant is connected, **When** the user submits a prompt, **Then** tokens render incrementally without interruptions or flicker, and the response list settles once the stream ends.
 2. **Given** the backend throttles or a malformed tool call occurs, **When** streaming fails, **Then** the UI shows a retry or error indicator but does not crash or enter an infinite loop.
+
+---
+
+### User Story 1.5 - Error visibility and recovery (Priority: P1) [Phase 0.5]
+
+A user encounters a tool execution failure or backend error and expects clear feedback with recovery options, not silent failure.
+
+**Why this priority**: Phase 0 revealed that streaming failures are silent - users see no error message, just abrupt termination. This breaks trust and prevents task completion.
+
+**Independent Test**: Trigger a tool execution error (e.g., invalid parameters) and verify: (1) User sees inline error message with details, (2) Conversation continues without crash, (3) User can retry or proceed with next message.
+
+**Acceptance Scenarios**:
+1. **Given** a tool execution fails during streaming, **When** the error occurs, **Then** the user sees an inline error message with actionable details (not just "something went wrong") and the stream continues gracefully.
+2. **Given** the backend worker crashes mid-stream, **When** the error is detected, **Then** the frontend shows a toast notification "Connection lost. Retrying..." and attempts automatic recovery up to 10 times before showing manual retry option.
+3. **Given** messages are being delivered during stream completion, **When** the completion signal arrives, **Then** all pending messages are flushed and rendered before the stream closes (no lost content).
+4. **Given** the final chunks of text are being rendered, **When** the stream completes, **Then** all text appears in the UI (React.startTransition does not delay or drop final updates).
 
 ---
 
@@ -109,14 +217,29 @@ An SRE or engineer needs enough logging and metrics to understand streaming fail
 
 ### Measurable Outcomes
 
-- **SC-001**: Reduce streaming interruptions to zero in manual regression tests for two consecutive sessions.
-- **SC-002**: Ensure React logs report zero "Maximum update depth exceeded" warnings across three different simulated threads.
-- **SC-003**: Verify the hybrid branch retains at least 90% of the non-experimental features from `feature/malformed-tool-call-handler` that were marked safe.
-- **SC-004**: Confirm log/console volume stays within 3x the baseline set in `dev` while still recording streaming failures.
-- **SC-005**: Document streaming lifecycle in less than 5 minutes by reviewing the new metrics/logs.
-- **SC-006**: Achieve <100ms token display latency and <10 renders per message cycle in performance testing.
-- **SC-007**: Successfully handle complex XML/JSON hybrid tool calls without UI freezing or excessive render loops.
-- **SC-008**: Complete manual testing checklist covering conversation types, tool scenarios, and network interruption recovery.
+#### Phase 0.5 Investigation Success Criteria
+
+- **SC-001a**: Identify root cause of streaming failures through investigation of 7 problem areas within 1-2 weeks.
+- **SC-001b**: Implement and verify fixes for at least 2 critical issues (tool exception swallowing, error propagation) before proceeding to Phase 1.
+- **SC-001c**: Add comprehensive logging to enable <5 minute debugging of future streaming failures (sequence numbers, timing, error traces).
+- **SC-001d**: Document all investigation findings, solution options, and human decisions in `Pre-Phase-1-Problem-Areas.md`.
+- **SC-001e**: Generate 3-5 solution options for each high-priority problem area with clear tradeoffs documented.
+- **SC-001f**: Verify that tool execution errors are caught, logged, and yielded to frontend with actionable error messages.
+- **SC-001g**: Confirm backend errors reliably reach frontend with toast notifications and automatic retry attempts.
+- **SC-001h**: Validate that stream completion waits for all pending messages to flush (no lost content).
+- **SC-001i**: Ensure final text chunks always render before stream closes (no React.startTransition delays).
+
+#### Overall Feature Success Criteria
+
+- **SC-002**: Reduce streaming interruptions to zero in manual regression tests for two consecutive sessions.
+- **SC-003**: Ensure React logs report zero "Maximum update depth exceeded" warnings across three different simulated threads.
+- **SC-004**: Verify the hybrid branch retains at least 90% of the non-experimental features from `feature/malformed-tool-call-handler` that were marked safe.
+- **SC-005**: Confirm log/console volume stays within 3x the baseline set in `dev` while still recording streaming failures.
+- **SC-006**: Document streaming lifecycle in less than 5 minutes by reviewing the new metrics/logs.
+- **SC-007**: Achieve <100ms token display latency and <10 renders per message cycle in performance testing.
+- **SC-008**: Successfully handle complex XML/JSON hybrid tool calls without UI freezing or excessive render loops.
+- **SC-009**: Complete manual testing checklist covering conversation types, tool scenarios, and network interruption recovery.
+- **SC-010**: Zero silent failures - all errors visible to users with clear recovery options.
 
 ### Testing Strategy
 
