@@ -1,10 +1,61 @@
 # Research: Stable Rendering & Streaming
 
-**Feature**: 001-stable-rendering | **Date**: 2025-11-13
+**Feature**: 001-stable-rendering | **Date**: 2025-11-13 | **Updated**: 2025-11-14
 
 ## Overview
 
 This research document addresses the technical decisions and implementation approaches for creating a stable streaming system in Suna that eliminates React render loops while maintaining real-time responsiveness.
+
+## Phase 0 Findings (2025-11-14)
+
+**⚠️ CRITICAL DISCOVERY**: After implementing Phase 0 cherry-picked optimizations (memoization, deep equality checks, error handling), the message stream is still failing. This confirms:
+
+1. **Root cause is NOT in f01c371f changes** - The commit only had malformed error handling, no backend batching
+2. **Baseline architecture has streaming issues** - The problem exists in the current `22a36feb` baseline
+3. **Comprehensive analysis required** - Need full file-by-file streaming flow analysis before Phase 1
+
+**Required Analysis Before Phase 1**:
+
+### Streaming Data Flow Analysis
+
+**Backend Streaming Path**:
+```
+agent_runs.py (SSE endpoint) 
+  ↓
+response_processor.py (LLM response handling)
+  ↓
+Redis pub/sub (message queue)
+  ↓
+SSE stream to frontend
+```
+
+**Frontend Streaming Path**:
+```
+SSE connection (EventSource)
+  ↓
+useAgentStream.ts (message parsing, state updates)
+  ↓
+ThreadComponent.tsx (message array management)
+  ↓
+ThreadContent.tsx (message grouping, rendering)
+  ↓
+ShowToolStream.tsx (individual tool display)
+```
+
+**Key Questions to Answer**:
+1. Where do render loops originate? (useAgentStream deps? ThreadContent re-renders?)
+2. How should message batching work? (Backend throttling? Frontend debouncing?)
+3. Which components need React.memo? (ShowToolStream? ThreadContent?)
+4. What backend throttling is required? (50ms batching? 100ms?)
+5. Are there stale closures in useAgentStream? (Dependency array issues?)
+6. Is Redis pub/sub causing message spam? (Too many events?)
+
+**Files Requiring Deep Analysis**:
+- `backend/core/agentpress/response_processor.py` - Message yielding logic
+- `backend/api/routes/agent_runs.py` - SSE endpoint implementation
+- `frontend/src/hooks/useAgentStream.ts` - State management and updates
+- `frontend/src/components/thread/ThreadComponent.tsx` - Message array handling
+- `frontend/src/components/thread/content/ThreadContent.tsx` - Rendering logic
 
 ## Research Areas
 

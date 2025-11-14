@@ -110,6 +110,28 @@ Create a hybrid `feature/stable-rendering` branch that combines the stable basel
 
 **Build Status**: ✅ All containers running successfully (backend, worker, frontend, redis)
 
+**⚠️ CRITICAL DISCOVERY**: Message stream still failing with baseline + cherry-picked edits. This confirms:
+1. The f01c371f changes did NOT contain the streaming fix
+2. Root cause is in the baseline streaming architecture
+3. Phase 1+ implementations are necessary to achieve stable streaming
+
+**📋 ACTION REQUIRED FOR PHASE 1**: Before implementing frontend optimizations, we need a comprehensive file-by-file analysis of the entire streaming data flow:
+
+**Streaming Architecture Analysis Needed**:
+- **Backend Flow**: `agent_runs.py` → `response_processor.py` → Redis pub/sub → SSE endpoint
+- **Frontend Flow**: SSE connection → `useAgentStream.ts` → `ThreadComponent.tsx` → `ThreadContent.tsx` → `ShowToolStream.tsx`
+- **State Management**: Message state updates, React re-render triggers, dependency arrays
+- **Critical Files to Analyze**:
+  - Backend: `backend/core/agentpress/response_processor.py`, `backend/api/routes/agent_runs.py`
+  - Frontend: `frontend/src/hooks/useAgentStream.ts`, `frontend/src/components/thread/ThreadComponent.tsx`, `frontend/src/components/thread/content/ThreadContent.tsx`
+  - Streaming: Redis pub/sub configuration, SSE implementation, message batching logic
+
+This analysis will identify:
+- Where render loops originate
+- How message batching should work
+- Which components need memoization
+- What backend throttling is required
+
 ### Step 0.1: Generate Comprehensive Diff
 
 Compare `feature/malformed-tool-call-handler` against `dev` (current `001-stable-rendering` baseline):
