@@ -136,7 +136,239 @@ This analysis will identify:
 - Which components need memoization
 - What backend throttling is required
 
-### Step 0.1: Generate Comprehensive Diff
+---
+
+## Phase 0.5: Problem Areas Investigation & Root Cause Analysis 🔍 IN PROGRESS
+
+**STATUS**: 🔍 **IN PROGRESS** (2025-11-14)  
+**COMMITS**:
+- `a5c4d324` - Deep-dive analysis: Identify 7 critical problem areas
+- `500854aa` - Add user notes and priorities to problem areas
+
+**CRITICAL PHASE**: After Phase 0 completion, streaming still fails. This phase investigates root causes through iterative testing and human-in-the-loop decision making.
+
+### Phase 0.5 Overview
+
+**Analysis Document**: `Pre-Phase-1-Problem-Areas.md`
+
+This is **NOT a linear task list** - this is a **discovery and investigation phase** requiring:
+- Iterative testing and debugging
+- Human-in-the-loop decision making
+- Multiple investigation cycles
+- Feedback-driven prioritization
+
+**Key Findings**: Identified 7 critical problem areas that could cause streaming failures:
+
+### Investigation Areas
+
+#### 🔴 CRITICAL #1: Silent Exception Swallowing in Tool Execution
+**Priority**: HIGHEST  
+**Location**: `response_processor.py:471-476`  
+**Status**: 🔍 Needs Investigation
+
+**Problem**: Tool execution exceptions not caught/yielded to stream  
+**Investigation Plan**:
+1. Add comprehensive logging around tool execution
+2. Test with intentionally failing tools
+3. Verify error messages reach frontend
+4. Integrate with malformed tool call handler
+
+**Human Decision Points**:
+- Should we create new backend error handler or extend existing?
+- How should frontend display tool execution errors?
+- What error recovery strategies should we implement?
+
+---
+
+#### 🔴 CRITICAL #2: Missing Error Propagation in Background Worker
+**Priority**: HIGH  
+**Location**: `run_agent_background.py:220-244`  
+**Status**: 🔍 Needs Investigation
+
+**Problem**: Exceptions caught but not reliably pushed to Redis/frontend  
+**Investigation Plan**:
+1. Check worker logs for exceptions
+2. Verify Redis error message delivery
+3. Test frontend toast notification system
+4. Ensure error boundary integration
+
+**Human Decision Points**:
+- Is existing error notification system sufficient?
+- Do we need retry logic for Redis error pushes?
+- What level of error detail should frontend receive?
+
+---
+
+#### 🟡 HIGH #3: Race Condition in Stream Finalization
+**Priority**: MEDIUM-HIGH  
+**Location**: Frontend + Backend stream completion  
+**Status**: 🔍 Needs Solution Options
+
+**Problem**: Completion signal sent before all messages flushed  
+**Investigation Plan**:
+1. Add logging to track message ordering
+2. Monitor Redis list vs SSE delivery timing
+3. Test with slow network conditions
+4. Generate solution options
+
+**Human Decision Points**:
+- Should backend wait for acknowledgment before completion?
+- Should frontend buffer messages before displaying?
+- What timeout is acceptable for message flush?
+
+---
+
+#### 🟡 HIGH #4: Frontend Dependency Array Issues
+**Priority**: MEDIUM (DEFERRED)  
+**Location**: `useAgentStream.ts:514-516`  
+**Status**: ⏸️ SKIP FOR NOW - Too Complex
+
+**Problem**: Callbacks recreate mid-stream causing handler loss  
+**Investigation Plan** (Future):
+1. Profile callback recreation frequency
+2. Research alternative patterns (no major refactor)
+3. Test minimal fixes (e.g., useRef for specific callbacks)
+
+**Human Decision Points**:
+- Can we fix with targeted useRef changes?
+- Is the impact significant enough to warrant work?
+- Should this be Phase 2 or later?
+
+---
+
+#### 🟠 MEDIUM #5: Redis Pub/Sub Message Loss
+**Priority**: MEDIUM  
+**Location**: `run_agent_background.py:229-230`  
+**Status**: 🔍 Needs Architecture Review
+
+**Problem**: Fire-and-forget Redis operations, no ordering guarantees  
+**Investigation Plan**:
+1. Review batching compatibility with Redis
+2. Add timing logs for Redis operations
+3. Test message ordering under load
+4. Evaluate await vs fire-and-forget tradeoffs
+
+**Human Decision Points**:
+- Should we await Redis operations (performance impact)?
+- Do we need Redis transactions for atomicity?
+- Is batching compatible with current architecture?
+
+---
+
+#### 🟠 MEDIUM #6: Throttling Buffer Overflow
+**Priority**: MEDIUM  
+**Location**: `useAgentStream.ts:121-128`  
+**Status**: 🔍 Needs Decision: Improve or Remove
+
+**Problem**: Frontend buffer with no backpressure  
+**Investigation Plan**:
+1. Profile buffer usage under production load
+2. Test with high-speed streaming
+3. Evaluate backend-only solution
+4. Compare frontend vs backend throttling
+
+**Human Decision Points**:
+- Keep frontend throttle and improve it?
+- Remove and migrate to backend-only solution?
+- What buffer size is appropriate?
+- Do we need backpressure mechanism?
+
+---
+
+#### 🟡 MEDIUM #7: React.startTransition Delaying Updates
+**Priority**: HIGH (User Experience)  
+**Location**: `useAgentStream.ts:107-108`  
+**Status**: 🔍 Needs Investigation
+
+**Problem**: Final content might not render before stream closes  
+**Investigation Plan**:
+1. Test stream completion timing
+2. Verify flush before finalization
+3. Profile transition delays
+4. Test removal impact
+
+**Human Decision Points**:
+- Remove startTransition entirely?
+- Add explicit flush before completion?
+- Is there a better React 18 pattern?
+
+---
+
+#### 🔵 LOW: Keepalive Timeout Too Long
+**Priority**: LOW (Easy Win)  
+**Location**: `agent_runs.py:1018-1020`  
+**Status**: ✅ Ready to Fix
+
+**Problem**: 30-second keepalive delays error detection  
+**Fix**: Reduce to 10-15 seconds  
+**No Investigation Needed**: Straightforward change
+
+---
+
+### Investigation Workflow
+
+**This phase uses an iterative cycle**:
+
+```
+1. SELECT problem area to investigate
+   ↓
+2. ADD logging/instrumentation
+   ↓
+3. RUN tests (manual + automated)
+   ↓
+4. ANALYZE results
+   ↓
+5. GENERATE solution options
+   ↓
+6. HUMAN DECISION on approach
+   ↓
+7. IMPLEMENT fix (if ready)
+   ↓
+8. VERIFY fix works
+   ↓
+9. DOCUMENT findings
+   ↓
+10. REPEAT for next problem area
+```
+
+### Investigation Priorities
+
+**Week 1 Focus**:
+1. Critical #1 (Tool Exceptions) - Add logging, test with failing tools
+2. Critical #2 (Error Propagation) - Verify error delivery path
+3. Low (Keepalive) - Quick win, easy fix
+
+**Week 2 Focus**:
+4. High #3 (Race Condition) - Generate solution options
+5. Medium #7 (startTransition) - Test removal impact
+6. Medium #5 (Redis) - Architecture review
+
+**Deferred**:
+- High #4 (Dependency Arrays) - Too complex, needs major research
+- Medium #6 (Buffer Overflow) - Pending decision on approach
+
+### Success Criteria for Phase 0.5
+
+- ✅ Root cause of streaming failure identified
+- ✅ Solution options generated for each problem area
+- ✅ Human decisions made on approach for top 3 issues
+- ✅ At least 2 fixes implemented and verified
+- ✅ Comprehensive logging added for ongoing monitoring
+- ✅ Ready to proceed with Phase 1 implementation
+
+### Transition to Phase 1
+
+**Phase 0.5 must complete before Phase 1** because:
+- Phase 1 assumes we know what needs fixing
+- Can't optimize rendering if root cause is backend
+- Risk of wasted effort on wrong layer
+- Need clear understanding of problem scope
+
+**Phase 1 will be updated** based on Phase 0.5 findings to target actual issues.
+
+---
+
+### Step 0.1: Generate Comprehensive Diff (COMPLETED)
 
 Compare `feature/malformed-tool-call-handler` against `dev` (current `001-stable-rendering` baseline):
 

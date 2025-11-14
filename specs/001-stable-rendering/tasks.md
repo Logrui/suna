@@ -32,7 +32,146 @@
 
 ---
 
-## Phase 1: Frontend Render Optimization
+## Phase 0.5: Problem Areas Investigation & Root Cause Analysis 🔍 IN PROGRESS
+
+**Goal**: Investigate 7 identified problem areas through iterative testing and human-in-the-loop decision making to determine root cause of streaming failures
+
+**Type**: Discovery & Investigation (NOT linear task execution)
+
+**Independent Test Criteria**:
+- Root cause of streaming failure identified
+- Solution options generated for top priority issues
+- At least 2 fixes implemented and verified
+- Comprehensive logging added for monitoring
+- Ready to proceed with Phase 1 with clear understanding of what needs fixing
+
+**Status**: 🔍 **IN PROGRESS** (2025-11-14)
+
+### Investigation Cycle Tasks (Iterative)
+
+**NOTE**: These tasks are NOT executed linearly. Each problem area goes through its own investigation cycle.
+
+#### Investigation Cycle Template
+For each problem area:
+1. Add logging/instrumentation
+2. Run tests (manual + automated)
+3. Analyze results
+4. Generate solution options
+5. Human decision on approach
+6. Implement fix (if ready)
+7. Verify fix works
+8. Document findings
+
+---
+
+### Week 1 Priority: Critical Issues + Quick Win
+
+#### 🔴 CRITICAL #1: Tool Exception Swallowing Investigation
+
+- [ ] T008a [P] Add comprehensive logging around tool execution in `response_processor.py:471-476`
+- [ ] T008b [P] Add try/except wrapper around `asyncio.create_task(self._execute_tool())` 
+- [ ] T008c [P] Implement error yielding mechanism for tool execution failures
+- [ ] T008d Create test tool that intentionally fails (e.g., division by zero, missing file)
+- [ ] T008e Run test with failing tool, capture worker logs
+- [ ] T008f Verify error messages reach Redis list
+- [ ] T008g Verify error messages reach frontend SSE stream
+- [ ] T008h **HUMAN DECISION**: Choose error handling approach (new handler vs extend existing)
+- [ ] T008i **HUMAN DECISION**: Choose frontend error display strategy
+- [ ] T008j Implement chosen solution
+- [ ] T008k Verify fix: Test with failing tool, confirm graceful error display
+- [ ] T008l Document findings in `Pre-Phase-1-Problem-Areas.md`
+
+#### 🔴 CRITICAL #2: Error Propagation Investigation
+
+- [ ] T008m Check worker logs for recent exceptions: `docker logs suna-worker-1 | grep -i error`
+- [ ] T008n Check Redis for error messages: `redis-cli LRANGE "agent_run:*:responses" 0 -1`
+- [ ] T008o Add logging to Redis error push operations in `run_agent_background.py:290-294`
+- [ ] T008p Test frontend toast notification system with mock error
+- [ ] T008q Verify error boundary catches and displays backend errors
+- [ ] T008r **HUMAN DECISION**: Is existing error notification system sufficient?
+- [ ] T008s **HUMAN DECISION**: Do we need retry logic for Redis error pushes?
+- [ ] T008t Implement chosen improvements
+- [ ] T008u Verify fix: Trigger backend error, confirm frontend notification
+- [ ] T008v Document findings in `Pre-Phase-1-Problem-Areas.md`
+
+#### 🔵 LOW: Keepalive Timeout (Quick Win)
+
+- [ ] T008w [P] Reduce keepalive timeout from 30s to 15s in `agent_runs.py:1018-1020`
+- [ ] T008x Test with slow tool execution, verify faster error detection
+- [ ] T008y Document change in commit message
+
+---
+
+### Week 2 Priority: Race Conditions + UX Issues
+
+#### 🟡 HIGH #3: Race Condition Investigation
+
+- [ ] T008z Add logging to track message sequence numbers in backend
+- [ ] T008aa Add logging to track message receipt order in frontend
+- [ ] T008ab Monitor Redis list vs SSE delivery timing with timestamps
+- [ ] T008ac Test with slow network conditions (throttle in DevTools)
+- [ ] T008ad Analyze logs to identify if messages are lost or reordered
+- [ ] T008ae Generate 3-5 solution options (e.g., ack-based, buffer-based, timeout-based)
+- [ ] T008af **HUMAN DECISION**: Choose solution approach
+- [ ] T008ag Implement chosen solution
+- [ ] T008ah Verify fix: Test with slow network, confirm all messages delivered
+- [ ] T008ai Document findings and chosen solution in `Pre-Phase-1-Problem-Areas.md`
+
+#### 🟡 MEDIUM #7: React.startTransition Investigation
+
+- [ ] T008aj Add logging before/after startTransition calls
+- [ ] T008ak Test stream completion timing, measure transition delays
+- [ ] T008al Verify flush is called before finalization
+- [ ] T008am Create test branch: Remove startTransition entirely
+- [ ] T008an Compare rendering behavior with/without startTransition
+- [ ] T008ao **HUMAN DECISION**: Remove, keep, or modify startTransition?
+- [ ] T008ap Implement chosen approach
+- [ ] T008aq Verify fix: Confirm final content always renders
+- [ ] T008ar Document findings in `Pre-Phase-1-Problem-Areas.md`
+
+#### 🟠 MEDIUM #5: Redis Architecture Review
+
+- [ ] T008as Review current Redis pub/sub implementation
+- [ ] T008at Add timing logs for rpush and publish operations
+- [ ] T008au Test message ordering under load (multiple rapid messages)
+- [ ] T008av Evaluate await vs fire-and-forget tradeoffs
+- [ ] T008aw **HUMAN DECISION**: Await Redis operations or keep fire-and-forget?
+- [ ] T008ax **HUMAN DECISION**: Is batching compatible with current architecture?
+- [ ] T008ay Document architecture review findings
+
+---
+
+### Deferred Investigations
+
+#### 🟡 HIGH #4: Dependency Arrays (DEFERRED - Too Complex)
+
+- [ ] T008az Profile callback recreation frequency (add console.log)
+- [ ] T008ba Research alternative patterns without major refactor
+- [ ] T008bb Test minimal fixes (e.g., useRef for specific callbacks)
+- [ ] T008bc **HUMAN DECISION**: Worth the effort? Phase 2 or later?
+
+#### 🟠 MEDIUM #6: Buffer Overflow (DEFERRED - Pending Decision)
+
+- [ ] T008bd Profile buffer usage under production load
+- [ ] T008be Test with high-speed streaming (100+ messages/sec)
+- [ ] T008bf Compare frontend vs backend throttling approaches
+- [ ] T008bg **HUMAN DECISION**: Improve frontend buffer or migrate to backend-only?
+
+---
+
+### Phase 0.5 Completion Checklist
+
+- [ ] T008bh Root cause identified for streaming failure
+- [ ] T008bi At least 2 critical issues fixed and verified
+- [ ] T008bj Comprehensive logging added for ongoing monitoring
+- [ ] T008bk All investigation findings documented
+- [ ] T008bl Human decisions made on approach for top 3 issues
+- [ ] T008bm Phase 1 plan updated based on findings
+- [ ] T008bn Ready to proceed with Phase 1 implementation
+
+---
+
+## Phase 1: Frontend Render Optimization (BLOCKED - Pending Phase 0.5)
 
 **Goal**: Reduce render frequency of critical components using React.memo and memoization (highest impact, no upstream divergence)
 
@@ -330,16 +469,20 @@ If issues arise:
 
 ## Task Summary
 
-**Total Tasks**: 104  
-**Phase 0 (Baseline)**: 8 tasks  
-**Phase 1 (Frontend Optimization)**: 11 tasks  
-**Phase 2 (Backend Buffering)**: 9 tasks  
+**Total Tasks**: 147 (43 new investigation tasks added)  
+**Phase 0 (Baseline)**: 8 tasks ✅ COMPLETE  
+**Phase 0.5 (Investigation)**: 43 tasks 🔍 IN PROGRESS (iterative, not linear)  
+**Phase 1 (Frontend Optimization)**: 11 tasks ⏸️ BLOCKED (pending Phase 0.5)  
+**Phase 2 (Backend Buffering)**: 9 tasks ⏸️ BLOCKED (pending Phase 0.5)  
 **Phase 3 (Error Boundaries)**: 9 tasks  
 **Phase 4 (Debug Endpoints)**: 11 tasks  
-**Phase 5 (Network Resilience)**: 19 tasks (6 new tasks for graceful degradation)  
-**Phase 6 (Testing & Validation)**: 17 tasks (added T093 for observability verification)  
-**Phase 7 (Polish & Cross-Cutting)**: 11 tasks (renumbered T094-T104)  
+**Phase 5 (Network Resilience)**: 19 tasks  
+**Phase 6 (Testing & Validation)**: 17 tasks  
+**Phase 7 (Polish & Cross-Cutting)**: 11 tasks  
 
-**Parallelizable Opportunities**: ~40% of tasks can run in parallel within phases  
-**Estimated Duration**: 4 weeks with incremental validation  
-**MVP Scope**: Phases 0-2 (28 tasks, 1-2 weeks)
+**Investigation Approach**: Phase 0.5 uses iterative cycles, not linear execution  
+**Parallelizable Opportunities**: Investigation tasks can be explored in parallel  
+**Estimated Duration**: 
+- Phase 0.5: 1-2 weeks (discovery phase)
+- Remaining phases: 3-4 weeks (adjusted based on findings)
+**Updated MVP Scope**: Phase 0 + Phase 0.5 + targeted fixes (not full Phase 1-2)
