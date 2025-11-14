@@ -32,191 +32,130 @@
 
 ---
 
-## Phase 0.5: Problem Areas Investigation & Root Cause Analysis 🔍 IN PROGRESS
+## Phase 0.5: Problem Areas Investigation & Upstream Research ✅ COMPLETE
 
-**Goal**: Investigate 7 identified problem areas through iterative testing and human-in-the-loop decision making to determine root cause of streaming failures
+**Goal**: Investigate 7 identified problem areas and discover production-tested solutions in upstream branches
 
-**Type**: Discovery & Investigation (NOT linear task execution)
-
-**Independent Test Criteria**:
-- Root cause of streaming failure identified
-- Solution options generated for top priority issues
-- At least 2 fixes implemented and verified
-- Comprehensive logging added for monitoring
-- Ready to proceed with Phase 1 with clear understanding of what needs fixing
-
-**Status**: 🔍 **IN PROGRESS** (2025-11-14)
-
-### Investigation Cycle Tasks (Iterative)
-
-**NOTE**: These tasks are NOT executed linearly. Each problem area goes through its own investigation cycle.
-
-#### Investigation Cycle Template
-For each problem area:
-1. Add logging/instrumentation
-2. Run tests (manual + automated)
-3. Analyze results
-4. Generate solution options
-5. Human decision on approach
-6. Implement fix (if ready)
-7. Verify fix works
-8. Document findings
-
----
-
-### Week 1 Priority: Critical Issues + Quick Win
-
-#### 🔴 CRITICAL #1: Tool Exception Swallowing Investigation
-
-- [ ] T008a [P] Add comprehensive logging around tool execution in `response_processor.py:471-476`
-- [ ] T008b [P] Add try/except wrapper around `asyncio.create_task(self._execute_tool())` 
-- [ ] T008c [P] Implement error yielding mechanism for tool execution failures
-- [ ] T008d Create test tool that intentionally fails (e.g., division by zero, missing file)
-- [ ] T008e Run test with failing tool, capture worker logs
-- [ ] T008f Verify error messages reach Redis list
-- [ ] T008g Verify error messages reach frontend SSE stream
-- [ ] T008h **HUMAN DECISION**: Choose error handling approach (new handler vs extend existing)
-- [ ] T008i **HUMAN DECISION**: Choose frontend error display strategy
-- [ ] T008j Implement chosen solution
-- [ ] T008k Verify fix: Test with failing tool, confirm graceful error display
-- [ ] T008l Document findings in `Pre-Phase-1-Problem-Areas.md`
-
-#### 🔴 CRITICAL #2: Error Propagation Investigation
-
-- [ ] T008m Check worker logs for recent exceptions: `docker logs suna-worker-1 | grep -i error`
-- [ ] T008n Check Redis for error messages: `redis-cli LRANGE "agent_run:*:responses" 0 -1`
-- [ ] T008o Add logging to Redis error push operations in `run_agent_background.py:290-294`
-- [ ] T008p Test frontend toast notification system with mock error
-- [ ] T008q Verify error boundary catches and displays backend errors
-- [ ] T008r **HUMAN DECISION**: Is existing error notification system sufficient?
-- [ ] T008s **HUMAN DECISION**: Do we need retry logic for Redis error pushes?
-- [ ] T008t Implement chosen improvements
-- [ ] T008u Verify fix: Trigger backend error, confirm frontend notification
-- [ ] T008v Document findings in `Pre-Phase-1-Problem-Areas.md`
-
-#### 🔵 LOW: Keepalive Timeout (Quick Win)
-
-- [ ] T008w [P] Reduce keepalive timeout from 30s to 15s in `agent_runs.py:1018-1020`
-- [ ] T008x Test with slow tool execution, verify faster error detection
-- [ ] T008y Document change in commit message
-
----
-
-### Week 2 Priority: Race Conditions + UX Issues
-
-#### 🟡 HIGH #3: Race Condition Investigation
-
-- [ ] T008z Add logging to track message sequence numbers in backend
-- [ ] T008aa Add logging to track message receipt order in frontend
-- [ ] T008ab Monitor Redis list vs SSE delivery timing with timestamps
-- [ ] T008ac Test with slow network conditions (throttle in DevTools)
-- [ ] T008ad Analyze logs to identify if messages are lost or reordered
-- [ ] T008ae Generate 3-5 solution options (e.g., ack-based, buffer-based, timeout-based)
-- [ ] T008af **HUMAN DECISION**: Choose solution approach
-- [ ] T008ag Implement chosen solution
-- [ ] T008ah Verify fix: Test with slow network, confirm all messages delivered
-- [ ] T008ai Document findings and chosen solution in `Pre-Phase-1-Problem-Areas.md`
-
-#### 🟡 MEDIUM #7: React.startTransition Investigation
-
-- [ ] T008aj Add logging before/after startTransition calls
-- [ ] T008ak Test stream completion timing, measure transition delays
-- [ ] T008al Verify flush is called before finalization
-- [ ] T008am Create test branch: Remove startTransition entirely
-- [ ] T008an Compare rendering behavior with/without startTransition
-- [ ] T008ao **HUMAN DECISION**: Remove, keep, or modify startTransition?
-- [ ] T008ap Implement chosen approach
-- [ ] T008aq Verify fix: Confirm final content always renders
-- [ ] T008ar Document findings in `Pre-Phase-1-Problem-Areas.md`
-
-#### 🟠 MEDIUM #5: Redis Architecture Review
-
-- [ ] T008as Review current Redis pub/sub implementation
-- [ ] T008at Add timing logs for rpush and publish operations
-- [ ] T008au Test message ordering under load (multiple rapid messages)
-- [ ] T008av Evaluate await vs fire-and-forget tradeoffs
-- [ ] T008aw **HUMAN DECISION**: Await Redis operations or keep fire-and-forget?
-- [ ] T008ax **HUMAN DECISION**: Is batching compatible with current architecture?
-- [ ] T008ay Document architecture review findings
-
----
-
-### Deferred Investigations
-
-#### 🟡 HIGH #4: Dependency Arrays (DEFERRED - Too Complex)
-
-- [ ] T008az Profile callback recreation frequency (add console.log)
-- [ ] T008ba Research alternative patterns without major refactor
-- [ ] T008bb Test minimal fixes (e.g., useRef for specific callbacks)
-- [ ] T008bc **HUMAN DECISION**: Worth the effort? Phase 2 or later?
-
-#### 🟠 MEDIUM #6: Buffer Overflow (DEFERRED - Pending Decision)
-
-- [ ] T008bd Profile buffer usage under production load
-- [ ] T008be Test with high-speed streaming (100+ messages/sec)
-- [ ] T008bf Compare frontend vs backend throttling approaches
-- [ ] T008bg **HUMAN DECISION**: Improve frontend buffer or migrate to backend-only?
-
----
-
-### Phase 0.5 Completion Checklist
-
-- [ ] T008bh Root cause identified for streaming failure
-- [ ] T008bi At least 2 critical issues fixed and verified
-- [ ] T008bj Comprehensive logging added for ongoing monitoring
-- [ ] T008bk All investigation findings documented
-- [ ] T008bl Human decisions made on approach for top 3 issues
-- [ ] T008bm Phase 1 plan updated based on findings
-- [ ] T008bn Ready to proceed with Phase 1 implementation
-
----
-
-## Phase 1: Frontend Render Optimization (BLOCKED - Pending Phase 0.5)
-
-**Goal**: Reduce render frequency of critical components using React.memo and memoization (highest impact, no upstream divergence)
+**Type**: Discovery & Research (completed with major pivot to cherry-pick strategy)
 
 **Independent Test Criteria**:
-- Render count warnings reduced by 50%+ for `ShowToolStream`, `ThreadContent`
-- No visible performance degradation
-- Streaming feels smoother without flicker
-- Zero new React errors in console
+- ✅ 7 problem areas identified and documented
+- ✅ 673 commits analyzed across 3 upstream branches
+- ✅ 4 high-priority commits identified for Week 1 cherry-picking
+- ✅ 6 of 7 problem areas have potential upstream fixes (86% coverage)
+- ✅ Clear escalation path defined (Track 1 → Track 2 → Track 3)
+- ✅ Ready to proceed with Phase 1 cherry-pick strategy
 
-### Phase 1 Tasks
+**Status**: ✅ **COMPLETE** (2025-11-14)
 
-- [ ] T009 [P] [US1] Add React.memo wrapper to `ShowToolStream` component in `frontend/src/components/thread/content/ShowToolStream.tsx`
-- [ ] T010 [P] [US1] Add render count monitoring to `ShowToolStream` with console warnings when threshold exceeded
-- [ ] T011 [P] [US1] Memoize expensive parsing operations in `ShowToolStream` using useMemo for `extractAndFormatToolContent()`
-- [ ] T012 [P] [US1] Add React.memo wrapper to `ThreadContent` component in `frontend/src/components/thread/content/ThreadContent.tsx`
-- [ ] T013 [P] [US1] Add render count monitoring to `ThreadContent` with console warnings
-- [ ] T014 [P] [US1] Memoize message array in `ThreadContent` using useMemo to prevent unnecessary re-renders
-- [ ] T015 [P] [US1] Optimize `useAgentStream` hook in `frontend/src/hooks/useAgentStream.ts` with render count tracking
-- [ ] T016 [P] [US1] Add useCallback optimization to content throttling function in `useAgentStream`
-- [ ] T017 [US1] Manual test Phase 1: Start conversation with rapid prompts, verify render warnings reduced, streaming smooth
-- [ ] T018 [US1] Manual test Phase 1: Trigger tool calls with large output, verify no flicker, auto-scroll works
-- [ ] T019 [US1] Verify Phase 1 changes: No new render errors, performance improved, streaming uninterrupted
+**Major Discovery**: Production-tested solutions exist in `upstream/PRODUCTION` branch. Strategy pivoted from "implement from scratch" to "cherry-pick production-tested fixes".
+
+### Phase 0.5 Completion Summary
+
+**Research Findings**:
+- ✅ Analyzed 673 commits across 3 upstream branches (PRODUCTION, native_tool_calling, parallel_tool)
+- ✅ Identified 4 high-priority commits for Week 1 cherry-picking
+- ✅ Discovered 6 of 7 problem areas have potential upstream fixes (86% coverage)
+- ✅ Selected Track 1 (PRODUCTION) as baseline due to low risk and production-tested status
+- ✅ Documented all findings in: Pre-Phase-1-Problem-Areas.md, Phase-0.5-Upstream-Review.md, upstream-file-diffs-research/research.md
+
+**Key Commits Identified**:
+1. `abadd6a6` - Cancellation event + graceful stoppage (addresses #2, #3)
+2. `8b6b16f5` - 5-second drain timeout (addresses #6)
+3. `e56c2873` - Don't save cancelled responses (addresses #3)
+4. `26baa2ee` - Frontend cleanup and refactoring (addresses #4, #7)
+
+**Documentation Generated**:
+- [X] Pre-Phase-1-Problem-Areas.md - 7 critical problems with upstream fix information
+- [X] Phase-0.5-Upstream-Review.md - Executive summary of research
+- [X] upstream-file-diffs-research/research.md - Detailed analysis (673 commits, 3 branches)
+- [X] plan.md - Updated with Phase 1 cherry-pick implementation strategy
 
 ---
 
-## Phase 2: Backend Streaming Optimization (Internal Only)
+## Phase 1: Cherry-Pick Production Fixes (Week 1) 🚀 READY TO START
 
-**Goal**: Implement internal content buffering in ResponseProcessor without changing API or message types (maintains upstream compatibility)
+**Goal**: Apply 4 high-priority commits from `upstream/PRODUCTION` to address 6 of 7 identified problem areas
+
+**Approach**: Cherry-pick production-tested commits instead of implementing from scratch (lower risk, faster timeline)
 
 **Independent Test Criteria**:
-- Network tab shows reduced SSE message frequency
-- Content still streams smoothly without visible delays
-- Frontend receives same message types (no new types introduced)
-- Streaming latency <100ms
+- ✅ All 4 commits applied without breaking changes
+- ✅ No new console errors or warnings
+- ✅ Streaming completes without abrupt termination
+- ✅ Tool calls display correctly
+- ✅ No performance regressions
+- ✅ Potential resolution of 60-80% of streaming issues
 
-### Phase 2 Tasks
+**Expected Outcome**: Potential resolution of 60-80% of streaming issues with Week 1 cherry-picks
 
-- [ ] T020 [P] [US1] Implement internal content buffering in `ResponseProcessor.process_streaming_response()` in `backend/core/agentpress/response_processor.py`
-- [ ] T021 [P] [US1] Add buffer configuration (batch_size=5, flush_interval=50ms) to ResponseProcessor
-- [ ] T022 [P] [US1] Ensure buffering uses existing message types ('assistant', 'tool_call', 'status') - NO new types
-- [ ] T023 [P] [US1] Test backend buffering: Verify content chunks are batched before yielding to Redis
-- [ ] T024 [P] [US1] Verify frontend receives same message structure as before (backward compatible)
-- [ ] T025 [US1] Manual test Phase 2: Monitor network tab for reduced SSE message frequency
-- [ ] T026 [US1] Manual test Phase 2: Verify streaming latency remains <100ms
-- [ ] T027 [US1] Verify Phase 2 changes: No API changes, no new message types, protocol compatible
+### Phase 1 Tasks - Week 1 Cherry-Picks
+
+- [ ] T009 Prepare implementation branch: `git checkout -b 001-stable-rendering-phase1-implementation`
+- [ ] T010 [P] Verify upstream remote configured: `git remote -v | grep upstream`
+- [ ] T011 [P] Fetch all upstream branches: `git fetch upstream PRODUCTION native_tool_calling parallel_tool_calling_and_flow_execution`
+- [ ] T012 [US1] Cherry-pick `abadd6a6` (cancellation event + graceful stoppage): `git cherry-pick abadd6a6`
+- [ ] T013 [US1] Test after T012: Run backend tests, verify no conflicts, check response_processor.py changes
+- [ ] T014 [US1] Cherry-pick `8b6b16f5` (5-second drain timeout): `git cherry-pick 8b6b16f5`
+- [ ] T015 [US1] Test after T014: Verify timeout logic, check for conflicts with previous commit
+- [ ] T016 [US1] Cherry-pick `e56c2873` (don't save cancelled responses): `git cherry-pick e56c2873`
+- [ ] T017 [US1] Test after T016: Verify finish_reason checks, ensure no duplicates with abadd6a6
+- [ ] T018 [US1] Cherry-pick `26baa2ee` (frontend cleanup): `git cherry-pick 26baa2ee`
+- [ ] T019 [US1] Test after T018: Verify dependency array changes, check useAgentStream.ts
+- [ ] T020 [US1] Run comprehensive backend tests: `python -m pytest tests/ -v`
+- [ ] T021 [US1] Manual test: Start conversation, verify streaming works without errors
+- [ ] T022 [US1] Manual test: Trigger tool call, verify display without errors
+- [ ] T023 [US1] Manual test: Check for console errors or warnings
+- [ ] T024 [US1] Document results in `CHERRY_PICK_RESULTS.md` with status, conflicts, test results for each commit
+- [ ] T025 [US1] Verify Phase 1 changes: No new render errors, streaming completes, tool calls display correctly
+
+**Conflict Resolution Strategy**:
+- If conflicts occur: `git diff --ours` vs `git diff --theirs`, resolve manually, `git add <file>`, `git cherry-pick --continue`
+- If unresolvable: `git cherry-pick --abort` and skip commit
+
+**Success Criteria**:
+- All 4 commits applied successfully
+- No new console errors
+- Streaming works without abrupt termination
+- Tool calls display correctly
+- No performance regressions
+
+---
+
+## Phase 2: Week 2 Evaluation & Additional Cherry-Picks 📊 PENDING
+
+**Goal**: Evaluate Week 1 results and cherry-pick additional commits from Track 1 if needed
+
+**Approach**: Based on Week 1 outcomes, cherry-pick additional commits to address remaining issues
+
+**Independent Test Criteria**:
+- Week 1 results evaluated and documented
+- Remaining issues identified (if any)
+- Additional commits cherry-picked if needed
+- Cumulative impact: 60-80%+ of streaming issues resolved
+
+**Decision Tree**:
+- **If 60-80% resolved**: Continue with additional Track 1 commits (79 for #1, 91 for #5)
+- **If 30-60% resolved**: Cherry-pick more commits + identify patterns in remaining issues
+- **If <30% resolved**: Escalate to Track 2 (native_tool_calling) or from-scratch implementation
+
+### Phase 2 Tasks - Week 2 Evaluation
+
+- [ ] T026 Evaluate Week 1 results: Review `CHERRY_PICK_RESULTS.md` and test outcomes
+- [ ] T027 [US1] Identify remaining issues: Compare expected vs actual behavior
+- [ ] T028 [US1] Analyze patterns: Determine if remaining issues are in Problem #1 (tool exceptions) or #5 (Redis)
+- [ ] T029 [US1] Decision: Proceed with additional Track 1 commits or escalate to Track 2?
+- [ ] T030 [P] [US1] If proceeding with Track 1: Cherry-pick additional commits for Problem #1 (tool exception handling)
+- [ ] T031 [P] [US1] If proceeding with Track 1: Cherry-pick additional commits for Problem #5 (Redis operations)
+- [ ] T032 [US1] Test additional cherry-picks: Verify no new conflicts, streaming behavior improved
+- [ ] T033 [US1] Document Week 2 results and decision in `CHERRY_PICK_RESULTS.md`
+- [ ] T034 [US1] Verify Phase 2 changes: Cumulative impact on streaming issues resolved
+
+**Success Criteria**:
+- Week 1 results documented and analyzed
+- Decision made on additional cherry-picks or escalation
+- If cherry-picking: Additional commits applied successfully
+- Cumulative impact: 60-80%+ of streaming issues resolved
 
 ---
 
@@ -469,20 +408,26 @@ If issues arise:
 
 ## Task Summary
 
-**Total Tasks**: 147 (43 new investigation tasks added)  
+**Total Tasks**: 134 (updated with cherry-pick strategy)  
 **Phase 0 (Baseline)**: 8 tasks ✅ COMPLETE  
-**Phase 0.5 (Investigation)**: 43 tasks 🔍 IN PROGRESS (iterative, not linear)  
-**Phase 1 (Frontend Optimization)**: 11 tasks ⏸️ BLOCKED (pending Phase 0.5)  
-**Phase 2 (Backend Buffering)**: 9 tasks ⏸️ BLOCKED (pending Phase 0.5)  
+**Phase 0.5 (Upstream Research)**: ✅ COMPLETE (673 commits analyzed, 4 commits identified)  
+**Phase 1 (Week 1 Cherry-Picks)**: 17 tasks 🚀 READY TO START  
+**Phase 2 (Week 2 Evaluation)**: 9 tasks 📊 PENDING  
 **Phase 3 (Error Boundaries)**: 9 tasks  
 **Phase 4 (Debug Endpoints)**: 11 tasks  
 **Phase 5 (Network Resilience)**: 19 tasks  
 **Phase 6 (Testing & Validation)**: 17 tasks  
 **Phase 7 (Polish & Cross-Cutting)**: 11 tasks  
 
-**Investigation Approach**: Phase 0.5 uses iterative cycles, not linear execution  
-**Parallelizable Opportunities**: Investigation tasks can be explored in parallel  
+**Strategy Change**: Pivoted from "implement from scratch" to "cherry-pick production-tested fixes"  
+**Week 1 Focus**: Apply 4 high-priority commits from `upstream/PRODUCTION`  
+**Week 2 Focus**: Evaluate results and cherry-pick additional commits if needed  
+**Expected Outcome**: 60-80% of streaming issues potentially resolved with Week 1-2 cherry-picks  
+**Escalation Path**: Track 1 → Track 2 (native_tool_calling) → Track 3 (parallel_tool) if needed  
+
 **Estimated Duration**: 
-- Phase 0.5: 1-2 weeks (discovery phase)
-- Remaining phases: 3-4 weeks (adjusted based on findings)
-**Updated MVP Scope**: Phase 0 + Phase 0.5 + targeted fixes (not full Phase 1-2)
+- Phase 1 (Week 1): 2-3 days (cherry-pick 4 commits + testing)
+- Phase 2 (Week 2): 2-3 days (evaluate + additional cherry-picks if needed)
+- Phases 3-7: 2-3 weeks (based on Phase 1-2 outcomes)
+
+**Updated MVP Scope**: Phase 0 + Phase 1 (Week 1 cherry-picks) = Potential 60-80% issue resolution
