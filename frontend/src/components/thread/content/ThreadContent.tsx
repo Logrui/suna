@@ -20,6 +20,7 @@ import { ComposioUrlDetector } from './composio-url-detector';
 import { StreamingText } from './StreamingText';
 import { HIDE_STREAMING_XML_TAGS } from '@/components/thread/utils';
 import { useAgentsFromCache } from '@/hooks/react-query/agents/use-agents';
+import { MalformedToolCallView } from '@/components/thread/tool-views/MalformedToolCallView';
 
 
 // Helper function to render all attachments as standalone messages
@@ -980,6 +981,18 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         );
 
                                                                         assistantMessageCount++; // Increment after adding the element
+                                                                    } else if (message.type === 'malformed_tool_call') {
+                                                                        // Handle malformed tool call error display
+                                                                        const msgKey = message.message_id || `malformed-${msgIndex}`;
+                                                                        
+                                                                        elements.push(
+                                                                            <div key={msgKey} className="mt-4">
+                                                                                <MalformedToolCallView
+                                                                                    assistantContent={message.content}
+                                                                                    toolContent={message.metadata}
+                                                                                />
+                                                                            </div>
+                                                                        );
                                                                     }
                                                                 });
 

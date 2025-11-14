@@ -13,7 +13,7 @@ export interface UnifiedMessage {
   sequence?: number;
   message_id: string | null; // Can be null for transient stream events (chunks, unsaved statuses)
   thread_id: string;
-  type: 'user' | 'assistant' | 'tool' | 'system' | 'status' | 'browser_state' | 'image_context' | 'llm_response_end'; // image_context for images loaded into LLM context
+  type: 'user' | 'assistant' | 'tool' | 'system' | 'status' | 'browser_state' | 'image_context' | 'llm_response_end' | 'malformed_tool_call'; // image_context for images loaded into LLM context
   is_llm_message: boolean;
   content: string; // ALWAYS a JSON string from the backend
   metadata: string; // ALWAYS a JSON string from the backend

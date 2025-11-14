@@ -120,6 +120,13 @@ export function useAgentStream(
   const addContentThrottled = useCallback((content: { content: string; sequence?: number }) => {
     pendingContentRef.current.push(content);
     
+    // Buffer monitoring - warn if approaching capacity
+    if (pendingContentRef.current.length > MAX_BUFFER_ITEMS * 0.8) {
+      console.warn(
+        `[useAgentStream] Buffer approaching capacity: ${pendingContentRef.current.length}/${MAX_BUFFER_ITEMS}`
+      );
+    }
+    
     // Clear existing throttle
     if (throttleRef.current) {
       clearTimeout(throttleRef.current);
@@ -440,13 +447,27 @@ export function useAgentStream(
         case 'status':
           switch (parsedContent.status_type) {
             case 'tool_started':
-              setToolCall({
-                role: 'assistant',
-                status_type: 'tool_started',
-                name: parsedContent.function_name,
-                arguments: parsedContent.arguments,
-                xml_tag_name: parsedContent.xml_tag_name,
-                tool_index: parsedContent.tool_index,
+              // Deep equality check - only update if tool call actually changed
+              setToolCall((prev) => {
+                const newToolCall = {
+                  role: 'assistant' as const,
+                  status_type: 'tool_started' as const,
+                  name: parsedContent.function_name,
+                  arguments: parsedContent.arguments,
+                  xml_tag_name: parsedContent.xml_tag_name,
+                  tool_index: parsedContent.tool_index,
+                };
+                
+                // Skip update if content hasn't changed
+                if (prev && 
+                    prev.tool_index === newToolCall.tool_index &&
+                    prev.name === newToolCall.name &&
+                    prev.status_type === newToolCall.status_type &&
+                    JSON.stringify(prev.arguments) === JSON.stringify(newToolCall.arguments)) {
+                  return prev; // No change, return same reference
+                }
+                
+                return newToolCall;
               });
               break;
             case 'tool_completed':

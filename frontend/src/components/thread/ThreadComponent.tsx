@@ -374,6 +374,14 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const handleStreamClose = useCallback(() => { }, []);
 
+  // Memoized callbacks object to prevent unnecessary re-renders
+  const streamCallbacks = React.useMemo(() => ({
+    onMessage: handleNewMessageFromStream,
+    onStatusChange: handleStreamStatusChange,
+    onError: handleStreamError,
+    onClose: handleStreamClose,
+  }), [handleNewMessageFromStream, handleStreamStatusChange, handleStreamError, handleStreamClose]);
+
   const {
     status: streamHookStatus,
     textContent: streamingTextContent,
@@ -383,12 +391,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     startStreaming,
     stopStreaming,
   } = useAgentStream(
-    {
-      onMessage: handleNewMessageFromStream,
-      onStatusChange: handleStreamStatusChange,
-      onError: handleStreamError,
-      onClose: handleStreamClose,
-    },
+    streamCallbacks,
     threadId,
     setMessages,
     threadAgentData?.agent?.agent_id,
