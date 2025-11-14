@@ -1263,6 +1263,18 @@ export const streamAgent = (
       eventSource.onerror = (event) => {
         console.error(`[STREAM] EventSource error for ${agentRunId}:`, event);
         
+        // 🔧 FIX: Check if connection was closed normally (not an error state)
+        // readyState === CLOSED means the backend properly closed the SSE connection
+        // (likely because it finished streaming). This is NOT an error condition.
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log(`[STREAM] Connection closed normally for ${agentRunId} - streaming complete`);
+          nonRunningAgentRuns.add(agentRunId);
+          cleanupEventSource(agentRunId, 'normal closure');
+          callbacks.onClose();
+          return;
+        }
+        
+        // Only attempt reconnection for actual connection errors (readyState === CONNECTING)
         // Check if the agent is still running
         getAgentStatus(agentRunId)
           .then((status) => {
