@@ -48,6 +48,10 @@ pending_tool_executions.append({
 
 **Fix Required**: Wrap tool execution in try/except and yield error messages immediately
 
+**Notes/Comments**:
+- Potential solution: Integrate with malformed tool call handler in frontend by building out a malformed tool call handler on the backend if not already present
+- Needs more research for potential solutions
+
 ---
 
 ### 🔴 CRITICAL #2: Missing Error Propagation in Background Worker
@@ -86,6 +90,12 @@ async for response in agent_gen:
 - Appears as silent failure
 
 **Fix Required**: Ensure error messages are reliably pushed to Redis and SSE stream before cleanup
+
+**Notes/Comments**:
+- Potential solution: Needs frontend integration to at minimum push a toast message
+- Backend messages already appear via some sort of error boundary in frontend console
+- System likely already exists for this
+- Needs more research
 
 ---
 
@@ -129,6 +139,10 @@ if response.get('type') == 'status' and response.get('status') in ['completed', 
 
 **Fix Required**: Ensure all pending messages are flushed before sending completion signal
 
+**Notes/Comments**:
+- This one doesn't sound too hard to potentially fix
+- Need to generate potential solution options after a bit of research
+
 ---
 
 ### 🟡 HIGH #4: Frontend Dependency Array Issues Causing Premature Cleanup
@@ -171,6 +185,11 @@ if response.get('type') == 'status' and response.get('status') in ['completed', 
 
 **Fix Required**: Stabilize callback dependencies using refs instead of state
 
+**Notes/Comments**:
+- This one is going to be difficult to work on
+- Stabilizing callback dependencies using refs instead of state requires a major rework and extensive research on the codebase
+- **SKIP FOR NOW** - Need to do more search and propose potential solutions that do not entirely refactor the architecture of that part of the code
+
 ---
 
 ### 🟠 MEDIUM #5: Redis Pub/Sub Message Loss
@@ -204,6 +223,10 @@ pending_redis_operations.append(asyncio.create_task(redis.publish(response_chann
 - Some messages missing from display
 
 **Fix Required**: Await Redis operations or use proper batching with ordering guarantees
+
+**Notes/Comments**:
+- Not super high priority
+- Given we are introducing batching, need to review the architecture and make sure batching is compatible with the current Redis architecture
 
 ---
 
@@ -241,6 +264,12 @@ const addContentThrottled = useCallback((content: { content: string; sequence?: 
 
 **Fix Required**: Implement proper backpressure or increase buffer size
 
+**Notes/Comments**:
+- Throttle buffer is a frontend bandaid we previously attempted
+- Need to either:
+  - Improve it and test that it can handle production workloads and has meaningful value add, OR
+  - Remove it entirely if it's better to migrate to a backend-only solution
+
 ---
 
 ### 🟡 MEDIUM #7: React.startTransition Delaying Critical Updates
@@ -272,6 +301,11 @@ React.startTransition(() => {
 
 **Fix Required**: Remove startTransition or ensure flush before finalization
 
+**Notes/Comments**:
+- Need to investigate further
+- "Final content being able to render" is extremely important instead of full loss of a mid-streamed conversation
+- This is a critical user experience issue
+
 ---
 
 ## Secondary Issues (Lower Priority)
@@ -283,6 +317,10 @@ React.startTransition(() => {
 **Issue**: 30-second keepalive timeout might be too long. If tool execution takes 25 seconds and fails, frontend waits 30 seconds before knowing something's wrong.
 
 **Impact**: **LOW** - Doesn't cause failure, just delays error detection
+
+**Notes/Comments**:
+- Quick fix and an easy win
+- Should be addressed as low-hanging fruit
 
 ---
 
