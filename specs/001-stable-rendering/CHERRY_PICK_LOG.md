@@ -2,7 +2,7 @@
 
 **Feature**: 001-stable-rendering  
 **Date**: 2025-11-13  
-**Analysis**: Comparing `dev` (baseline) vs `feature/malformed-tool-call-handler`  
+**Analysis**: Comparing `001-stable-rendering` (baseline carbon copy of dev) vs `feature/malformed-tool-call-handler`  
 **Total Files Changed**: 43 files  
 **Total Changes**: 81 insertions(+), 9551 deletions(-)
 
@@ -18,6 +18,49 @@ The `feature/malformed-tool-call-handler` branch contains **primarily documentat
 4. **Minimal streaming-related changes** - Only 3 files touch core streaming logic
 
 **Recommendation**: **SELECTIVE CHERRY-PICK** - Only accept changes to core streaming files that fix actual bugs. Skip documentation deletions and feature removals.
+
+---
+
+## Phase 0 Execution Status
+
+### ✅ COMPLETED - Easy Cherry-Picks (Categories 3, 4, 5, partial 7)
+
+**Files Pulled In** (11 files):
+
+**Category 3: Knowledge Base UI** (5 modified):
+- `frontend/src/components/knowledge-base/databases-tab.tsx`
+- `frontend/src/components/knowledge-base/kb-tabs-navigation.tsx`
+- `frontend/src/components/knowledge-base/knowledge-base-manager.tsx`
+- `frontend/src/components/knowledge-base/knowledge-base-page.tsx`
+- `frontend/src/components/knowledge-base/shared-kb-tree.tsx`
+- `frontend/src/components/sidebar/nav-knowledge-base.tsx`
+
+**Category 4: Slash Commands** (2 files - 1 new, 1 modified):
+- `frontend/src/components/slash-commands/SlashCommandAutocomplete.tsx` (NEW)
+- `frontend/src/hooks/useSlashCommands.ts` (modified)
+
+**Category 5: Slash Commands Utils** (1 new):
+- `frontend/src/lib/slashCommands.ts` (NEW)
+
+**Category 7: UI Components** (1 modified):
+- `frontend/src/components/ui/fancy-tabs.tsx`
+
+---
+
+### ⏳ PENDING - Manual Review Required
+
+**Category 2: Backend Files** (3 files - NEEDS REVIEW):
+- `backend/core/knowledge_base/api.py` (-210 lines)
+- `backend/core/knowledge_base/file_processor.py` (+25 lines)
+- `backend/core/threads.py` (+7 lines)
+
+**Category 6: Frontend Streaming** (3 files - NEEDS REVIEW):
+- `frontend/src/components/thread/chat-input/chat-input.tsx` (+31 lines)
+- `frontend/src/app/share/[threadId]/_hooks/useShareThreadData.ts` (+7 lines)
+- `frontend/src/lib/api/threads.ts` (+30 lines)
+
+**Category 7: API** (1 file - NEEDS REVIEW):
+- `frontend/src/lib/api/projects.ts` (+3 lines)
 
 ---
 

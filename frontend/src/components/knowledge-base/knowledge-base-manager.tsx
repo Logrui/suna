@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SLASH_COMMANDS_FOLDER_NAME } from '../slash-commands/types';
 import {
     FolderIcon,
     FileIcon,
@@ -43,15 +42,12 @@ import { UnifiedKbEntryModal } from './unified-kb-entry-modal';
 import { KBFilePreviewModal } from './kb-file-preview-modal';
 import { EditSummaryModal } from './edit-summary-modal';
 import { KBDeleteConfirmDialog } from './kb-delete-confirm-dialog';
-import { MoveFileModal } from './move-file-modal';
 import { useKnowledgeFolders, type Folder, type Entry } from '@/hooks/react-query/knowledge-base/use-folders';
 import { FileNameValidator } from '@/lib/validation';
 import { createClient } from '@/lib/supabase/client';
 import { getApiUrl } from '@/lib/get-api-url';
-import { downloadFile, downloadFolderAsZip } from '@/lib/kb-download-utils';
 
 const API_URL = getApiUrl();
-const PROMPTS_FOLDER_NAME = SLASH_COMMANDS_FOLDER_NAME;
 
 interface TreeItem {
     id: string;
@@ -159,18 +155,6 @@ export function KnowledgeBaseManager({
         file: null,
     });
 
-    const [moveFileModal, setMoveFileModal] = useState<{
-        isOpen: boolean;
-        fileId: string | null;
-        fileName: string;
-        currentFolderId: string;
-    }>({
-        isOpen: false,
-        fileId: null,
-        fileName: '',
-        currentFolderId: '',
-    });
-
     const { folders, recentFiles, loading: foldersLoading, refetch: refetchFolders } = useKnowledgeFolders();
 
     // DND Sensors
@@ -184,10 +168,7 @@ export function KnowledgeBaseManager({
     // Build tree structure and auto-expand all folders for assignment mode
     React.useEffect(() => {
         const buildTree = () => {
-            // Filter out Prompts folder from display
-            const filteredFolders = folders.filter(folder => folder.name !== PROMPTS_FOLDER_NAME);
-            
-            const tree: TreeItem[] = filteredFolders.map(folder => {
+            const tree: TreeItem[] = folders.map(folder => {
                 const existingFolder = treeData.find(item => item.id === folder.folder_id);
                 // Auto-expand all folders in assignment mode, preserve state otherwise
                 const isExpanded = enableAssignments ? true : (existingFolder?.expanded || false);
@@ -363,11 +344,6 @@ export function KnowledgeBaseManager({
     };
 
     const fetchFolderEntries = async (folderId: string) => {
-        if (!folderId) {
-            console.error('[KBManager] fetchFolderEntries called with undefined folderId');
-            return;
-        }
-        
         setLoadingFolders(prev => ({ ...prev, [folderId]: true }));
 
         try {
@@ -618,23 +594,10 @@ export function KnowledgeBaseManager({
 
             if (response.ok) {
                 toast.success('Summary updated successfully');
-                
-                // Find parent folder to refresh its entries
                 const fileItem = treeData.flatMap(folder => folder.children || []).find(file => file.id === editSummaryModal.fileId);
-                const parentFolderId = fileItem?.parentId;
-                
-                if (parentFolderId) {
-                    await fetchFolderEntries(parentFolderId);
-                } else {
-                    // Fallback: find parent folder by searching all folders
-                    const parentFolder = treeData.find(folder => 
-                        folder.children?.some(child => child.id === editSummaryModal.fileId)
-                    );
-                    if (parentFolder?.id) {
-                        await fetchFolderEntries(parentFolder.id);
-                    }
+                if (fileItem?.parentId) {
+                    await fetchFolderEntries(fileItem.parentId);
                 }
-                
                 refetchFolders();
             } else {
                 const errorData = await response.json().catch(() => null);
@@ -1204,27 +1167,6 @@ export function KnowledgeBaseManager({
                                             } : undefined}
                                             onDelete={handleDelete}
                                             onEditSummary={handleEditSummary}
-                                            onMoveFile={(fileId, fileName) => {
-                                                const file = Object.values(folderEntries).flat().find(f => f.entry_id === fileId);
-                                                if (file) {
-                                                    const currentFolderId = Object.entries(folderEntries).find(([_, files]) => files.find(f => f.entry_id === fileId))?.[0];
-                                                    if (currentFolderId) {
-                                                        setMoveFileModal({
-                                                            isOpen: true,
-                                                            fileId,
-                                                            fileName,
-                                                            currentFolderId,
-                                                        });
-                                                    }
-                                                }
-                                            }}
-                                            onDownloadFile={(fileId, fileName) => {
-                                                console.log('[KBManager] onDownloadFile called:', { fileId, fileName });
-                                                downloadFile(fileId, fileName);
-                                            }}
-                                            onDownloadFolder={(folderId, folderName) => {
-                                                downloadFolderAsZip(folderId, folderName);
-                                            }}
                                             editingFolder={editingFolder}
                                             editingName={editingName}
                                             onStartEdit={handleStartEdit}
@@ -1302,28 +1244,6 @@ export function KnowledgeBaseManager({
                     onClose={handleCloseFilePreview}
                     file={filePreviewModal.file}
                     onEditSummary={handleEditSummary}
-                />
-            )}
-
-            {moveFileModal.fileId && (
-                <MoveFileModal
-                    isOpen={moveFileModal.isOpen}
-                    onClose={() => {
-                        setMoveFileModal({
-                            isOpen: false,
-                            fileId: null,
-                            fileName: '',
-                            currentFolderId: '',
-                        });
-                    }}
-                    fileName={moveFileModal.fileName}
-                    currentFolderId={moveFileModal.currentFolderId}
-                    folders={folders}
-                    isMoving={movingFiles[moveFileModal.fileId] || false}
-                    onMove={async (targetFolderId) => {
-                        if (!moveFileModal.fileId) return;
-                        await handleMoveFile(moveFileModal.fileId, targetFolderId);
-                    }}
                 />
             )}
         </div>

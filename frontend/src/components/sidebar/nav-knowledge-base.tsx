@@ -150,7 +150,7 @@ export function NavKnowledgeBase() {
             {loading && <LoadingSkeleton />}
             
             {/* Recent Files Section */}
-{/*             {!loading && recentFiles.length > 0 && (
+            {!loading && recentFiles.length > 0 && (
               <>
                 <DateGroupHeader title="Recent Files" count={Math.min(recentFiles.length, 5)} />
                 <div className="space-y-1">
@@ -165,12 +165,11 @@ export function NavKnowledgeBase() {
                 </div>
               </>
             )}
-             */}
-
+            
             {/* All Folders Section */}
             {!loading && folders.length > 0 && (
               <>
-                <DateGroupHeader title="Folders" count={folders.length} />
+                <DateGroupHeader title="All Folders" count={folders.length} />
                 <div className="space-y-1">
                   {folders.map((folder) => (
                     <FolderItem

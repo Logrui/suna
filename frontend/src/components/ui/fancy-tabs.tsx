@@ -69,25 +69,15 @@ export const FancyTabs = ({ tabs, activeTab, onTabChange, className }: FancyTabs
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   
-  // Calculate container width: each tab gets minimum 180px + padding/gaps
-  // Formula: (tabs.length * 180px) + (gaps between tabs) + (container padding)
-  const TAB_MIN_WIDTH = 180; // pixels
-  const GAP_SIZE = 6; // padding between tabs in grid
-  const CONTAINER_PADDING = 3; // p-1.5 = 6px on each side, but we already count gap
-  const containerWidth = `${tabs.length * TAB_MIN_WIDTH + (tabs.length - 1) * GAP_SIZE + CONTAINER_PADDING * 2}px`;
-  
   return (
     <div 
       className={cn(
-        "overflow-x-auto rounded-3xl p-1.5 mx-auto",
+        "overflow-hidden grid w-full max-w-lg mx-auto rounded-3xl p-1.5",
         isDark ? "border-white/5" : "border-border/20 bg-muted",
         className
       )}
       style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${tabs.length}, minmax(120px, 1fr))`,
-        width: containerWidth,
-        maxWidth: '100%',
+        gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
         ...(isDark ? {
           background: 'rgba(255, 255, 255, 0.05)',
           backdropFilter: 'blur(20px)',
