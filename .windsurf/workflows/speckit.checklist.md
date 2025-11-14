@@ -1,6 +1,5 @@
 ---
 description: Generate a custom checklist for the current feature based on user requirements.
-auto_execution_mode: 3
 ---
 
 ## Checklist Purpose: "Unit Tests for English"
