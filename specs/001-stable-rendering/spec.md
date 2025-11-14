@@ -81,10 +81,9 @@ An SRE or engineer needs enough logging and metrics to understand streaming fail
 - **FR-001**: System MUST render response streaming tokens in a single append-only list per conversation turn.
 - **FR-002**: System MUST gracefully handle backend throttle or malformed tool-call errors without triggering React's maximum update depth exception, primarily through backend batching/throttling rather than complex frontend handling.
 - **FR-003**: Engineers MUST be able to compare `feature/malformed-tool-call-handler` and `dev` diffs file-by-file, selectively cherry-picking stable code into the new branch. Include features that don't touch React state management or streaming logic; manually review and exclude rendering/thread component changes that could cause flickering, especially experimental frontend throttling mechanisms.
-- **FR-004**: Feature flags or gating mechanisms MUST isolate experimental thread refactor changes so the default experience remains stable.
-- **FR-005**: Logging/Metrics MUST capture stream lifecycle events (connect, data, error, complete) plus any malformed tool-call exceptions.
+- **FR-004**: Logging/Metrics MUST capture stream lifecycle events (connect, data, error, complete) plus any malformed tool-call exceptions.
 - **FR-006**: UI state cleanup MUST cancel stale streaming subscriptions when the user navigates away or starts a new conversation.
-- **FR-007**: Frontend MUST maintain visible "live" animations during throttle, only declaring a stream stopped after 10-15 seconds of silence and 2-3 retry attempts.
+- **FR-007**: Frontend MUST maintain visible "live" animations during throttle, only declaring a stream stopped after 10-15 seconds of silence and up to 10 linear retry attempts.
 - **FR-008**: Frontend MUST support batching of streaming payloads to reduce update frequency while preserving the real-time feel.
 - **FR-009**: Frontend MUST implement minimal error boundaries around tool call displays and other known sources of React render errors.
 - **FR-010**: System MUST handle extremely long and complex tool calls in Suna's XML/JSON hybrid format without causing render performance degradation.
@@ -103,8 +102,9 @@ An SRE or engineer needs enough logging and metrics to understand streaming fail
 
 - **Performance**: Target <100ms latency for streaming token display, <10 renders per message update cycle.
 - **Reliability**: 99% uptime for streaming functionality during normal backend operation, graceful degradation during throttling.
+- **Graceful Degradation**: When backend throttles or network disconnects, UI maintains pulsing/live animations continuously without interruption. Silent automatic retries (up to 10 linear attempts) without user-facing error messages. If all retries fail, display toast notification with "Try Again" button in chat for manual retry.
 - **Scalability**: Support up to 10 concurrent users with 500 messages/hour per user without performance degradation.
-- **Maintainability**: Incremental refactoring approach - no giant rewrites, focus on high-impact render optimization areas.
+- **Maintainability**: Incremental refactoring approach with specific constraints: (1) NO modifications to existing API endpoints or message types, (2) NO large refactors of core rendering components (ThreadContent.tsx, ShowToolStream.tsx, useAgentStream.ts), (3) Frontend changes limited to React.memo, useCallback, and memoization optimizations only, (4) Backend batching/throttling in ResponseProcessor is the primary solution for frontend render issues, (5) Manual bug fix pass on frontend during Phase 0 cherry-picking to identify and fix existing bugs before optimization.
 - **Observability**: Stream lifecycle logging, render count monitoring, error boundary reporting for debugging.
 
 ## Success Criteria *(mandatory)*
