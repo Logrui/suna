@@ -1,0 +1,83 @@
+﻿diff --git a/backend/core/agentpress/response_processor.py b/backend/core/agentpress/response_processor.py
+index d315a8c7..d6c2c64e 100644
+--- a/backend/core/agentpress/response_processor.py
++++ b/backend/core/agentpress/response_processor.py
+@@ -286,6 +286,7 @@ class ResponseProcessor:
+         has_printed_thinking_prefix = False # Flag for printing thinking prefix only once
+         agent_should_terminate = False # Flag to track if a terminating tool has been executed
+         complete_native_tool_calls = [] # Initialize early for use in assistant_response_end
++        pending_malformed_errors = [] # Collect malformed errors to yield AFTER assistant message is saved
+ 
+         # Store the complete LiteLLM response object as received
+         final_llm_response = None
+@@ -423,30 +424,33 @@ class ResponseProcessor:
+                                     tool_call, parsing_details = result
+                                     
+                                     # PHASE 2: Validate tool call before execution
+-                                    is_valid, error_msg, malformation_details = self._validate_parsed_tool_call(
+-                                        tool_call, 
+-                                        parsing_details
+-                                    )
++                                    try:
++                                        is_valid, error_msg, malformation_details = self._validate_parsed_tool_call(
++                                            tool_call, 
++                                            parsing_details
++                                        )
++                                    except TypeError as te:
++                                        import traceback
++                                        logger.error(f"Γ¥î TypeError during tool validation: {te}")
++                                        logger.error(f"Γ¥î Tool call: {tool_call}")
++                                        logger.error(f"Γ¥î Parsing details keys: {list(parsing_details.keys()) if parsing_details else None}")
++                                        logger.error(f"Γ¥î Full traceback:\n{traceback.format_exc()}")
++                                        raise
+                                     
+                                     if not is_valid:
+                                         # Log malformed call
+                                         logger.warning(f"ΓÜá∩╕Å Malformed XML tool call in stream: {error_msg}")
+                                         logger.warning(f"   Raw XML: {xml_chunk[:200]}...")
+                                         
+-                                        # Handle malformed call - yields error feedback
+-                                        async for error_chunk in self._handle_malformed_tool_calls(
+-                                            malformed_calls=[{
+-                                                "tool_call": tool_call,
+-                                                "parsing_details": parsing_details,
+-                                                "error": error_msg,
+-                                                "malformation": malformation_details,
+-                                                "raw_xml": xml_chunk
+-                                            }],
+-                                            thread_id=thread_id,
+-                                            thread_run_id=thread_run_id,
+-                                            assistant_message_id=last_assistant_message_object['message_id'] if last_assistant_message_object else None
+-                                        ):
+-                                            yield error_chunk
++                                        # Collect malformed call for handling after assistant message is saved
++                                        # This ensures natural conversation flow: Assistant attempt -> Error message
++                                        pending_malformed_errors.append({
++                                            "tool_call": tool_call,
++                                            "parsing_details": parsing_details,
++                                            "error": error_msg,
++                                            "malformation": malformation_details,
++                                            "raw_xml": xml_chunk
++                                        })
+                                         
+                                         # Trigger auto-continue for reprompt
+                                         should_auto_continue = True
+@@ -682,6 +686,18 @@ class ResponseProcessor:
+                     yield_message = last_assistant_message_object.copy()
+                     yield_message['metadata'] = yield_metadata
+                     yield format_for_yield(yield_message)
++                    
++                    # NOW yield any pending malformed errors (AFTER assistant message is in DB)
++                    # This ensures natural conversation flow: Assistant attempt -> Error feedback
++                    if pending_malformed_errors:
++                        logger.info(f"≡ƒöä Yielding {len(pending_malformed_errors)} pending malformed errors after assistant message saved")
++                        async for error_chunk in self._handle_malformed_tool_calls(
++                            malformed_calls=pending_malformed_errors,
++                            thread_id=thread_id,
++                            thread_run_id=thread_run_id,
++                            assistant_message_id=last_assistant_message_object['message_id']
++                        ):
++                            yield error_chunk
+                 else:
+                     logger.error(f"Failed to save final assistant message for thread {thread_id}")
+                     self.trace.event(name="failed_to_save_final_assistant_message_for_thread", level="ERROR", status_message=(f"Failed to save final assistant message for thread {thread_id}"))
