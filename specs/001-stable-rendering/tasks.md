@@ -1,9 +1,19 @@
 # Implementation Tasks: Stable Rendering & Streaming
 
-**Feature**: 001-stable-rendering | **Date**: 2025-11-13  
-**Branch**: `001-stable-rendering` | **Baseline Commit**: `22a36feb` (2025-11-13 00:44:22) from `feature/workflows-restoration` | **Status**: Ready for Implementation
+**Feature**: 001-stable-rendering | **Date**: 2025-11-14 (Updated)  
+**Branch**: `001-stable-rendering` | **Baseline Commit**: `22a36feb` (2025-11-13 00:44:22) from `feature/workflows-restoration` | **Status**: Phase 0.5 Complete - Ready for Week 1 Cherry-Picks
 
-**Overview**: Execute 7 phases of implementation to establish reliable streaming and eliminate React render loop errors. Start with Phase 0 baseline analysis, then proceed through frontend optimization, backend buffering, error boundaries, debug endpoints, network resilience, and validation.
+**Overview**: Execute implementation to establish reliable streaming and eliminate React render loop errors. 
+
+**Strategy**: Phase 0 (baseline) ✅ COMPLETE → Phase 0.5 (upstream research) ✅ COMPLETE → Phase 1 (Week 1 cherry-picks) 🚀 READY → Phase 2 (Week 2 evaluation) → Phases 3-7 (optimization, error handling, resilience, validation)
+
+**Major Discovery**: Production-tested solutions exist in `upstream/PRODUCTION` branch. Pivoted from "implement from scratch" to "cherry-pick production-tested fixes" (lower risk, faster timeline, 60-80% expected issue resolution)
+
+**Week 1 Focus**: Cherry-pick 4 high-priority commits from upstream/PRODUCTION:
+1. `abadd6a6` - Cancellation event + graceful stoppage
+2. `8b6b16f5` - 5-second drain timeout
+3. `e56c2873` - Don't save cancelled responses
+4. `26baa2ee` - Frontend cleanup and refactoring
 
 ---
 
@@ -73,7 +83,7 @@
 
 ---
 
-## Phase 1: Cherry-Pick Production Fixes (Week 1) 🚀 READY TO START
+## Phase 1: Cherry-Pick Selected Production Fixes (Week 1) 🚀 READY TO START
 
 **Goal**: Apply 4 high-priority commits from `upstream/PRODUCTION` to address 6 of 7 identified problem areas
 
@@ -91,30 +101,103 @@
 
 ### Phase 1 Tasks - Week 1 Cherry-Picks
 
-- [ ] T009 Prepare implementation branch: `git checkout -b 001-stable-rendering-phase1-implementation`
+**IMPORTANT**: All tasks are HUMAN-IN-THE-LOOP. Each cherry-pick requires manual review of file diffs, dependency analysis, and integration decisions.
+
+#### Preparation Phase
+
+- [ ] T009 Prepare implementation branch: `git checkout -b 001-stable-rendering-phase1-track-production`
 - [ ] T010 [P] Verify upstream remote configured: `git remote -v | grep upstream`
 - [ ] T011 [P] Fetch all upstream branches: `git fetch upstream PRODUCTION native_tool_calling parallel_tool_calling_and_flow_execution`
-- [ ] T012 [US1] Cherry-pick `abadd6a6` (cancellation event + graceful stoppage): `git cherry-pick abadd6a6`
-- [ ] T013 [US1] Test after T012: Run backend tests, verify no conflicts, check response_processor.py changes
-- [ ] T014 [US1] Cherry-pick `8b6b16f5` (5-second drain timeout): `git cherry-pick 8b6b16f5`
-- [ ] T015 [US1] Test after T014: Verify timeout logic, check for conflicts with previous commit
-- [ ] T016 [US1] Cherry-pick `e56c2873` (don't save cancelled responses): `git cherry-pick e56c2873`
-- [ ] T017 [US1] Test after T016: Verify finish_reason checks, ensure no duplicates with abadd6a6
-- [ ] T018 [US1] Cherry-pick `26baa2ee` (frontend cleanup): `git cherry-pick 26baa2ee`
-- [ ] T019 [US1] Test after T018: Verify dependency array changes, check useAgentStream.ts
-- [ ] T020 [US1] Run comprehensive backend tests: `python -m pytest tests/ -v`
-- [ ] T021 [US1] Manual test: Start conversation, verify streaming works without errors
-- [ ] T022 [US1] Manual test: Trigger tool call, verify display without errors
-- [ ] T023 [US1] Manual test: Check for console errors or warnings
-- [ ] T024 [US1] Document results in `CHERRY_PICK_RESULTS.md` with status, conflicts, test results for each commit
-- [ ] T025 [US1] Verify Phase 1 changes: No new render errors, streaming completes, tool calls display correctly
+
+#### Commit 1: abadd6a6 (Cancellation event + graceful stoppage)
+
+- [ ] T012 [US1] **HUMAN REVIEW**: View file diffs for commit `abadd6a6`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
+- [ ] T013 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in abadd6a6
+- [ ] T014 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T015 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed (check requirements.txt, pyproject.toml changes)
+- [ ] T016 [US1] **FILE PULL**: If new files created in abadd6a6, pull them: `git show upstream/PRODUCTION:<filepath> > <local_path>`
+- [ ] T017 [US1] **DEPENDENCY PULL**: If dependencies changed, update requirements.txt or pyproject.toml from upstream
+- [ ] T018 [US1] Cherry-pick `abadd6a6`: `git cherry-pick abadd6a6`
+- [ ] T019 [US1] **CONFLICT RESOLUTION**: If conflicts, manually review: `git diff --ours` vs `git diff --theirs`, resolve, `git add <file>`, `git cherry-pick --continue`
+- [ ] T020 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
+- [ ] T021 [US1] Test after T018: Run backend tests `python -m pytest tests/ -v`, verify no conflicts
+- [ ] T022 [US1] Manual test: Verify response_processor.py changes work correctly
+
+#### Commit 2: 8b6b16f5 (5-second drain timeout)
+
+- [ ] T023 [US1] **HUMAN REVIEW**: View file diffs for commit `8b6b16f5`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
+- [ ] T024 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in 8b6b16f5
+- [ ] T025 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T026 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed
+- [ ] T027 [US1] **FILE PULL**: If new files created, pull them from upstream
+- [ ] T028 [US1] **DEPENDENCY PULL**: If dependencies changed, update from upstream
+- [ ] T029 [US1] Cherry-pick `8b6b16f5`: `git cherry-pick 8b6b16f5`
+- [ ] T030 [US1] **CONFLICT RESOLUTION**: If conflicts, manually resolve and continue
+- [ ] T031 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
+- [ ] T032 [US1] Test after T029: Verify timeout logic, check for conflicts with previous commit
+- [ ] T033 [US1] Manual test: Verify 5-second drain timeout works correctly
+
+#### Commit 3: e56c2873 (Don't save cancelled responses)
+
+- [ ] T034 [US1] **HUMAN REVIEW**: View file diffs for commit `e56c2873`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
+- [ ] T035 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in e56c2873
+- [ ] T036 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T037 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed
+- [ ] T038 [US1] **FILE PULL**: If new files created, pull them from upstream
+- [ ] T039 [US1] **DEPENDENCY PULL**: If dependencies changed, update from upstream
+- [ ] T040 [US1] Cherry-pick `e56c2873`: `git cherry-pick e56c2873`
+- [ ] T041 [US1] **CONFLICT RESOLUTION**: If conflicts, manually resolve and continue
+- [ ] T042 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
+- [ ] T043 [US1] Test after T040: Verify finish_reason checks, ensure no duplicates with abadd6a6
+- [ ] T044 [US1] Manual test: Verify cancelled responses not saved
+
+#### Commit 4: 26baa2ee (Frontend cleanup and refactoring)
+
+- [ ] T045 [US1] **HUMAN REVIEW**: View file diffs for commit `26baa2ee`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- frontend/src/hooks/useAgentStream.ts`
+- [ ] T046 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in 26baa2ee
+- [ ] T047 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T048 [US1] **DEPENDENCY CHECK**: Identify if new npm packages needed (check package.json changes)
+- [ ] T049 [US1] **FILE PULL**: If new files created, pull them from upstream
+- [ ] T050 [US1] **DEPENDENCY PULL**: If dependencies changed, update package.json and run `npm install` or `yarn install`
+- [ ] T051 [US1] Cherry-pick `26baa2ee`: `git cherry-pick 26baa2ee`
+- [ ] T052 [US1] **CONFLICT RESOLUTION**: If conflicts, manually resolve and continue
+- [ ] T053 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
+- [ ] T054 [US1] Test after T051: Verify dependency array changes, check useAgentStream.ts
+- [ ] T055 [US1] Manual test: Verify frontend cleanup works correctly
+
+#### Comprehensive Testing & Documentation
+
+- [ ] T056 [US1] Run comprehensive backend tests: `python -m pytest tests/ -v`
+- [ ] T057 [US1] Run frontend tests (if applicable): `npm test` or `yarn test`
+- [ ] T058 [US1] Manual test: Start conversation, verify streaming works without errors
+- [ ] T059 [US1] Manual test: Trigger tool call, verify display without errors
+- [ ] T060 [US1] Manual test: Check for console errors or warnings
+- [ ] T061 [US1] **HUMAN ANALYSIS**: Review all test results and identify any issues
+- [ ] T062 [US1] Document results in `CHERRY_PICK_RESULTS.md` with:
+  - Status of each commit (applied/conflicts/skipped)
+  - Files modified by each commit
+  - Dependencies added/updated
+  - New files pulled from upstream
+  - Test results for each commit
+  - Any manual resolutions made
+  - Overall impact assessment
+- [ ] T063 [US1] Verify Phase 1 changes: No new render errors, streaming completes, tool calls display correctly
 
 **Conflict Resolution Strategy**:
-- If conflicts occur: `git diff --ours` vs `git diff --theirs`, resolve manually, `git add <file>`, `git cherry-pick --continue`
-- If unresolvable: `git cherry-pick --abort` and skip commit
+- If conflicts occur: `git diff --ours` vs `git diff --theirs`, manually review and resolve, `git add <file>`, `git cherry-pick --continue`
+- If unresolvable: `git cherry-pick --abort` and document why commit was skipped
+
+**Dependency Management**:
+- Backend: Check for new imports in `requirements.txt` or `pyproject.toml`, update if needed
+- Frontend: Check for new packages in `package.json`, run `npm install` or `yarn install` if updated
+- New Files: Use `git show upstream/PRODUCTION:<filepath>` to pull files not in current branch
 
 **Success Criteria**:
-- All 4 commits applied successfully
+- All 4 commits reviewed and analyzed by human
+- All conflicts manually resolved
+- All dependencies identified and pulled
+- All new files integrated
+- All 4 commits applied successfully (or documented as skipped with reason)
 - No new console errors
 - Streaming works without abrupt termination
 - Tool calls display correctly
