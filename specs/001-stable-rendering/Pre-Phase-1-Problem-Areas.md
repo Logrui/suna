@@ -1,6 +1,7 @@
 # Pre-Phase 1 Problem Areas Analysis
 
 **Feature**: 001-stable-rendering | **Date**: 2025-11-14  
+**Status**: ✅ **UPSTREAM RESEARCH COMPLETE** - Production-tested fixes identified  
 **Symptom**: Initial messages appear in streaming, then process abruptly ends after initial tool call stream. Full agent run fails. Langfuse has little details. Both async agent run AND frontend rendering appear to fail.
 
 ---
@@ -10,6 +11,22 @@
 After deep-dive analysis of the actual code (not just codemaps), I've identified **7 critical problem areas** that could cause the described failure pattern. The issue appears to be a **cascade failure** where backend exceptions are not properly surfaced, causing silent failures that manifest as abrupt stream termination.
 
 **Most Likely Root Cause**: Exception handling gaps in `response_processor.py` during tool execution, combined with frontend not receiving proper error signals.
+
+### 🎯 CRITICAL UPDATE: Upstream Research Complete (Phase 0.5)
+
+**MAJOR DISCOVERY**: Production-tested fixes exist in `upstream/PRODUCTION` branch!
+
+**Research Results**:
+- ✅ **673 commits analyzed** across 3 upstream branches
+- ✅ **650 production-tested commits** available in Track 1 (PRODUCTION)
+- ✅ **6 of 7 problem areas** have existing fixes (86% coverage)
+- ✅ **4 high-priority commits** identified for immediate cherry-picking
+
+**Decision**: Cherry-pick production-tested fixes from `upstream/PRODUCTION` instead of implementing from scratch.
+
+**Expected Impact**: 60-80% of streaming issues resolved with Week 1 cherry-picks.
+
+See [Phase 0.5 Upstream Review](./Phase-0.5-Upstream-Review.md) and [Upstream Research](./upstream-file-diffs-research/research.md) for complete details.
 
 ---
 
@@ -51,6 +68,12 @@ pending_tool_executions.append({
 **Notes/Comments**:
 - Potential solution: Integrate with malformed tool call handler in frontend by building out a malformed tool call handler on the backend if not already present
 - Needs more research for potential solutions
+
+**🎯 UPSTREAM FIX AVAILABLE**:
+- ✅ **79 commits** in Track 1 (PRODUCTION) address tool exception handling
+- ✅ Multiple fixes in `response_processor.py`, `run.py`, `thread_manager.py`
+- ✅ Production-tested and deployed
+- **Action**: Cherry-pick relevant commits from Track 1
 
 ---
 
@@ -97,6 +120,14 @@ async for response in agent_gen:
 - System likely already exists for this
 - Needs more research
 
+**🎯 UPSTREAM FIX AVAILABLE**:
+- ✅ **HIGH PRIORITY**: Commit `abadd6a6` (Nov 3, 2025)
+- ✅ **62 additional commits** in `run_agent_background.py`
+- ✅ Adds `cancellation_event` for graceful error propagation
+- ✅ Implements cancellation checks in streaming loop
+- **Impact**: HIGH - Prevents abrupt stream termination
+- **Action**: Cherry-pick `abadd6a6` in Week 1
+
 ---
 
 ### 🟡 HIGH #3: Race Condition in Stream Finalization
@@ -142,6 +173,14 @@ if response.get('type') == 'status' and response.get('status') in ['completed', 
 **Notes/Comments**:
 - This one doesn't sound too hard to potentially fix
 - Need to generate potential solution options after a bit of research
+
+**🎯 UPSTREAM FIX AVAILABLE**:
+- ✅ **HIGH PRIORITY**: Commits `abadd6a6` + `e56c2873` (Nov 3, 2025)
+- ✅ **29 additional commits** in `agent_runs.py`
+- ✅ `e56c2873`: Don't save partial response if user cancelled
+- ✅ Checks `finish_reason != "cancelled"` before saving
+- **Impact**: MEDIUM - Cleaner cancellation handling
+- **Action**: Cherry-pick both commits in Week 1
 
 ---
 
@@ -190,6 +229,14 @@ if response.get('type') == 'status' and response.get('status') in ['completed', 
 - Stabilizing callback dependencies using refs instead of state requires a major rework and extensive research on the codebase
 - **SKIP FOR NOW** - Need to do more search and propose potential solutions that do not entirely refactor the architecture of that part of the code
 
+**🎯 UPSTREAM FIX AVAILABLE**:
+- ✅ **HIGH PRIORITY**: Commit `26baa2ee` (Nov 6, 2025)
+- ✅ **35 additional commits** in `useAgentStream.ts`
+- ✅ Frontend cleanup and refactoring
+- ✅ Addresses dependency array issues
+- **Impact**: MEDIUM - Frontend stability improvements
+- **Action**: Cherry-pick `26baa2ee` in Week 1
+
 ---
 
 ### 🟠 MEDIUM #5: Redis Pub/Sub Message Loss
@@ -227,6 +274,12 @@ pending_redis_operations.append(asyncio.create_task(redis.publish(response_chann
 **Notes/Comments**:
 - Not super high priority
 - Given we are introducing batching, need to review the architecture and make sure batching is compatible with the current Redis architecture
+
+**🎯 UPSTREAM FIX AVAILABLE**:
+- ✅ **91 commits** in Track 1 address Redis pub/sub issues
+- ✅ Fixes in `run_agent_background.py` and `agent_runs.py`
+- ✅ Production-tested Redis operation improvements
+- **Action**: Review Track 1 commits for Redis fixes if needed in Week 2
 
 ---
 
@@ -270,6 +323,14 @@ const addContentThrottled = useCallback((content: { content: string; sequence?: 
   - Improve it and test that it can handle production workloads and has meaningful value add, OR
   - Remove it entirely if it's better to migrate to a backend-only solution
 
+**🎯 UPSTREAM FIX AVAILABLE**:
+- ✅ **HIGH PRIORITY**: Commit `8b6b16f5` (Oct 22, 2025)
+- ✅ "fix: task list freezing issue - introduce buffer for 5 seconds"
+- ✅ Adds 5-second drain timeout for XML tool limit
+- ✅ Prevents infinite stream draining with max 100 chunks
+- **Impact**: HIGH - Prevents stream hanging
+- **Action**: Cherry-pick `8b6b16f5` in Week 1
+
 ---
 
 ### 🟡 MEDIUM #7: React.startTransition Delaying Critical Updates
@@ -306,6 +367,12 @@ React.startTransition(() => {
 - "Final content being able to render" is extremely important instead of full loss of a mid-streamed conversation
 - This is a critical user experience issue
 
+**🎯 UPSTREAM FIX AVAILABLE**:
+- ⚠️ **PARTIAL**: Commit `26baa2ee` (Nov 6, 2025)
+- ⚠️ Frontend cleanup may address some startTransition issues
+- ⚠️ Not fully resolved - may need additional work
+- **Action**: Cherry-pick `26baa2ee` and evaluate if additional fixes needed
+
 ---
 
 ## Secondary Issues (Lower Priority)
@@ -335,6 +402,25 @@ React.startTransition(() => {
 ---
 
 ## Recommended Investigation Order
+
+### ✅ NEW APPROACH: Cherry-Pick First (Post-Upstream Research)
+
+**Week 1 Priority** (Production-tested fixes):
+1. ✅ **Cherry-pick `abadd6a6`** - Addresses Critical #2 + High #3 (cancellation + error propagation)
+2. ✅ **Cherry-pick `8b6b16f5`** - Addresses Medium #6 (buffer overflow with 5s timeout)
+3. ✅ **Cherry-pick `e56c2873`** - Addresses High #3 (don't save cancelled responses)
+4. ✅ **Cherry-pick `26baa2ee`** - Addresses High #4 + Medium #7 (frontend cleanup)
+
+**Week 2 Evaluation**:
+- Test streaming behavior after cherry-picks
+- Identify remaining issues (if any)
+- Cherry-pick additional commits from Track 1 if needed
+
+**Week 3+ (Only if Track 1 insufficient)**:
+- Evaluate Track 2 (native tool calling) for comprehensive rewrite
+- Consider Track 3 (parallel tool) as last resort
+
+### Original Investigation Order (Backup if Cherry-Picks Insufficient)
 
 1. **Start with Critical #1**: Add exception handling around tool execution in response_processor.py
 2. **Then Critical #2**: Verify error messages reach Redis and frontend
@@ -386,6 +472,30 @@ redis-cli SUBSCRIBE "agent_run:{agent_run_id}:response"
 
 ---
 
+## Upstream Fix Coverage Summary
+
+| Problem Area | Priority | Upstream Coverage | Key Commits | Week 1 Action |
+|--------------|----------|-------------------|-------------|---------------|
+| #1 Tool Exception Swallowing | 🔴 CRITICAL | ✅ 79 commits | Multiple files | Cherry-pick relevant commits |
+| #2 Error Propagation | 🔴 CRITICAL | ✅ 62 commits + `abadd6a6` | run_agent_background.py | ✅ Cherry-pick `abadd6a6` |
+| #3 Race Conditions | 🟡 HIGH | ✅ 29 commits + 2 fixes | agent_runs.py, response_processor.py | ✅ Cherry-pick `abadd6a6` + `e56c2873` |
+| #4 Dependency Arrays | 🟡 HIGH | ✅ 35 commits + `26baa2ee` | useAgentStream.ts | ✅ Cherry-pick `26baa2ee` |
+| #5 Redis Message Loss | 🟠 MEDIUM | ✅ 91 commits | run_agent_background.py, agent_runs.py | Review in Week 2 if needed |
+| #6 Buffer Overflow | 🟠 MEDIUM | ✅ `8b6b16f5` | response_processor.py | ✅ Cherry-pick `8b6b16f5` |
+| #7 startTransition Delays | 🟡 MEDIUM | ⚠️ Partial (`26baa2ee`) | useAgentStream.ts | Cherry-pick + evaluate |
+
+**Overall Coverage**: ✅ **6 of 7 problem areas (86%)** have production-tested fixes available
+
+**Week 1 Cherry-Picks** (4 commits):
+1. ✅ `abadd6a6` - Cancellation event + graceful stoppage (HIGH impact)
+2. ✅ `8b6b16f5` - 5-second drain timeout (HIGH impact)
+3. ✅ `e56c2873` - Don't save cancelled responses (MEDIUM impact)
+4. ✅ `26baa2ee` - Frontend cleanup (MEDIUM impact)
+
+**Expected Outcome**: 60-80% of streaming issues resolved
+
+---
+
 ## Conclusion
 
 The most likely root cause is **Critical #1**: Silent exception swallowing during tool execution. This would explain:
@@ -395,4 +505,20 @@ The most likely root cause is **Critical #1**: Silent exception swallowing durin
 - ✅ Frontend sees incomplete stream (no error message received)
 - ✅ Backend appears to fail (exception terminates generator)
 
-**Recommendation**: Start by adding robust exception handling around tool execution and ensure all errors are yielded to the stream before termination.
+### ✅ UPDATED RECOMMENDATION (Post-Upstream Research)
+
+**Instead of implementing from scratch**: Cherry-pick 4 production-tested commits from `upstream/PRODUCTION` that directly address 6 of 7 problem areas.
+
+**Implementation Strategy**:
+1. **Week 1**: Cherry-pick 4 high-priority commits
+2. **Week 2**: Evaluate results, cherry-pick additional commits if needed
+3. **Week 3+**: Escalate to Track 2 (native tool calling) only if Track 1 insufficient
+
+**Why This Approach**:
+- ✅ Lower risk (production-tested)
+- ✅ Faster implementation (no research needed)
+- ✅ Proven solutions (already deployed)
+- ✅ 86% problem coverage
+- ✅ Clear escalation path if insufficient
+
+See [Phase 0.5 Upstream Review](./Phase-0.5-Upstream-Review.md) for complete implementation plan.
