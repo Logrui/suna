@@ -5,8 +5,8 @@
 
 **Implementation Approach**: 
 1. **Phase 0** (Baseline): Diff and cherry-pick safe improvements from `feature/malformed-tool-call-handler` (see plan.md) ✅ COMPLETE
-2. **Phase 0.5** (Investigation): Root cause analysis of 7 identified problem areas through iterative testing 🔍 IN PROGRESS
-3. **Phases 1-6** (Improvements): Implement targeted fixes based on Phase 0.5 findings, then proceed with optimization, error boundaries, debug endpoints, network resilience, and testing
+2. **Phase 0.5** (Upstream Research): Root cause analysis of 7 identified problem areas + discovery of production-tested solutions in upstream branches ✅ COMPLETE (2025-11-14)
+3. **Phases 1-7** (Improvements): Cherry-pick 4 production-tested commits (Phase 1), evaluate results (Phase 2), then implement error boundaries (Phase 3), debug endpoints (Phase 4), network resilience (Phase 5), comprehensive testing (Phase 6), and polish (Phase 7)
 
 ## Clarifications
 

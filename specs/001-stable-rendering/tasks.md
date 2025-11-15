@@ -114,6 +114,7 @@
 - [ ] T012 [US1] **HUMAN REVIEW**: View file diffs for commit `abadd6a6`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
 - [ ] T013 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in abadd6a6
 - [ ] T014 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T014.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve abadd6a6 cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
 - [ ] T015 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed (check requirements.txt, pyproject.toml changes)
 - [ ] T016 [US1] **FILE PULL**: If new files created in abadd6a6, pull them: `git show upstream/PRODUCTION:<filepath> > <local_path>`
 - [ ] T017 [US1] **DEPENDENCY PULL**: If dependencies changed, update requirements.txt or pyproject.toml from upstream
@@ -128,6 +129,7 @@
 - [ ] T023 [US1] **HUMAN REVIEW**: View file diffs for commit `8b6b16f5`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
 - [ ] T024 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in 8b6b16f5
 - [ ] T025 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T025.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve 8b6b16f5 cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
 - [ ] T026 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed
 - [ ] T027 [US1] **FILE PULL**: If new files created, pull them from upstream
 - [ ] T028 [US1] **DEPENDENCY PULL**: If dependencies changed, update from upstream
@@ -142,6 +144,7 @@
 - [ ] T034 [US1] **HUMAN REVIEW**: View file diffs for commit `e56c2873`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
 - [ ] T035 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in e56c2873
 - [ ] T036 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T036.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve e56c2873 cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
 - [ ] T037 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed
 - [ ] T038 [US1] **FILE PULL**: If new files created, pull them from upstream
 - [ ] T039 [US1] **DEPENDENCY PULL**: If dependencies changed, update from upstream
@@ -156,6 +159,7 @@
 - [ ] T045 [US1] **HUMAN REVIEW**: View file diffs for commit `26baa2ee`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- frontend/src/hooks/useAgentStream.ts`
 - [ ] T046 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in 26baa2ee
 - [ ] T047 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [ ] T047.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve 26baa2ee cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
 - [ ] T048 [US1] **DEPENDENCY CHECK**: Identify if new npm packages needed (check package.json changes)
 - [ ] T049 [US1] **FILE PULL**: If new files created, pull them from upstream
 - [ ] T050 [US1] **DEPENDENCY PULL**: If dependencies changed, update package.json and run `npm install` or `yarn install`
@@ -164,6 +168,14 @@
 - [ ] T053 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
 - [ ] T054 [US1] Test after T051: Verify dependency array changes, check useAgentStream.ts
 - [ ] T055 [US1] Manual test: Verify frontend cleanup works correctly
+
+#### Logging & Observability (Phase 1)
+
+- [ ] T056a [US1] **ADD DEBUG LOGGING**: Add debug logging to abadd6a6 changes in `response_processor.py` (log cancellation events, graceful stoppage)
+- [ ] T056b [US1] **ADD DEBUG LOGGING**: Add debug logging to 8b6b16f5 changes (log drain timeout triggers and duration)
+- [ ] T056c [US1] **ADD DEBUG LOGGING**: Add debug logging to e56c2873 changes (log finish_reason checks and response save decisions)
+- [ ] T056d [US1] **ADD DEBUG LOGGING**: Add debug logging to 26baa2ee changes in `useAgentStream.ts` (log dependency array changes and hook lifecycle)
+- [ ] T056e [US1] **MONITOR REACT ERRORS**: During all manual tests, monitor browser console for "Maximum update depth exceeded" warnings and log any occurrences
 
 #### Comprehensive Testing & Documentation
 
@@ -183,9 +195,46 @@
   - Overall impact assessment
 - [ ] T063 [US1] Verify Phase 1 changes: No new render errors, streaming completes, tool calls display correctly
 
-**Conflict Resolution Strategy**:
-- If conflicts occur: `git diff --ours` vs `git diff --theirs`, manually review and resolve, `git add <file>`, `git cherry-pick --continue`
-- If unresolvable: `git cherry-pick --abort` and document why commit was skipped
+**Conflict Resolution Strategy** (HUMAN-IN-THE-LOOP):
+
+When conflicts occur during cherry-pick:
+
+1. **HUMAN REVIEW**: Examine conflicts
+   - `git status` - See conflicted files
+   - `git diff --ours` - See our current version
+   - `git diff --theirs` - See upstream version
+   - `git diff --ours --theirs` - See full diff with markers
+
+2. **HUMAN ANALYSIS**: Understand the conflict
+   - Why did this conflict occur?
+   - Which version is correct for our codebase?
+   - Are there dependencies on both versions?
+   - Does this conflict affect other cherry-picks?
+
+3. **HUMAN DECISION**: Choose resolution approach
+   - **Option A**: Keep our version (ours): `git checkout --ours <file>`
+   - **Option B**: Take upstream version (theirs): `git checkout --theirs <file>`
+   - **Option C**: Manual merge: Edit file to combine both versions
+   - **Option D**: Abort and skip: `git cherry-pick --abort`
+
+4. **HUMAN VERIFICATION**: Validate resolution
+   - Review the resolved file for correctness
+   - Ensure no syntax errors or broken logic
+   - Check that dependencies are satisfied
+   - Verify the resolution aligns with commit intent
+
+5. **COMPLETION**:
+   - `git add <file>` - Mark as resolved
+   - `git cherry-pick --continue` - Continue cherry-pick
+   - OR `git cherry-pick --abort` - Abort if unresolvable
+
+**If Unresolvable**:
+- `git cherry-pick --abort` - Abort the cherry-pick
+- Document in `CHERRY_PICK_RESULTS.md`:
+  - Which commit was skipped and why
+  - What conflicts prevented resolution
+  - Recommendation for manual integration later
+  - Impact on streaming fixes
 
 **Dependency Management**:
 - Backend: Check for new imports in `requirements.txt` or `pyproject.toml`, update if needed
@@ -224,21 +273,48 @@
 
 ### Phase 2 Tasks - Week 2 Evaluation
 
-- [ ] T026 Evaluate Week 1 results: Review `CHERRY_PICK_RESULTS.md` and test outcomes
-- [ ] T027 [US1] Identify remaining issues: Compare expected vs actual behavior
-- [ ] T028 [US1] Analyze patterns: Determine if remaining issues are in Problem #1 (tool exceptions) or #5 (Redis)
-- [ ] T029 [US1] Decision: Proceed with additional Track 1 commits or escalate to Track 2?
-- [ ] T030 [P] [US1] If proceeding with Track 1: Cherry-pick additional commits for Problem #1 (tool exception handling)
-- [ ] T031 [P] [US1] If proceeding with Track 1: Cherry-pick additional commits for Problem #5 (Redis operations)
-- [ ] T032 [US1] Test additional cherry-picks: Verify no new conflicts, streaming behavior improved
-- [ ] T033 [US1] Document Week 2 results and decision in `CHERRY_PICK_RESULTS.md`
-- [ ] T034 [US1] Verify Phase 2 changes: Cumulative impact on streaming issues resolved
+- [ ] T064 Evaluate Week 1 results: Review `CHERRY_PICK_RESULTS.md` and test outcomes
+- [ ] T065 [US1] Identify remaining issues: Compare expected vs actual behavior
+- [ ] T066 [US1] Analyze patterns: Determine if remaining issues are in Problem #1 (tool exceptions) or #5 (Redis)
+- [ ] T067 [US1] Decision: Proceed with additional Track 1 commits or escalate to Track 2?
+- [ ] T068 [P] [US1] If proceeding with Track 1: Cherry-pick additional commits for Problem #1 (tool exception handling)
+- [ ] T069 [P] [US1] If proceeding with Track 1: Cherry-pick additional commits for Problem #5 (Redis operations)
+- [ ] T070 [US1] Test additional cherry-picks: Verify no new conflicts, streaming behavior improved
+- [ ] T071 [US1] Document Week 2 results and decision in `CHERRY_PICK_RESULTS.md`
+- [ ] T072 [US1] Verify Phase 2 changes: Cumulative impact on streaming issues resolved
 
 **Success Criteria**:
 - Week 1 results documented and analyzed
 - Decision made on additional cherry-picks or escalation
 - If cherry-picking: Additional commits applied successfully
 - Cumulative impact: 60-80%+ of streaming issues resolved
+
+### 🚨 MVP VALIDATION GATE (CRITICAL)
+
+**BEFORE PROCEEDING TO PHASES 3-7**, Phase 2 evaluation MUST complete and meet one of these criteria:
+
+1. **✅ PROCEED WITH PHASES 3-7**: If Phase 1-2 cherry-picks achieve **60-80%+ issue resolution**
+   - Streaming is stable without abrupt termination
+   - Tool calls display correctly
+   - No new React render errors
+   - Proceed to Phase 3 (Error Boundaries)
+
+2. **⚠️ CONDITIONAL PROCEED**: If Phase 1-2 cherry-picks achieve **30-60% issue resolution**
+   - Some streaming issues remain
+   - Additional Track 1 commits cherry-picked in Phase 2
+   - Proceed to Phase 3 with understanding that additional fixes may be needed
+   - Monitor Phase 6 testing closely for remaining issues
+
+3. **❌ ESCALATE**: If Phase 1-2 cherry-picks achieve **<30% issue resolution**
+   - Track 1 approach insufficient
+   - **DO NOT PROCEED** to Phases 3-7
+   - **ESCALATE** to Track 2 (native_tool_calling branch) or from-scratch implementation
+   - Document findings in `CHERRY_PICK_RESULTS.md` for future reference
+
+**Gate Enforcement**:
+- [ ] T072.5 [US1] **PHASE 2 COMPLETION GATE**: Evaluate Phase 2 results against criteria above
+- [ ] T072.6 [US1] **DECISION GATE**: Document decision (proceed/conditional/escalate) in `CHERRY_PICK_RESULTS.md`
+- [ ] T072.7 [US1] **ESCALATION TRIGGER** (if <30% resolved): Create escalation report and notify team before proceeding
 
 ---
 
@@ -254,15 +330,15 @@
 
 ### Phase 3 Tasks
 
-- [ ] T028 [P] [US1] Create `ToolCallErrorBoundary` component in `frontend/src/components/common/ToolCallErrorBoundary.tsx`
-- [ ] T029 [P] [US1] Implement error logging in `ToolCallErrorBoundary` with component stack trace
-- [ ] T030 [P] [US1] Add fallback UI for tool call rendering errors in `ToolCallErrorBoundary`
-- [ ] T031 [P] [US1] Wrap `ShowToolStream` component with `ToolCallErrorBoundary` in rendering logic
-- [ ] T032 [P] [US1] Create `ThreadContentErrorBoundary` component in `frontend/src/components/common/ThreadContentErrorBoundary.tsx`
-- [ ] T033 [P] [US1] Wrap `ThreadContent` component with `ThreadContentErrorBoundary`
-- [ ] T034 [US1] Manual test Phase 3: Trigger malformed tool call, verify error boundary catches it
-- [ ] T035 [US1] Manual test Phase 3: Verify fallback UI displays, streaming continues
-- [ ] T036 [US1] Verify Phase 3 changes: No infinite error loops, UI remains responsive
+- [ ] T073 [P] [US1] Create `ToolCallErrorBoundary` component in `frontend/src/components/common/ToolCallErrorBoundary.tsx`
+- [ ] T074 [P] [US1] Implement error logging in `ToolCallErrorBoundary` with component stack trace
+- [ ] T075 [P] [US1] Add fallback UI for tool call rendering errors in `ToolCallErrorBoundary`
+- [ ] T076 [P] [US1] Wrap `ShowToolStream` component with `ToolCallErrorBoundary` in rendering logic
+- [ ] T077 [P] [US1] Create `ThreadContentErrorBoundary` component in `frontend/src/components/common/ThreadContentErrorBoundary.tsx`
+- [ ] T078 [P] [US1] Wrap `ThreadContent` component with `ThreadContentErrorBoundary`
+- [ ] T079 [US1] Manual test Phase 3: Trigger malformed tool call, verify error boundary catches it
+- [ ] T080 [US1] Manual test Phase 3: Verify fallback UI displays, streaming continues
+- [ ] T081 [US1] Verify Phase 3 changes: No infinite error loops, UI remains responsive
 
 ---
 
@@ -278,17 +354,17 @@
 
 ### Phase 4 Tasks
 
-- [ ] T037 [P] Create `backend/api/debug.py` with debug endpoint routes
-- [ ] T038 [P] Implement `/render-performance/metrics` POST endpoint in `backend/api/debug.py`
-- [ ] T039 [P] Add render metrics logging with threshold warnings (>50 renders) in metrics endpoint
-- [ ] T040 [P] Implement `/debug/streaming-events` POST endpoint in `backend/api/debug.py`
-- [ ] T041 [P] Add streaming event logging (retry, timeout, error, reconnect, malformed_response) in debug endpoint
-- [ ] T042 [P] Register debug routes in `backend/main.py` or `backend/api/__init__.py`
-- [ ] T043 [P] [US3] Add frontend metrics reporting to `useAgentStream` hook for render counts
-- [ ] T044 [P] [US3] Add frontend event reporting to `useAgentStream` for streaming errors/retries
-- [ ] T045 [US3] Manual test Phase 4: Trigger render metrics endpoint, verify metrics logged
-- [ ] T046 [US3] Manual test Phase 4: Trigger streaming error, verify event logged to debug endpoint
-- [ ] T047 [US3] Verify Phase 4 changes: Debug endpoints isolated, no impact on core streaming
+- [ ] T082 [P] Create `backend/api/debug.py` with debug endpoint routes
+- [ ] T083 [P] Implement `/render-performance/metrics` POST endpoint in `backend/api/debug.py`
+- [ ] T084 [P] Add render metrics logging with threshold warnings (>50 renders) in metrics endpoint
+- [ ] T085 [P] Implement `/debug/streaming-events` POST endpoint in `backend/api/debug.py`
+- [ ] T086 [P] Add streaming event logging (retry, timeout, error, reconnect, malformed_response) in debug endpoint
+- [ ] T087 [P] Register debug routes in `backend/main.py` or `backend/api/__init__.py`
+- [ ] T088 [P] [US3] Add frontend metrics reporting to `useAgentStream` hook for render counts
+- [ ] T089 [P] [US3] Add frontend event reporting to `useAgentStream` for streaming errors/retries
+- [ ] T090 [US3] Manual test Phase 4: Trigger render metrics endpoint, verify metrics logged
+- [ ] T091 [US3] Manual test Phase 4: Trigger streaming error, verify event logged to debug endpoint
+- [ ] T092 [US3] Verify Phase 4 changes: Debug endpoints isolated, no impact on core streaming
 
 ---
 
@@ -305,25 +381,25 @@
 
 ### Phase 5 Tasks
 
-- [ ] T048 [P] [US1] Update streaming timeout configuration in `frontend/src/hooks/useAgentStream.ts`
-- [ ] T049 [P] [US1] Set silenceThreshold to 15000ms (15 seconds) in useAgentStream config
-- [ ] T050 [P] [US1] Set maxRetries to 10 in useAgentStream config
-- [ ] T051 [P] [US1] Set retryInterval to 5000ms (5 seconds linear) in useAgentStream config
-- [ ] T052 [P] [US1] Set keepAliveInterval to 10000ms (10 seconds) in useAgentStream config
-- [ ] T053 [P] [US1] Implement retry logic in `useAgentStream` with linear backoff (not exponential)
-- [ ] T054 [P] [US1] Add reconnection logic to EventSource error handler in `useAgentStream`
-- [ ] T055 [P] [US1] Maintain UI pulsing/live animations during throttle in `ThreadContent` message display - ensure animations never stop during retries. **Animation Details**: When `streamHookStatus === 'streaming' || 'connecting'` and no text content is available, display three pulsing dots (h-1 w-1 rounded-full) with staggered delays (0ms, 150ms, 300ms) using Tailwind's `animate-pulse duration-1000` class. Animation must remain visible and continuous during all 10 retry attempts; do NOT reset animation state or hide dots during retries.
-- [ ] T056 [P] [US1] Implement stream cleanup on navigation to prevent stale subscriptions
-- [ ] T057 [P] [US1] Create toast notification component for streaming errors in `frontend/src/components/common/StreamingErrorToast.tsx`
-- [ ] T058 [P] [US1] Implement "Try Again" button in chat message area for manual stream retry after all automatic retries exhausted
-- [ ] T059 [P] [US1] Add logic to show toast notification only after all 10 automatic retries fail (not during retries)
-- [ ] T060 [P] [US1] Ensure animations remain consistent and continuous during all retry attempts - no flicker or animation reset. **Verification Criteria**: (1) Pulsing dots visible continuously from first retry through 10th retry attempt, (2) No animation interruption when status changes between 'streaming' and 'connecting', (3) Dots maintain consistent opacity/brightness throughout (no sudden dimming/brightening), (4) Staggered timing preserved (dots pulse in sequence, not synchronized)
-- [ ] T061 [US1] Manual test Phase 5: Simulate 15 second network silence, verify pulsing animation continues uninterrupted
-- [ ] T062 [US1] Manual test Phase 5: Verify toast notification appears only after all retries exhausted
-- [ ] T063 [US1] Manual test Phase 5: Verify "Try Again" button works and retriggers stream
-- [ ] T064 [US1] Manual test Phase 5: Simulate network disconnection, verify reconnection succeeds
-- [ ] T065 [US1] Manual test Phase 5: Verify UI maintains pulsing appearance during throttle without interruption
-- [ ] T066 [US1] Verify Phase 5 changes: Timeouts correct, retries work, reconnection succeeds, animations stable
+- [ ] T093 [P] [US1] Update streaming timeout configuration in `frontend/src/hooks/useAgentStream.ts`
+- [ ] T094 [P] [US1] Set silenceThreshold to 15000ms (15 seconds) in useAgentStream config
+- [ ] T095 [P] [US1] Set maxRetries to 10 in useAgentStream config
+- [ ] T096 [P] [US1] Set retryInterval to 5000ms (5 seconds linear) in useAgentStream config
+- [ ] T097 [P] [US1] Set keepAliveInterval to 10000ms (10 seconds) in useAgentStream config
+- [ ] T098 [P] [US1] Implement retry logic in `useAgentStream` with linear backoff (not exponential)
+- [ ] T099 [P] [US1] Add reconnection logic to EventSource error handler in `useAgentStream`
+- [ ] T100 [P] [US1] Maintain UI pulsing/live animations during throttle in `ThreadContent` message display - ensure animations never stop during retries. **Animation Details**: When `streamHookStatus === 'streaming' || 'connecting'` and no text content is available, display three pulsing dots (h-1 w-1 rounded-full) with staggered delays (0ms, 150ms, 300ms) using Tailwind's `animate-pulse duration-1000` class. Animation must remain visible and continuous during all 10 retry attempts; do NOT reset animation state or hide dots during retries.
+- [ ] T101 [P] [US1] Implement stream cleanup on navigation to prevent stale subscriptions
+- [ ] T102 [P] [US1] Create toast notification component for streaming errors in `frontend/src/components/common/StreamingErrorToast.tsx`
+- [ ] T103 [P] [US1] Implement "Try Again" button in chat message area for manual stream retry after all automatic retries exhausted
+- [ ] T104 [P] [US1] Add logic to show toast notification only after all 10 automatic retries fail (not during retries)
+- [ ] T105 [P] [US1] Ensure animations remain consistent and continuous during all retry attempts - no flicker or animation reset. **Verification Criteria**: (1) Pulsing dots visible continuously from first retry through 10th retry attempt, (2) No animation interruption when status changes between 'streaming' and 'connecting', (3) Dots maintain consistent opacity/brightness throughout (no sudden dimming/brightening), (4) Staggered timing preserved (dots pulse in sequence, not synchronized)
+- [ ] T106 [US1] Manual test Phase 5: Simulate 15 second network silence, verify pulsing animation continues uninterrupted
+- [ ] T107 [US1] Manual test Phase 5: Verify toast notification appears only after all retries exhausted
+- [ ] T108 [US1] Manual test Phase 5: Verify "Try Again" button works and retriggers stream
+- [ ] T109 [US1] Manual test Phase 5: Simulate network disconnection, verify reconnection succeeds
+- [ ] T110 [US1] Manual test Phase 5: Verify UI maintains pulsing appearance during throttle without interruption
+- [ ] T111 [US1] Verify Phase 5 changes: Timeouts correct, retries work, reconnection succeeds, animations stable
 
 ---
 
@@ -340,23 +416,23 @@
 
 ### Phase 6 Tasks
 
-- [ ] T077 [US1] Manual test: Basic streaming - Start conversation, verify tokens stream smoothly
-- [ ] T078 [US1] Manual test: Tool call rendering - Trigger tool call, verify display without errors
-- [ ] T079 [US1] Manual test: Rapid input - Send multiple prompts quickly, verify UI responsive
-- [ ] T080 [US1] Manual test: Long tool output - Trigger tool with large output, verify no performance degradation
-- [ ] T081 [US1] Manual test: Network resilience - Simulate disconnect/reconnect, verify recovery
-- [ ] T082 [US1] Manual test: Malformed response - Trigger malformed tool call, verify graceful handling
-- [ ] T083 [US1] Manual test: Concurrent streams - Double-click submit, verify no overlapping renders
-- [ ] T084 [US1] Manual test: Error boundary - Trigger tool rendering error, verify fallback UI
-- [ ] T085 [US1] Manual test: Throttle scenario - Simulate backend throttle, verify UI maintains pulsing
-- [ ] T086 [US1] Performance verification: Render counts reduced by 50%+ for critical components
-- [ ] T087 [US1] Performance verification: Streaming latency <100ms
-- [ ] T088 [US1] Performance verification: Zero "Maximum update depth exceeded" errors
-- [ ] T089 [US2] Manual test: Feature parity - Verify cherry-picked features work correctly
-- [ ] T090 [US2] Manual test: Smoke test - Run through basic workflows, verify no regressions
-- [ ] T091 [US3] Verify logging: Check debug endpoints capture metrics and events
-- [ ] T092 [US3] Verify observability: Logs describe failures without overwhelming volume
-- [ ] T093 [US3] Verify observability: Confirm debug endpoints capture all required metrics and events without overwhelming volume
+- [ ] T112 [US1] Manual test: Basic streaming - Start conversation, verify tokens stream smoothly
+- [ ] T113 [US1] Manual test: Tool call rendering - Trigger tool call, verify display without errors
+- [ ] T114 [US1] Manual test: Rapid input - Send multiple prompts quickly, verify UI responsive
+- [ ] T115 [US1] Manual test: Long tool output - Trigger tool with large output, verify no performance degradation
+- [ ] T116 [US1] Manual test: Network resilience - Simulate disconnect/reconnect, verify recovery
+- [ ] T117 [US1] Manual test: Malformed response - Trigger malformed tool call, verify graceful handling
+- [ ] T118 [US1] Manual test: Concurrent streams - Double-click submit, verify no overlapping renders
+- [ ] T119 [US1] Manual test: Error boundary - Trigger tool rendering error, verify fallback UI
+- [ ] T120 [US1] Manual test: Throttle scenario - Simulate backend throttle, verify UI maintains pulsing
+- [ ] T121 [US1] Performance verification: Render counts reduced by 50%+ for critical components
+- [ ] T122 [US1] Performance verification: Streaming latency <100ms
+- [ ] T123 [US1] Performance verification: Zero "Maximum update depth exceeded" errors
+- [ ] T124 [US2] Manual test: Feature parity - Verify cherry-picked features work correctly
+- [ ] T125 [US2] Manual test: Smoke test - Run through basic workflows, verify no regressions
+- [ ] T126 [US3] Verify logging: Check debug endpoints capture metrics and events
+- [ ] T127 [US3] Verify observability: Logs describe failures without overwhelming volume
+- [ ] T128 [US3] Verify observability: Confirm debug endpoints capture all required metrics and events without overwhelming volume
 
 ---
 
@@ -372,17 +448,17 @@
 
 ### Phase 7 Tasks
 
-- [ ] T094 [P] Review all code changes for Suna conventions and style consistency
-- [ ] T095 [P] Update CHERRY_PICK_LOG.md with final summary and lessons learned
-- [ ] T096 [P] Document all Phase 0-6 changes in feature branch commit messages
-- [ ] T097 [P] Create performance baseline comparison (before/after metrics)
-- [ ] T098 [P] Verify all files have proper imports and dependencies
-- [ ] T099 [P] Run linter on all modified files: `npm run lint` (frontend), `pylint` (backend)
-- [ ] T100 [P] Test Windows compatibility: Verify asyncio and file paths work on Windows
-- [ ] T101 Update `.docs/guidelines/Rendering_React_Best_Practices.md` with learnings from this feature
-- [ ] T102 Create rollback plan documentation in feature branch
-- [ ] T103 Final validation: Run full manual test checklist one more time
-- [ ] T104 Prepare PR description with summary of changes and testing results
+- [ ] T129 [P] Review all code changes for Suna conventions and style consistency
+- [ ] T130 [P] Update CHERRY_PICK_LOG.md with final summary and lessons learned
+- [ ] T131 [P] Document all Phase 0-6 changes in feature branch commit messages
+- [ ] T132 [P] Create performance baseline comparison (before/after metrics)
+- [ ] T133 [P] Verify all files have proper imports and dependencies
+- [ ] T134 [P] Run linter on all modified files: `npm run lint` (frontend), `pylint` (backend)
+- [ ] T135 [P] Test Windows compatibility: Verify asyncio and file paths work on Windows
+- [ ] T136 Update `.docs/guidelines/Rendering_React_Best_Practices.md` with learnings from this feature
+- [ ] T137 Create rollback plan documentation in feature branch
+- [ ] T138 Final validation: Run full manual test checklist one more time
+- [ ] T139 Prepare PR description with summary of changes and testing results
 
 ---
 
@@ -410,51 +486,78 @@ Phase 7: Polish & Cross-Cutting [All]
 
 ### Parallelizable Tasks Within Phases
 
-**Phase 1** (Frontend Optimization):
-- T009-T016 can run in parallel (different files, no dependencies)
-- T017-T019 sequential (dependent on T009-T016)
+**Phase 1** (Week 1 Cherry-Picks - HUMAN-IN-THE-LOOP):
+- T009-T011: Preparation (sequential, must complete first)
+- T012-T022: Commit 1 (sequential, human review → cherry-pick → test)
+- T023-T033: Commit 2 (sequential, human review → cherry-pick → test)
+- T034-T044: Commit 3 (sequential, human review → cherry-pick → test)
+- T045-T055: Commit 4 (sequential, human review → cherry-pick → test)
+- T056-T063: Testing & Documentation (sequential, dependent on all commits)
+- **Note**: Each commit's human review can start in parallel, but cherry-pick must wait for approval
 
-**Phase 2** (Backend Buffering):
-- T020-T024 can run in parallel (different aspects of same file)
-- T025-T027 sequential (dependent on T020-T024)
+**Phase 2** (Week 2 Evaluation):
+- T064-T067: Evaluation (sequential, must complete before decisions)
+- T068-T069: Additional cherry-picks (parallel if proceeding with Track 1)
+- T070-T072: Testing & Documentation (sequential, dependent on cherry-picks)
 
 **Phase 3** (Error Boundaries):
-- T028-T033 can run in parallel (different components)
-- T034-T036 sequential (dependent on T028-T033)
+- T073-T078: Component creation (can run in parallel, different files)
+- T079-T081: Testing (sequential, dependent on T073-T078)
 
 **Phase 4** (Debug Endpoints):
-- T037-T042 can run in parallel (backend endpoints)
-- T043-T044 can run in parallel (frontend reporting)
-- T045-T047 sequential (dependent on all)
+- T082-T087: Backend endpoints (can run in parallel, different endpoints)
+- T088-T089: Frontend reporting (can run in parallel, independent of backend)
+- T090-T092: Testing (sequential, dependent on all)
 
 **Phase 5** (Network Resilience):
-- T048-T056 can run in parallel (different aspects)
-- T057-T060 sequential (dependent on T048-T056)
+- T093-T105: Configuration & implementation (can run in parallel, different aspects)
+- T106-T111: Testing (sequential, dependent on T093-T105)
 
-**Phase 6** (Testing):
-- T061-T069 can run in parallel (independent test scenarios)
-- T070-T076 sequential (verification tasks)
+**Phase 6** (Testing & Validation):
+- T112-T120: Manual tests (can run in parallel, independent scenarios)
+- T121-T123: Performance verification (can run in parallel)
+- T124-T128: Feature & observability tests (can run in parallel)
 
-**Phase 7** (Polish):
-- T077-T083 can run in parallel (different concerns)
-- T084-T087 sequential (final tasks)
+**Phase 7** (Polish & Cross-Cutting):
+- T129-T135: Code review & documentation (can run in parallel, different concerns)
+- T136-T139: Final validation (sequential, dependent on all)
 
 ### Suggested MVP Scope
 
-**Minimum Viable Product** (Phase 0 + Phase 1 + Phase 2):
-- Establish clean baseline via cherry-picking
-- Implement frontend render optimization (React.memo, memoization)
-- Implement backend content buffering (internal only)
-- Validate streaming works without render errors
+**Minimum Viable Product** (Phase 0 + Phase 1):
+- ✅ Phase 0: Establish clean baseline (COMPLETE)
+- 🚀 Phase 1: Cherry-pick 4 production-tested commits (READY)
+- **Expected Result**: 60-80% of streaming issues resolved
+- **Effort**: 2-3 days
+- **Risk**: Low (production-tested commits)
+- **Timeline**: Week 1
 
-This MVP addresses the core problem (React render loop errors) and establishes the foundation for subsequent phases.
+This MVP addresses the core streaming failures with proven production fixes and establishes the foundation for subsequent optimization phases.
+
+**Phase 1.5 (Optional)**: If Phase 1 achieves 60-80% resolution, proceed directly to Phase 6 (Testing & Validation) to validate improvements before continuing with Phases 3-5.
 
 ### Recommended Execution Plan
 
-1. **Week 1**: Phase 0 (baseline analysis) + Phase 1 (frontend optimization)
-2. **Week 2**: Phase 2 (backend buffering) + Phase 3 (error boundaries)
-3. **Week 3**: Phase 4 (debug endpoints) + Phase 5 (network resilience)
-4. **Week 4**: Phase 6 (testing) + Phase 7 (polish)
+**Week 1 (Phase 1 - MVP)**:
+- T009-T011: Preparation (0.5 day)
+- T012-T022: Commit 1 cherry-pick + test (0.5 day)
+- T023-T033: Commit 2 cherry-pick + test (0.5 day)
+- T034-T044: Commit 3 cherry-pick + test (0.5 day)
+- T045-T055: Commit 4 cherry-pick + test (0.5 day)
+- T056-T063: Comprehensive testing + documentation (1 day)
+
+**Week 2 (Phase 2 - Evaluation)**:
+- T064-T072: Evaluate results and decide on additional cherry-picks (2-3 days)
+- If 60-80% resolved: Proceed to Phase 6 (Testing & Validation)
+- If 30-60% resolved: Cherry-pick additional commits + Phase 6
+- If <30% resolved: Escalate to Track 2 or from-scratch implementation
+
+**Week 3+ (Phases 3-7 - Optimization & Polish)**:
+- Phase 3: Error Boundaries (1-2 days)
+- Phase 4: Debug Endpoints (1-2 days)
+- Phase 5: Network Resilience (2-3 days)
+- Phase 6: Testing & Validation (2-3 days)
+- Phase 7: Polish & Cross-Cutting (1-2 days)
 
 Each phase includes manual testing to validate improvements before proceeding.
 
@@ -470,6 +573,22 @@ Each phase includes manual testing to validate improvements before proceeding.
 4. **Careful Review**: Core rendering components reviewed with extreme caution
 5. **Documentation**: All decisions and cherry-picks documented
 
+### Functional Requirements to Task Mapping
+
+| Requirement | Description | Task IDs | Phase |
+|-------------|-------------|----------|-------|
+| **FR-001** | Render response streaming tokens in append-only list | T012-T063, T112-T120 | 1, 6 |
+| **FR-002** | Handle backend throttle/malformed errors without React max depth | T012-T055, T073-T081 | 1, 3 |
+| **FR-003** | Engineers can cherry-pick stable code selectively | T009-T063 | 1 |
+| **FR-004** | Logging/Metrics capture stream lifecycle events | T056a-T056e, T082-T092 | 1, 4 |
+| **FR-006** | UI state cleanup cancels stale subscriptions | T101, T106-T111 | 5 |
+| **FR-007** | Frontend maintains live animations during throttle | T100, T106-T111 | 5 |
+| **FR-008** | Frontend batches streaming payloads | Phase 2 evaluation | 2 |
+| **FR-009** | Error boundaries on tool call displays | T073-T081 | 3 |
+| **FR-010** | Handle complex tool calls without degradation | T012-T055, T112-T120 | 1, 6 |
+| **FR-011** | Network disconnection/reconnection recovery | T093-T111 | 5 |
+| **FR-012** | Prevent concurrent stream conflicts | T118, T120 | 6 |
+
 ### Success Criteria
 
 - ✅ Zero "Maximum update depth exceeded" errors
@@ -478,6 +597,7 @@ Each phase includes manual testing to validate improvements before proceeding.
 - ✅ Graceful handling of network failures and malformed responses
 - ✅ Upstream sync-safe implementation
 - ✅ All user stories independently testable and completable
+- ✅ All 12 functional requirements mapped to executable tasks
 
 ### Rollback Strategy
 
@@ -491,26 +611,98 @@ If issues arise:
 
 ## Task Summary
 
-**Total Tasks**: 134 (updated with cherry-pick strategy)  
-**Phase 0 (Baseline)**: 8 tasks ✅ COMPLETE  
-**Phase 0.5 (Upstream Research)**: ✅ COMPLETE (673 commits analyzed, 4 commits identified)  
-**Phase 1 (Week 1 Cherry-Picks)**: 17 tasks 🚀 READY TO START  
-**Phase 2 (Week 2 Evaluation)**: 9 tasks 📊 PENDING  
-**Phase 3 (Error Boundaries)**: 9 tasks  
-**Phase 4 (Debug Endpoints)**: 11 tasks  
-**Phase 5 (Network Resilience)**: 19 tasks  
-**Phase 6 (Testing & Validation)**: 17 tasks  
-**Phase 7 (Polish & Cross-Cutting)**: 11 tasks  
+**Total Tasks**: 139 (comprehensive human-in-the-loop cherry-pick + optimization workflow)
 
-**Strategy Change**: Pivoted from "implement from scratch" to "cherry-pick production-tested fixes"  
-**Week 1 Focus**: Apply 4 high-priority commits from `upstream/PRODUCTION`  
-**Week 2 Focus**: Evaluate results and cherry-pick additional commits if needed  
-**Expected Outcome**: 60-80% of streaming issues potentially resolved with Week 1-2 cherry-picks  
-**Escalation Path**: Track 1 → Track 2 (native_tool_calling) → Track 3 (parallel_tool) if needed  
+### Task Breakdown by Phase
 
-**Estimated Duration**: 
-- Phase 1 (Week 1): 2-3 days (cherry-pick 4 commits + testing)
-- Phase 2 (Week 2): 2-3 days (evaluate + additional cherry-picks if needed)
-- Phases 3-7: 2-3 weeks (based on Phase 1-2 outcomes)
+| Phase | Name | Tasks | Status | Duration |
+|-------|------|-------|--------|----------|
+| 0 | Baseline Analysis | T001-T008 (8) | ✅ COMPLETE | Done |
+| 0.5 | Upstream Research | Research Complete | ✅ COMPLETE | Done |
+| 1 | Week 1 Cherry-Picks | T009-T063 (55) | 🚀 READY | 2-3 days |
+| 2 | Week 2 Evaluation | T064-T072 (9) | 📊 PENDING | 2-3 days |
+| 3 | Error Boundaries | T073-T081 (9) | ⏳ BLOCKED | 1-2 days |
+| 4 | Debug Endpoints | T082-T092 (11) | ⏳ BLOCKED | 1-2 days |
+| 5 | Network Resilience | T093-T111 (19) | ⏳ BLOCKED | 2-3 days |
+| 6 | Testing & Validation | T112-T128 (17) | ⏳ BLOCKED | 2-3 days |
+| 7 | Polish & Cross-Cutting | T129-T139 (11) | ⏳ BLOCKED | 1-2 days |
 
-**Updated MVP Scope**: Phase 0 + Phase 1 (Week 1 cherry-picks) = Potential 60-80% issue resolution
+### Key Metrics
+
+**Strategy**: Pivoted from "implement from scratch" to "cherry-pick production-tested fixes"
+- **Lower Risk**: Commits tested in production deployments
+- **Faster Timeline**: Week 1 cherry-picks vs weeks of research + implementation
+- **High Coverage**: 6 of 7 problem areas addressed (86%)
+- **Clear Escalation**: Track 1 → Track 2 → Track 3 if needed
+
+**Week 1 Focus**: Apply 4 high-priority commits from `upstream/PRODUCTION`
+- `abadd6a6` - Cancellation event + graceful stoppage (Problem #2, #3)
+- `8b6b16f5` - 5-second drain timeout (Problem #6)
+- `e56c2873` - Don't save cancelled responses (Problem #3)
+- `26baa2ee` - Frontend cleanup and refactoring (Problem #4, #7)
+
+**Week 2 Focus**: Evaluate results and cherry-pick additional commits if needed
+- If 60-80% resolved: Continue with additional Track 1 commits
+- If 30-60% resolved: Cherry-pick more + identify patterns
+- If <30% resolved: Escalate to Track 2 or from-scratch implementation
+
+**Expected Outcome**: 60-80% of streaming issues potentially resolved with Week 1-2 cherry-picks
+
+### Phase 1 Task Details (55 tasks)
+
+**Preparation** (T009-T011): 3 tasks
+- Create implementation branch
+- Verify upstream remote
+- Fetch all upstream branches
+
+**Per Commit** (4 commits × 11 tasks = 44 tasks):
+- HUMAN REVIEW: View file diffs
+- HUMAN ANALYSIS: Identify modified files and dependencies
+- HUMAN DECISION: Approve changes
+- DEPENDENCY CHECK: Identify new imports/packages
+- FILE PULL: Pull new files from upstream
+- DEPENDENCY PULL: Update requirements.txt/package.json
+- Cherry-pick: Apply commit
+- CONFLICT RESOLUTION: Manually resolve conflicts
+- HUMAN VERIFICATION: Verify changes match expected diffs
+- Testing: Run tests and manual verification
+
+**Comprehensive Testing & Documentation** (T056-T063): 8 tasks
+- Run comprehensive backend/frontend tests
+- Manual testing (streaming, tool calls, console errors)
+- Human analysis of test results
+- Document all results in CHERRY_PICK_RESULTS.md
+
+### Estimated Timeline
+
+- **Phase 1 (Week 1)**: 2-3 days (cherry-pick 4 commits + testing)
+- **Phase 2 (Week 2)**: 2-3 days (evaluate + additional cherry-picks if needed)
+- **Phases 3-7**: 2-3 weeks (based on Phase 1-2 outcomes)
+- **Total**: 3-4 weeks to complete all phases
+
+### MVP Scope
+
+**Minimum Viable Product**: Phase 0 + Phase 1 (Week 1 cherry-picks)
+- **Expected Result**: 60-80% of streaming issues resolved
+- **Effort**: 2-3 days
+- **Risk**: Low (production-tested commits)
+- **Next Steps**: Evaluate Phase 2 based on Phase 1 results
+
+### Parallelization Opportunities
+
+**Phase 1**: Human-in-the-loop tasks are sequential (each commit must be reviewed before cherry-picking)
+**Phase 3-7**: Can run in parallel with Phase 1-2 if additional team members available
+**Testing**: Manual tests can be parallelized across different scenarios
+
+### Success Criteria
+
+✅ All 4 commits reviewed and analyzed by human
+✅ All conflicts manually resolved
+✅ All dependencies identified and pulled
+✅ All new files integrated
+✅ All 4 commits applied successfully (or documented as skipped with reason)
+✅ No new console errors
+✅ Streaming works without abrupt termination
+✅ Tool calls display correctly
+✅ No performance regressions
+✅ 60-80% of streaming issues resolved
