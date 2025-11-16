@@ -116,13 +116,11 @@ $failedFiles = @()
 
 foreach ($file in $safeFiles) {
     try {
-        # Get file from production
-        $content = git show "upstream/PRODUCTION:$file" 2>$null
-        
+        # Check if file exists in production first
+        $checkFile = git cat-file -e "upstream/PRODUCTION:$file" 2>$null
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "  SKIP: $file (not found in production)"
+            # File doesn't exist in production, skip it
             $failureCount++
-            $failedFiles += $file
             continue
         }
         
@@ -134,7 +132,17 @@ foreach ($file in $safeFiles) {
             }
         }
         
-        # Write file content
+        # Get file content from production
+        $content = git show "upstream/PRODUCTION:$file" 2>$null
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  SKIP: $file (error reading from production)"
+            $failureCount++
+            $failedFiles += $file
+            continue
+        }
+        
+        # Write file using -LiteralPath to avoid wildcard expansion with brackets
         $content | Out-File -LiteralPath $file -Encoding UTF8 -Force
         
         Write-Host "  MERGED: $file"
