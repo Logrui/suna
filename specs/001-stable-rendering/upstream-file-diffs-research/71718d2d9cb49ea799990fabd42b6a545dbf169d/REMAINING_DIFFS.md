@@ -1,12 +1,12 @@
 ﻿# Files Still Differing from Production Commit
 
 **Production Commit**: `71718d2d9cb49ea799990fabd42b6a545dbf169d`  
-**Current HEAD**: `511b3517ec48fc073edd94f26c613fe8d02bfc2a`  
+**Current HEAD**: `77155039ce97d343fc800482e27389767fc0373e`  
 **Status**: Post auto-merge verification
 
-**Total Differing Files**: 408
+**Total Differing Files**: 423
 - Expected (Manual Review): 27
-- Unexpected (Should be merged): 381
+- Unexpected (Should be merged): 396
 
 ## âš ï¸ UNEXPECTED DIFFERENCES (Should have been merged!)
 
@@ -50,6 +50,7 @@
 - `apps/mobile/assets/images/quick-actions/presentation-templates/colorful-min.png`  
 - `apps/mobile/assets/images/quick-actions/presentation-templates/competitor_analysis_blue-min.png`  
 - `apps/mobile/assets/images/quick-actions/presentation-templates/elevator_pitch-min.png`  
+- `apps/mobile/assets/images/quick-actions/presentation-templates/gamer_gray-min.png`  
 - `apps/mobile/assets/images/quick-actions/presentation-templates/green-min.png`  
 - `apps/mobile/assets/images/quick-actions/presentation-templates/hipster-min.png`  
 - `apps/mobile/assets/images/quick-actions/presentation-templates/minimalist_2-min.png`  
@@ -173,6 +174,7 @@
 - `backend/core/run.py`  
 - `backend/core/sandbox/sandbox.py`  
 - `backend/core/services/email.py`  
+- `backend/core/services/email_api.py`  
 - `backend/core/services/llm.py`  
 - `backend/core/templates/utils.py`  
 - `backend/core/threads.py`  
@@ -231,6 +233,7 @@
 - `frontend/src/app/legal/page.tsx`  
 - `frontend/src/app/metadata.ts`  
 - `frontend/src/app/not-found.tsx`  
+- `frontend/src/app/react-query-provider.tsx`  
 - `frontend/src/app/setting-up/page.tsx`  
 - `frontend/src/app/share/[threadId]/_components/SharePageWrapper.tsx`  
 - `frontend/src/app/share/[threadId]/_components/ShareThreadLayout.tsx`  
@@ -239,6 +242,8 @@
 - `frontend/src/app/sitemap.ts`  
 - `frontend/src/app/subscription/page.tsx`  
 - `frontend/src/app/suna/page.tsx`  
+- `frontend/src/assets/animations/loading-black.json`  
+- `frontend/src/assets/animations/loading-white.json`  
 - `frontend/src/components/admin/admin-user-details-dialog.tsx`  
 - `frontend/src/components/admin/admin-user-table.tsx`  
 - `frontend/src/components/agents/agent-configuration-dialog.tsx`  
@@ -294,6 +299,7 @@
 - `frontend/src/components/billing/plan-utils.ts`  
 - `frontend/src/components/billing/pricing/index.ts`  
 - `frontend/src/components/billing/pricing/plan-selection-modal.tsx`  
+- `frontend/src/components/billing/pricing/pricing-section.tsx`  
 - `frontend/src/components/billing/scheduled-downgrade-card.tsx`  
 - `frontend/src/components/billing/subscription-cancellation-card.tsx`  
 - `frontend/src/components/billing/thread-usage.tsx`  
@@ -307,7 +313,11 @@
 - `frontend/src/components/GithubSignIn.tsx`  
 - `frontend/src/components/help/help-search-modal.tsx`  
 - `frontend/src/components/help/help-sidebar.tsx`  
+- `frontend/src/components/home/footer-section.tsx`  
+- `frontend/src/components/home/hero-section.tsx`  
+- `frontend/src/components/home/navbar.tsx`  
 - `frontend/src/components/home/theme-toggle.tsx`  
+- `frontend/src/components/home/wordmark-footer.tsx`  
 - `frontend/src/components/maintenance/maintenance-page.tsx`  
 - `frontend/src/components/onboarding/index.ts`  
 - `frontend/src/components/onboarding/onboarding-config.tsx`  
@@ -341,9 +351,11 @@
 - `frontend/src/components/thread/file-viewer-modal.tsx`  
 - `frontend/src/components/thread/HealthCheckedVncIframe.tsx`  
 - `frontend/src/components/thread/layout/index.ts`  
+- `frontend/src/components/thread/layout/thread-layout.tsx`  
 - `frontend/src/components/thread/preview-renderers/file-preview-markdown-renderer.tsx`  
 - `frontend/src/components/thread/preview-renderers/html-renderer.tsx`  
 - `frontend/src/components/thread/ThreadComponent.tsx`  
+- `frontend/src/components/thread/thread-error.tsx`  
 - `frontend/src/components/thread/thread-site-header.tsx`  
 - `frontend/src/components/thread/tiptap-document-modal.tsx`  
 - `frontend/src/components/thread/tool-views/configure-agent-integration/configure-agent-integration.tsx`  
@@ -371,10 +383,12 @@
 - `frontend/src/components/triggers/simplified-trigger-detail-panel.tsx`  
 - `frontend/src/components/triggers/trigger-creation-dialog.tsx`  
 - `frontend/src/components/triggers/triggers-page.tsx`  
+- `frontend/src/components/ui/animated-bg.tsx`  
 - `frontend/src/components/ui/border-beam.tsx`  
 - `frontend/src/components/ui/calendar.tsx`  
 - `frontend/src/components/ui/date-range-picker.tsx`  
 - `frontend/src/components/ui/editable.tsx`  
+- `frontend/src/components/ui/flickering-grid.tsx`  
 - `frontend/src/components/ui/kbd.tsx`  
 - `frontend/src/components/ui/kortix-loader.tsx`  
 - `frontend/src/components/ui/page-header.tsx`  
@@ -391,6 +405,7 @@
 - `frontend/src/lib/supabase/server.ts`  
 - `frontend/src/lib/utils/credit-formatter.ts`  
 - `README.md`  
+- `setup.py`  
 
 ---
 

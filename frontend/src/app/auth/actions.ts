@@ -3,6 +3,7 @@
 import { createTrialCheckout } from '@/lib/api/billing';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { sendWelcomeEmail } from '@/lib/email';
 
 
 export async function signIn(prevState: any, formData: FormData) {
@@ -66,8 +67,14 @@ export async function signUp(prevState: any, formData: FormData) {
     return { message: error.message || 'Could not create account' };
   }
 
-  // Welcome email is now sent automatically by Supabase database trigger
-  // See: backend/supabase/migrations/20251113000000_welcome_email_webhook.sql
+  // Send welcome email immediately after signup (don't wait for sign-in)
+  // The email will also be sent when they confirm via callback route, but sending here
+  // ensures it's sent even if they don't need to confirm email
+  const userName = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  // Don't await - send in background to not block signup flow
+  sendWelcomeEmail(email, userName).catch(err => {
+    console.error('Failed to send welcome email:', err);
+  });
 
   const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
     email,

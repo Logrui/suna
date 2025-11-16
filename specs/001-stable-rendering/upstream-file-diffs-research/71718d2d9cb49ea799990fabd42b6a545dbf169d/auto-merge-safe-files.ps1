@@ -1,7 +1,8 @@
-# Auto-merge script - overwrites safe files with upstream/PRODUCTION versions
-# Fresh approach: Compare against upstream/PRODUCTION HEAD, not a specific commit
+# Auto-merge script - overwrites safe files with specific production commit
+# Compares against 71718d2d9cb49ea799990fabd42b6a545dbf169d (the target production state)
 
 param(
+    [string]$ProductionCommit = "71718d2d9cb49ea799990fabd42b6a545dbf169d",
     [switch]$DryRun = $true
 )
 
@@ -13,19 +14,19 @@ if (-not $gitRoot) {
 }
 Set-Location $gitRoot
 
-Write-Host "Auto-Merge Script - Safe Files from upstream/PRODUCTION"
-Write-Host "=========================================================="
+Write-Host "Auto-Merge Script - Safe Files from Production Commit"
+Write-Host "======================================================"
+Write-Host "Production Commit: $ProductionCommit"
 Write-Host "Dry Run Mode: $DryRun"
 Write-Host ""
 
-# Get production HEAD
-$productionHead = git rev-parse upstream/PRODUCTION 2>$null
-if (-not $productionHead) {
-    Write-Host "Error: Cannot resolve upstream/PRODUCTION"
+# Verify production commit exists
+$commitExists = git cat-file -e "$ProductionCommit^{commit}" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Cannot resolve commit $ProductionCommit"
     exit 1
 }
 
-Write-Host "Production HEAD: $productionHead"
 Write-Host "Current HEAD: $(git rev-parse HEAD)"
 Write-Host ""
 
@@ -65,9 +66,9 @@ $manualReviewFiles = @(
     "frontend/src/middleware.ts"
 )
 
-# Get all files that differ from production
-Write-Host "Fetching all files that differ from upstream/PRODUCTION..."
-$allDiffFiles = @(git diff HEAD upstream/PRODUCTION --name-only)
+# Get all files that differ from production commit
+Write-Host "Fetching all files that differ from production commit..."
+$allDiffFiles = @(git diff HEAD $ProductionCommit --name-only --diff-filter=M)
 
 Write-Host "Total files differing: $($allDiffFiles.Count)"
 Write-Host ""
@@ -111,16 +112,19 @@ Write-Host "Starting auto-merge of $($safeFiles.Count) safe files..."
 Write-Host ""
 
 $successCount = 0
+$skipCount = 0
 $failureCount = 0
 $failedFiles = @()
+$skippedFiles = @()
 
 foreach ($file in $safeFiles) {
     try {
-        # Check if file exists in production first
-        $checkFile = git cat-file -e "upstream/PRODUCTION:$file" 2>$null
+        # Check if file exists in production commit first
+        $checkFile = git cat-file -e "${ProductionCommit}:$file" 2>$null
         if ($LASTEXITCODE -ne 0) {
-            # File doesn't exist in production, skip it
-            $failureCount++
+            # File doesn't exist in production commit, skip it silently
+            $skipCount++
+            $skippedFiles += $file
             continue
         }
         
@@ -132,11 +136,11 @@ foreach ($file in $safeFiles) {
             }
         }
         
-        # Get file content from production
-        $content = git show "upstream/PRODUCTION:$file" 2>$null
+        # Get file content from production commit
+        $content = git show "${ProductionCommit}:$file" 2>$null
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "  SKIP: $file (error reading from production)"
+            Write-Host "  ERROR: $file (failed to read from production)"
             $failureCount++
             $failedFiles += $file
             continue
@@ -160,6 +164,7 @@ Write-Host "=============================="
 Write-Host "Auto-Merge Summary"
 Write-Host "=============================="
 Write-Host "Successfully merged: $successCount files"
+Write-Host "Skipped (not in production): $skipCount files"
 Write-Host "Failed: $failureCount files"
 
 if ($failedFiles.Count -gt 0) {
@@ -168,9 +173,15 @@ if ($failedFiles.Count -gt 0) {
     $failedFiles | ForEach-Object { Write-Host "  - $_" }
 }
 
+if ($skipCount -gt 0 -and $skipCount -lt 20) {
+    Write-Host ""
+    Write-Host "Skipped files (don't exist in production commit):"
+    $skippedFiles | ForEach-Object { Write-Host "  - $_" }
+}
+
 Write-Host ""
 Write-Host "Next steps:"
 Write-Host "1. Review merged files: git status"
-Write-Host "2. Stage and commit: git add . && git commit -m 'auto-merge safe files from upstream/PRODUCTION'"
+Write-Host "2. Stage and commit: git add . && git commit -m 'auto-merge safe files from production commit $ProductionCommit'"
 Write-Host "3. Run tests to verify functionality"
 Write-Host "4. Manually review and merge the $($manualFiles.Count) files marked as NEEDS MANUAL REVIEW"
