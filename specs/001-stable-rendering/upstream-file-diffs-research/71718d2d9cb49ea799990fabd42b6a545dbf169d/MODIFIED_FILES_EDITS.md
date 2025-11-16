@@ -10,7 +10,7 @@
 - Frontend: 210
 - Other: 137
 
-## Backend Files - PRIORITY FOR STREAMING FIXES - NEEDS MANUAL REVIEW
+## Backend Files (10) - PRIORITY FOR STREAMING FIXES - NEEDS MANUAL REVIEW
 - `backend/.env.example`  
 - `backend/api.py`  
 - `backend/core/api.py`  
@@ -25,7 +25,7 @@
 - `backend/core/sandbox/docker/docker-compose.yml`  
 ---
 
-## Backend Files (61) - PRIORITY FOR STREAMING FIXES - OK TO MERGE/CHERRY PICK WITH KEEP THEIRS
+## Backend Files (51) - PRIORITY FOR STREAMING FIXES - OK TO MERGE/CHERRY PICK WITH KEEP THEIRS
 
 These are the critical files for chat completions and streaming:
 - `backend/.gitignore`  
@@ -93,9 +93,7 @@ These are the critical files for chat completions and streaming:
 
 ---
 
-
-
-## Frontend Files - NEEDS MANUAL REVIEW
+## Frontend Files (16) - NEEDS MANUAL REVIEW
 - `frontend/.env.example`  
 - `frontend/Dockerfile`  
 - `frontend/next.config.ts`  
@@ -116,12 +114,13 @@ These are the critical files for chat completions and streaming:
 
 - `frontend/src/components/ui/fancy-tabs.tsx`  
 
-## Other Files - NEEDS MANUAL REVIEW
+## Other Files (2) - NEEDS MANUAL REVIEW
 - `docker-compose.yaml`  
+- `frontend/src/middleware.ts`  
 
---
+---
 
-## Frontend Files (210) - UI/BILLING/COMPONENTS - OK TO MERGE/CHERRY PICK WITH KEEP THEIRS
+## Frontend Files (194) - UI/BILLING/COMPONENTS - OK TO MERGE/CHERRY PICK WITH KEEP THEIRS
 - `frontend/public/manifest.json`  
 - `frontend/public/plan-icons/basic.svg`  
 - `frontend/public/plan-icons/plus.svg`  
@@ -318,22 +317,21 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/thread/tool-views/wrapper/ToolViewRegistry.tsx`  
 
 - `frontend/src/components/thread/types.ts`  
+
 - `frontend/src/components/triggers/simplified-trigger-detail-panel.tsx`  
 - `frontend/src/components/triggers/trigger-creation-dialog.tsx`  
 - `frontend/src/components/triggers/triggers-page.tsx`  
+
 - `frontend/src/components/ui/border-beam.tsx`  
 - `frontend/src/components/ui/calendar.tsx`  
 - `frontend/src/components/ui/date-range-picker.tsx`  
 - `frontend/src/components/ui/editable.tsx`  
-
 - `frontend/src/components/ui/kbd.tsx`  
 - `frontend/src/components/ui/kortix-loader.tsx`  
 - `frontend/src/components/ui/page-header.tsx`  
 - `frontend/src/components/ui/sidebar.tsx`  
 - `frontend/src/components/ui/status-overlay.tsx`  
 - `frontend/src/components/ui/unified-agent-card.tsx`  
-
-
 
 - `frontend/src/lib/config.ts`  
 - `frontend/src/lib/email.ts`  
@@ -344,7 +342,7 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/lib/supabase/client.ts`  
 - `frontend/src/lib/supabase/server.ts`  
 - `frontend/src/lib/utils/credit-formatter.ts`  
-- `frontend/src/middleware.ts`  
+
 
 ---
 
