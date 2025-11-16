@@ -10,15 +10,26 @@
 - Frontend: 210
 - Other: 137
 
+## Backend Files - PRIORITY FOR STREAMING FIXES - NEEDS MANUAL REVIEW
+- `backend/.env.example`  
+- `backend/api.py`  
+- `backend/core/api.py`  
+- `backend/core/billing/api.py`  
+
+- `backend/core/composio_integration/api.py`  
+- `backend/core/limits_api.py`  
+- `backend/core/knowledge_base/api.py`  
+
+- `backend/core/triggers/api.py`  
+- `backend/supabase/config.toml`  
+- `backend/core/sandbox/docker/docker-compose.yml`  
 ---
 
-## Backend Files (61) - PRIORITY FOR STREAMING FIXES
+## Backend Files (61) - PRIORITY FOR STREAMING FIXES - OK TO MERGE/CHERRY PICK WITH KEEP THEIRS
 
 These are the critical files for chat completions and streaming:
-
-- `backend/.env.example`  
 - `backend/.gitignore`  
-- `backend/api.py`  
+
 - `backend/core/agent_loader.py`  
 - `backend/core/agent_runs.py`  
 - `backend/core/agent_service.py`  
@@ -32,8 +43,7 @@ These are the critical files for chat completions and streaming:
 - `backend/core/ai_models/ai_models.py`  
 - `backend/core/ai_models/manager.py`  
 - `backend/core/ai_models/registry.py`  
-- `backend/core/api.py`  
-- `backend/core/billing/api.py`  
+
 - `backend/core/billing/billing_integration.py`  
 - `backend/core/billing/config.py`  
 - `backend/core/billing/free_tier_service.py`  
@@ -42,37 +52,40 @@ These are the critical files for chat completions and streaming:
 - `backend/core/billing/subscription_service.py`  
 - `backend/core/billing/trial_service.py`  
 - `backend/core/billing/webhook_service.py`  
-- `backend/core/composio_integration/api.py`  
+
 - `backend/core/composio_integration/composio_profile_service.py`  
 - `backend/core/credits.py`  
-- `backend/core/knowledge_base/api.py`  
+
 - `backend/core/knowledge_base/file_processor.py`  
-- `backend/core/limits_api.py`  
+
 - `backend/core/prompts/prompt.py`  
 - `backend/core/run.py`  
-- `backend/core/sandbox/docker/docker-compose.yml`  
+
 - `backend/core/sandbox/sandbox.py`  
 - `backend/core/services/email.py`  
 - `backend/core/services/llm.py`  
 - `backend/core/templates/utils.py`  
 - `backend/core/threads.py`  
+
 - `backend/core/tools/sb_files_tool.py`  
 - `backend/core/tools/sb_kb_tool.py`  
 - `backend/core/tools/sb_presentation_tool.py`  
 - `backend/core/tools/sb_upload_file_tool.py`  
 - `backend/core/tools/task_list_tool.py`  
 - `backend/core/tools/tool_registry.py`  
-- `backend/core/triggers/api.py`  
+
 - `backend/core/utils/auth_utils.py`  
 - `backend/core/utils/config.py`  
 - `backend/core/utils/icon_generator.py`  
 - `backend/core/utils/limits_checker.py`  
+
 - `backend/core/utils/message_sanitizer.py`  
+
 - `backend/core/utils/project_helpers.py`  
 - `backend/core/utils/scripts/fix_missing_subscription.py`  
 - `backend/core/utils/tool_discovery.py`  
 - `backend/run_agent_background.py`  
-- `backend/supabase/config.toml`  
+
 - `backend/supabase/migrations/20251102072712_enable_free_tier.sql`  
 - `backend/supabase/migrations/20251102090935_revert_free_tier_grant.sql`  
 - `backend/supabase/migrations/20251106090733_allow_negative_credits.sql`  
@@ -80,19 +93,42 @@ These are the critical files for chat completions and streaming:
 
 ---
 
-## Frontend Files (210) - UI/BILLING/COMPONENTS
 
+
+## Frontend Files - NEEDS MANUAL REVIEW
 - `frontend/.env.example`  
 - `frontend/Dockerfile`  
 - `frontend/next.config.ts`  
 - `frontend/package.json`  
 - `frontend/package-lock.json`  
+- `frontend/src/components/sidebar/sidebar-left.tsx`  
+
+- `frontend/src/lib/api/projects.ts`  
+- `frontend/src/lib/api/threads.ts`  
+- `frontend/src/lib/api-client.ts`  
+
+- `frontend/src/components/knowledge-base/knowledge-base-manager.tsx`  
+- `frontend/src/components/knowledge-base/knowledge-base-page.tsx`  
+- `frontend/src/components/knowledge-base/shared-kb-tree.tsx`  
+- `frontend/src/components/knowledge-base/unified-kb-entry-modal.tsx`  
+
+- `frontend/src/components/sidebar/thread-search-modal.tsx`  
+
+- `frontend/src/components/ui/fancy-tabs.tsx`  
+
+## Other Files - NEEDS MANUAL REVIEW
+- `docker-compose.yaml`  
+
+--
+
+## Frontend Files (210) - UI/BILLING/COMPONENTS - OK TO MERGE/CHERRY PICK WITH KEEP THEIRS
 - `frontend/public/manifest.json`  
 - `frontend/public/plan-icons/basic.svg`  
 - `frontend/public/plan-icons/plus.svg`  
 - `frontend/public/plan-icons/pro.svg`  
 - `frontend/public/plan-icons/ultra.svg`  
 - `frontend/public/robots.txt`  
+
 - `frontend/src/app/(dashboard)/admin/billing/page.tsx`  
 - `frontend/src/app/(dashboard)/agents/[threadId]/redirect-page.tsx`  
 - `frontend/src/app/(dashboard)/agents/config/[agentId]/page.tsx`  
@@ -106,6 +142,7 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/app/(dashboard)/credits-explained/page.tsx`  
 - `frontend/src/app/(dashboard)/model-pricing/page.tsx`  
 - `frontend/src/app/(dashboard)/onboarding-demo/page.tsx`  
+
 - `frontend/src/app/(dashboard)/settings/api-keys/page.tsx`  
 - `frontend/src/app/(home)/enterprise/page.tsx`  
 - `frontend/src/app/(home)/layout.tsx`  
@@ -130,8 +167,10 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/app/sitemap.ts`  
 - `frontend/src/app/subscription/page.tsx`  
 - `frontend/src/app/suna/page.tsx`  
+
 - `frontend/src/components/admin/admin-user-details-dialog.tsx`  
 - `frontend/src/components/admin/admin-user-table.tsx`  
+
 - `frontend/src/components/agents/agent-configuration-dialog.tsx`  
 - `frontend/src/components/agents/agent-count-limit-dialog.tsx`  
 - `frontend/src/components/agents/agent-creation-modal.tsx`  
@@ -139,6 +178,7 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/agents/agents-grid.tsx`  
 - `frontend/src/components/agents/AgentVersionManager.tsx`  
 - `frontend/src/components/agents/agent-version-switcher.tsx`  
+
 - `frontend/src/components/agents/composio/composio-app-card.tsx`  
 - `frontend/src/components/agents/composio/composio-connections-section.tsx`  
 - `frontend/src/components/agents/composio/composio-connector.tsx`  
@@ -147,36 +187,45 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/agents/composio/composio-registry.tsx`  
 - `frontend/src/components/agents/composio/composio-tools-manager.tsx`  
 - `frontend/src/components/agents/composio/composio-tools-selector.tsx`  
+
 - `frontend/src/components/agents/config/agent-editor-dialog.tsx`  
 - `frontend/src/components/agents/config/agent-icon-editor-dialog.tsx`  
 - `frontend/src/components/agents/config/model-selector.tsx`  
+
 - `frontend/src/components/agents/create-version-button.tsx`  
 - `frontend/src/components/agents/custom-agents-page/publish-dialog.tsx`  
 - `frontend/src/components/agents/custom-agents-page/tabs-navigation.tsx`  
+
 - `frontend/src/components/agents/docs-agent/editor.tsx`  
 - `frontend/src/components/agents/docs-agent/editor/controls/color-picker.tsx`  
 - `frontend/src/components/agents/docs-agent/editor/controls/font-selector.tsx`  
 - `frontend/src/components/agents/docs-agent/editor/controls/highlight-picker.tsx`  
 - `frontend/src/components/agents/docs-agent/editor/controls/image-dialog.tsx`  
 - `frontend/src/components/agents/docs-agent/editor/controls/link-dialog.tsx`  
-- `frontend/src/components/agents/docs-agent/editor/controls/table-dropdown.tsx`  
+- `frontend/src/components/agents/docs-agent/editor/controls/table-dropdown.tsx` 
+
 - `frontend/src/components/agents/installation/streamlined-profile-connector.tsx`  
 - `frontend/src/components/agents/json-import-dialog.tsx`  
 - `frontend/src/components/agents/marketplace-agent-preview-dialog.tsx`  
+
 - `frontend/src/components/agents/mcp/configured-mcp-list.tsx`  
 - `frontend/src/components/agents/mcp/custom-mcp-dialog.tsx`  
 - `frontend/src/components/agents/mcp/tools-manager.tsx`  
+
 - `frontend/src/components/agents/new-agent-dialog.tsx`  
 - `frontend/src/components/agents/tools/granular-tool-configuration.tsx`  
 - `frontend/src/components/agents/tools/tool-groups.ts`  
+
 - `frontend/src/components/agents/triggers/agent-triggers-configuration.tsx`  
 - `frontend/src/components/agents/triggers/event-based-trigger-dialog.tsx`  
 - `frontend/src/components/agents/triggers/one-click-integrations.tsx`  
 - `frontend/src/components/agents/triggers/trigger-browse-dialog.tsx`  
+
 - `frontend/src/components/agents/upcoming-runs-dropdown.tsx`  
 - `frontend/src/components/agents/version-inline-editor.tsx`  
 - `frontend/src/components/auth/background-aal-checker.tsx`  
 - `frontend/src/components/auth/phone-verification/phone-verification-page.tsx`  
+
 - `frontend/src/components/billing/credit-purchase.tsx`  
 - `frontend/src/components/billing/credits-display.tsx`  
 - `frontend/src/components/billing/credit-transactions.tsx`  
@@ -189,25 +238,25 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/billing/subscription-cancellation-card.tsx`  
 - `frontend/src/components/billing/thread-usage.tsx`  
 - `frontend/src/components/billing/tier-badge.tsx`  
+
 - `frontend/src/components/dashboard/custom-agents-section.tsx`  
 - `frontend/src/components/dashboard/dashboard-content.tsx`  
 - `frontend/src/components/dashboard/layout-content.tsx`  
 - `frontend/src/components/dashboard/trial-management.tsx`  
+
 - `frontend/src/components/file-renderers/authenticated-markdown-renderer.tsx`  
 - `frontend/src/components/file-renderers/xlsx-renderer.tsx`  
 - `frontend/src/components/GithubSignIn.tsx`  
 - `frontend/src/components/help/help-search-modal.tsx`  
 - `frontend/src/components/help/help-sidebar.tsx`  
 - `frontend/src/components/home/theme-toggle.tsx`  
-- `frontend/src/components/knowledge-base/knowledge-base-manager.tsx`  
-- `frontend/src/components/knowledge-base/knowledge-base-page.tsx`  
-- `frontend/src/components/knowledge-base/shared-kb-tree.tsx`  
-- `frontend/src/components/knowledge-base/unified-kb-entry-modal.tsx`  
+
 - `frontend/src/components/maintenance/maintenance-page.tsx`  
 - `frontend/src/components/onboarding/index.ts`  
 - `frontend/src/components/onboarding/onboarding-config.tsx`  
 - `frontend/src/components/onboarding/onboarding-provider.tsx`  
 - `frontend/src/components/settings/user-settings-modal.tsx`  
+
 - `frontend/src/components/sidebar/kortix-enterprise-modal.tsx`  
 - `frontend/src/components/sidebar/nav-agents.tsx`  
 - `frontend/src/components/sidebar/nav-agents-view.tsx`  
@@ -216,15 +265,16 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/sidebar/nav-user-with-teams.tsx`  
 - `frontend/src/components/sidebar/search-search.tsx`  
 - `frontend/src/components/sidebar/share-modal.tsx`  
-- `frontend/src/components/sidebar/sidebar-left.tsx`  
-- `frontend/src/components/sidebar/thread-search-modal.tsx`  
+
 - `frontend/src/components/thread/agent-run-limit-dialog.tsx`  
 - `frontend/src/components/thread/attachment-group.tsx`  
+
 - `frontend/src/components/thread/chat-input/chat-input.tsx`  
 - `frontend/src/components/thread/chat-input/file-upload-handler.tsx`  
 - `frontend/src/components/thread/chat-input/unified-config-menu.tsx`  
 - `frontend/src/components/thread/chat-input/usage-preview.tsx`  
 - `frontend/src/components/thread/chat-input/voice-recorder.tsx`  
+
 - `frontend/src/components/thread/content/agent-avatar.tsx`  
 - `frontend/src/components/thread/content/PlaybackControls.tsx`  
 - `frontend/src/components/thread/content/PlaybackFloatingControls.tsx`  
@@ -232,6 +282,7 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/thread/content/SimplePlaybackControls.tsx`  
 - `frontend/src/components/thread/content/ThreadContent.tsx`  
 - `frontend/src/components/thread/content/usePlaybackControls.tsx`  
+
 - `frontend/src/components/thread/ContextUsageIndicator.tsx`  
 - `frontend/src/components/thread/file-attachment.tsx`  
 - `frontend/src/components/thread/file-browser.tsx`  
@@ -243,6 +294,7 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/thread/ThreadComponent.tsx`  
 - `frontend/src/components/thread/thread-site-header.tsx`  
 - `frontend/src/components/thread/tiptap-document-modal.tsx`  
+
 - `frontend/src/components/thread/tool-views/configure-agent-integration/configure-agent-integration.tsx`  
 - `frontend/src/components/thread/tool-views/create-credential-profile-for-agent/create-credential-profile-for-agent.tsx`  
 - `frontend/src/components/thread/tool-views/designer-tool/DesignerToolView.tsx`  
@@ -264,6 +316,7 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/thread/tool-views/vapi-call/MakeCallToolView.tsx`  
 - `frontend/src/components/thread/tool-views/vapi-call/MonitorCallToolView.tsx`  
 - `frontend/src/components/thread/tool-views/wrapper/ToolViewRegistry.tsx`  
+
 - `frontend/src/components/thread/types.ts`  
 - `frontend/src/components/triggers/simplified-trigger-detail-panel.tsx`  
 - `frontend/src/components/triggers/trigger-creation-dialog.tsx`  
@@ -272,16 +325,16 @@ These are the critical files for chat completions and streaming:
 - `frontend/src/components/ui/calendar.tsx`  
 - `frontend/src/components/ui/date-range-picker.tsx`  
 - `frontend/src/components/ui/editable.tsx`  
-- `frontend/src/components/ui/fancy-tabs.tsx`  
+
 - `frontend/src/components/ui/kbd.tsx`  
 - `frontend/src/components/ui/kortix-loader.tsx`  
 - `frontend/src/components/ui/page-header.tsx`  
 - `frontend/src/components/ui/sidebar.tsx`  
 - `frontend/src/components/ui/status-overlay.tsx`  
 - `frontend/src/components/ui/unified-agent-card.tsx`  
-- `frontend/src/lib/api/projects.ts`  
-- `frontend/src/lib/api/threads.ts`  
-- `frontend/src/lib/api-client.ts`  
+
+
+
 - `frontend/src/lib/config.ts`  
 - `frontend/src/lib/email.ts`  
 - `frontend/src/lib/error-handler.ts`  
@@ -295,143 +348,5 @@ These are the critical files for chat completions and streaming:
 
 ---
 
-## Other Files (137)
 
-- `.gitignore`  
-- `apps/mobile/.gitignore`  
-- `apps/mobile/android/app/src/main/AndroidManifest.xml`  
-- `apps/mobile/android/app/src/main/res/drawable-hdpi/splashscreen_logo.png`  
-- `apps/mobile/android/app/src/main/res/drawable-mdpi/splashscreen_logo.png`  
-- `apps/mobile/android/app/src/main/res/drawable-xhdpi/splashscreen_logo.png`  
-- `apps/mobile/android/app/src/main/res/drawable-xxhdpi/splashscreen_logo.png`  
-- `apps/mobile/android/app/src/main/res/drawable-xxxhdpi/splashscreen_logo.png`  
-- `apps/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.webp`  
-- `apps/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp`  
-- `apps/mobile/android/app/src/main/res/values/strings.xml`  
-- `apps/mobile/android/settings.gradle`  
-- `apps/mobile/app/_layout.tsx`  
-- `apps/mobile/app/auth/callback.tsx`  
-- `apps/mobile/app/auth/index.tsx`  
-- `apps/mobile/app/index.tsx`  
-- `apps/mobile/app/onboarding.tsx`  
-- `apps/mobile/app/setting-up.tsx`  
-- `apps/mobile/assets/brand/tiers/basic.svg`  
-- `apps/mobile/assets/brand/tiers/plus.svg`  
-- `apps/mobile/assets/brand/tiers/pro.svg`  
-- `apps/mobile/assets/brand/tiers/ultra.svg`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/architect-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/black_and_white_clean-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/colorful-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/competitor_analysis_blue-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/elevator_pitch-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/green-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/hipster-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/minimalist_2-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/minimalist-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/numbers_clean-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/numbers_colorful-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/portfolio-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/premium_black-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/premium_green-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/professor_gray-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/startup-min.png`  
-- `apps/mobile/assets/images/quick-actions/presentation-templates/textbook-min.png`  
-- `apps/mobile/components/agents/AgentDrawer.tsx`  
-- `apps/mobile/components/billing/BillingContent.tsx`  
-- `apps/mobile/components/billing/BillingPeriodToggle.tsx`  
-- `apps/mobile/components/billing/CreditPackages.tsx`  
-- `apps/mobile/components/billing/CreditPurchaseModal.tsx`  
-- `apps/mobile/components/billing/CreditsCard.tsx`  
-- `apps/mobile/components/billing/CurrentPlanCard.tsx`  
-- `apps/mobile/components/billing/index.ts`  
-- `apps/mobile/components/billing/PlanSelectionModal.tsx`  
-- `apps/mobile/components/billing/PricingCarousel.tsx`  
-- `apps/mobile/components/billing/PricingSection.tsx`  
-- `apps/mobile/components/billing/PricingTierBadge.tsx`  
-- `apps/mobile/components/billing/PricingTierCard.tsx`  
-- `apps/mobile/components/billing/ScheduledDowngradeCard.tsx`  
-- `apps/mobile/components/chat/ChatInput.tsx`  
-- `apps/mobile/components/chat/index.ts`  
-- `apps/mobile/components/chat/shared/ChatInputSection.tsx`  
-- `apps/mobile/components/chat/StreamingToolCard.tsx`  
-- `apps/mobile/components/chat/ThreadContent.tsx`  
-- `apps/mobile/components/files/FileManagerScreen.tsx`  
-- `apps/mobile/components/home/TopNav.tsx`  
-- `apps/mobile/components/menu/ConversationItem.tsx`  
-- `apps/mobile/components/menu/TierBadge.tsx`  
-- `apps/mobile/components/menu/types.ts`  
-- `apps/mobile/components/pages/HomePage.tsx`  
-- `apps/mobile/components/pages/MenuPage.tsx`  
-- `apps/mobile/components/pages/ThreadPage.tsx`  
-- `apps/mobile/components/quick-actions/QuickActionBar.tsx`  
-- `apps/mobile/components/quick-actions/QuickActionExpandedView.tsx`  
-- `apps/mobile/components/quick-actions/QuickActionOptionCard.tsx`  
-- `apps/mobile/components/quick-actions/quickActionViews.ts`  
-- `apps/mobile/components/quick-actions/starterPrompts.ts`  
-- `apps/mobile/components/quick-actions/TemplatePreviewModal.tsx`  
-- `apps/mobile/components/settings/AccountDeletionPage.tsx`  
-- `apps/mobile/components/settings/BetaPage.tsx`  
-- `apps/mobile/components/settings/BillingPage.tsx`  
-- `apps/mobile/components/settings/CreditsPurchasePage.tsx`  
-- `apps/mobile/components/settings/index.ts`  
-- `apps/mobile/components/settings/LanguagePage.tsx`  
-- `apps/mobile/components/settings/NameEditPage.tsx`  
-- `apps/mobile/components/settings/ProfilePicture.tsx`  
-- `apps/mobile/components/settings/SettingsHeader.tsx`  
-- `apps/mobile/components/settings/SettingsPage.tsx`  
-- `apps/mobile/components/settings/ThemePage.tsx`  
-- `apps/mobile/components/settings/UsageContent.tsx`  
-- `apps/mobile/components/settings/UsageDrawer.tsx`  
-- `apps/mobile/components/settings/UsagePage.tsx`  
-- `apps/mobile/components/shared/AnimatedPageWrapper.tsx`  
-- `apps/mobile/components/ui/Avatar.tsx`  
-- `apps/mobile/components/ui/KortixLogo.tsx`  
-- `apps/mobile/contexts/AgentContext.tsx`  
-- `apps/mobile/contexts/BillingContext.tsx`  
-- `apps/mobile/eas.json.example`  
-- `apps/mobile/hooks/index.ts`  
-- `apps/mobile/hooks/ui/useSideMenu.ts`  
-- `apps/mobile/hooks/useAccountDeletion.ts`  
-- `apps/mobile/hooks/useAccountInitialization.ts`  
-- `apps/mobile/hooks/useAccountSetup.ts`  
-- `apps/mobile/hooks/useAuth.ts`  
-- `apps/mobile/hooks/useChat.ts`  
-- `apps/mobile/ios/kortix.xcodeproj/project.pbxproj`  
-- `apps/mobile/ios/kortix.xcodeproj/xcshareddata/xcschemes/kortix.xcscheme`  
-- `apps/mobile/ios/kortix.xcworkspace/contents.xcworkspacedata`  
-- `apps/mobile/ios/kortix/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png`  
-- `apps/mobile/ios/kortix/Images.xcassets/SplashScreenLegacy.imageset/image.png`  
-- `apps/mobile/ios/kortix/Images.xcassets/SplashScreenLegacy.imageset/image@2x.png`  
-- `apps/mobile/ios/kortix/Images.xcassets/SplashScreenLegacy.imageset/image@3x.png`  
-- `apps/mobile/ios/kortix/Info.plist`  
-- `apps/mobile/ios/Podfile`  
-- `apps/mobile/ios/Podfile.lock`  
-- `apps/mobile/ios/Podfile.properties.json`  
-- `apps/mobile/lib/billing/api.ts`  
-- `apps/mobile/lib/billing/checkout.ts`  
-- `apps/mobile/lib/billing/hooks.ts`  
-- `apps/mobile/lib/billing/index.ts`  
-- `apps/mobile/lib/billing/pricing.ts`  
-- `apps/mobile/lib/billing/usage-api.ts`  
-- `apps/mobile/lib/utils/credit-formatter.ts`  
-- `apps/mobile/lib/utils/index.ts`  
-- `apps/mobile/package.json`  
-- `apps/mobile/package-lock.json`  
-- `apps/mobile/stores/billing-modal-store.ts`  
-- `CONTRIBUTING.md`  
-- `docker-compose.yaml`  
-- `README.md`  
 
