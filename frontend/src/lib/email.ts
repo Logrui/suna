@@ -2,11 +2,12 @@
  * Email utility functions
  * Shared functions for sending emails from server-side code
  */
+import { getApiUrl } from './get-api-url';
 
 export async function sendWelcomeEmail(email: string, name?: string) {
   try {
     console.log(`📧 Attempting to send welcome email to ${email}`);
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const backendUrl = getApiUrl();
     const adminApiKey = process.env.KORTIX_ADMIN_API_KEY;
     
     if (!adminApiKey) {

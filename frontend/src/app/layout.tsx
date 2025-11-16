@@ -10,6 +10,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import Script from 'next/script';
 import { PostHogIdentify } from '@/components/posthog-identify';
+import { isLocalMode } from '@/lib/config';
 import '@/lib/polyfills';
 import { roobert } from './fonts/roobert';
 import { roobertMono } from './fonts/roobert-mono';
@@ -182,7 +183,8 @@ export default function RootLayout({
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-PCHSN4M2');`}
         </Script>
-        <Script async src="https://cdn.tolt.io/tolt.js" data-tolt={process.env.NEXT_PUBLIC_TOLT_REFERRAL_ID}></Script>
+        {/* Tolt analytics - disabled for local mode */}
+        {!isLocalMode() && <Script async src="https://cdn.tolt.io/tolt.js" data-tolt={process.env.NEXT_PUBLIC_TOLT_REFERRAL_ID}></Script>}
       </head>
 
       <body className="antialiased font-sans bg-background">
@@ -211,10 +213,11 @@ export default function RootLayout({
               </Suspense>
             </ReactQueryProvider>
           </AuthProvider>
-          <Analytics />
-          <GoogleAnalytics gaId="G-6ETJFB3PT3" />
-          <SpeedInsights />
-          <PostHogIdentify />
+          {/* Disable Vercel analytics in local mode */}
+          {!isLocalMode() && <Analytics />}
+          {!isLocalMode() && <GoogleAnalytics gaId="G-6ETJFB3PT3" />}
+          {!isLocalMode() && <SpeedInsights />}
+          {!isLocalMode() && <PostHogIdentify />}
         </ThemeProvider>
       </body>
     </html>

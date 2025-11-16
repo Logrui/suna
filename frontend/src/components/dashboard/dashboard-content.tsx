@@ -21,6 +21,7 @@ import {
 import { useIsMobile } from '@/hooks/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
+import { cn } from '@/lib/utils';
 import { useInitiateAgentWithInvalidation, useThreadLimit } from '@/hooks/dashboard/use-initiate-agent';
 
 import { useAgents } from '@/hooks/agents/use-agents';
@@ -105,9 +106,9 @@ export function DashboardContent() {
   const threadQuery = useThreadQuery(initiatedThreadId || '');
   const { data: threadLimit } = useThreadLimit();
   const { data: limits } = useLimits();
-  const canCreateThread = threadLimit?.can_create || false;
+  const canCreateThread = true; // Hardcoded to allow thread creation
   
-  const isDismissed = typeof window !== 'undefined' && sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
+  const isDismissed = true; // Hardcoded to disable limits alert
   const showAlert = !canCreateThread && !isDismissed;
 
   React.useEffect(() => {
@@ -298,7 +299,7 @@ export function DashboardContent() {
 
       return () => clearTimeout(timer);
     }
-  }, [autoSubmit, inputValue, isSubmitting, isRedirecting]);
+  }, [autoSubmit, inputValue, isSubmitting, isRedirecting, handleSubmit]);
 
   return (
     <>
@@ -316,7 +317,7 @@ export function DashboardContent() {
             </PopoverTrigger>
             <PopoverContent align='end' className="w-70">
               <div>
-                <h2 className="text-md font-medium mb-4">Usage Limits</h2>
+                <h2 className="text-md font-medium mb-4">Usage Statistics</h2>
                 <div className="space-y-2">
                   <div className='space-y-2'>
                     <div className="flex justify-between text-xs">
@@ -366,8 +367,9 @@ export function DashboardContent() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="min-h-full flex flex-col">
-            {/* Tabs at the top */}
-            {/* {(isStagingMode() || isLocalMode()) && (
+            {/* Tabs at the top - disabled for now */}
+            {/* TODO: Re-enable tabs when needed
+            {(isStagingMode() || isLocalMode()) && (
               <div className="px-4 pt-4 pb-4">
                 <div className="flex items-center justify-center gap-2 p-1 bg-muted/50 rounded-xl w-fit mx-auto">
                   <button
@@ -402,7 +404,8 @@ export function DashboardContent() {
                   </button>
                 </div>
               </div>
-            )} */}
+            )}
+            */}
             
 
             <div className="flex-1 flex items-start justify-center pt-[30vh]">
@@ -442,37 +445,6 @@ export function DashboardContent() {
                           selectedTemplate={selectedTemplate}
                         />
 
-                        {showAlert && (
-                          <div 
-                            className='w-full h-16 p-2 px-4 dark:bg-amber-500/5 bg-amber-500/10 dark:border-amber-500/10 border-amber-700/10 border text-white rounded-b-3xl flex items-center justify-between overflow-hidden'
-                            style={{
-                              marginTop: '-32px',
-                              transition: 'margin-top 300ms ease-in-out, opacity 300ms ease-in-out',
-                            }}
-                          >
-                            <span className='-mb-3.5 dark:text-amber-500 text-amber-700 text-sm'>You ran out of limits. Upgrade your plan to chat more.</span>
-                            <div className='flex items-center -mb-3.5'>
-                              <Button 
-                                size='sm' 
-                                className='h-6 text-xs'
-                                onClick={() => pricingModalStore.openPricingModal()}
-                              >
-                                  Upgrade
-                                </Button>
-                              {/* <Button 
-                                size='icon' 
-                                variant='ghost' 
-                                className='h-6 text-muted-foreground'
-                                onClick={() => {
-                                  sessionStorage.setItem('threadLimitAlertDismissed', 'true');
-                                  window.dispatchEvent(new Event('storage'));
-                                }}
-                              >
-                                <X/>
-                              </Button> */}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

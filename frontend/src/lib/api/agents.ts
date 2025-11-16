@@ -4,8 +4,9 @@ import { backendApi } from '../api-client';
 import { BillingError, AgentRunLimitError, ProjectLimitError, NoAccessTokenAvailableError } from './errors';
 import { nonRunningAgentRuns, activeStreams, cleanupEventSource } from './streaming';
 import { Message } from './threads';
+import { getApiUrl } from '../get-api-url';
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_URL = getApiUrl();
 
 export type AgentRun = {
   id: string;

@@ -28,6 +28,7 @@ import { TipTapDocumentModal } from '@/components/thread/tiptap-document-modal';
 import { exportDocument, type ExportFormat } from '@/lib/utils/document-export';
 import { createClient } from '@/lib/supabase/client';
 import { handleGoogleDocsUpload, checkPendingGoogleDocsUpload } from '@/lib/utils/google-docs-utils';
+import { getApiUrl } from '@/lib/get-api-url';
 import { useEffect } from 'react';
 import { 
   DocumentInfo, 
@@ -71,7 +72,7 @@ export function DocsToolView({
         
         if (session?.access_token) {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
+            `${getApiUrl()}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
             {
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,

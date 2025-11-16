@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { getApiUrl } from '@/lib/get-api-url';
 
 export default function MasterLoginPage() {
   const [email, setEmail] = useState('');
@@ -17,7 +18,7 @@ export default function MasterLoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/admin/master-login/authenticate`, {
+      const response = await fetch(`${getApiUrl()}/admin/master-login/authenticate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

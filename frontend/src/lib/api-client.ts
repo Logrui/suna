@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError, handleNetworkError, ErrorContext, ApiError } from './error-handler';
+import { parseTierRestrictionError } from './api/errors';
 import { getApiUrl } from './get-api-url';
 
 const API_URL = getApiUrl();
@@ -98,6 +99,7 @@ async function makeRequest<T = any>(
         });
 
       if (response.status === 402) {
+        error = parseTierRestrictionError(error);
       }
 
         if (showErrors) {
@@ -158,6 +160,7 @@ async function makeRequest<T = any>(
         handleNetworkError(apiError, errorContext);
       }
       } else if (error instanceof Error) {
+        // Create a copy of the error to avoid read-only issues
         apiError = Object.assign(Object.create(Error.prototype), {
           message: error.message,
           name: error.name || 'ApiError',
@@ -194,6 +197,7 @@ export const supabaseClient = {
       const { data, error } = await queryFn();
 
       if (error) {
+        // Create custom error object to avoid read-only property issues
         const apiError: ApiError = Object.assign(Object.create(Error.prototype), {
           message: error.message || 'Database error',
           name: 'ApiError',
@@ -214,6 +218,7 @@ export const supabaseClient = {
         success: true,
       };
     } catch (error: any) {
+      // Create a copy of the error to avoid read-only issues
       const apiError: ApiError = error instanceof Error 
         ? Object.assign(Object.create(Error.prototype), {
             message: error.message,

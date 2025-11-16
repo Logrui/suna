@@ -114,7 +114,7 @@ class BillingIntegration:
         """
         # Skip all checks in local development mode
         if config.ENV_MODE == EnvMode.LOCAL:
-            logger.debug("Running in local development mode - skipping all billing and model access checks")
+            logger.debug("SYHC Private Suna Kortix mode - skipping all billing and model access checks")
             return True, "Local development mode", {"local_mode": True}
         
         try:

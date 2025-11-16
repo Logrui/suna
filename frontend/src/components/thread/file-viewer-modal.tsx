@@ -51,9 +51,10 @@ import {
 import JSZip from 'jszip';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { TipTapDocumentModal } from './tiptap-document-modal';
+import { getApiUrl } from '@/lib/get-api-url';
 
 // Define API_URL
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_URL = getApiUrl();
 
 interface FileViewerModalProps {
   open: boolean;
@@ -258,7 +259,7 @@ export function FileViewerModal({
           if (!content) {
             // Load from server if not cached
             const response = await fetch(
-              `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
+              `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
               {
                 headers: { 'Authorization': `Bearer ${session.access_token}` }
               }
@@ -293,7 +294,7 @@ export function FileViewerModal({
               } catch (blobError) {
                 // Fallback: try to fetch from server directly
                 const fallbackResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
+                  `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
                   { headers: { 'Authorization': `Bearer ${session.access_token}` } }
                 );
                 if (fallbackResponse.ok) {
@@ -1019,7 +1020,7 @@ export function FileViewerModal({
           if (rawContent.startsWith('blob:')) {
             // If it's a blob URL, get directly from server to avoid CORS issues
             const response = await fetch(
-              `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
+              `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
               { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
             );
 
@@ -1048,7 +1049,7 @@ export function FileViewerModal({
 
       // Get from server if no raw content
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
+        `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
         { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
       );
 

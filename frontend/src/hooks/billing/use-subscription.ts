@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/billing';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { isLocalMode } from '@/lib/config';
 
 export const billingKeys = {
   all: ['billing'] as const,
@@ -48,6 +49,8 @@ export const useSubscription = (options?: {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: true,
+    // Disable in local mode - endpoint doesn't exist
+    enabled: !isLocalMode(),
     ...options,
   });
 };
@@ -74,6 +77,8 @@ export const useSubscriptionWithStreaming = (isStreaming: boolean = false) => {
     gcTime: 1000 * 60 * 15,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    // Disable in local mode - endpoint doesn't exist
+    enabled: !isLocalMode(),
     refetchInterval: (data) => {
       if (!isVisible) return false;
       if (isStreaming) return 2 * 60 * 1000;
@@ -173,7 +178,8 @@ export const useCreditBalance = (enabled = true) => {
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: false, // Don't refetch on mount if data is fresh
     refetchOnReconnect: true, // Only refetch on reconnect
-    enabled,
+    // Disable in local mode - endpoint doesn't exist
+    enabled: enabled && !isLocalMode(),
   });
 };
 
@@ -188,6 +194,8 @@ export const useBillingStatus = () => {
     gcTime: 1000 * 60 * 10, // 10 minutes cache time
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    // Disable in local mode - endpoint doesn't exist
+    enabled: !isLocalMode(),
   });
 };
 
@@ -199,6 +207,8 @@ export const useUsageHistory = (days = 30) => {
     queryKey: billingKeys.usageHistory(days),
     queryFn: () => billingApi.getUsageHistory(days),
     staleTime: 1000 * 60 * 10,
+    // Disable in local mode - endpoint doesn't exist
+    enabled: !isLocalMode(),
   });
 };
 

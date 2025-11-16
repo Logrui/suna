@@ -130,7 +130,7 @@ export default function PersonalAccountBillingPage() {
         {isLocalMode() ? (
           <div className="p-4 mb-4 bg-muted/30 border border-border rounded-lg text-center">
             <p className="text-sm text-muted-foreground">
-              Running in local development mode - billing features are disabled
+              SYHC Private Suna Kortix mode - billing features are disabled
             </p>
             <p className="text-xs text-muted-foreground mt-2">
               Agent usage limits are not enforced in this environment

@@ -39,6 +39,7 @@ import { useTheme } from 'next-themes';
 import ColorThief from 'colorthief';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { getApiUrl } from '@/lib/get-api-url';
 
 interface MarketplaceTemplate {
   template_id: string;
@@ -99,7 +100,7 @@ const IntegrationIcon: React.FC<{
   useEffect(() => {
     if (extractedSlug && !hasError) {
       setIsLoading(true);
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const backendUrl = getApiUrl();
       fetch(`${backendUrl}/composio/toolkits/${extractedSlug}/icon`)
         .then(res => res.json())
         .then(data => {
@@ -245,7 +246,7 @@ export default function TemplateSharePage() {
   const { data: template, isLoading, error } = useQuery({
     queryKey: ['template-public', templateId],
     queryFn: async () => {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const backendUrl = getApiUrl();
       const response = await fetch(`${backendUrl}/templates/public/${templateId}`);
       if (!response.ok) {
         throw new Error('Template not found');

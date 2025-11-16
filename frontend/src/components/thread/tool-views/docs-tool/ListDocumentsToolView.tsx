@@ -27,6 +27,7 @@ import {
   extractDocsData,
   extractToolName,
 } from './_utils';
+import { getApiUrl } from '@/lib/get-api-url';
 
 export function ListDocumentsToolView({
   name = 'list_documents',
@@ -75,7 +76,7 @@ export function ListDocumentsToolView({
         
         if (session?.access_token) {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
+            `${getApiUrl()}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
             {
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,

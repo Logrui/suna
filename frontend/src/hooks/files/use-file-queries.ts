@@ -2,6 +2,7 @@ import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/components/AuthProvider';
 import { listSandboxFiles, type FileInfo } from '@/lib/api/sandbox';
+import { getApiUrl } from '@/lib/get-api-url';
 
 /**
  * Normalize a file path to ensure consistent caching
@@ -109,7 +110,7 @@ export async function fetchFileContent(
 ): Promise<string | Blob | any> {
   const normalizedPath = normalizePath(filePath);
   
-  const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
+  const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
   url.searchParams.append('path', normalizedPath);
   
   const headers: Record<string, string> = {};

@@ -1267,7 +1267,7 @@ async def get_available_models(
         # Use the implemented get_allowed_models_for_user function
         
         if config.ENV_MODE == EnvMode.LOCAL:
-            logger.debug("Running in local development mode - all models available")
+            logger.debug("SYHC Private Suna Kortix - all models available")
             all_models = model_manager.list_available_models(include_disabled=False)
             model_info = []
             

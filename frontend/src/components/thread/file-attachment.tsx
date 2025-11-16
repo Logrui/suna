@@ -21,6 +21,7 @@ import {
 import { useFileContent, useImageContent } from '@/hooks/files';
 import { useAuth } from '@/components/AuthProvider';
 import { Project } from '@/lib/api/projects';
+import { getApiUrl } from '@/lib/get-api-url';
 
 // Define basic file types
 export type FileType =
@@ -141,7 +142,7 @@ function getFileUrl(sandboxId: string | undefined, path: string): string {
         console.error('Error processing Unicode escapes in path:', e);
     }
 
-    const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
+    const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
 
     // Properly encode the path parameter for UTF-8 support
     url.searchParams.append('path', path);
@@ -337,7 +338,7 @@ export function FileAttachment({
             }
 
             // Use the same fetch logic as other components
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(filepath)}`, {
+            const response = await fetch(`${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(filepath)}`, {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`
                 }

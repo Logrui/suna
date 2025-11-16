@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
 import { getProject as getProjectFromApi, type Project } from "@/lib/api/projects";
+import { getApiUrl } from "@/lib/get-api-url";
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_URL = getApiUrl();
 
 // Re-export Project type for consistent imports
 export type { Project };

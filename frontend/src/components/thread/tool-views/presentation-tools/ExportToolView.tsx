@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Markdown } from '@/components/ui/markdown';
 import { FileAttachment } from '../../file-attachment';
 import { useAuth } from '@/components/AuthProvider';
+import { getApiUrl } from '@/lib/get-api-url';
 
 interface ExportToolViewProps extends ToolViewProps {
   onFileClick?: (filePath: string) => void;
@@ -175,7 +176,7 @@ export function ExportToolView({
       }
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${project.sandbox.id}/files/content?path=${encodeURIComponent(downloadUrl)}`,
+        `${getApiUrl()}/sandboxes/${project.sandbox.id}/files/content?path=${encodeURIComponent(downloadUrl)}`,
         { headers }
       );
       

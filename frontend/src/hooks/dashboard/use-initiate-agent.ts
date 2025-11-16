@@ -15,6 +15,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { handleApiSuccess, handleApiError } from "@/lib/error-handler";
 import { dashboardKeys } from "./keys";
 import { useQueryClient } from "@tanstack/react-query";
+import { isLocalMode } from "@/lib/config";
 
 import { projectKeys, threadKeys } from "../threads/keys";
 import { backendApi } from "@/lib/api-client";
@@ -36,15 +37,17 @@ export const useInitiateAgentMutation = () => {
       const agent_id = formData.get('agent_id') as string | undefined;
       const files = formData.getAll('files') as File[];
       
-      // Debug logging
-      console.log('[useInitiateAgent] Extracted from FormData:', {
-        prompt: prompt ? prompt.substring(0, 100) : prompt === '' ? '(empty string)' : undefined,
-        promptLength: prompt?.length ?? (prompt === '' ? 0 : undefined),
-        promptIsEmptyString: prompt === '',
-        model_name,
-        agent_id,
-        filesCount: files.length,
-      });
+      // Debug logging - disabled in local mode
+      if (!isLocalMode()) {
+        console.log('[useInitiateAgent] Extracted from FormData:', {
+          prompt: prompt ? prompt.substring(0, 100) : prompt === '' ? '(empty string)' : undefined,
+          promptLength: prompt?.length ?? (prompt === '' ? 0 : undefined),
+          promptIsEmptyString: prompt === '',
+          model_name,
+          agent_id,
+          filesCount: files.length,
+        });
+      }
       
       return await unifiedAgentStart({
         prompt: prompt !== undefined ? prompt : undefined, // Send empty string if present, undefined if not in FormData
@@ -84,10 +87,13 @@ export const useThreadLimit = () => {
       const response = await backendApi.get('/limits?type=thread_count');
       return response.data.thread_count || response.data;
     },
+    // Disable in local mode - endpoint doesn't exist
+    enabled: !isLocalMode(),
     staleTime: 30000,
     refetchOnWindowFocus: false,
+    retry: false,
   });
-}
+};
 
 export const useInitiateAgentWithInvalidation = () => {
   const queryClient = useQueryClient();

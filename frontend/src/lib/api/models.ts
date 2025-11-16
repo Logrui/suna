@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api-client';
+import { backendApi } from '@/lib/api-client';
 
 export interface LocalModel {
   id: string;          // e.g., "lm_studio:hermes-2-pro"
@@ -36,7 +36,7 @@ export interface ModelStatusResponse {
  * Fetch all available local models from LM Studio and Ollama
  */
 export async function getLocalModels() {
-  return apiClient.get<LocalModelsResponse>('/models/local', {
+  return backendApi.get<LocalModelsResponse>('/models/local', {
     showErrors: true,
     errorContext: {
       operation: 'getLocalModels',
@@ -50,7 +50,7 @@ export async function getLocalModels() {
  * This returns immediately while the actual loading happens in the background
  */
 export async function warmupModel(modelId: string) {
-  return apiClient.post<{ success: boolean; message: string }>('/models/warmup', {
+  return backendApi.post<{ success: boolean; message: string }>('/models/warmup', {
     model_id: modelId
   }, {
     showErrors: true,
@@ -65,7 +65,7 @@ export async function warmupModel(modelId: string) {
  * Unload a specific model
  */
 export async function unloadModel(modelId: string) {
-  return apiClient.post<{ success: boolean; message: string }>('/models/unload', {
+  return backendApi.post<{ success: boolean; message: string }>('/models/unload', {
     model_id: modelId
   }, {
     showErrors: true,
@@ -80,7 +80,7 @@ export async function unloadModel(modelId: string) {
  * Unload all models from a provider
  */
 export async function unloadProvider(provider: string) {
-  return apiClient.post<{ success: boolean; message: string; unloaded_models: string[] }>('/models/unload_provider', {
+  return backendApi.post<{ success: boolean; message: string; unloaded_models: string[] }>('/models/unload_provider', {
     provider
   }, {
     showErrors: true,
@@ -95,7 +95,7 @@ export async function unloadProvider(provider: string) {
  * Get the status of a model
  */
 export async function getModelStatus(modelId: string) {
-  return apiClient.get<ModelStatusResponse>(`/models/${modelId}/status`, {
+  return backendApi.get<ModelStatusResponse>(`/models/${modelId}/status`, {
     showErrors: false,
     errorContext: {
       operation: 'getModelStatus',

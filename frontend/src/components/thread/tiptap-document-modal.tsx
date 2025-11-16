@@ -17,6 +17,7 @@ import { AdvancedToolbar } from '@/components/agents/docs-agent/advanced-toolbar
 import { exportDocument, type ExportFormat } from '@/lib/utils/document-export';
 import { KortixLogo } from '../sidebar/kortix-logo';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
+import { getApiUrl } from '@/lib/get-api-url';
 
 interface TipTapDocumentModalProps {
   open: boolean;
@@ -97,7 +98,7 @@ export function TipTapDocumentModal({
       };
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files`,
+        `${getApiUrl()}/sandboxes/${sandboxId}/files`,
         {
           method: 'PUT',
           headers: {
