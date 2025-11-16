@@ -97,3 +97,18 @@ export const isLocalMode = (): boolean => {
 export const isStagingMode = (): boolean => {
   return config.IS_STAGING;
 };
+
+export const isPlanChangeAllowed = (currentPriceId: string, newPriceId: string): boolean => {
+  // Allow plan changes between different price IDs
+  return currentPriceId !== newPriceId;
+};
+
+export const isYearlyCommitmentDowngrade = (currentPriceId: string, newPriceId: string): boolean => {
+  // Placeholder for yearly commitment downgrade logic
+  return false;
+};
+
+export const getPlanInfo = (priceId: string): SubscriptionTierData | null => {
+  // Find tier by price ID (placeholder implementation)
+  return Object.values(TIERS)[0] || null;
+};

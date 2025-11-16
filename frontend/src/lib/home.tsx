@@ -303,6 +303,60 @@ export const siteConfig = {
       ],
     },
   ],
+  companyShowcase: {
+    companyLogos: [
+      { id: 1, name: 'Company 1', logo: '/images/companies/company1.png' },
+      { id: 2, name: 'Company 2', logo: '/images/companies/company2.png' },
+      { id: 3, name: 'Company 3', logo: '/images/companies/company3.png' },
+      { id: 4, name: 'Company 4', logo: '/images/companies/company4.png' },
+    ],
+  },
+  ctaSection: {
+    title: 'Ready to get started?',
+    description: 'Join thousands of users building with Kortix',
+    button: {
+      text: 'Start Free',
+      href: '/signup',
+    },
+    subtext: 'No credit card required',
+  },
+  faqSection: {
+    title: 'Frequently Asked Questions',
+    description: 'Find answers to common questions about Kortix',
+    faQitems: [
+      {
+        id: 1,
+        question: 'What is Kortix?',
+        answer: 'Kortix is an open-source platform for building and managing AI workers.',
+      },
+      {
+        id: 2,
+        question: 'How do I get started?',
+        answer: 'You can start for free with our basic tier. No credit card required.',
+      },
+    ],
+  },
+  featureSection: {
+    title: 'Powerful Features',
+    description: 'Everything you need to build amazing AI applications',
+    items: [
+      {
+        id: 1,
+        title: 'Easy to Use',
+        description: 'Simple and intuitive interface',
+      },
+      {
+        id: 2,
+        title: 'Scalable',
+        description: 'Built for growth',
+      },
+      {
+        id: 3,
+        title: 'Open Source',
+        description: 'Fully open source and customizable',
+      },
+    ],
+  },
 };
 
 export type SiteConfig = typeof siteConfig;
