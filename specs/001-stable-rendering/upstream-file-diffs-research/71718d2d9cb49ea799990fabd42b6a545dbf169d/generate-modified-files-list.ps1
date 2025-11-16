@@ -1,9 +1,12 @@
 # Script to verify which files still differ from production after merge
 # Usage: .\generate-modified-files-list.ps1
 
-$commit = "71718d2d9cb49ea799990fabd42b6a545dbf169d"
+$productionCommit = "71718d2d9cb49ea799990fabd42b6a545dbf169d"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $outputFile = Join-Path $scriptDir "REMAINING_DIFFS.md"
+
+# Get current HEAD
+$currentHead = git rev-parse HEAD
 
 # Files that NEED MANUAL REVIEW (should be the only ones differing)
 $manualReviewFiles = @(
@@ -41,8 +44,8 @@ $manualReviewFiles = @(
     "frontend/src/middleware.ts"
 )
 
-# Get all files that differ from production
-$allDiffFiles = git diff HEAD $commit --name-only --diff-filter=M | Sort-Object
+# Get all files that differ from production (compare committed versions)
+$allDiffFiles = git diff $productionCommit HEAD --name-only --diff-filter=M | Sort-Object
 
 # Separate by category
 $backendFiles = @()
@@ -68,7 +71,8 @@ foreach ($file in $allDiffFiles) {
 
 # Start building markdown
 $markdown = "# Files Still Differing from Production Commit`n`n"
-$markdown += "**Production Commit**: ``$commit``  `n"
+$markdown += "**Production Commit**: ``$productionCommit``  `n"
+$markdown += "**Current HEAD**: ``$currentHead``  `n"
 $markdown += "**Status**: Post auto-merge verification`n`n"
 $markdown += "**Total Differing Files**: $($allDiffFiles.Count)`n"
 $markdown += "- Expected (Manual Review): $($manualReviewFiles.Count)`n"
