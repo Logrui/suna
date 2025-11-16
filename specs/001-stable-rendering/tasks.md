@@ -83,25 +83,31 @@
 
 ---
 
-## Phase 1: Cherry-Pick Selected Production Fixes (Week 1) 🚀 READY TO START
+## Phase 1: Manual Review & Code Integration (Week 1) 🚀 IN PROGRESS
 
 **Goal**: Apply 4 high-priority commits from `upstream/PRODUCTION` to address 6 of 7 identified problem areas
 
-**Approach**: Cherry-pick production-tested commits instead of implementing from scratch (lower risk, faster timeline)
+**Approach**: Manual human review of each commit with COMMIT_hash_REVIEW.md documentation, then manually apply code changes (lower risk, full transparency, better control)
 
 **Independent Test Criteria**:
-- ✅ All 4 commits applied without breaking changes
+- ✅ All 4 commits reviewed and documented
+- ✅ All 4 commits manually integrated without breaking changes
 - ✅ No new console errors or warnings
 - ✅ Streaming completes without abrupt termination
 - ✅ Tool calls display correctly
 - ✅ No performance regressions
 - ✅ Potential resolution of 60-80% of streaming issues
 
-**Expected Outcome**: Potential resolution of 60-80% of streaming issues with Week 1 cherry-picks
+**Expected Outcome**: Potential resolution of 60-80% of streaming issues with Week 1 manual integrations
 
-### Phase 1 Tasks - Week 1 Cherry-Picks
+### Phase 1 Tasks - Week 1 Manual Review & Integration
 
-**IMPORTANT**: All tasks are HUMAN-IN-THE-LOOP. Each cherry-pick requires manual review of file diffs, dependency analysis, and integration decisions.
+**IMPORTANT**: All tasks are HUMAN-IN-THE-LOOP. Each commit requires:
+1. Create COMMIT_hash_REVIEW.md with detailed analysis
+2. Human review and approval
+3. Manual code integration (not cherry-pick)
+4. Testing and verification
+5. Document results in CHERRY_PICK_RESULTS.md
 
 #### Preparation Phase
 
@@ -111,63 +117,67 @@
 
 #### Commit 1: abadd6a6 (Cancellation event + graceful stoppage)
 
-- [X] T012 [US1] **HUMAN REVIEW**: View file diffs for commit `abadd6a6`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
+- [X] T012 [US1] **HUMAN REVIEW**: Create COMMIT_abadd6a6_REVIEW.md with detailed analysis
 - [X] T013 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in abadd6a6
-- [X] T014 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
-- [ ] T014.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve abadd6a6 cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
+- [X] T014 [US1] **HUMAN DECISION**: Review changes and approve for manual integration
+- [X] T014.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve abadd6a6 integration (documented in CHERRY_PICK_RESULTS.md)
 - [X] T015 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed (check requirements.txt, pyproject.toml changes)
-- [X] T016 [US1] **FILE PULL**: If new files created in abadd6a6, pull them: `git show upstream/PRODUCTION:<filepath> > <local_path>`
-- [X] T017 [US1] **DEPENDENCY PULL**: If dependencies changed, update requirements.txt or pyproject.toml from upstream
-- [ ] T018 [US1] Cherry-pick `abadd6a6`: `git cherry-pick abadd6a6`
-- [ ] T019 [US1] **CONFLICT RESOLUTION**: If conflicts, manually review: `git diff --ours` vs `git diff --theirs`, resolve, `git add <file>`, `git cherry-pick --continue`
-- [ ] T020 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
-- [ ] T021 [US1] Test after T018: Run backend tests `python -m pytest tests/ -v`, verify no conflicts
-- [ ] T022 [US1] Manual test: Verify response_processor.py changes work correctly
+- [X] T016 [US1] **FILE PULL**: Pull new files created in abadd6a6: `api_sanitized.py`, `message_sanitizer.py`
+- [X] T017 [US1] **DEPENDENCY PULL**: Verify no requirements.txt or pyproject.toml changes needed
+- [X] T018 [US1] **MANUAL CODE INTEGRATION**: Manually apply code changes from abadd6a6 to:
+  - `backend/core/agentpress/response_processor.py` - Add cancellation event system
+  - `backend/core/run.py` - Propagate cancellation event parameter
+  - `backend/run_agent_background.py` - Create and set cancellation event
+  - `backend/core/agentpress/thread_manager.py` - Propagate cancellation event
+- [X] T019 [US1] **COMMIT CHANGES**: Stage and commit manual integration: `git add .` then `git commit -m "abadd6a6 manually code additions/reviews"`
+- [ ] T020 [US1] **HUMAN VERIFICATION**: Review integrated code matches expected changes from COMMIT_abadd6a6_REVIEW.md
+- [ ] T021 [US1] **BACKEND TESTS**: Run backend tests `python -m pytest tests/ -v`, verify no errors
+- [ ] T022 [US1] **MANUAL TEST**: Verify response_processor.py changes work correctly (streaming, cancellation, cleanup)
 
 #### Commit 2: 8b6b16f5 (5-second drain timeout)
 
-- [ ] T023 [US1] **HUMAN REVIEW**: View file diffs for commit `8b6b16f5`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
+- [ ] T023 [US1] **HUMAN REVIEW**: Create COMMIT_8b6b16f5_REVIEW.md with detailed analysis
 - [ ] T024 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in 8b6b16f5
-- [ ] T025 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
-- [ ] T025.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve 8b6b16f5 cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
+- [ ] T025 [US1] **HUMAN DECISION**: Review changes and approve for manual integration
+- [ ] T025.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve 8b6b16f5 integration (document in CHERRY_PICK_RESULTS.md)
 - [ ] T026 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed
 - [ ] T027 [US1] **FILE PULL**: If new files created, pull them from upstream
 - [ ] T028 [US1] **DEPENDENCY PULL**: If dependencies changed, update from upstream
-- [ ] T029 [US1] Cherry-pick `8b6b16f5`: `git cherry-pick 8b6b16f5`
-- [ ] T030 [US1] **CONFLICT RESOLUTION**: If conflicts, manually resolve and continue
-- [ ] T031 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
-- [ ] T032 [US1] Test after T029: Verify timeout logic, check for conflicts with previous commit
-- [ ] T033 [US1] Manual test: Verify 5-second drain timeout works correctly
+- [ ] T029 [US1] **MANUAL CODE INTEGRATION**: Manually apply code changes from 8b6b16f5 to response_processor.py
+- [ ] T030 [US1] **COMMIT CHANGES**: Stage and commit manual integration
+- [ ] T031 [US1] **HUMAN VERIFICATION**: Review integrated code matches expected changes from COMMIT_8b6b16f5_REVIEW.md
+- [ ] T032 [US1] **BACKEND TESTS**: Run backend tests `python -m pytest tests/ -v`, verify no conflicts with previous commit
+- [ ] T033 [US1] **MANUAL TEST**: Verify 5-second drain timeout works correctly
 
 #### Commit 3: e56c2873 (Don't save cancelled responses)
 
-- [ ] T034 [US1] **HUMAN REVIEW**: View file diffs for commit `e56c2873`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
+- [ ] T034 [US1] **HUMAN REVIEW**: Create COMMIT_e56c2873_REVIEW.md with detailed analysis
 - [ ] T035 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in e56c2873
-- [ ] T036 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
-- [ ] T036.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve e56c2873 cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
+- [ ] T036 [US1] **HUMAN DECISION**: Review changes and approve for manual integration
+- [ ] T036.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve e56c2873 integration (document in CHERRY_PICK_RESULTS.md)
 - [ ] T037 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed
 - [ ] T038 [US1] **FILE PULL**: If new files created, pull them from upstream
 - [ ] T039 [US1] **DEPENDENCY PULL**: If dependencies changed, update from upstream
-- [ ] T040 [US1] Cherry-pick `e56c2873`: `git cherry-pick e56c2873`
-- [ ] T041 [US1] **CONFLICT RESOLUTION**: If conflicts, manually resolve and continue
-- [ ] T042 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
-- [ ] T043 [US1] Test after T040: Verify finish_reason checks, ensure no duplicates with abadd6a6
-- [ ] T044 [US1] Manual test: Verify cancelled responses not saved
+- [ ] T040 [US1] **MANUAL CODE INTEGRATION**: Manually apply code changes from e56c2873 to response_processor.py
+- [ ] T041 [US1] **COMMIT CHANGES**: Stage and commit manual integration
+- [ ] T042 [US1] **HUMAN VERIFICATION**: Review integrated code matches expected changes from COMMIT_e56c2873_REVIEW.md
+- [ ] T043 [US1] **BACKEND TESTS**: Run backend tests `python -m pytest tests/ -v`, verify no conflicts with previous commits
+- [ ] T044 [US1] **MANUAL TEST**: Verify cancelled responses not saved, ensure no duplicates with abadd6a6
 
 #### Commit 4: 26baa2ee (Frontend cleanup and refactoring)
 
-- [ ] T045 [US1] **HUMAN REVIEW**: View file diffs for commit `26baa2ee`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- frontend/src/hooks/useAgentStream.ts`
+- [ ] T045 [US1] **HUMAN REVIEW**: Create COMMIT_26baa2ee_REVIEW.md with detailed analysis
 - [ ] T046 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in 26baa2ee
-- [ ] T047 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
-- [ ] T047.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve 26baa2ee cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
+- [ ] T047 [US1] **HUMAN DECISION**: Review changes and approve for manual integration
+- [ ] T047.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve 26baa2ee integration (document in CHERRY_PICK_RESULTS.md)
 - [ ] T048 [US1] **DEPENDENCY CHECK**: Identify if new npm packages needed (check package.json changes)
 - [ ] T049 [US1] **FILE PULL**: If new files created, pull them from upstream
 - [ ] T050 [US1] **DEPENDENCY PULL**: If dependencies changed, update package.json and run `npm install` or `yarn install`
-- [ ] T051 [US1] Cherry-pick `26baa2ee`: `git cherry-pick 26baa2ee`
-- [ ] T052 [US1] **CONFLICT RESOLUTION**: If conflicts, manually resolve and continue
-- [ ] T053 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
-- [ ] T054 [US1] Test after T051: Verify dependency array changes, check useAgentStream.ts
-- [ ] T055 [US1] Manual test: Verify frontend cleanup works correctly
+- [ ] T051 [US1] **MANUAL CODE INTEGRATION**: Manually apply code changes from 26baa2ee to useAgentStream.ts and related files
+- [ ] T052 [US1] **COMMIT CHANGES**: Stage and commit manual integration
+- [ ] T053 [US1] **HUMAN VERIFICATION**: Review integrated code matches expected changes from COMMIT_26baa2ee_REVIEW.md
+- [ ] T054 [US1] **FRONTEND TESTS**: Run frontend tests `npm test` or `yarn test`, verify dependency array changes
+- [ ] T055 [US1] **MANUAL TEST**: Verify frontend cleanup works correctly
 
 #### Logging & Observability (Phase 1)
 
