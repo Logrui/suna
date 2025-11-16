@@ -1,6 +1,14 @@
 # Script to verify which files still differ from production after merge
 # Usage: .\generate-modified-files-list.ps1
 
+# Ensure we're in the git repository root
+$gitRoot = git rev-parse --show-toplevel 2>$null
+if (-not $gitRoot) {
+    Write-Host "Error: Not in a git repository"
+    exit 1
+}
+Set-Location $gitRoot
+
 $productionCommit = "71718d2d9cb49ea799990fabd42b6a545dbf169d"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $outputFile = Join-Path $scriptDir "REMAINING_DIFFS.md"
@@ -44,7 +52,7 @@ $manualReviewFiles = @(
     "frontend/src/middleware.ts"
 )
 
-# Get all files that differ from production (compare committed versions)
+# Get all modified files that differ from production (compare committed versions)
 $allDiffFiles = git diff $productionCommit HEAD --name-only --diff-filter=M | Sort-Object
 
 # Separate by category

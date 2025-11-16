@@ -9,8 +9,17 @@ param(
     [switch]$SkipConflicts = $false
 )
 
+# Ensure we're in the git repository root
+$gitRoot = git rev-parse --show-toplevel 2>$null
+if (-not $gitRoot) {
+    Write-Host "Error: Not in a git repository"
+    exit 1
+}
+Set-Location $gitRoot
+
 Write-Host "Selective Cherry-Pick Script (Maintains Git History)"
 Write-Host "====================================================="
+Write-Host "Working Directory: $gitRoot"
 Write-Host "Production Branch: $ProductionBranch"
 Write-Host "Production Commit (for file diff): $ProductionCommit"
 Write-Host "Dry Run Mode: $DryRun"
