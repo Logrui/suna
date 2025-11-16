@@ -375,6 +375,8 @@ async def create_agent_trigger(
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating trigger: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

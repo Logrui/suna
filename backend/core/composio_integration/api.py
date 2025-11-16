@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from uuid import uuid4
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_optional_current_user_id_from_jwt
 from core.utils.logger import logger
+from core.utils.config import config, EnvMode
 from core.services.supabase import DBConnection
 from datetime import datetime
 import os
@@ -856,8 +857,9 @@ async def create_composio_trigger(req: CreateComposioTriggerRequest, current_use
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to create Composio trigger: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e) if e else "Unknown error"
+        logger.error(f"Failed to create Composio trigger: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 
 @router.post("/webhook")

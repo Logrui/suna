@@ -10,6 +10,37 @@
 - Frontend: 210
 - Other: 137
 
+
+The 26 files that still differ (as expected):
+Backend (10 files):
+
+backend/.env.example
+backend/api.py
+backend/core/api.py
+backend/core/billing/api.py
+backend/core/composio_integration/api.py
+backend/core/knowledge_base/api.py
+backend/core/limits_api.py
+backend/core/sandbox/docker/docker-compose.yml
+backend/core/triggers/api.py
+backend/supabase/config.toml
+
+Frontend (16 files):
+
+frontend/.env.example
+frontend/Dockerfile
+frontend/next.config.ts
+frontend/package.json
+frontend/package-lock.json
+frontend/src/components/sidebar/sidebar-left.tsx
+frontend/src/lib/api/projects.ts
+frontend/src/lib/api/threads.ts
+frontend/src/lib/api-client.ts
+frontend/src/components/knowledge-base/* (4 files)
+frontend/src/components/sidebar/thread-search-modal.tsx
+frontend/src/components/ui/fancy-tabs.tsx
+frontend/src/middleware.ts*
+
 ## Backend Files (10) - PRIORITY FOR STREAMING FIXES - NEEDS MANUAL REVIEW
 - `backend/.env.example`  
 - `backend/api.py`  
