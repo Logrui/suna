@@ -187,35 +187,7 @@ class ErrorProcessor:
     def safe_error_to_string(error: Exception) -> str:
         """Safely convert an exception to a string with fallback"""
         try:
-            error_str = str(error)
-            
-            # For verbose LiteLLM errors, extract just the core message
-            # Remove the "No fallback model group found" and all the fallback configuration noise
-            if "No fallback model group found" in error_str:
-                # Extract just the first part before the verbose fallback info
-                core_message = error_str.split("No fallback model group found")[0].strip()
-                # Also remove any trailing "Fallbacks=[" if it exists
-                if "Fallbacks=[" in core_message:
-                    core_message = core_message.split("Fallbacks=[")[0].strip()
-                return core_message.rstrip(". ")
-            
-            # Remove "Fallbacks=[{...}]" and subsequent verbose error info
-            if "Fallbacks=[" in error_str:
-                core_message = error_str.split("Fallbacks=[")[0].strip()
-                # Remove trailing period if present
-                return core_message.rstrip(". ")
-            
-            # Remove "Error doing the fallback" and subsequent verbose info
-            if "Error doing the fallback:" in error_str:
-                core_message = error_str.split("Error doing the fallback:")[0].strip()
-                return core_message.rstrip(". ")
-            
-            # Remove "Received Model Group" verbose info
-            if "Received Model Group=" in error_str:
-                core_message = error_str.split("Received Model Group=")[0].strip()
-                return core_message.rstrip(". ")
-            
-            return error_str
+            return str(error)
             
         except Exception:
             try:
