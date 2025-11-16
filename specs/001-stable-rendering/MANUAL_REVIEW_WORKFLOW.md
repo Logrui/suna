@@ -5,6 +5,21 @@
 
 ---
 
+## Phase 1 Commits Reference
+
+| Commit Hash | Date | Branch | Subject | Priority |
+|-------------|------|--------|---------|----------|
+| `abadd6a6` | Nov 3, 2025 08:12 | upstream/PRODUCTION | fix string parsing task list bug, add graceful premature llm stoppage | 🔴 HIGH |
+| `8b6b16f5` | Oct 22, 2025 | upstream/PRODUCTION | fix: task list freezing issue - introduce buffer for 5 seconds | 🔴 HIGH |
+| `e56c2873` | Nov 3, 2025 | upstream/PRODUCTION | fix: don't save cancelled responses | 🟡 MEDIUM |
+| `26baa2ee` | Nov 6, 2025 | upstream/PRODUCTION | cleaning in progress (frontend cleanup) | 🟡 MEDIUM |
+
+**Branch Info**: All 4 commits from `upstream/PRODUCTION` (650 production-tested commits)
+
+**Expected Impact**: 60-80% of streaming issues resolved
+
+---
+
 ## Workflow Overview
 
 Instead of using `git cherry-pick`, we now follow a manual review and integration process:
