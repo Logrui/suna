@@ -98,9 +98,12 @@ export const isStagingMode = (): boolean => {
   return config.IS_STAGING;
 };
 
-export const isPlanChangeAllowed = (currentPriceId: string, newPriceId: string): boolean => {
+export const isPlanChangeAllowed = (currentPriceId: string, newPriceId: string): { allowed: boolean; reason?: string } => {
   // Allow plan changes between different price IDs
-  return currentPriceId !== newPriceId;
+  if (currentPriceId === newPriceId) {
+    return { allowed: false, reason: 'You are already on this plan' };
+  }
+  return { allowed: true };
 };
 
 export const isYearlyCommitmentDowngrade = (currentPriceId: string, newPriceId: string): boolean => {

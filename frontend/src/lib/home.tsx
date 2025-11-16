@@ -25,6 +25,9 @@ export interface PricingTier {
   billingPeriod?: 'monthly' | 'yearly';
   originalYearlyPrice?: string;
   discountPercentage?: number;
+  stripePriceId?: string;
+  yearlyStripePriceId?: string;
+  monthlyCommitmentStripePriceId?: string;
 }
 
 export const siteConfig = {
@@ -104,6 +107,9 @@ export const siteConfig = {
       ],
       tierKey: config.SUBSCRIPTION_TIERS.FREE_TIER.tierKey,
       upgradePlans: [],
+      stripePriceId: 'price_free',
+      yearlyStripePriceId: 'price_free_yearly',
+      monthlyCommitmentStripePriceId: 'price_free_commitment',
     },
     {
       name: 'Plus',
@@ -125,6 +131,9 @@ export const siteConfig = {
       ],
       tierKey: config.SUBSCRIPTION_TIERS.TIER_2_20.tierKey,
       upgradePlans: [],
+      stripePriceId: 'price_plus_monthly',
+      yearlyStripePriceId: 'price_plus_yearly',
+      monthlyCommitmentStripePriceId: 'price_plus_commitment',
     },
     {
       name: 'Pro',
@@ -146,6 +155,9 @@ export const siteConfig = {
       ],
       tierKey: config.SUBSCRIPTION_TIERS.TIER_6_50.tierKey,
       upgradePlans: [],
+      stripePriceId: 'price_pro_monthly',
+      yearlyStripePriceId: 'price_pro_yearly',
+      monthlyCommitmentStripePriceId: 'price_pro_commitment',
     },
     {
       name: 'Business',
@@ -168,6 +180,9 @@ export const siteConfig = {
       tierKey: config.SUBSCRIPTION_TIERS.TIER_12_100.tierKey,
       upgradePlans: [],
       hidden: true,
+      stripePriceId: 'price_business_monthly',
+      yearlyStripePriceId: 'price_business_yearly',
+      monthlyCommitmentStripePriceId: 'price_business_commitment',
     },
     {
       name: 'Ultra',
@@ -190,6 +205,9 @@ export const siteConfig = {
       ],
       tierKey: config.SUBSCRIPTION_TIERS.TIER_25_200.tierKey,
       upgradePlans: [],
+      stripePriceId: 'price_ultra_monthly',
+      yearlyStripePriceId: 'price_ultra_yearly',
+      monthlyCommitmentStripePriceId: 'price_ultra_commitment',
     },
     {
       name: 'Enterprise',
@@ -212,6 +230,9 @@ export const siteConfig = {
       tierKey: config.SUBSCRIPTION_TIERS.TIER_50_400.tierKey,
       upgradePlans: [],
       hidden: true,
+      stripePriceId: 'price_enterprise_monthly',
+      yearlyStripePriceId: 'price_enterprise_yearly',
+      monthlyCommitmentStripePriceId: 'price_enterprise_commitment',
     },
     {
       name: 'Scale',
@@ -235,6 +256,9 @@ export const siteConfig = {
       tierKey: config.SUBSCRIPTION_TIERS.TIER_125_800.tierKey,
       upgradePlans: [],
       hidden: true,
+      stripePriceId: 'price_scale_monthly',
+      yearlyStripePriceId: 'price_scale_yearly',
+      monthlyCommitmentStripePriceId: 'price_scale_commitment',
     },
     {
       name: 'Max',
@@ -259,6 +283,9 @@ export const siteConfig = {
       tierKey: config.SUBSCRIPTION_TIERS.TIER_200_1000.tierKey,
       upgradePlans: [],
       hidden: true,
+      stripePriceId: 'price_max_monthly',
+      yearlyStripePriceId: 'price_max_yearly',
+      monthlyCommitmentStripePriceId: 'price_max_commitment',
     },
   ],
   footerLinks: [
@@ -343,20 +370,70 @@ export const siteConfig = {
       {
         id: 1,
         title: 'Easy to Use',
-        description: 'Simple and intuitive interface',
+        content: 'Simple and intuitive interface for building AI workers',
       },
       {
         id: 2,
         title: 'Scalable',
-        description: 'Built for growth',
+        content: 'Built for growth with enterprise-grade infrastructure',
       },
       {
         id: 3,
         title: 'Open Source',
-        description: 'Fully open source and customizable',
+        content: 'Fully open source and customizable for your needs',
       },
     ],
   },
+  quoteSection: {
+    quote: 'Kortix makes it easy to build and deploy AI workers at scale.',
+    author: {
+      name: 'Happy Customer',
+      image: '/images/avatar.png',
+      role: 'CEO',
+    },
+  },
+  testimonials: [
+    {
+      id: '1',
+      name: 'John Doe',
+      role: 'CEO at TechCorp',
+      image: '/images/testimonial1.png',
+      img: '/images/testimonial1.png',
+      quote: 'Kortix transformed how we build AI solutions.',
+      description: 'Kortix transformed how we build AI solutions.',
+    },
+    {
+      id: '2',
+      name: 'Jane Smith',
+      role: 'CTO at StartupXYZ',
+      image: '/images/testimonial2.png',
+      img: '/images/testimonial2.png',
+      quote: 'The best platform for AI worker management.',
+      description: 'The best platform for AI worker management.',
+    },
+  ],
+  useCases: [
+    {
+      id: '1',
+      title: 'Data Processing',
+      description: 'Automate data processing workflows',
+      featured: true,
+      category: 'Automation',
+      icon: 'database',
+      image: '/images/use-case-1.png',
+      url: '/use-cases/data-processing',
+    },
+    {
+      id: '2',
+      title: 'Content Generation',
+      description: 'Generate content at scale',
+      featured: true,
+      category: 'Content',
+      icon: 'pen',
+      image: '/images/use-case-2.png',
+      url: '/use-cases/content-generation',
+    },
+  ],
 };
 
 export type SiteConfig = typeof siteConfig;
