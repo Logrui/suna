@@ -71,13 +71,13 @@ export function createRealtimeClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL || 
     'http://localhost:8888'
 
-  // console.log('[createRealtimeClient] Configuration:', {
-  //   NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL,
-  //   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  //   realtimeUrl,
-  //   windowOrigin: typeof window !== 'undefined' ? window.location.origin : 'SSR',
-  //   note: 'WebSocket will attempt to upgrade at: ' + realtimeUrl + '/realtime/v1/websocket',
-  // })
+  console.log('[createRealtimeClient] Configuration:', {
+    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    realtimeUrl,
+    windowOrigin: typeof window !== 'undefined' ? window.location.origin : 'SSR',
+    note: 'WebSocket will attempt to upgrade at: ' + realtimeUrl + '/realtime/v1/websocket',
+  })
 
   // Use createSupabaseClient (from @supabase/supabase-js) instead of createBrowserClient
   // This gives us full control over the URL and doesn't override it with window.location.origin

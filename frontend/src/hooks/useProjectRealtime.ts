@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createRealtimeClient } from '@/lib/supabase/client';
 import { threadKeys } from '@/hooks/react-query/threads/keys';
+import { isLocalMode } from '@/lib/config';
 import { Project } from '../app/(dashboard)/projects/[projectId]/thread/_types';
 
 /**

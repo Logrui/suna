@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
+import { createRealtimeClient } from '@/lib/supabase/client';
+import { isLocalMode } from '@/lib/config';
 
 interface VapiCall {
   id: string;
@@ -22,7 +23,7 @@ export function useVapiCallRealtime(callId?: string, threadId?: string) {
   useEffect(() => {
     if (!callId && !threadId) return;
 
-    const supabase = createClient();
+    const supabase = createRealtimeClient();
     const channelName = callId ? `vapi-call-${callId}` : `vapi-calls-thread-${threadId}`;
 
     console.log(`[Vapi Realtime] Setting up subscription for ${channelName}`);
