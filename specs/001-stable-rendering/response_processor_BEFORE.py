@@ -19,11 +19,6 @@ from core.utils.logger import logger
 from core.agentpress.tool import ToolResult
 from core.agentpress.tool_registry import ToolRegistry
 from core.agentpress.xml_tool_parser import XMLToolParser
-from core.agentpress.tool_validation import (
-    ToolCallValidator, 
-    MalformedToolCallHandler,
-    ValidationResult
-)
 from core.agentpress.error_processor import ErrorProcessor
 from langfuse.client import StatefulTraceClient
 from core.services.langfuse import langfuse
@@ -108,13 +103,8 @@ class ResponseProcessor:
         if not self.trace:
             self.trace = langfuse.trace(name="anonymous:response_processor")
             
-        # Initialize the XML parser with tool registry for validation
-        self.xml_parser = XMLToolParser(tool_registry=tool_registry)
-        
-        # Initialize validation components
-        self.validator = ToolCallValidator(tool_registry)
-        self.malformed_handler = MalformedToolCallHandler(message_handler=self)
-        
+        # Initialize the XML parser
+        self.xml_parser = XMLToolParser()
         self.is_agent_builder = False  # Deprecated - keeping for compatibility
         self.target_agent_id = None  # Deprecated - keeping for compatibility
         self.agent_config = agent_config
@@ -246,7 +236,6 @@ class ResponseProcessor:
         continuous_state: Optional[Dict[str, Any]] = None,
         generation = None,
         estimated_total_tokens: Optional[int] = None,
-        cancellation_event: Optional[asyncio.Event] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Process a streaming LLM response, handling tool calls and execution.
         
@@ -264,10 +253,6 @@ class ResponseProcessor:
             Complete message objects matching the DB schema, except for content chunks.
         """
         logger.info(f"Starting streaming response processing for thread {thread_id}")
-        
-        # Initialize cancellation event if not provided
-        if cancellation_event is None:
-            cancellation_event = asyncio.Event()
         
         # Initialize from continuous state if provided (for auto-continue)
         continuous_state = continuous_state or {}
@@ -337,12 +322,6 @@ class ResponseProcessor:
 
             chunk_count = 0
             async for chunk in llm_response:
-                # Check for cancellation before processing each chunk
-                if cancellation_event.is_set():
-                    logger.info(f"Cancellation signal received for thread {thread_id} - stopping LLM stream processing")
-                    finish_reason = "cancelled"
-                    break
-                
                 chunk_count += 1
                 
                 # Track timing
@@ -421,41 +400,6 @@ class ResponseProcessor:
                                 result = self._parse_xml_tool_call(xml_chunk)
                                 if result:
                                     tool_call, parsing_details = result
-                                    
-                                    # PHASE 2: Validate tool call before execution
-                                    is_valid, error_msg, malformation_details = self._validate_parsed_tool_call(
-                                        tool_call, 
-                                        parsing_details
-                                    )
-                                    
-                                    if not is_valid:
-                                        # Log malformed call
-                                        logger.warning(f"ΓÜá∩╕Å Malformed XML tool call in stream: {error_msg}")
-                                        logger.warning(f"   Raw XML: {xml_chunk[:200]}...")
-                                        
-                                        # Handle malformed call - yields error feedback
-                                        async for error_chunk in self._handle_malformed_tool_calls(
-                                            malformed_calls=[{
-                                                "tool_call": tool_call,
-                                                "parsing_details": parsing_details,
-                                                "error": error_msg,
-                                                "malformation": malformation_details,
-                                                "raw_xml": xml_chunk
-                                            }],
-                                            thread_id=thread_id,
-                                            thread_run_id=thread_run_id,
-                                            assistant_message_id=last_assistant_message_object['message_id'] if last_assistant_message_object else None
-                                        ):
-                                            yield error_chunk
-                                        
-                                        # Trigger auto-continue for reprompt
-                                        should_auto_continue = True
-                                        finish_reason = "tool_validation_failed"
-                                        
-                                        # Skip execution of malformed tool
-                                        continue
-                                    
-                                    # Tool call is valid - proceed with execution
                                     xml_tool_call_count += 1
                                     current_assistant_id = last_assistant_message_object['message_id'] if last_assistant_message_object else None
                                     context = self._create_tool_context(
@@ -546,10 +490,41 @@ class ResponseProcessor:
                                 tool_index += 1
 
                 if finish_reason == "xml_tool_limit_reached":
-                    logger.info("XML tool limit reached - stopping immediately without draining stream")
-                    self.trace.event(name="xml_tool_limit_reached_immediate_stop", level="DEFAULT", status_message=(f"XML tool limit reached - stopping immediately to prevent further LLM token generation"))
-                    # Immediately break from the loop to stop consuming chunks
-                    # This prevents the LLM from continuing to generate tokens in the background
+                    logger.info("XML tool limit reached - draining remaining stream to capture usage data")
+                    self.trace.event(name="xml_tool_limit_draining_stream", level="DEFAULT", status_message=(f"XML tool limit reached - draining remaining stream to capture usage data"))
+                    
+                    drain_timeout = 5.0
+                    drain_start_time = datetime.now(timezone.utc).timestamp()
+                    chunks_drained = 0
+                    max_drain_chunks = 100
+                    
+                    try:
+                        async for remaining_chunk in llm_response:
+                            chunk_count += 1
+                            chunks_drained += 1
+
+                            current_drain_time = datetime.now(timezone.utc).timestamp()
+                            last_chunk_time = current_drain_time
+
+                            if hasattr(remaining_chunk, 'usage') and remaining_chunk.usage and final_llm_response is None:
+                                final_llm_response = remaining_chunk
+                                logger.info(f"✅ Captured usage data after tool limit: {remaining_chunk.usage}")
+                                break
+
+                            if hasattr(remaining_chunk, 'choices') and remaining_chunk.choices:
+                                if hasattr(remaining_chunk.choices[0], 'finish_reason') and remaining_chunk.choices[0].finish_reason:
+                                    if not finish_reason:
+                                        finish_reason = remaining_chunk.choices[0].finish_reason
+                            
+                            if (current_drain_time - drain_start_time) > drain_timeout:
+                                break
+                            
+                            if chunks_drained >= max_drain_chunks:
+                                break
+                                
+                    except Exception as drain_error:
+                        logger.warning(f"Error draining stream after tool limit: {drain_error}")
+                    
                     break
 
             logger.info(f"Stream complete. Total chunks: {chunk_count}")
@@ -641,9 +616,7 @@ class ResponseProcessor:
 
             should_auto_continue = (can_auto_continue and finish_reason == 'length')
 
-            # Don't save partial response if user stopped (cancelled)
-            # But do save for other early stops like XML limit reached
-            if accumulated_content and not should_auto_continue and finish_reason != "cancelled":
+            if accumulated_content and not should_auto_continue:
                 # ... (Truncate accumulated_content logic) ...
                 if config.max_xml_tool_calls > 0 and xml_tool_call_count >= config.max_xml_tool_calls and xml_chunks_buffer:
                     last_xml_chunk = xml_chunks_buffer[-1]
@@ -993,36 +966,6 @@ class ResponseProcessor:
             # IMPORTANT: Finally block runs even when stream is stopped (GeneratorExit)
             # We MUST NOT yield here - just save to DB silently for billing/usage tracking
             
-            # Phase 3: Resource Cleanup - Cancel pending tasks and close generator
-            try:
-                # Cancel all pending tool execution tasks when stopping
-                if pending_tool_executions:
-                    logger.info(f"Cancelling {len(pending_tool_executions)} pending tool executions due to stop/cancellation")
-                    for execution in pending_tool_executions:
-                        task = execution.get("task")
-                        if task and not task.done():
-                            try:
-                                task.cancel()
-                            except Exception as cancel_err:
-                                logger.warning(f"Error cancelling tool execution task: {cancel_err}")
-                
-                # Try to close the LLM response generator if it supports aclose()
-                # This helps stop the underlying HTTP connection from continuing
-                if hasattr(llm_response, 'aclose'):
-                    try:
-                        await llm_response.aclose()
-                        logger.debug(f"Closed LLM response generator for thread {thread_id}")
-                    except Exception as close_err:
-                        logger.debug(f"Error closing LLM response generator (may not support aclose): {close_err}")
-                elif hasattr(llm_response, 'close'):
-                    try:
-                        llm_response.close()
-                        logger.debug(f"Closed LLM response generator (sync close) for thread {thread_id}")
-                    except Exception as close_err:
-                        logger.debug(f"Error closing LLM response generator (sync): {close_err}")
-            except Exception as cleanup_err:
-                logger.warning(f"Error during resource cleanup: {cleanup_err}")
-            
             if not llm_response_end_saved and last_assistant_message_object:
                 try:
                     logger.info(f"💰 BULLETPROOF BILLING: Saving llm_response_end in finally block for call #{auto_continue_count + 1}")
@@ -1182,17 +1125,7 @@ class ResponseProcessor:
                      if hasattr(response_message, 'content') and response_message.content:
                          content = response_message.content
                          if config.xml_tool_calling:
-                             # Parse with validation - returns (valid_calls, malformed_calls)
-                             valid_xml_data, malformed_xml_data = self._parse_xml_tool_calls(content, validate=True)
-                             
-                             # Log malformed calls but don't block in non-streaming mode
-                             if malformed_xml_data:
-                                 logger.warning(f"ΓÜá∩╕Å Found {len(malformed_xml_data)} malformed tool calls in non-streaming response")
-                                 for malformed in malformed_xml_data:
-                                     logger.warning(f"   - {malformed['error']}")
-                             
-                             parsed_xml_data = valid_xml_data
-                             
+                             parsed_xml_data = self._parse_xml_tool_calls(content)
                              if config.max_xml_tool_calls > 0 and len(parsed_xml_data) > config.max_xml_tool_calls:
                                  # Truncate content and tool data if limit exceeded
                                  # ... (Truncation logic similar to streaming) ...
@@ -1512,117 +1445,31 @@ class ResponseProcessor:
             self.trace.event(name="error_parsing_xml_chunk", level="ERROR", status_message=(f"Error parsing XML chunk: {e}"), metadata={"xml_chunk": xml_chunk})
             return None
 
-    def _validate_parsed_tool_call(
-        self,
-        tool_call: Dict[str, Any],
-        parsing_details: Dict[str, Any]
-    ) -> Tuple[bool, Optional[str], Optional[Dict[str, Any]]]:
-        """
-        Validate a parsed tool call for malformations.
+    def _parse_xml_tool_calls(self, content: str) -> List[Dict[str, Any]]:
+        """Parse XML tool calls from content string.
         
-        Delegates to the modular ToolCallValidator for comprehensive validation.
-        
-        Args:
-            tool_call: Tool call dictionary with function_name and arguments
-            parsing_details: Parsing details from XML parser
-            
         Returns:
-            Tuple of (is_valid, error_message, malformation_details)
+            List of dictionaries, each containing {'tool_call': ..., 'parsing_details': ...}
         """
-        return self.validator.validate_tool_call(tool_call, parsing_details)
-
-    def _parse_xml_tool_calls(
-        self, 
-        content: str,
-        validate: bool = True
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """
-        Parse XML tool calls from content string with optional validation.
-        
-        Args:
-            content: Content containing XML tool calls
-            validate: Whether to validate tool calls (default: True)
-            
-        Returns:
-            Tuple of (valid_tool_calls, malformed_tool_calls)
-            - valid_tool_calls: List of dicts with 'tool_call' and 'parsing_details'
-            - malformed_tool_calls: List of dicts with 'tool_call', 'parsing_details', 'error', 'malformation', 'raw_xml'
-        """
-        valid_calls = []
-        malformed_calls = []
+        parsed_data = []
         
         try:
             xml_chunks = self._extract_xml_chunks(content)
             
             for xml_chunk in xml_chunks:
                 result = self._parse_xml_tool_call(xml_chunk)
-                if not result:
-                    continue
-                    
-                tool_call, parsing_details = result
-                
-                # Validate if enabled
-                if validate:
-                    is_valid, error_msg, malformation_details = self._validate_parsed_tool_call(
-                        tool_call, 
-                        parsing_details
-                    )
-                    
-                    if not is_valid:
-                        malformed_calls.append({
-                            "tool_call": tool_call,
-                            "parsing_details": parsing_details,
-                            "error": error_msg,
-                            "malformation": malformation_details,
-                            "raw_xml": xml_chunk
-                        })
-                        logger.warning(f"ΓÜá∩╕Å Malformed tool call detected: {error_msg}")
-                        continue
-                
-                # Add to valid calls
-                valid_calls.append({
-                    "tool_call": tool_call,
-                    "parsing_details": parsing_details
-                })
+                if result:
+                    tool_call, parsing_details = result
+                    parsed_data.append({
+                        "tool_call": tool_call,
+                        "parsing_details": parsing_details
+                    })
                     
         except Exception as e:
-            logger.error(f"Error parsing XML tool calls: {e}")
+            logger.error(f"Error parsing XML tool calls: {e}", exc_info=True)
             self.trace.event(name="error_parsing_xml_tool_calls", level="ERROR", status_message=(f"Error parsing XML tool calls: {e}"), metadata={"content": content})
         
-        return valid_calls, malformed_calls
-
-    async def _handle_malformed_tool_calls(
-        self,
-        malformed_calls: List[Dict[str, Any]],
-        thread_id: str,
-        thread_run_id: str,
-        assistant_message_id: Optional[str]
-    ) -> AsyncGenerator[Dict[str, Any], None]:
-        """
-        Handle malformed tool calls by delegating to MalformedToolCallHandler.
-        
-        This method delegates to the modular malformed handler which:
-        1. Generates detailed error messages for the LLM
-        2. Saves error feedback as user message (for LLM context)
-        3. Yields status messages to frontend
-        4. Triggers auto-reprompt by setting metadata
-        
-        Args:
-            malformed_calls: List of malformed tool call dictionaries
-            thread_id: Thread ID
-            thread_run_id: Current thread run ID
-            assistant_message_id: ID of assistant message containing malformed calls
-            
-        Yields:
-            Status messages and error feedback for frontend
-        """
-        async for message in self.malformed_handler.handle_malformed_calls(
-            malformed_calls=malformed_calls,
-            thread_id=thread_id,
-            thread_run_id=thread_run_id,
-            assistant_message_id=assistant_message_id
-        ):
-            yield message
+        return parsed_data
 
     # Tool execution methods
     async def _execute_tool(self, tool_call: Dict[str, Any]) -> ToolResult:

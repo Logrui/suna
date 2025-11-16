@@ -95,7 +95,7 @@ if finish_reason == "xml_tool_limit_reached":
     max_drain_chunks = 100
     
     try:
-        async for remaining_chunk in llm_response:
+        async for remaining_chunk in llm_response:  
             chunk_count += 1
             chunks_drained += 1
             

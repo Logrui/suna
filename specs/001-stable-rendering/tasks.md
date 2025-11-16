@@ -105,19 +105,19 @@
 
 #### Preparation Phase
 
-- [ ] T009 Prepare implementation branch: `git checkout -b 001-stable-rendering-phase1-track-production`
-- [ ] T010 [P] Verify upstream remote configured: `git remote -v | grep upstream`
-- [ ] T011 [P] Fetch all upstream branches: `git fetch upstream PRODUCTION native_tool_calling parallel_tool_calling_and_flow_execution`
+- [X] T009 Prepare implementation branch: `git checkout -b 001-stable-rendering-phase1-track-production`
+- [X] T010 [P] Verify upstream remote configured: `git remote -v | grep upstream`
+- [X] T011 [P] Fetch all upstream branches: `git fetch upstream PRODUCTION native_tool_calling parallel_tool_calling_and_flow_execution`
 
 #### Commit 1: abadd6a6 (Cancellation event + graceful stoppage)
 
-- [ ] T012 [US1] **HUMAN REVIEW**: View file diffs for commit `abadd6a6`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
-- [ ] T013 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in abadd6a6
-- [ ] T014 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
+- [X] T012 [US1] **HUMAN REVIEW**: View file diffs for commit `abadd6a6`: `git diff upstream/PRODUCTION~1 upstream/PRODUCTION -- backend/core/agentpress/response_processor.py`
+- [X] T013 [US1] **HUMAN ANALYSIS**: Identify all modified files and new dependencies in abadd6a6
+- [X] T014 [US1] **HUMAN DECISION**: Review changes and approve for cherry-pick
 - [ ] T014.5 [US1] **HUMAN APPROVAL GATE**: Explicitly approve abadd6a6 cherry-pick before proceeding (document approval in CHERRY_PICK_RESULTS.md)
-- [ ] T015 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed (check requirements.txt, pyproject.toml changes)
-- [ ] T016 [US1] **FILE PULL**: If new files created in abadd6a6, pull them: `git show upstream/PRODUCTION:<filepath> > <local_path>`
-- [ ] T017 [US1] **DEPENDENCY PULL**: If dependencies changed, update requirements.txt or pyproject.toml from upstream
+- [X] T015 [US1] **DEPENDENCY CHECK**: Identify if new imports/packages needed (check requirements.txt, pyproject.toml changes)
+- [X] T016 [US1] **FILE PULL**: If new files created in abadd6a6, pull them: `git show upstream/PRODUCTION:<filepath> > <local_path>`
+- [X] T017 [US1] **DEPENDENCY PULL**: If dependencies changed, update requirements.txt or pyproject.toml from upstream
 - [ ] T018 [US1] Cherry-pick `abadd6a6`: `git cherry-pick abadd6a6`
 - [ ] T019 [US1] **CONFLICT RESOLUTION**: If conflicts, manually review: `git diff --ours` vs `git diff --theirs`, resolve, `git add <file>`, `git cherry-pick --continue`
 - [ ] T020 [US1] **HUMAN VERIFICATION**: Review cherry-picked changes match expected diffs
