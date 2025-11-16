@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+﻿from fastapi import HTTPException
 from typing import Dict
 from decimal import Decimal
 from datetime import datetime, timezone
@@ -69,6 +69,7 @@ class PaymentService:
                 mode='payment',
                 success_url=success_url,
                 cancel_url=cancel_url,
+                allow_promotion_codes=True,
                 metadata={
                     'type': 'credit_purchase',
                     'account_id': account_id,

@@ -1,4 +1,4 @@
-"""
+﻿"""
 LLM API interface for making calls to various language models.
 
 This module provides a unified interface for making API calls to different LLM providers
@@ -102,73 +102,39 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         },
     ]
     
-    # Configure fallbacks: MAP-tagged Bedrock app inference profiles (global routing, 14B tokens/day)
-    # Keep Bedrock fallback chains for the specific MAP-tagged profiles
     fallbacks = [
-        # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5 -> Anthropic fallbacks
+        # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
         {
             "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48": [
                 "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
                 "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
-                "anthropic/claude-haiku-4-5-20251001",
-                "anthropic/claude-sonnet-4-20250514"
             ]
         },
-        # MAP-tagged Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5 -> Anthropic fallbacks
+        # MAP-tagged Sonnet 4.5 -> Sonnet 4 -> Haiku 4.5
         {
             "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh": [
                 "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
                 "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-                "anthropic/claude-sonnet-4-5-20250929",
-                "anthropic/claude-sonnet-4-20250514"
             ]
         },
-        # MAP-tagged Sonnet 4 -> Haiku 4.5 -> Anthropic fallbacks
+        # MAP-tagged Sonnet 4 -> Haiku 4.5
         {
             "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf": [
                 "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-                "anthropic/claude-sonnet-4-20250514"
             ]
         }
     ]
     
     provider_router = Router(
         model_list=model_list,
+        retry_after=15,
         fallbacks=fallbacks,
     )
     
     logger.info(f"Configured LiteLLM Router with {len(fallbacks)} Bedrock-only fallback rules")
 
 def _configure_openai_compatible(params: Dict[str, Any], model_name: str, api_key: Optional[str], api_base: Optional[str]) -> None:
-    """Configure OpenAI-compatible provider setup for local and custom models."""
-    
-    # Handle LM Studio models
-    if model_name.startswith("lm_studio/"):
-        lm_studio_base = getattr(config, 'LM_STUDIO_API_BASE', None) if config else None
-        if not lm_studio_base:
-            lm_studio_base = "http://host.docker.internal:1234"  # Default fallback
-        
-        # LM Studio uses OpenAI-compatible /v1 endpoints
-        if not lm_studio_base.endswith('/v1'):
-            lm_studio_base = f"{lm_studio_base}/v1"
-        
-        params["api_base"] = lm_studio_base
-        params["api_key"] = "lm-studio"  # LM Studio doesn't require a real key
-        logger.debug(f"Configured LM Studio model with API base: {lm_studio_base}")
-        return
-    
-    # Handle Ollama models
-    if model_name.startswith("ollama/"):
-        ollama_base = getattr(config, 'OLLAMA_API_BASE', None) if config else None
-        if not ollama_base:
-            ollama_base = "http://host.docker.internal:11434"  # Default fallback
-        
-        params["api_base"] = ollama_base
-        params["api_key"] = "ollama"  # Ollama doesn't require a real key
-        logger.debug(f"Configured Ollama model with API base: {ollama_base}")
-        return
-    
-    # Handle openai-compatible models (existing logic)
+    """Configure OpenAI-compatible provider setup."""
     if not model_name.startswith("openai-compatible/"):
         return
     
@@ -282,120 +248,22 @@ async def make_llm_api_call(
         
         # For streaming responses, we need to handle errors that occur during iteration
         if hasattr(response, '__aiter__') and stream:
-            return _wrap_streaming_response(response, resolved_model_name, params)
+            return _wrap_streaming_response(response)
         
         return response
         
     except Exception as e:
-        # Check if this is a NotFoundError (upstream issue - don't use fallbacks)
-        is_not_found = any(keyword in str(e).lower() for keyword in ['notfounderror', 'does not exist', 'model not found', 'no such model'])
-        
-        if is_not_found:
-            # NotFoundError indicates an upstream issue with the model not being available
-            # Don't use fallbacks - we need to debug why the model isn't accessible
-            logger.error(f"Model not found error for {resolved_model_name}. This is an upstream issue that needs debugging.")
-            logger.debug(f"Full error: {str(e)}")
-            
-            processed_error = ErrorProcessor.process_llm_error(e, context={"model": model_name})
-            ErrorProcessor.log_error(processed_error)
-            raise LLMError(processed_error.message)
-        
-        # Check if this is a rate limit error
-        is_rate_limit = any(keyword in str(e).lower() for keyword in ['rate_limit', 'quota', 'ratelimit', '429', 'overloaded'])
-        
-        if is_rate_limit:
-            # Get fallbacks from the model registry
-            from core.ai_models import model_manager
-            model = model_manager.get_model(resolved_model_name)
-            fallback_models = model.fallback_models if model and model.fallback_models else []
-            
-            if fallback_models:
-                logger.info(f"Rate limit hit for {resolved_model_name}. Trying fallback models: {fallback_models}")
-                
-                # Try each fallback model
-                for fallback_model in fallback_models:
-                    try:
-                        logger.info(f"Attempting fallback to {fallback_model}")
-                        params_copy = params.copy()
-                        params_copy["model"] = fallback_model
-                        
-                        response = await provider_router.acompletion(**params_copy)
-                        
-                        if hasattr(response, '__aiter__') and stream:
-                            logger.info(f"Fallback to {fallback_model} succeeded")
-                            return _wrap_streaming_response(response)
-                        
-                        logger.info(f"Fallback to {fallback_model} succeeded")
-                        return response
-                        
-                    except Exception as fallback_error:
-                        logger.debug(f"Fallback to {fallback_model} failed: {str(fallback_error)[:100]}")
-                        continue
-                
-                logger.error(f"All fallback models failed for {resolved_model_name}")
-            else:
-                logger.warning(f"Rate limit hit but no fallback models configured for {resolved_model_name}")
-        
         # Use ErrorProcessor to handle the error consistently
         processed_error = ErrorProcessor.process_llm_error(e, context={"model": model_name})
         ErrorProcessor.log_error(processed_error)
         raise LLMError(processed_error.message)
 
-async def _wrap_streaming_response(response, resolved_model_name: str = None, params: Dict = None) -> AsyncGenerator:
-    """Wrap streaming response to handle errors during iteration, including rate limit fallbacks."""
+async def _wrap_streaming_response(response) -> AsyncGenerator:
+    """Wrap streaming response to handle errors during iteration."""
     try:
         async for chunk in response:
             yield chunk
     except Exception as e:
-        # Check if this is a NotFoundError (upstream issue - don't use fallbacks)
-        is_not_found = any(keyword in str(e).lower() for keyword in ['notfounderror', 'does not exist', 'model not found', 'no such model'])
-        
-        if is_not_found:
-            # NotFoundError indicates an upstream issue with the model not being available
-            # Don't use fallbacks - we need to debug why the model isn't accessible
-            logger.error(f"Model not found error during streaming for {resolved_model_name}. This is an upstream issue that needs debugging.")
-            logger.debug(f"Full error: {str(e)}")
-            
-            processed_error = ErrorProcessor.process_llm_error(e)
-            ErrorProcessor.log_error(processed_error)
-            raise LLMError(processed_error.message)
-        
-        # Check if this is a rate limit error that occurred mid-stream
-        is_rate_limit = any(keyword in str(e).lower() 
-                           for keyword in ['rate_limit', 'quota', 'ratelimit', '429', 'overloaded', 'mid', 'stream', 'fallback'])
-        
-        if is_rate_limit and resolved_model_name and params:
-            # Get fallbacks from the model registry
-            from core.ai_models import model_manager
-            model = model_manager.get_model(resolved_model_name)
-            fallback_models = model.fallback_models if model and model.fallback_models else []
-            
-            if fallback_models:
-                logger.info(f"Rate limit hit during streaming for {resolved_model_name}. Trying fallback models: {fallback_models}")
-                
-                # Try each fallback model
-                for fallback_model in fallback_models:
-                    try:
-                        logger.info(f"Attempting streaming fallback to {fallback_model}")
-                        params_copy = params.copy()
-                        params_copy["model"] = fallback_model
-                        
-                        response = await provider_router.acompletion(**params_copy)
-                        
-                        if hasattr(response, '__aiter__'):
-                            logger.info(f"Fallback to {fallback_model} succeeded during streaming")
-                            async for chunk in response:
-                                yield chunk
-                            return
-                        
-                    except Exception as fallback_error:
-                        logger.debug(f"Streaming fallback to {fallback_model} failed: {str(fallback_error)[:100]}")
-                        continue
-                
-                logger.error(f"All fallback models failed during streaming for {resolved_model_name}")
-            else:
-                logger.warning(f"Rate limit hit during streaming but no fallback models configured for {resolved_model_name}")
-        
         # Convert streaming errors to processed errors
         processed_error = ErrorProcessor.process_llm_error(e)
         ErrorProcessor.log_error(processed_error)

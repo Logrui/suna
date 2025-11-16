@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Key, Plus, Trash2, Copy, Shield, ExternalLink, Sparkles } from 'lucide-react';
@@ -48,7 +48,7 @@ import {
   APIKeyCreateRequest,
   APIKeyResponse,
   APIKeyCreateResponse,
-} from '@/lib/api-client';
+} from '@/lib/api/api-keys';
 
 interface NewAPIKeyData {
   title: string;

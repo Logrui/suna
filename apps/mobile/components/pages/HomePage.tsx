@@ -1,13 +1,15 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View, Keyboard } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { ChatInputSection, ChatDrawers, type ChatInputSectionRef } from '@/components/chat';
 import { QuickActionBar } from '@/components/quick-actions';
 import { BackgroundLogo, TopNav } from '@/components/home';
-import { BillingPage } from '@/components/settings/BillingPage';
+import { PlanSelectionModal } from '@/components/billing/PlanSelectionModal';
+import { UsageDrawer } from '@/components/settings/UsageDrawer';
 import { CreditsPurchasePage } from '@/components/settings/CreditsPurchasePage';
 import { useChatCommons } from '@/hooks';
 import type { UseChatReturn } from '@/hooks';
+import { usePricingModalStore } from '@/stores/billing-modal-store';
 
 interface HomePageProps {
   onMenuPress?: () => void;
@@ -27,8 +29,10 @@ export const HomePage = React.forwardRef<HomePageRef, HomePageProps>(({
   onOpenAuthDrawer,
 }, ref) => {
   const { agentManager, audioRecorder, audioHandlers, isTranscribing } = useChatCommons(chat);
-  const [isBillingPageVisible, setIsBillingPageVisible] = React.useState(false);
-  const [isCreditsPurchasePageVisible, setIsCreditsPurchasePageVisible] = React.useState(false);
+  
+  const { isOpen: isPricingModalOpen, alertTitle, creditsExhausted, closePricingModal } = usePricingModalStore();
+  const [isUsageDrawerOpen, setIsUsageDrawerOpen] = React.useState(false);
+  const [isCreditsPurchaseOpen, setIsCreditsPurchaseOpen] = React.useState(false);
   
   const chatInputRef = React.useRef<ChatInputSectionRef>(null);
   
@@ -40,24 +44,40 @@ export const HomePage = React.forwardRef<HomePageRef, HomePageProps>(({
   }), []);
 
   const handleUpgradePress = React.useCallback(() => {
-    console.log('🎯 Upgrade button pressed - opening billing page');
-    setIsBillingPageVisible(true);
+    console.log('🎯 Upgrade button pressed - opening pricing modal');
+    usePricingModalStore.getState().openPricingModal();
   }, []);
 
-  const handleCloseBilling = React.useCallback(() => {
-    console.log('🎯 Billing page closed');
-    setIsBillingPageVisible(false);
+  const handleClosePricingModal = React.useCallback(() => {
+    console.log('🎯 Pricing modal closed');
+    closePricingModal();
+  }, [closePricingModal]);
+
+  const handleCreditsPress = React.useCallback(() => {
+    console.log('🎯 Credits pressed - opening usage drawer');
+    setIsUsageDrawerOpen(true);
   }, []);
 
-  const handleOpenCredits = React.useCallback(() => {
-    console.log('🎯 Opening credits purchase page');
-    setIsBillingPageVisible(false);
-    setIsCreditsPurchasePageVisible(true);
+  const handleCloseUsageDrawer = React.useCallback(() => {
+    console.log('🎯 Usage drawer closed');
+    setIsUsageDrawerOpen(false);
   }, []);
 
-  const handleCloseCredits = React.useCallback(() => {
-    console.log('🎯 Credits purchase page closed');
-    setIsCreditsPurchasePageVisible(false);
+  const handleTopUpPress = React.useCallback(() => {
+    console.log('🎯 Top up pressed - opening credits purchase');
+    setIsUsageDrawerOpen(false);
+    setIsCreditsPurchaseOpen(true);
+  }, []);
+
+  const handleCloseCreditsPurchase = React.useCallback(() => {
+    console.log('🎯 Credits purchase closed');
+    setIsCreditsPurchaseOpen(false);
+  }, []);
+
+  const handleUpgradeFromUsage = React.useCallback(() => {
+    console.log('🎯 Upgrade from usage - opening pricing modal');
+    setIsUsageDrawerOpen(false);
+    usePricingModalStore.getState().openPricingModal();
   }, []);
 
 
@@ -77,7 +97,8 @@ export const HomePage = React.forwardRef<HomePageRef, HomePageProps>(({
           <View className="flex-1 relative">
             <TopNav 
               onMenuPress={onMenuPress} 
-              onUpgradePress={handleUpgradePress} 
+              onUpgradePress={handleUpgradePress}
+              onCreditsPress={handleCreditsPress}
             />
             <View className="absolute inset-0" pointerEvents="none">
               <BackgroundLogo />
@@ -86,8 +107,17 @@ export const HomePage = React.forwardRef<HomePageRef, HomePageProps>(({
               <QuickActionBar 
                 onActionPress={chat.handleQuickAction}
                 selectedActionId={chat.selectedQuickAction}
-                selectedOptionId={null}
-                onSelectOption={() => {}}
+                selectedOptionId={chat.selectedQuickActionOption}
+                onSelectOption={(optionId) => {
+                  console.log('🎯 Option selected:', optionId);
+                  chat.setSelectedQuickActionOption(optionId);
+                }}
+                onSelectPrompt={(prompt) => {
+                  console.log('📝 Loading prompt into input:', prompt);
+                  chat.setInputValue(prompt);
+                  // Also focus the input so the user can immediately edit or send
+                  chatInputRef.current?.focusInput();
+                }}
               />
             </View>
             <ChatInputSection
@@ -112,6 +142,7 @@ export const HomePage = React.forwardRef<HomePageRef, HomePageProps>(({
               attachments={chat.attachments}
               onRemoveAttachment={chat.removeAttachment}
               selectedQuickAction={chat.selectedQuickAction}
+              selectedQuickActionOption={chat.selectedQuickActionOption}
               onClearQuickAction={chat.clearQuickAction}
               isAuthenticated={isAuthenticated}
               onOpenAuthDrawer={onOpenAuthDrawer}
@@ -130,14 +161,20 @@ export const HomePage = React.forwardRef<HomePageRef, HomePageProps>(({
           onChooseImages={chat.handleChooseImages}
           onChooseFiles={chat.handleChooseFiles}
         />
-        <BillingPage
-          visible={isBillingPageVisible}
-          onClose={handleCloseBilling}
-          onOpenCredits={handleOpenCredits}
+        <PlanSelectionModal
+          open={isPricingModalOpen}
+          onOpenChange={handleClosePricingModal}
+          creditsExhausted={creditsExhausted}
+        />
+        <UsageDrawer
+          visible={isUsageDrawerOpen}
+          onClose={handleCloseUsageDrawer}
+          onUpgradePress={handleUpgradeFromUsage}
+          onTopUpPress={handleTopUpPress}
         />
         <CreditsPurchasePage
-          visible={isCreditsPurchasePageVisible}
-          onClose={handleCloseCredits}
+          visible={isCreditsPurchaseOpen}
+          onClose={handleCloseCreditsPurchase}
         />
       </KeyboardAvoidingView>
     </View>

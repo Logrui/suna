@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAgents } from '@/lib/agents';
 import { useAuthContext } from './AuthContext';
@@ -65,7 +65,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   
   const agents = agentsResponse?.agents || [];
   
-  // Refetch agents when session changes (e.g., after signup or trial completion)
+  // Refetch agents when session changes (e.g., after signup or subscription completion)
   React.useEffect(() => {
     const hadSession = !!prevSessionRef.current;
     const hasSession = !!session;

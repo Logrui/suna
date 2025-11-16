@@ -1,4 +1,4 @@
-from fastapi import HTTPException
+﻿from fastapi import HTTPException
 from typing import Dict, Optional
 from datetime import datetime, timezone
 import stripe
@@ -305,8 +305,9 @@ class TrialService:
                     'quantity': 1
                 }],
                 mode='subscription',
-                ui_mode='embedded',  # Enable embedded checkout
-                return_url=success_url,  # For embedded checkout
+                ui_mode='embedded',
+                return_url=success_url,
+                allow_promotion_codes=True,
                 metadata={
                     'account_id': account_id,
                     'trial_start': 'true'

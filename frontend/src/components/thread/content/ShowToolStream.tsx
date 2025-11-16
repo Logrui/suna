@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { CircleDashed } from 'lucide-react';
 import { extractToolNameFromStream } from '@/components/thread/tool-views/xml-parser';
 import { getToolIcon, getUserFriendlyToolName, extractPrimaryParam } from '@/components/thread/utils';
@@ -85,16 +85,11 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
     const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
     // Use ref to store stable start time - only set once!
     const stableStartTimeRef = useRef<number | null>(null);
-    // FIX: Debounce refs for scroll handling to prevent infinite loops
-    const scrollDebounceRef = useRef<NodeJS.Timeout | null>(null);
-    const scrollHandlerDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-    // FIX: Set stable start time in useEffect to avoid setting refs during render phase
-    useEffect(() => {
-        if (showExpanded && !stableStartTimeRef.current) {
-            stableStartTimeRef.current = Date.now();
-        }
-    }, [showExpanded]);
+    // Set stable start time only once
+    if (showExpanded && !stableStartTimeRef.current) {
+        stableStartTimeRef.current = Date.now();
+    }
 
     const rawToolName = extractToolNameFromStream(content);
     const toolName = getUserFriendlyToolName(rawToolName || '');
@@ -250,61 +245,25 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
         }
     }, [showExpanded, toolName]);
 
-    // FIX: Auto-scroll effect with 100ms debounce to prevent triggering 60+ times/sec
-    // This prevents infinite loops caused by rapid scroll updates during content streaming
     useEffect(() => {
         if (containerRef.current && shouldShowContent && shouldAutoScroll) {
-            // Clear any pending scroll update
-            if (scrollDebounceRef.current) {
-                clearTimeout(scrollDebounceRef.current);
-            }
-
-            // Debounce scroll updates by 100ms
-            scrollDebounceRef.current = setTimeout(() => {
-                if (containerRef.current) {
-                    containerRef.current.scrollTop = containerRef.current.scrollHeight;
-                }
-            }, 100);
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
         }
-
-        // Cleanup debounce timeout on unmount or when dependencies change
-        return () => {
-            if (scrollDebounceRef.current) {
-                clearTimeout(scrollDebounceRef.current);
-            }
-        };
     }, [content, shouldShowContent, shouldAutoScroll]);
 
-    // FIX: Handle scroll events with 150ms debounce and passive listener
-    // Prevents rapid state updates that trigger re-renders and more scroll events
+    // Handle scroll events to disable auto-scroll when user scrolls up
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const handleScroll = () => {
-            // Clear any pending scroll handler update
-            if (scrollHandlerDebounceRef.current) {
-                clearTimeout(scrollHandlerDebounceRef.current);
-            }
-
-            // Debounce the state update by 150ms to avoid excessive re-renders
-            scrollHandlerDebounceRef.current = setTimeout(() => {
-                const { scrollTop, scrollHeight, clientHeight } = container;
-                const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
-                setShouldAutoScroll(isAtBottom);
-            }, 150);
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
+            setShouldAutoScroll(isAtBottom);
         };
 
-        // Use passive listener for better scroll performance
-        container.addEventListener('scroll', handleScroll, { passive: true });
-
-        // Cleanup: remove listener and clear pending debounce timeout
-        return () => {
-            container.removeEventListener('scroll', handleScroll);
-            if (scrollHandlerDebounceRef.current) {
-                clearTimeout(scrollHandlerDebounceRef.current);
-            }
-        };
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
     }, [shouldShowContent]);
 
     if (!toolName) {
@@ -322,13 +281,13 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
     if (showExpanded && isToolStreamable) {
         return (
             <div className="my-1">
-                {/* FIX: Simplified transitions - removed transform-gpu and scale animations to reduce repaints */}
-                <div className={`border border-neutral-200 dark:border-neutral-700/50 rounded-2xl overflow-hidden transition-colors duration-300 ease-in-out ${shouldShowContent ? 'bg-zinc-100 dark:bg-neutral-900' : 'bg-muted opacity-80'
+                {/* Always render the container for smooth transitions */}
+                <div className={`border border-neutral-200 dark:border-neutral-700/50 rounded-2xl overflow-hidden transition-all duration-500 ease-in-out transform-gpu ${shouldShowContent ? 'bg-zinc-100 dark:bg-neutral-900' : 'bg-muted scale-95 opacity-80'
                     }`}>
                     {/* Tool name header */}
                     <button
                         onClick={() => onToolClick?.(messageId, toolName)}
-                        className={`w-full flex items-center gap-1.5 py-1 px-2 text-xs text-muted-foreground hover:bg-muted/80 transition-colors duration-200 ease-in-out cursor-pointer ${shouldShowContent ? 'bg-muted' : 'bg-muted rounded-2xl'
+                        className={`w-full flex items-center gap-1.5 py-1 px-2 text-xs text-muted-foreground hover:bg-muted/80 transition-all duration-400 ease-in-out cursor-pointer ${shouldShowContent ? 'bg-muted' : 'bg-muted rounded-2xl'
                             }`}
                     >
                         <div className=' flex items-center justify-center p-1 rounded-sm'>
@@ -338,17 +297,16 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                         {paramDisplay && <span className="ml-1 text-muted-foreground truncate max-w-[200px]" title={paramDisplay}>{paramDisplay}</span>}
                     </button>
 
-                    {/* FIX: Streaming content - replaced max-height transitions with fixed height for better performance */}
-                    {/* max-height transitions cause excessive repaints during content streaming */}
-                    <div className={`transition-opacity duration-300 ease-in-out overflow-hidden ${shouldShowContent ? 'h-[350px] border-t border-neutral-200 dark:border-neutral-700/50 opacity-100' : 'h-0 border-t-0 opacity-0'
+                    {/* Streaming content below - smooth height transition */}
+                    <div className={`transition-all duration-500 ease-in-out overflow-hidden transform-gpu ${shouldShowContent ? 'max-h-[350px] border-t border-neutral-200 dark:border-neutral-700/50 opacity-100' : 'max-h-0 border-t-0 opacity-0 scale-y-95'
                         }`}>
-                        <div className="relative h-full">
+                        <div className="relative">
                             <div
                                 ref={containerRef}
-                                className={`h-[300px] overflow-y-auto scrollbar-none text-xs text-foreground transition-opacity duration-200 ease-in-out ${STREAMABLE_TOOLS.FILE_OPERATIONS.has(toolName || '') || STREAMABLE_TOOLS.COMMAND_TOOLS.has(toolName || '')
+                                className={`max-h-[300px] overflow-y-auto scrollbar-none text-xs text-foreground transition-all duration-400 ease-in-out transform-gpu ${STREAMABLE_TOOLS.FILE_OPERATIONS.has(toolName || '') || STREAMABLE_TOOLS.COMMAND_TOOLS.has(toolName || '')
                                     ? 'font-mono whitespace-pre-wrap'
                                     : 'whitespace-pre-wrap'
-                                    } ${shouldShowContent ? 'opacity-100 p-3' : 'opacity-0 p-0'}`}
+                                    } ${shouldShowContent ? 'opacity-100 translate-y-0 p-3' : 'opacity-0 translate-y-3 scale-95 p-0'}`}
                                 style={{
                                     maskImage: shouldShowContent ? 'linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)' : 'none',
                                     WebkitMaskImage: shouldShowContent ? 'linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%)' : 'none'
@@ -402,14 +360,13 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                                     return contentToDisplay;
                                 })()}
                             </div>
-                            {/* FIX: Simplified gradient transitions - removed duration-400 and unnecessary transitions */}
                             {/* Top gradient */}
-                            <div className={`absolute top-0 left-0 right-0 h-8 pointer-events-none transition-opacity duration-200 ease-in-out ${shouldShowContent
+                            <div className={`absolute top-0 left-0 right-0 h-8 pointer-events-none transition-all duration-400 ease-in-out ${shouldShowContent
                                 ? 'opacity-100 bg-gradient-to-b from-zinc-100 dark:from-neutral-900 via-zinc-100/80 dark:via-neutral-900/80 to-transparent'
                                 : 'opacity-0 bg-gradient-to-b from-muted via-muted/80 to-transparent'
                                 }`} />
                             {/* Bottom gradient */}
-                            <div className={`absolute bottom-0 left-0 right-0 h-8 pointer-events-none transition-opacity duration-200 ease-in-out ${shouldShowContent
+                            <div className={`absolute bottom-0 left-0 right-0 h-8 pointer-events-none transition-all duration-400 ease-in-out ${shouldShowContent
                                 ? 'opacity-100 bg-gradient-to-t from-zinc-100 dark:from-neutral-900 via-zinc-100/80 dark:via-neutral-900/80 to-transparent'
                                 : 'opacity-0 bg-gradient-to-t from-muted via-muted/80 to-transparent'
                                 }`} />

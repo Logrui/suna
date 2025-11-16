@@ -1,4 +1,4 @@
-"""
+﻿"""
 Centralized error processing for AgentPress.
 
 This module provides a unified way to handle, format, and propagate errors
@@ -124,16 +124,6 @@ class ErrorProcessor:
             return ProcessedError(
                 error_type="content_policy_violation",
                 message=f"Content policy violation: The request was rejected by content filters. {error_message}",
-                original_error=error,
-                context=context
-            )
-        
-        elif isinstance(error, NotFoundError):
-            # Extract just the core message for NotFoundError (avoid verbose LiteLLM fallback info)
-            model_name = context.get("model", "unknown model") if context else "unknown model"
-            return ProcessedError(
-                error_type="model_not_found",
-                message=f"Model not found: The model '{model_name}' is not available or cannot be accessed. This may mean the model is not pulled in Ollama, or the service is unreachable.",
                 original_error=error,
                 context=context
             )

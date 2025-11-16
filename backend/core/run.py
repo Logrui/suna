@@ -1,13 +1,11 @@
-import os
+﻿import os
 import json
 import asyncio
 import datetime
-import time
 from typing import Optional, Dict, List, Any, AsyncGenerator
 from dataclasses import dataclass
 
 from core.tools.message_tool import MessageTool
-from core.tools.sb_expose_tool import SandboxExposeTool
 from core.tools.web_search_tool import SandboxWebSearchTool
 from core.tools.image_search_tool import SandboxImageSearchTool
 from dotenv import load_dotenv
@@ -16,9 +14,6 @@ from core.prompts.agent_builder_prompt import get_agent_builder_prompt
 from core.agentpress.thread_manager import ThreadManager
 from core.agentpress.response_processor import ProcessorConfig
 from core.agentpress.error_processor import ErrorProcessor
-from core.tools.sb_shell_tool import SandboxShellTool
-from core.tools.sb_files_tool import SandboxFilesTool
-from core.tools.sb_kb_tool import SandboxKbTool
 from core.tools.data_providers_tool import DataProvidersTool
 from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.prompt import get_system_prompt
@@ -26,11 +21,6 @@ from core.prompts.prompt import get_system_prompt
 from core.utils.logger import logger
 
 from core.billing.billing_integration import billing_integration
-from core.tools.sb_vision_tool import SandboxVisionTool
-from core.tools.sb_image_edit_tool import SandboxImageEditTool
-from core.tools.sb_designer_tool import SandboxDesignerTool
-from core.tools.sb_presentation_tool import SandboxPresentationTool
-from core.tools.sb_document_parser import SandboxDocumentParserTool
 
 from core.services.langfuse import langfuse
 from langfuse.client import StatefulTraceClient
@@ -38,8 +28,6 @@ from langfuse.client import StatefulTraceClient
 from core.tools.mcp_tool_wrapper import MCPToolWrapper
 from core.tools.task_list_tool import TaskListTool
 from core.agentpress.tool import SchemaType
-from core.tools.sb_upload_file_tool import SandboxUploadFileTool
-from core.tools.sb_docs_tool import SandboxDocsTool
 from core.tools.people_search_tool import PeopleSearchTool
 from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
@@ -57,64 +45,6 @@ class AgentConfig:
     model_name: str = "openai/gpt-5-mini"
     agent_config: Optional[dict] = None
     trace: Optional[StatefulTraceClient] = None
-
-
-# ===== Pattern 2 Enhancement Helper Functions =====
-
-def _classify_task_type(tool_name: str) -> str:
-    """Classify task type based on first tool call (Pattern 2 enhancement)"""
-    search_tools = ['web_search', 'document_search', 'people_search', 'company_search', 'paper_search', 'image_search']
-    compute_tools = ['calculator', 'run_command', 'execute_code']
-    write_tools = ['edit_file', 'create_file', 'write_document']
-    
-    if tool_name in search_tools:
-        return 'research'
-    elif tool_name in compute_tools:
-        return 'computation'
-    elif tool_name in write_tools:
-        return 'writing'
-    else:
-        return 'general'
-
-
-def _get_timeout_for_task(task_type: str) -> int:
-    """Get adaptive timeout based on task type (Pattern 2 enhancement)"""
-    timeouts = {
-        'research': 10,      # Search tasks: quicker timeout
-        'computation': 30,   # Compute tasks: longer timeout
-        'writing': 20,       # Writing tasks: medium timeout
-        'general': 15        # Default
-    }
-    return timeouts.get(task_type, 15)
-
-
-def _get_degradation_level(iteration: int) -> int:
-    """Determine escalation level (Pattern 2 enhancement - graceful degradation)"""
-    if iteration <= 15:
-        return 0  # Normal operation
-    elif iteration <= 20:
-        return 1  # Caution level
-    elif iteration <= 24:
-        return 2  # Warning level
-    else:
-        return 3  # Critical level
-
-
-def _get_urgency_message(degradation_level: int, task_type: str) -> str:
-    """Get contextual urgency message (Pattern 2 enhancement)"""
-    messages = {
-        1: f"Making good progress on {task_type} task",
-        2: f"Wrapping up {task_type} task (final stages)",
-        3: f"Completing {task_type} task (force stop soon)"
-    }
-    return messages.get(degradation_level, "Continuing...")
-
-
-def _is_context_window_strained() -> bool:
-    """Check if context window is approaching limits (Pattern 2 enhancement)"""
-    # Simplified check - can be enhanced with actual token counting
-    # For now, return False to avoid prematurely stopping
-    return False
 
 class ToolManager:
     def __init__(self, thread_manager: ThreadManager, project_id: str, thread_id: str, agent_config: Optional[dict] = None):
@@ -726,14 +656,6 @@ class AgentRunner:
         logger.debug(f"model_name received: {self.config.model_name}")
         iteration_count = 0
         continue_execution = True
-        
-        # Enhanced Auto-Continue (Pattern 2 with Task Awareness)
-        last_activity_time = time.time()
-        activity_timeout = 15  # seconds (default, adjusts by task type)
-        task_type = 'general'  # Will be classified from first tool call
-        task_start_time = time.time()
-        tool_call_history = []  # Track tool patterns
-        iteration_warnings = {}  # Track escalation levels
 
         latest_user_message = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).eq('type', 'user').order('created_at', desc=True).limit(1).execute()
         latest_user_message_content = None
@@ -768,9 +690,7 @@ class AgentRunner:
             latest_message = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).in_('type', ['assistant', 'tool', 'user']).order('created_at', desc=True).limit(1).execute()
             if latest_message.data and len(latest_message.data) > 0:
                 message_type = latest_message.data[0].get('type')
-                logger.debug(f"Latest message type before iteration {iteration_count}: {message_type}")
                 if message_type == 'assistant':
-                    logger.info(f"🛑 Early exit: Last message already from assistant at iteration {iteration_count}")
                     continue_execution = False
                     break
 
@@ -806,7 +726,6 @@ class AgentRunner:
                 )
 
                 last_tool_call = None
-                last_message_type = None  # Track the type of the last message
                 agent_should_terminate = False
                 error_detected = False
 
@@ -826,10 +745,6 @@ class AgentRunner:
                                     content = chunk.get('content', {})
                                     if isinstance(content, str):
                                         content = json.loads(content)
-                                    
-                                    # Track message type for continuation decisions
-                                    if 'status_type' in content:
-                                        last_message_type = content['status_type']  # e.g., 'tool_error', 'tool_failed', 'tool_completed'
                                     
                                     # Check for error status
                                     if content.get('status_type') == 'error':
@@ -855,7 +770,6 @@ class AgentRunner:
                             
                             # Check for terminating XML tools in assistant content
                             if chunk.get('type') == 'assistant' and 'content' in chunk:
-                                last_message_type = 'assistant'  # Assistant message is a final type
                                 try:
                                     content = chunk.get('content', '{}')
                                     if isinstance(content, str):
@@ -895,220 +809,7 @@ class AgentRunner:
                     if agent_should_terminate or last_tool_call in ['ask', 'complete', 'present_presentation']:
                         if generation:
                             generation.end(status_message="agent_stopped")
-                        logger.info(f"🛑 Termination tool detected: {last_tool_call} - continuing main loop without auto-continue")
                         continue_execution = False
-                    
-                    # Enhanced AUTO-CONTINUE LOGIC (Pattern 2 with Task Awareness)
-                    # Determine if we should enter auto-continue
-                    # Non-final message types that require continuation:
-                    non_final_message_types = [
-                        'tool',
-                        'tool_completed',
-                        'tool_failed',
-                        'tool_error',
-                        'status'
-                    ]
-                    
-                    should_auto_continue = last_message_type in non_final_message_types
-                    
-                    if not should_auto_continue:
-                        logger.info(f"✅ Response complete: last_message_type='{last_message_type}' (final type, no auto-continue needed)")
-                        continue_execution = False
-                    else:
-                        logger.info(f"🔄 Auto-continue needed: last_message_type='{last_message_type}' is non-final, entering auto-continue loop")
-                    
-                    if not should_auto_continue:
-                        continue_execution = False
-                        break
-                    
-                    logger.info(f"🔄 Entering auto-continue loop (continue_execution={continue_execution}, termination_tool={last_tool_call})")
-                    auto_continue_iterations = 0
-                    max_auto_continue = 25
-                    last_auto_continue_tools = None
-                    last_auto_continue_tool_call = None  # Initialize
-                    conversation_health_score = 100  # Track response quality
-                    task_type = 'general'  # Initialize with default
-                    activity_timeout = 15  # Initialize with default
-                    tool_call_history = []  # Track for tool diversity
-                    
-                    while continue_execution and auto_continue_iterations < max_auto_continue:
-                        # Check if last message is from assistant - if so, we're done
-                        latest_msg = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).in_('type', ['assistant', 'tool', 'user']).order('created_at', desc=True).limit(1).execute()
-                        if latest_msg.data and len(latest_msg.data) > 0:
-                            if latest_msg.data[0].get('type') == 'assistant':
-                                logger.info(f"✅ Auto-continue: Received final assistant message after {auto_continue_iterations} iterations")
-                                break
-                        
-                        # Classify task type on first tool call (determines adaptive safeguards)
-                        if auto_continue_iterations == 0 and last_auto_continue_tool_call:
-                            task_type = _classify_task_type(last_auto_continue_tool_call)
-                            activity_timeout = _get_timeout_for_task(task_type)
-                            logger.info(f"📋 Task classified as: {task_type} (timeout: {activity_timeout}s)")
-                        
-                        # Check for activity timeout (adaptive based on task type)
-                        elapsed_time = time.time() - last_activity_time
-                        if elapsed_time > activity_timeout:
-                            logger.info(f"⏱️ Auto-continue: Activity timeout after {elapsed_time:.1f}s ({task_type} task)")
-                            break
-                        
-                        # Check context window health (warn if approaching limits)
-                        if _is_context_window_strained():
-                            logger.warning(f"⚠️ Context window approaching limit - preparing to wrap up")
-                            if conversation_health_score > 50:  # Only continue if quality is good
-                                continue
-                            else:
-                                break
-                        
-                        auto_continue_iterations += 1
-                        
-                        # Graceful degradation messaging (gets more urgent as iterations increase)
-                        degradation_level = _get_degradation_level(auto_continue_iterations)
-                        if degradation_level > 0:
-                            urgency_msg = _get_urgency_message(degradation_level, task_type)
-                            logger.info(f"🔄 Auto-continue iteration {auto_continue_iterations}/25 - {urgency_msg}")
-                        else:
-                            logger.info(f"🔄 Auto-continue iteration {auto_continue_iterations}/25")
-                        
-                        # Add continuation prompt
-                        continuation_prompt = {
-                            "role": "user",
-                            "content": "Continue your response or take the next action."
-                        }
-                        
-                        # Reset activity timer before LLM call
-                        last_activity_time = time.time()
-                        
-                        try:
-                            # Call LLM again
-                            continuation_response = await self.thread_manager.run_thread(
-                                thread_id=self.config.thread_id,
-                                system_prompt=system_message,
-                                stream=True,
-                                llm_model=self.config.model_name,
-                                llm_temperature=0,
-                                llm_max_tokens=None,
-                                tool_choice="auto",
-                                max_xml_tool_calls=1,
-                                temporary_message=None,
-                                latest_user_message_content=None,
-                                processor_config=ProcessorConfig(
-                                    xml_tool_calling=True,
-                                    native_tool_calling=False,
-                                    execute_tools=True,
-                                    execute_on_stream=True,
-                                    tool_execution_strategy="parallel",
-                                    xml_adding_strategy="user_message"
-                                ),
-                                native_max_auto_continues=0,  # Don't allow further auto-continues
-                            )
-                            
-                            # Reset activity timer when response arrives
-                            last_activity_time = time.time()
-                            
-                            last_auto_continue_tool_call = None
-                            last_message_type = None  # Reset for this iteration
-                            continuation_error = False
-                            response_length = 0
-                            
-                            if hasattr(continuation_response, '__aiter__') and not isinstance(continuation_response, dict):
-                                async for chunk in continuation_response:
-                                    # Track response quality indicators
-                                    if chunk.get('type') == 'assistant' and 'content' in chunk:
-                                        last_message_type = 'assistant'  # Mark as final
-                                        try:
-                                            content = chunk.get('content', '{}')
-                                            if isinstance(content, str):
-                                                response_length += len(content)
-                                        except Exception:
-                                            pass
-                                    
-                                    # Check for assistant message type
-                                    if chunk.get('type') == 'assistant':
-                                        continuation_error = False
-                                    
-                                    # Check for tool calls and status types
-                                    if isinstance(chunk, dict) and chunk.get('type') == 'status':
-                                        try:
-                                            content = chunk.get('content', {})
-                                            if isinstance(content, str):
-                                                content = json.loads(content)
-                                            metadata = chunk.get('metadata', {})
-                                            if isinstance(metadata, str):
-                                                metadata = json.loads(metadata)
-                                            
-                                            # Track message type for continuation decisions
-                                            if 'status_type' in content:
-                                                last_message_type = content['status_type']
-                                            
-                                            if metadata.get('agent_should_terminate'):
-                                                if content.get('function_name'):
-                                                    last_auto_continue_tool_call = content['function_name']
-                                                elif content.get('xml_tag_name'):
-                                                    last_auto_continue_tool_call = content['xml_tag_name']
-                                        except Exception:
-                                            pass
-                                    
-                                    # Check for terminating tools in assistant content
-                                    if chunk.get('type') == 'assistant' and 'content' in chunk:
-                                        try:
-                                            content = chunk.get('content', '{}')
-                                            if isinstance(content, str):
-                                                assistant_content_json = json.loads(content)
-                                            else:
-                                                assistant_content_json = content
-                                            
-                                            assistant_text = assistant_content_json.get('content', '')
-                                            if isinstance(assistant_text, str):
-                                                if '</ask>' in assistant_text:
-                                                    last_auto_continue_tool_call = 'ask'
-                                                elif '</complete>' in assistant_text:
-                                                    last_auto_continue_tool_call = 'complete'
-                                        except Exception:
-                                            pass
-                                    
-                                    yield chunk
-                            
-                            # Update conversation health (shorter responses = potentially stuck)
-                            if response_length < 50 and auto_continue_iterations > 5:
-                                conversation_health_score = max(0, conversation_health_score - 15)
-                            elif response_length > 200:
-                                conversation_health_score = min(100, conversation_health_score + 10)
-                            
-                            # Check loop detection: same tools called repeatedly
-                            if auto_continue_iterations > 3 and last_auto_continue_tool_call:
-                                current_tools = [last_auto_continue_tool_call] if last_auto_continue_tool_call else []
-                                tool_call_history.append(last_auto_continue_tool_call)
-                                
-                                # Check for thrashing (same tool family too many times)
-                                recent_tools = tool_call_history[-5:]
-                                tool_diversity = len(set(recent_tools))
-                                
-                                if current_tools == last_auto_continue_tools:
-                                    if len([t for t in tool_call_history[-5:] if t == last_auto_continue_tool_call]) >= 4:
-                                        logger.info(f"🔁 Auto-continue: Loop detected - {last_auto_continue_tool_call} called repeatedly")
-                                        break
-                                
-                                last_auto_continue_tools = current_tools
-                            
-                            # Check for termination tools
-                            if last_auto_continue_tool_call in ['ask', 'complete', 'present_presentation']:
-                                logger.info(f"🛑 Auto-continue: Termination tool detected: {last_auto_continue_tool_call}")
-                                break
-                            
-                            # Check if we got a final message (last_message_type == 'assistant')
-                            if last_message_type == 'assistant':
-                                logger.info(f"✅ Auto-continue: Received final assistant message (last_message_type='assistant')")
-                                break
-                            elif last_message_type and last_message_type != 'assistant':
-                                logger.info(f"🔄 Auto-continue: Continuing after non-final message_type='{last_message_type}'")
-                            
-                            # Escalation check: prompt for user guidance at critical points
-                            if auto_continue_iterations == 20 and conversation_health_score < 60:
-                                logger.warning(f"⚠️ Auto-continue approaching limit with declining quality - consider manual intervention")
-                        
-                        except Exception as e:
-                            logger.error(f"❌ Auto-continue error in iteration {auto_continue_iterations}: {str(e)}")
-                            break
 
                 except Exception as e:
                     # Use ErrorProcessor for safe error handling

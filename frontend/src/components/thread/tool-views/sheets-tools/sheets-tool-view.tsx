@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+﻿import React, { useCallback, useMemo, useState } from 'react';
 import { ToolViewProps } from '../types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +11,7 @@ import { FileAttachment } from '../../file-attachment';
 import { XlsxRenderer } from '@/components/file-renderers/xlsx-renderer';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/components/AuthProvider';
-import { fetchFileContent } from '@/hooks/react-query/files/use-file-queries';
-import { getApiUrl } from '@/lib/get-api-url';
+import { fetchFileContent } from '@/hooks/files/use-file-queries';
 
 function getFileUrl(sandboxId: string | undefined, path: string): string {
   if (!sandboxId) return path;
@@ -22,7 +21,7 @@ function getFileUrl(sandboxId: string | undefined, path: string): string {
   try {
     path = path.replace(/\\u([0-9a-fA-F]{4})/g, (_, hexCode) => String.fromCharCode(parseInt(hexCode, 16)));
   } catch {}
-  const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+  const url = new URL(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content`);
   url.searchParams.append('path', path);
   return url.toString();
 }
@@ -201,9 +200,9 @@ export function SheetsToolView({
         <div className="flex flex-col h-full">
           <div className="flex-1 min-w-0">
             <ScrollArea className="h-full">
-              <div className="p-4 flex flex-col h-full space-y-4">
+              <div className="p-4 flex flex-col space-y-4">
                 {primaryXlsx ? (
-                  <div className="space-y-3 h-full">
+                  <div className="space-y-3">
                     <XlsxRenderer
                       filePath={primaryXlsx}
                       fileName={(primaryXlsx.split('/').pop() || 'sheet.xlsx')}
@@ -212,7 +211,7 @@ export function SheetsToolView({
                     />
                   </div>
                 ) : primaryCsv ? (
-                  <div className="space-y-3 h-full">
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Table className="h-4 w-4" />
                       Preview (CSV data)

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Wand2, Loader2 } from 'lucide-react';
@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { AgentAvatar } from '../../thread/content/agent-avatar';
 import { IconPicker } from './icon-picker';
-import { useGenerateAgentIcon } from '@/hooks/react-query/agents/use-agent-icon-generation';
+import { useGenerateAgentIcon } from '@/hooks/agents/use-agent-icon-generation';
 
 interface AgentEditorDialogProps {
     isOpen: boolean;

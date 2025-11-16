@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, {
   useState,
@@ -10,9 +10,8 @@ import React, {
   useMemo,
   memo,
 } from 'react';
-import { useAgents } from '@/hooks/react-query/agents/use-agents';
-import { useAgentSelection } from '@/lib/stores/agent-selection-store';
-import { SLASH_COMMANDS_FOLDER_NAME } from '@/components/slash-commands/types';
+import { useAgents } from '@/hooks/agents/use-agents';
+import { useAgentSelection } from '@/stores/agent-selection-store';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { handleFiles, FileUploadHandler } from './file-upload-handler';
@@ -22,30 +21,28 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ArrowUp, X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { VoiceRecorder } from './voice-recorder';
+import { useTheme } from 'next-themes';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UnifiedConfigMenu } from './unified-config-menu';
 import { AttachmentGroup } from '../attachment-group';
 import { cn } from '@/lib/utils';
-import { useModelSelection } from '@/hooks/use-model-selection';
-import { useFileDelete } from '@/hooks/react-query/files';
+import { useModelSelection } from '@/hooks/agents';
+import { useFileDelete } from '@/hooks/files';
 import { useQueryClient } from '@tanstack/react-query';
-import { useKnowledgeFolders } from '@/hooks/react-query/knowledge-base/use-folders';
 import { ToolCallInput } from './floating-tool-preview';
 import { ChatSnack } from './chat-snack';
 import { Brain, Zap, Database, ArrowDown, Wrench } from 'lucide-react';
-import { useComposioToolkitIcon } from '@/hooks/react-query/composio/use-composio';
+import { useComposioToolkitIcon } from '@/hooks/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useSubscriptionData } from '@/contexts/SubscriptionContext';
+import { useSubscriptionData } from '@/stores/subscription-store';
 import { isStagingMode, isLocalMode } from '@/lib/config';
-import { BillingModal } from '@/components/billing/billing-modal';
+import { PlanSelectionModal } from '@/components/billing/pricing';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { ContextUsageIndicator } from '../ContextUsageIndicator';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { useSlashCommands } from '@/hooks/useSlashCommands';
-import { SlashCommandAutocomplete } from '@/components/slash-commands/slash-commands';
 
 import posthog from 'posthog-js';
 
@@ -205,19 +202,13 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
     const [showSnackbar, setShowSnackbar] = useState(defaultShowSnackbar);
     const [userDismissedUsage, setUserDismissedUsage] = useState(false);
-    const [billingModalOpen, setBillingModalOpen] = useState(false);
+    const [planModalOpen, setPlanSelectionModalOpen] = useState(false);
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
     const [isModeDismissing, setIsModeDismissing] = useState(false);    // Suna Agent Modes feature flag
     const ENABLE_SUNA_AGENT_MODES = false;
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
-
-    // Slash commands state
-    const [showSlashCommands, setShowSlashCommands] = useState(false);
-    const [slashCommandFilter, setSlashCommandFilter] = useState('');
-    const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
-    const [activeSlashCommand, setActiveSlashCommand] = useState<any>(null); // Track which command is active in the input
 
     const {
       selectedModel,
@@ -232,6 +223,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const { data: subscriptionData } = useSubscriptionData();
     const deleteFileMutation = useFileDelete();
     const queryClient = useQueryClient();
+    
+    // Chat input button has inverted background from theme
+    // Dark theme → light button → needs black loader
+    // Light theme → dark button → needs white loader
+    const { resolvedTheme } = useTheme();
+    const buttonLoaderVariant = (resolvedTheme === 'dark' ? 'black' : 'white') as 'black' | 'white';
 
     // Define quick integrations
     const quickIntegrations = useMemo(() => [
@@ -250,24 +247,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       'googledrive': googleDriveIcon?.icon_url,
       'slack': slackIcon?.icon_url,
       'notion': notionIcon?.icon_url,
-    }), [googleDriveIcon, slackIcon, notionIcon]);
-
-    // Fetch slash commands (no longer needs sandboxId)
-    const { data: slashCommands = [] } = useSlashCommands();
-
-    // Fetch knowledge base folders to get prompts folder for creating new commands
-    const { folders } = useKnowledgeFolders();
-    const promptsFolder = useMemo(() => folders.find(f => f.name === SLASH_COMMANDS_FOLDER_NAME), [folders]);
-
-    // Filter slash commands based on current input
-    const filteredSlashCommands = useMemo(() => {
-      if (!slashCommandFilter) return slashCommands;
-      return slashCommands.filter(cmd => 
-        cmd.name.toLowerCase().includes(slashCommandFilter.toLowerCase())
-      );
-    }, [slashCommands, slashCommandFilter]);
-
-    // Show usage preview logic:
+    }), [googleDriveIcon, slackIcon, notionIcon]);    // Show usage preview logic:
     // - Always show to free users when showToLowCreditUsers is true
     // - For paid users, only show when they're at 70% or more of their cost limit (30% or below remaining)
     const shouldShowUsage = useMemo(() => {
@@ -451,30 +431,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
 
       let message = value;
 
-      // Check if there's an active slash command that needs prompt injection
-      if (activeSlashCommand && message.startsWith('/' + activeSlashCommand.name)) {
-        // Extract the user's text after the command
-        const commandPattern = new RegExp(`^\\/${activeSlashCommand.name}\\s*`);
-        const userText = message.replace(commandPattern, '').trim();
-        
-        // Handle GitHub-format commands differently
-        if (activeSlashCommand.isGitHubFormat && activeSlashCommand.instructionFile) {
-          // GitHub format: Inject instruction file reference before user message
-          const instructionReference = `Follow instructions in ${activeSlashCommand.instructionFile}`;
-          message = userText 
-            ? `${instructionReference}\n\n${userText}`
-            : instructionReference;
-        } else {
-          // Standard format: Inject the full prompt before user message
-          message = userText 
-            ? `${activeSlashCommand.prompt}\n\n${userText}`
-            : activeSlashCommand.prompt;
-        }
-        
-        // Clear the active command
-        setActiveSlashCommand(null);
-      }
-
       if (uploadedFiles.length > 0) {
         const fileInfo = uploadedFiles
           .map((file) => `[Uploaded File: ${file.path}]`)
@@ -494,20 +450,20 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         message = message + slidesTemplateMarkdown;
       }
 
-      const baseModelName = getActualModelId(selectedModel);
+      const baseModelName = selectedModel ? getActualModelId(selectedModel) : undefined;
 
       posthog.capture("task_prompt_submitted", { message });
 
       onSubmit(message, {
         agent_id: selectedAgentId,
-        model_name: baseModelName,
+        model_name: baseModelName && baseModelName.trim() ? baseModelName.trim() : undefined,
       });
 
       // TODO: Clear input after agent stream connects
       // For now, keep the text visible until stream starts
 
       setUploadedFiles([]);
-    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange, slashCommands]);
+    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange]);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
@@ -518,59 +474,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       if (isControlled && controlledOnChange) {
         controlledOnChange(newValue);
       }
-
-      // Clear active command if user removes it or changes it
-      if (activeSlashCommand && !newValue.startsWith('/' + activeSlashCommand.name)) {
-        setActiveSlashCommand(null);
-      }
-
-      // Detect slash command
-      if (newValue.startsWith('/') && !newValue.includes('\n')) {
-        const parts = newValue.slice(1).split(' ');
-        const commandFilter = parts[0] || '';
-        setSlashCommandFilter(commandFilter);
-        setShowSlashCommands(true);
-        setSelectedCommandIndex(0);
-      } else {
-        setShowSlashCommands(false);
-        setSlashCommandFilter('');
-      }
-    }, [isControlled, controlledOnChange, activeSlashCommand]);
+    }, [isControlled, controlledOnChange]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Handle slash command autocomplete navigation
-      if (showSlashCommands && filteredSlashCommands.length > 0) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedCommandIndex(prev => 
-            prev < filteredSlashCommands.length - 1 ? prev + 1 : prev
-          );
-          return;
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedCommandIndex(prev => prev > 0 ? prev - 1 : 0);
-          return;
-        } else if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          // Select the highlighted command
-          const selectedCommand = filteredSlashCommands[selectedCommandIndex];
-          if (selectedCommand) {
-            setLocalValue('/' + selectedCommand.name + ' ');
-            setShowSlashCommands(false);
-            setSlashCommandFilter('');
-            setActiveSlashCommand(selectedCommand); // Store command for prompt injection
-            textareaRef.current?.focus();
-          }
-          return;
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          setShowSlashCommands(false);
-          setSlashCommandFilter('');
-          return;
-        }
-      }
-
-      // Original Enter key handling
       if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault();
         if (
@@ -582,7 +488,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           handleSubmit(e as unknown as React.FormEvent);
         }
       }
-    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, handleSubmit, showSlashCommands, filteredSlashCommands, selectedCommandIndex]);
+    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, handleSubmit]);
 
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!e.clipboardData) return;
@@ -620,27 +526,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         controlledOnChange(newValue);
       }
     }, [localValue, isControlled, controlledOnChange]);
-
-    const handleSlashCommandSelect = useCallback((command: any) => {
-      const newValue = '/' + command.name + ' ';
-      setLocalValue(newValue);
-      setShowSlashCommands(false);
-      setSlashCommandFilter('');
-      setActiveSlashCommand(command); // Store the command for later injection
-      
-      // Notify parent in controlled mode
-      if (isControlled && controlledOnChange) {
-        controlledOnChange(newValue);
-      }
-      
-      // Focus textarea
-      textareaRef.current?.focus();
-    }, [isControlled, controlledOnChange]);
-
-    const handleSlashCommandClose = useCallback(() => {
-      setShowSlashCommands(false);
-      setSlashCommandFilter('');
-    }, []);
 
     const removeUploadedFile = useCallback(async (index: number) => {
       const fileToRemove = uploadedFiles[index];
@@ -713,56 +598,23 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     }, [mounted, isLoggedIn, hideAgentSelection, selectedAgentId, onAgentSelect, selectedModel, handleModelChange, modelOptions, subscriptionStatus, canAccessModel, refreshCustomModels]);
 
     const renderTextArea = useMemo(() => (
-      <div className="flex flex-col gap-1 px-2 relative">
-        <SlashCommandAutocomplete
-          isOpen={showSlashCommands}
-          commands={filteredSlashCommands}
-          selectedIndex={selectedCommandIndex}
-          onSelect={handleSlashCommandSelect}
-          onClose={handleSlashCommandClose}
-          promptsFolder={promptsFolder}
-          onCommandCreated={() => {
-            // Refetch slash commands when a new one is created
-            // This will trigger the useSlashCommands hook to refresh
-            // The query client will automatically invalidate and refetch
-          }}
-        />
-        <div className="relative">
-          {/* Highlighted overlay for slash command */}
-          {activeSlashCommand && value.startsWith('/' + activeSlashCommand.name) && (
-            <div 
-              className="absolute inset-0 pointer-events-none px-0.5 pb-6 pt-4 whitespace-pre-wrap break-words"
-              style={{
-                font: 'inherit',
-                lineHeight: 'inherit',
-                wordBreak: 'break-word',
-                overflowWrap: 'break-word',
-              }}
-            >
-              <span className="bg-primary/10 text-primary rounded px-1 font-medium">
-                /{activeSlashCommand.name}
-              </span>
-              <span className="opacity-0">{value.slice(('/' + activeSlashCommand.name).length)}</span>
-            </div>
+      <div className="flex flex-col gap-1 px-2">
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder={animatedPlaceholder}
+          className={cn(
+            'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none',
+            isDraggingOver ? 'opacity-40' : '',
           )}
-          <Textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder={animatedPlaceholder}
-            className={cn(
-              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none relative z-10',
-              isDraggingOver ? 'opacity-40' : '',
-              activeSlashCommand && value.startsWith('/' + activeSlashCommand.name) ? 'caret-primary' : '',
-            )}
-            disabled={loading || (disabled && !isAgentRunning) || hasSubmitted}
-            rows={1}
-          />
-        </div>
+          disabled={disabled}
+          rows={1}
+        />
       </div>
-    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted, showSlashCommands, filteredSlashCommands, selectedCommandIndex, handleSlashCommandSelect, handleSlashCommandClose, activeSlashCommand]);
+    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
@@ -950,9 +802,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
 
         <div className='flex items-center gap-2'>
           {renderConfigDropdown}
-          <BillingModal
-            open={billingModalOpen}
-            onOpenChange={setBillingModalOpen}
+          <PlanSelectionModal
+            open={planModalOpen}
+            onOpenChange={setPlanSelectionModalOpen}
             returnUrl={typeof window !== 'undefined' ? window.location.href : '/'}
           />
 
@@ -985,7 +837,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                     }
                   >
                     {((loading || isUploading) && !isAgentRunning) ? (
-                      <KortixLoader size="small" customSize={20} forceTheme="dark" />
+                      <KortixLoader size="small" customSize={20} variant={buttonLoaderVariant} />
                     ) : isAgentRunning ? (
                       <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-current" />
                     ) : (
@@ -1003,7 +855,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           </div>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, billingModalOpen, setBillingModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, planModalOpen, setPlanSelectionModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon, buttonLoaderVariant]);
 
     return (
       <div className="mx-auto w-full max-w-4xl relative">
@@ -1017,7 +869,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             showUsagePreview={showSnackbar}
             subscriptionData={subscriptionData}
             onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
-            onOpenUpgrade={() => setBillingModalOpen(true)}
+            onOpenUpgrade={() => setPlanSelectionModalOpen(true)}
             isVisible={showToolPreview || !!showSnackbar}
           />
 
@@ -1070,7 +922,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                     {isUploading && pendingFiles.length > 0 && (
                       <div className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-xl flex items-center justify-center">
                         <div className="flex items-center gap-2 bg-background/90 px-3 py-2 rounded-lg border border-border">
-                          <KortixLoader size="small" customSize={16} forceTheme="dark" />
+                          <KortixLoader size="small" customSize={16} variant="auto" />
                           <span className="text-sm">Uploading {pendingFiles.length} file{pendingFiles.length !== 1 ? 's' : ''}...</span>
                         </div>
                       </div>
@@ -1173,9 +1025,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
               />
             </DialogContent>
           </Dialog>
-          <BillingModal
-            open={billingModalOpen}
-            onOpenChange={setBillingModalOpen}
+          <PlanSelectionModal
+            open={planModalOpen}
+            onOpenChange={setPlanSelectionModalOpen}
           />
           {selectedAgentId && agentConfigDialog.open && (
             <AgentConfigurationDialog

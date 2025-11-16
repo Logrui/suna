@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View, Keyboard, ScrollView, ActivityIndicator, Alert, Modal, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
@@ -548,6 +548,7 @@ export function ThreadPage({
         attachments={chat.attachments}
         onRemoveAttachment={chat.removeAttachment}
         selectedQuickAction={chat.selectedQuickAction}
+        selectedQuickActionOption={chat.selectedQuickActionOption}
         onClearQuickAction={chat.clearQuickAction}
         isAuthenticated={isAuthenticated}
         onOpenAuthDrawer={onOpenAuthDrawer}

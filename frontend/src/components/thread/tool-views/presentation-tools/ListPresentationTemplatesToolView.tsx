@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,7 @@ interface TemplatesData {
   note?: string
 }
 
+
 export function ListPresentationTemplatesToolView({
   name = "list_templates",
   toolContent,
@@ -31,13 +32,18 @@ export function ListPresentationTemplatesToolView({
   const toolTitle = getToolTitle(name)
   const { toolResult } = extractToolData(toolContent)
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
-  
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
+
   const handleTemplateClick = (templateId: string) => {
     setSelectedTemplate(templateId)
   }
-  
+
   const handleBack = () => {
     setSelectedTemplate(null)
+  }
+
+  const handleImageLoad = (templateId: string) => {
+    setLoadedImages(prev => new Set(prev).add(templateId))
   }
 
   let templatesData: TemplatesData | null = null
@@ -57,7 +63,7 @@ export function ListPresentationTemplatesToolView({
       } else {
         templatesData = output as unknown as TemplatesData
       }
-      
+
       // Check if this is load_template_design (has template_name in response)
       if (templatesData && (templatesData as any).template_name) {
         autoOpenTemplate = (templatesData as any).template_name
@@ -67,20 +73,20 @@ export function ListPresentationTemplatesToolView({
     console.error("Error processing tool result:", e)
     error = "Error processing templates data"
   }
-  
+
   // Auto-open template if specified (from load_template_design)
   if (autoOpenTemplate && !selectedTemplate) {
     setSelectedTemplate(autoOpenTemplate)
   }
 
   const templates = templatesData?.templates || []
-  
+
   // If a template is selected, show PDF viewer
   if (selectedTemplate) {
     const template = templates.find(t => t.id === selectedTemplate)
     const pdfUrl = `${getPdfUrl(selectedTemplate)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
     const showBackButton = !autoOpenTemplate // Only show back button if user clicked from grid, not auto-opened
-    
+
     return (
       <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-hidden bg-card">
         <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
@@ -108,7 +114,7 @@ export function ListPresentationTemplatesToolView({
             )}
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-0 h-full flex-1 overflow-hidden relative bg-muted/10">
           <object
             data={pdfUrl}
@@ -200,6 +206,7 @@ export function ListPresentationTemplatesToolView({
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {templates.map((template) => {
                   const imageUrl = getImageUrl(template.id, template.has_image)
+                  const isLoaded = loadedImages.has(template.id)
 
                   return (
                     <div
@@ -209,14 +216,30 @@ export function ListPresentationTemplatesToolView({
                     >
                       <div className="relative rounded-t-lg overflow-hidden bg-muted">
                         {imageUrl ? (
-                          <Image
-                            src={imageUrl}
-                            alt={template.name}
-                            width={400}
-                            height={192}
-                            className="w-full h-full object-contain"
-                            unoptimized
-                          />
+                          <>
+                            {/* Loading skeleton */}
+                            {!isLoaded && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 animate-pulse">
+                                <div className="flex flex-col items-center gap-2">
+                                  <Loader2 className="h-8 w-8 text-zinc-400 dark:text-zinc-600 animate-spin" />
+                                  <span className="text-xs text-zinc-400 dark:text-zinc-600">Loading...</span>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Image with fade-in transition */}
+                            <Image
+                              src={imageUrl}
+                              alt={template.name}
+                              width={400}
+                              height={192}
+                              className={`w-full h-full object-contain transition-opacity duration-300 ${
+                                isLoaded ? 'opacity-100' : 'opacity-0'
+                              }`}
+                              onLoad={() => handleImageLoad(template.id)}
+                              unoptimized
+                            />
+                          </>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
                             <Sparkles className="h-12 w-12 text-primary/40" />

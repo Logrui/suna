@@ -1,10 +1,10 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer as FileMarkdownRenderer } from '@/components/file-renderers/authenticated-markdown-renderer';
-import type { Project } from '@/lib/api';
+import type { Project } from '@/lib/api/projects';
 
 interface MarkdownRendererProps {
     content: string;

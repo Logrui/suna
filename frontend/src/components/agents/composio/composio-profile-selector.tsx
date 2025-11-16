@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Plus, Calendar, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
-import type { ComposioToolkit, ComposioProfile } from '@/hooks/react-query/composio/utils';
+import type { ComposioToolkit, ComposioProfile } from '@/hooks/composio/utils';
 
 interface ComposioProfileSelectorProps {
   open: boolean;

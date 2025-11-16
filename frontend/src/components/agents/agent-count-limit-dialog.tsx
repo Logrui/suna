@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { UpgradeDialog } from '@/components/ui/upgrade-dialog';
-import { PricingSection } from '@/components/home/sections/pricing-section';
+import { PricingSection } from '@/components/billing/pricing';
 
 interface AgentCountLimitDialogProps {
   open: boolean;
@@ -63,7 +63,6 @@ export const AgentCountLimitDialog: React.FC<AgentCountLimitDialogProps> = ({
           returnUrl={returnUrl}
           showTitleAndTabs={false}
           insideDialog={true}
-          showInfo={false}
           noPadding={true}
         />
       </div>

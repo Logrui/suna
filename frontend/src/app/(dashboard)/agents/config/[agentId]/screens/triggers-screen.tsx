@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
 import { Zap, Search, Plus, Play, Pause, Settings, Trash2, Clock, PlugZap } from 'lucide-react';
@@ -29,7 +29,7 @@ import {
     useDeleteTrigger,
     useToggleTrigger,
     useTriggerProviders
-} from '@/hooks/react-query/triggers';
+} from '@/hooks/triggers';
 import { TriggerCreationDialog } from '@/components/triggers/trigger-creation-dialog';
 
 interface TriggersScreenProps {

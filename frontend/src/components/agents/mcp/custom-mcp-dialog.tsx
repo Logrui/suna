@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,9 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
-import { getApiUrl } from '@/lib/get-api-url';
 
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 interface CustomMCPDialogProps {
   open: boolean;

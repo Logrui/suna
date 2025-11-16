@@ -1,54 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-
-/**
- * Intelligently detect the correct redirect URI for OAuth callbacks
- *
- * This supports multi-domain deployments:
- * - localhost:3000 (local development)
- * - https://kortix.syhc.dev (Cloudflare Tunnel)
- *
- * Priority:
- * 1. NEXT_PUBLIC_URL (explicit override, backward compatible)
- * 2. Request headers (x-forwarded-proto/host for proxies, host header)
- * 3. Fallback to localhost:3000
- */
-function getBaseUrl(request: NextRequest): string {
-  // If NEXT_PUBLIC_URL is explicitly set, use it (backward compatibility)
-  if (process.env.NEXT_PUBLIC_URL) {
-    return process.env.NEXT_PUBLIC_URL
-  }
-
-  // Extract the protocol from the request
-  // x-forwarded-proto is set by Cloudflare Tunnel and other reverse proxies
-  const protocol = request.headers.get('x-forwarded-proto') || 'http'
-
-  // Extract the host from the request
-  // x-forwarded-host is set by Cloudflare Tunnel
-  // host header is used for direct access
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000'
-
-  const baseUrl = `${protocol}://${host}`
-
-  console.log('🔐 OAuth Callback URL Detection:', {
-    protocol,
-    host,
-    baseUrl,
-    xForwardedProto: request.headers.get('x-forwarded-proto'),
-    xForwardedHost: request.headers.get('x-forwarded-host'),
-    hostHeader: request.headers.get('host'),
-  })
-
-  return baseUrl
-}
+import { sendWelcomeEmail } from '@/lib/email'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('returnUrl') || searchParams.get('redirect') || '/dashboard'
-
-  const baseUrl = getBaseUrl(request)
+  
+  // Use configured URL instead of parsed origin to avoid 0.0.0.0 issues in self-hosted environments
+  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 
@@ -66,6 +27,45 @@ export async function GET(request: NextRequest) {
       if (error) {
         console.error('❌ Error exchanging code for session:', error)
         return NextResponse.redirect(`${baseUrl}/auth?error=${encodeURIComponent(error.message)}`)
+      }
+
+      if (data.user) {
+        // Check if this is a new user signup (user created within last 3 minutes)
+        const userCreatedAt = new Date(data.user.created_at);
+        const now = new Date();
+        const minutesSinceCreation = (now.getTime() - userCreatedAt.getTime()) / (1000 * 60);
+        const isNewUser = minutesSinceCreation < 3;
+
+        const { data: accountData } = await supabase
+          .schema('basejump')
+          .from('accounts')
+          .select('id, created_at')
+          .eq('primary_owner_user_id', data.user.id)
+          .eq('personal_account', true)
+          .single();
+
+        // Send welcome email for new signups (both OAuth and email/password)
+        // This handles both OAuth signups and email confirmation callbacks
+        if (isNewUser && data.user.email) {
+          const userName = data.user.user_metadata?.full_name || 
+                          data.user.user_metadata?.name ||
+                          data.user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          
+          // Send welcome email asynchronously (don't block redirect)
+          sendWelcomeEmail(data.user.email, userName);
+        }
+
+        if (accountData) {
+          const { data: creditAccount } = await supabase
+            .from('credit_accounts')
+            .select('tier, stripe_subscription_id')
+            .eq('account_id', accountData.id)
+            .single();
+
+          if (creditAccount && (creditAccount.tier === 'none' || !creditAccount.stripe_subscription_id)) {
+            return NextResponse.redirect(`${baseUrl}/setting-up`);
+          }
+        }
       }
 
       // URL to redirect to after sign in process completes

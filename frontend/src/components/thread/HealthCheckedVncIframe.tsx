@@ -1,10 +1,10 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import { useVncPreloader } from '@/hooks/useVncPreloader';
+import { useVncPreloader } from '@/hooks/files';
 
 interface HealthCheckedVncIframeProps {
   sandbox: {

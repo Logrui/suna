@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import Image from 'next/image';
 import { Cpu } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,70 +10,39 @@ export type ModelProvider =
   | 'xai'
   | 'moonshotai'
   | 'bedrock'
-  | 'openrouter'
-  | 'lm_studio'
-  | 'ollama';
+  | 'openrouter';
 
 /**
  * Get the provider from a model ID
- * 
- * Supports multiple formats:
- * - Prefixed: "lm_studio:hermes-2-pro" or "ollama:neural-chat"
- * - Contained: "model-lm_studio" or "ollama-model"
- * - Fallback: "provider/model" format
  */
 export function getModelProvider(modelId: string): ModelProvider {
-  const lowerModelId = modelId.toLowerCase();
-  
-  // Debug logging
-  if (lowerModelId.includes('ollama') || lowerModelId.includes('lm_studio')) {
-    console.log('[getModelProvider] Detecting local model:', modelId, '→ lowercase:', lowerModelId);
-  }
-  
-  // Check for prefixed format (highest priority)
-  if (lowerModelId.startsWith('lm_studio:') || lowerModelId.startsWith('lm_studio-')) {
-    console.log('[getModelProvider] Matched lm_studio prefix:', modelId);
-    return 'lm_studio';
-  }
-  if (lowerModelId.startsWith('ollama:') || lowerModelId.startsWith('ollama-')) {
-    console.log('[getModelProvider] Matched ollama prefix:', modelId);
-    return 'ollama';
-  }
-  
-  // Check for contained strings
-  if (lowerModelId.includes('lm_studio')) {
-    return 'lm_studio';
-  }
-  if (lowerModelId.includes('ollama')) {
-    return 'ollama';
-  }
-  if (lowerModelId.includes('anthropic') || lowerModelId.includes('claude')) {
+  if (modelId.includes('anthropic') || modelId.includes('claude')) {
     return 'anthropic';
   }
-  if (lowerModelId.includes('openai') || lowerModelId.includes('gpt')) {
+  if (modelId.includes('openai') || modelId.includes('gpt')) {
     return 'openai';
   }
-  if (lowerModelId.includes('google') || lowerModelId.includes('gemini')) {
+  if (modelId.includes('google') || modelId.includes('gemini')) {
     return 'google';
   }
-  if (lowerModelId.includes('xai') || lowerModelId.includes('grok')) {
+  if (modelId.includes('xai') || modelId.includes('grok')) {
     return 'xai';
   }
-  if (lowerModelId.includes('moonshotai') || lowerModelId.includes('kimi')) {
+  if (modelId.includes('moonshotai') || modelId.includes('kimi')) {
     return 'moonshotai';
   }
-  if (lowerModelId.includes('bedrock')) {
+  if (modelId.includes('bedrock')) {
     return 'bedrock';
   }
-  if (lowerModelId.includes('openrouter')) {
+  if (modelId.includes('openrouter')) {
     return 'openrouter';
   }
 
-  // Fallback: try to extract provider from "provider/model" format
+  // Default fallback - try to extract provider from model ID format "provider/model"
   const parts = modelId.split('/');
   if (parts.length > 1) {
     const provider = parts[0].toLowerCase();
-    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter', 'lm_studio', 'ollama'].includes(provider)) {
+    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter'].includes(provider)) {
       return provider as ModelProvider;
     }
   }
@@ -107,8 +76,6 @@ export function ModelProviderIcon({
     moonshotai: '/images/models/Moonshot.svg',
     bedrock: '/images/models/Anthropic.svg', // Bedrock uses Anthropic models primarily
     openrouter: '/images/models/OAI.svg', // Default to OpenAI icon for OpenRouter
-    lm_studio: '/images/models/lmstudio.svg',
-    ollama: '/images/models/ollama.svg',
   };
 
   const iconSrc = iconMap[provider];
@@ -166,8 +133,6 @@ export function getModelProviderName(modelId: string): string {
     moonshotai: 'Moonshot AI',
     bedrock: 'AWS Bedrock',
     openrouter: 'OpenRouter',
-    lm_studio: 'LM Studio',
-    ollama: 'Ollama',
   };
 
   return nameMap[provider] || 'Unknown';

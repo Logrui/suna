@@ -1,4 +1,4 @@
-"""
+﻿"""
 Configuration management.
 
 This module provides a centralized way to access configuration settings and
@@ -80,8 +80,8 @@ class Configuration:
     
     # Environment mode
     ENV_MODE: Optional[EnvMode] = EnvMode.LOCAL
-    
-    
+
+
     # Subscription tier IDs - Production
     STRIPE_FREE_TIER_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrK4QLrx9i'
     STRIPE_TIER_2_20_ID_PROD: Optional[str] = 'price_1RILb4G6l1KZGqIrhomjgDnO'
@@ -305,9 +305,6 @@ class Configuration:
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None
-    OLLAMA_ENABLED: Optional[bool] = False
-    OLLAMA_API_BASE: Optional[str] = None  # Override for Docker: e.g., http://host.docker.internal:11434
-    LM_STUDIO_API_BASE: Optional[str] = None  # Override for Docker: e.g., http://host.docker.internal:1234
     OR_SITE_URL: Optional[str] = "https://kortix.ai"
     OR_APP_NAME: Optional[str] = "Kortix AI"
     
@@ -362,8 +359,8 @@ class Configuration:
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
-    SANDBOX_IMAGE_NAME = "notlogrui/suna:0.1.3.23"
-    SANDBOX_SNAPSHOT_NAME = "notlogrui/suna:0.1.3.23"
+    SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.24"
+    SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.24"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
     # LangFuse configuration
@@ -492,9 +489,9 @@ class Configuration:
         if self.ENV_MODE == EnvMode.PRODUCTION:
             return 'https://kortix.com'
         elif self.ENV_MODE == EnvMode.STAGING:
-            return 'https://staging.kortix.com'
+            return 'http://localhost:3000'
+            # return 'https://staging.suna.so'
         else:
-            # Local mode
             return 'http://localhost:3000'
     
     def _generate_admin_api_key(self) -> str:

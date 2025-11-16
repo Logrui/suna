@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Conversation Item Component - Unified thread item using SelectableListItem
  * 
  * Uses the unified SelectableListItem with ThreadAvatar
@@ -44,6 +44,7 @@ export function ConversationItem({
           title={conversation.title} 
           icon={conversation.iconName || conversation.icon}
           size={48} 
+          className="bg-primary flex-row items-center justify-center"
         />
       }
       title={conversation.title}

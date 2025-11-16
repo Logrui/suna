@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Loader2, User, PhoneCall, PhoneMissed, CheckCircle2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getToolTitle } from '../utils';
-import { useVapiCallRealtime } from '@/hooks/useVapiCallRealtime';
+import { useVapiCallRealtime } from '@/hooks/integrations';
 import { useQuery } from '@tanstack/react-query';
-import { createClient, createRealtimeClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface MonitorCallData {
@@ -111,13 +111,12 @@ export function MonitorCallToolView({
     if (!initialData?.call_id) return;
 
     console.log('[MonitorCallToolView] Setting up real-time subscription for:', initialData.call_id);
-    const dataClient = createClient(); // For data fetching
-    const realtimeClient = createRealtimeClient(); // For WebSocket subscription
+    const supabase = createClient();
     let channel: RealtimeChannel;
 
     const setupSubscription = async () => {
       // First, do an initial fetch to get current data
-      const { data: currentData } = await dataClient
+      const { data: currentData } = await supabase
         .from('vapi_calls')
         .select('*')
         .eq('call_id', initialData.call_id)
@@ -137,8 +136,8 @@ export function MonitorCallToolView({
         }
       }
 
-      // Set up real-time subscription using dedicated realtime client
-      channel = realtimeClient
+      // Set up real-time subscription
+      channel = supabase
         .channel(`call-monitor-${initialData.call_id}`)
         .on(
           'postgres_changes',
@@ -176,7 +175,7 @@ export function MonitorCallToolView({
     return () => {
       console.log('[MonitorCallToolView] Cleaning up subscription');
       if (channel) {
-        realtimeClient.removeChannel(channel);
+        supabase.removeChannel(channel);
       }
     };
   }, [initialData?.call_id]);

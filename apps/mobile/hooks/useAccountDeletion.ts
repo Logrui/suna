@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_URL } from '@/api/config';
 import { supabase } from '@/api/supabase';
 
@@ -34,7 +34,7 @@ async function getAuthHeaders() {
     };
 }
 
-export function useAccountDeletionStatus() {
+export function useAccountDeletionStatus(options?: { enabled?: boolean }) {
     return useQuery<AccountDeletionStatus>({
         queryKey: ACCOUNT_DELETION_QUERY_KEY,
         queryFn: async () => {
@@ -56,7 +56,9 @@ export function useAccountDeletionStatus() {
             return response.json();
         },
         staleTime: 30000,
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        ...options,
     });
 }
 

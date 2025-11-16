@@ -1,4 +1,4 @@
-"""
+﻿"""
 Message Sanitizer - Converts raw database messages to frontend-ready format.
 
 This module handles parsing of different message formats (XML tool calls, native function calls, etc.)
@@ -341,7 +341,7 @@ def sanitize_messages_batch(messages: List[Dict[str, Any]]) -> List[Dict[str, An
                             'error': tool_result['content'].get('error'),
                             'message_id': tool_result['message_id']
                         }
-                        logger.debug(f"[SANITIZER] ? Embedded result at index {tool_idx}")
+                        logger.debug(f"[SANITIZER] ✅ Embedded result at index {tool_idx}")
                     # Otherwise, try to match by tool name
                     else:
                         logger.debug(f"[SANITIZER] No tool_index, trying name matching for {tool_result['content']['name']}")
@@ -355,10 +355,10 @@ def sanitize_messages_batch(messages: List[Dict[str, Any]]) -> List[Dict[str, An
                                     'error': tool_result['content'].get('error'),
                                     'message_id': tool_result['message_id']
                                 }
-                                logger.debug(f"[SANITIZER] ? Embedded result by name matching for {tool_name}")
+                                logger.debug(f"[SANITIZER] ✅ Embedded result by name matching for {tool_name}")
                                 break
             else:
-                logger.debug(f"[SANITIZER] ? No tool results found for assistant {msg_id}")
+                logger.debug(f"[SANITIZER] ❌ No tool results found for assistant {msg_id}")
         
         sanitized.append(msg)
     

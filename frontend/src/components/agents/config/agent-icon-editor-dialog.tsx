@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Sparkles, Wand2, Loader2 } from 'lucide-react';
@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { HexColorPicker } from 'react-colorful';
-import { useGenerateAgentIcon } from '@/hooks/react-query/agents/use-agent-icon-generation';
+import { useGenerateAgentIcon } from '@/hooks/agents/use-agent-icon-generation';
 
 interface AgentIconEditorDialogProps {
   isOpen: boolean;

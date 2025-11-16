@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import {
@@ -22,7 +22,7 @@ import {
   listSandboxFiles,
   getSandboxFileContent,
   type FileInfo,
-} from '@/lib/api';
+} from '@/lib/api/sandbox';
 import { toast } from 'sonner';
 import { useDraggable } from '@dnd-kit/core';
 

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -11,7 +11,7 @@ import {
   useListFactors,
   useGetAAL,
   useUnenrollFactor,
-} from '@/hooks/react-query/phone-verification';
+} from '@/hooks/auth';
 import { signOut } from '@/app/auth/actions';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
 import { Button } from '@/components/ui/button';

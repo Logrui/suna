@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Billing Module
  * 
  * Centralized billing functionality
@@ -14,14 +14,14 @@
 // Re-export everything from submodules (except validation to avoid circular dependency)
 export * from './api';
 export * from './hooks';
-export * from './checkout';
 export * from './pricing';
+export * from './checkout';
+export * from './usage-api';
 
 // Named exports for convenience
 export { billingApi } from './api';
-export { billingKeys } from './hooks';
+export { usageApi } from './usage-api';
 export {
-  startTrialCheckout,
   startPlanCheckout,
   startCreditPurchase,
   openBillingPortal,

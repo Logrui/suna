@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+﻿import type { LucideIcon } from 'lucide-react-native';
 
 /**
  * Conversation Type
@@ -43,7 +43,7 @@ export interface BottomNavItem {
  * 
  * Available subscription tiers
  */
-export type TierType = 'Plus' | 'Pro' | 'Ultra';
+export type TierType = 'Basic' | 'Plus' | 'Pro' | 'Ultra';
 
 /**
  * User Profile Type

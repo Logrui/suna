@@ -1,11 +1,5 @@
-import dotenv
-import os
-import sys
-
-# Get the absolute path to .env file
-env_path = os.path.join(os.path.dirname(__file__), ".env")
-# Override=True ensures that env vars from .env overwrite any existing ones
-dotenv.load_dotenv(env_path, override=True)
+﻿import dotenv
+dotenv.load_dotenv(".env")
 
 import sentry
 import asyncio
@@ -38,29 +32,6 @@ redis_broker = RedisBroker(host=redis_host, port=redis_port, middleware=[dramati
 dramatiq.set_broker(redis_broker)
 
 _initialized = False
-
-# Initialize Ollama models at module load time (before any actor runs)
-try:
-    from core.ai_models import registry
-    
-    async def _init_ollama():
-        """Initialize Ollama models during module load."""
-        try:
-            logger.debug("Starting Ollama model initialization in worker...")
-            await registry.initialize_ollama_models()
-            logger.info("✅ Ollama models initialized at worker startup")
-        except Exception as e:
-            logger.error(f"Failed to initialize Ollama models at worker startup: {e}", exc_info=True)
-    
-    # Schedule initialization
-    logger.debug("Creating event loop for Ollama initialization...")
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(_init_ollama())
-    loop.close()
-    logger.debug("Ollama initialization event loop closed")
-except Exception as e:
-    logger.error(f"Critical error initializing Ollama models: {e}", exc_info=True)
 db = DBConnection()
 instance_id = ""
 
@@ -77,15 +48,6 @@ async def initialize():
     logger.info(f"Initializing worker with Redis at {redis_host}:{redis_port}")
     await retry(lambda: redis.initialize_async())
     await db.initialize()
-
-    # Initialize Ollama models for the worker (so it has the same model registry as backend)
-    try:
-        from core.ai_models import registry
-        await registry.initialize_ollama_models()
-        logger.debug("✅ Ollama models initialized in worker process")
-    except Exception as e:
-        logger.warning(f"Failed to initialize Ollama models in worker: {e}")
-        # Continue - worker can still function without Ollama models
 
     _initialized = True
     logger.info(f"✅ Worker initialized successfully with instance ID: {instance_id}")
@@ -255,11 +217,7 @@ async def run_agent_background(
              duration = (datetime.now(timezone.utc) - start_time).total_seconds()
              logger.info(f"Agent run {agent_run_id} completed normally (duration: {duration:.2f}s, responses: {total_responses})")
              completion_message = {"type": "status", "status": "completed", "message": "Agent run completed successfully"}
-             # Only call end() if trace is not None
-             if trace is not None:
-                 span = trace.span(name="agent_run_completed")
-                 if span is not None:
-                     span.end(status_message="agent_run_completed")
+             trace.span(name="agent_run_completed").end(status_message="agent_run_completed")
              await redis.rpush(response_list_key, json.dumps(completion_message))
              await redis.publish(response_channel, "new") # Notify about the completion message
 
@@ -285,11 +243,7 @@ async def run_agent_background(
         duration = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.error(f"Error in agent run {agent_run_id} after {duration:.2f}s: {error_message}\n{traceback_str} (Instance: {instance_id})")
         final_status = "failed"
-        # Only call end() if trace is not None
-        if trace is not None:
-            span = trace.span(name="agent_run_failed")
-            if span is not None:
-                span.end(status_message=error_message, level="ERROR")
+        trace.span(name="agent_run_failed").end(status_message=error_message, level="ERROR")
 
         # Push error message to Redis list
         error_response = {"type": "status", "status": "error", "message": error_message}

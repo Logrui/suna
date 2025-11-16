@@ -1,4 +1,4 @@
-"""
+﻿"""
 XML Tool Call Parser Module
 
 This module provides a reliable XML tool call parsing system that supports
@@ -11,8 +11,6 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import json
 import logging
-
-from core.agentpress.tool_validation import ToolCallValidator
 
 logger = logging.getLogger(__name__)
 
@@ -54,80 +52,9 @@ class XMLToolParser:
         re.DOTALL | re.IGNORECASE
     )
     
-    def __init__(self, tool_registry=None):
-        """
-        Initialize the XML tool parser.
-        
-        Args:
-            tool_registry: Optional ToolRegistry for validation (if None, validation is skipped)
-        """
-        self.validator = ToolCallValidator(tool_registry) if tool_registry else None
-    
-    def validate_tool_call(
-        self, 
-        tool_call: XMLToolCall
-    ) -> Tuple[bool, Optional[str], Optional[Dict[str, Any]]]:
-        """
-        Validate a parsed tool call for malformations.
-        
-        This method performs basic XML structure validation and delegates
-        to the ToolCallValidator for schema validation if a registry is available.
-        
-        Args:
-            tool_call: The parsed XMLToolCall object
-            
-        Returns:
-            Tuple of (is_valid, error_message, malformation_details)
-        """
-        # First check basic XML structure
-        malformation_details = {}
-        
-        # Check 1: Detect XML strings in parameter values
-        for param_name, param_value in tool_call.parameters.items():
-            if isinstance(param_value, str):
-                # Check for nested XML tags (indicating malformed parsing)
-                if '<parameter' in param_value:
-                    malformation_details[param_name] = {
-                        'type': 'nested_xml_detected',
-                        'value_preview': param_value[:200].replace('\n', '\\n'),
-                        'full_length': len(param_value)
-                    }
-                # Check for unclosed tags
-                elif param_value.count('<') != param_value.count('>'):
-                    malformation_details[param_name] = {
-                        'type': 'unbalanced_brackets',
-                        'value_preview': param_value[:200]
-                    }
-        
-        # Check 2: Validate XML structure balance in raw XML
-        raw_xml = tool_call.raw_xml
-        open_tags = raw_xml.count('<parameter')
-        close_tags = raw_xml.count('</parameter>')
-        
-        if open_tags != close_tags:
-            malformation_details['xml_structure'] = {
-                'type': 'unbalanced_tags',
-                'open_count': open_tags,
-                'close_count': close_tags
-            }
-        
-        # Return early if basic XML validation failed
-        if malformation_details:
-            error_msg = f"Malformed tool call '{tool_call.function_name}': {', '.join(malformation_details.keys())}"
-            return False, error_msg, malformation_details
-        
-        # Delegate to validator for schema validation if available
-        if self.validator:
-            tool_call_dict = {
-                'function_name': tool_call.function_name,
-                'arguments': tool_call.parameters
-            }
-            return self.validator.validate_tool_call(
-                tool_call_dict,
-                tool_call.parsing_details
-            )
-        
-        return True, None, None
+    def __init__(self):
+        """Initialize the XML tool parser."""
+        pass
     
     def parse_content(self, content: str) -> List[XMLToolCall]:
         """
@@ -175,40 +102,18 @@ class XMLToolParser:
             "raw_parameters": {}
         }
         
-        # Extract all TOP-LEVEL parameters only (not nested ones)
-        # This regex uses a non-greedy match and stops at the first </parameter>
-        param_pattern = re.compile(
-            r'<parameter\s+name=["\']([^"\']+)["\']>([^<]*(?:<(?!parameter)[^>]*>[^<]*)*)</parameter>',
-            re.DOTALL | re.IGNORECASE
-        )
-        param_matches = param_pattern.findall(invoke_content)
+        # Extract all parameters
+        param_matches = self.PARAMETER_PATTERN.findall(invoke_content)
         
         for param_name, param_value in param_matches:
             # Clean up the parameter value
             param_value = param_value.strip()
             
-            # If the parameter value contains nested <parameter> tags, extract them
-            if '<parameter' in param_value:
-                # This looks like improperly nested XML - try to extract as structured data
-                parsed_value = self._parse_nested_parameters(param_value)
-            else:
-                # Try to parse as JSON if it looks like JSON
-                parsed_value = self._parse_parameter_value(param_value)
+            # Try to parse as JSON if it looks like JSON
+            parsed_value = self._parse_parameter_value(param_value)
             
             parameters[param_name] = parsed_value
             parsing_details["raw_parameters"][param_name] = param_value
-        
-        # PHASE 1 FIX: Ensure all parameter values are safe for string operations
-        # Convert any remaining lists or dicts to JSON strings
-        for param_name, param_value in parameters.items():
-            if isinstance(param_value, list):
-                # Convert lists to JSON strings
-                parameters[param_name] = json.dumps(param_value)
-                logger.debug(f"Converted list parameter '{param_name}' to JSON string")
-            elif isinstance(param_value, dict):
-                # Convert dicts to JSON strings
-                parameters[param_name] = json.dumps(param_value)
-                logger.debug(f"Converted dict parameter '{param_name}' to JSON string")
         
         # Extract the raw XML for this specific invoke
         invoke_pattern = re.compile(
@@ -224,56 +129,6 @@ class XMLToolParser:
             raw_xml=raw_xml,
             parsing_details=parsing_details
         )
-    
-    def _parse_nested_parameters(self, nested_xml: str) -> Any:
-        """
-        Parse improperly nested parameters from XML content.
-        
-        When LLM generates nested <parameter> tags, extract them as a structured list/dict.
-        Example:
-            <parameter name="tasks">
-            <parameter name="task">Task 1</parameter>
-            <parameter name="task">Task 2</parameter>
-            </parameter>
-        
-        Args:
-            nested_xml: XML content with nested parameter tags
-            
-        Returns:
-            List of extracted parameter values
-        """
-        try:
-            # Extract all nested <parameter> tags
-            nested_pattern = re.compile(
-                r'<parameter\s+name=["\']([^"\']+)["\']>([^<]*)</parameter>',
-                re.DOTALL | re.IGNORECASE
-            )
-            matches = nested_pattern.findall(nested_xml)
-            
-            if matches:
-                # If all nested parameters have the same name, return as list of values
-                # Otherwise return as dict
-                names = [name for name, _ in matches]
-                values = [self._parse_parameter_value(value.strip()) for _, value in matches]
-                
-                if len(set(names)) == 1:
-                    # All same parameter name - return as JSON string to prevent concatenation errors
-                    result = values if len(values) > 1 else values[0] if values else None
-                    # CRITICAL FIX: Convert list to JSON string to prevent "can only concatenate str (not 'list') to str" error
-                    if isinstance(result, list):
-                        return json.dumps(result)
-                    return result
-                else:
-                    # Different names - return as dict (also convert to JSON string for safety)
-                    result_dict = {name: value for name, value in zip(names, values)}
-                    return json.dumps(result_dict)
-            
-            # If no nested parameters found, return the raw value
-            return nested_xml.strip()
-            
-        except Exception as e:
-            logger.error(f"Error parsing nested parameters: {e}")
-            return nested_xml.strip()
     
     def _parse_parameter_value(self, value: str) -> Any:
         """

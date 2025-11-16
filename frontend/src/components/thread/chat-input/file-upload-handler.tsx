@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { forwardRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Paperclip, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { fileQueryKeys } from '@/hooks/react-query/files/use-file-queries';
+import { fileQueryKeys } from '@/hooks/files/use-file-queries';
 import {
   Tooltip,
   TooltipContent,
@@ -15,9 +15,8 @@ import {
 } from '@/components/ui/tooltip';
 import { UploadedFile } from './chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { getApiUrl } from '@/lib/get-api-url';
 
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 const handleLocalFiles = (
   files: File[],
@@ -147,7 +146,7 @@ const uploadFiles = async (
     }
 
     setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
-    
+
     // Clear pending files after successful upload
     if (setPendingFiles) {
       setPendingFiles([]);

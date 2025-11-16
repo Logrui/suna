@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Highlighter } from 'lucide-react';
@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useEditorStore } from '@/lib/stores/use-editor-store';
+import { useEditorStore } from '@/stores/use-editor-store';
 
 const highlightColors = [
   { name: 'None', value: '' },

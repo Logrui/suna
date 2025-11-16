@@ -1,4 +1,4 @@
-export { ThreadContent } from './ThreadContent';
+﻿export { ThreadContent } from './ThreadContent';
 export type { ToolMessagePair } from './ThreadContent';
 export { ToolCallPanel } from './ToolCallPanel';
 export { ChatInput } from './ChatInput';
@@ -9,6 +9,7 @@ export {
   removeFileReferences,
 } from './FileAttachmentRenderer';
 export type { ChatInputRef } from './ChatInput';
+export { StreamingToolCard } from './StreamingToolCard';
 
 export { ChatInputSection, ChatDrawers } from './shared';
 export type { ChatInputSectionProps, ChatInputSectionRef, ChatDrawersProps } from './shared';

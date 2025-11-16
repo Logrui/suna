@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, Fragment, useCallback } from 'react';
 import {
@@ -32,8 +32,8 @@ import {
 import {
   listSandboxFiles,
   type FileInfo,
-  Project,
-} from '@/lib/api';
+} from '@/lib/api/sandbox';
+import { Project } from '@/lib/api/projects';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -47,14 +47,13 @@ import {
   useDirectoryQuery,
   useFileContentQuery,
   FileCache
-} from '@/hooks/react-query/files';
+} from '@/hooks/files';
 import JSZip from 'jszip';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { getApiUrl } from '@/lib/get-api-url';
 import { TipTapDocumentModal } from './tiptap-document-modal';
 
 // Define API_URL
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 interface FileViewerModalProps {
   open: boolean;
@@ -259,7 +258,7 @@ export function FileViewerModal({
           if (!content) {
             // Load from server if not cached
             const response = await fetch(
-              `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
+              `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
               {
                 headers: { 'Authorization': `Bearer ${session.access_token}` }
               }
@@ -294,7 +293,7 @@ export function FileViewerModal({
               } catch (blobError) {
                 // Fallback: try to fetch from server directly
                 const fallbackResponse = await fetch(
-                  `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
+                  `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
                   { headers: { 'Authorization': `Bearer ${session.access_token}` } }
                 );
                 if (fallbackResponse.ok) {
@@ -1020,7 +1019,7 @@ export function FileViewerModal({
           if (rawContent.startsWith('blob:')) {
             // If it's a blob URL, get directly from server to avoid CORS issues
             const response = await fetch(
-              `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
+              `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
               { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
             );
 
@@ -1049,7 +1048,7 @@ export function FileViewerModal({
 
       // Get from server if no raw content
       const response = await fetch(
-        `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
         { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
       );
 

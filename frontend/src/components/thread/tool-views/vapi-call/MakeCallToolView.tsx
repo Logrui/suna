@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Phone, CheckCircle, Clock, User, Mic, Brain, Loader2, AlertTriangle } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { extractMakeCallData, formatPhoneNumber, statusConfig } from './_utils';
 import { getToolTitle } from '../utils';
-import { useVapiCallRealtime } from '@/hooks/useVapiCallRealtime';
+import { useVapiCallRealtime } from '@/hooks/integrations';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';

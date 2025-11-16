@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -14,7 +14,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TriggerCreationDialog } from '@/components/triggers/trigger-creation-dialog';
-import { useAllTriggers } from '@/hooks/react-query/triggers/use-all-triggers';
+import { useAllTriggers } from '@/hooks/triggers/use-all-triggers';
 import Link from 'next/link';
 
 export function NavGlobalConfig() {

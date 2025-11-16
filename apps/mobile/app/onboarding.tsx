@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { View, Pressable, Dimensions, ScrollView } from 'react-native';
+﻿import * as React from 'react';
+import { View, Pressable, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { Text } from '@/components/ui/text';
@@ -14,43 +14,33 @@ import {
   Zap,
   LogOut 
 } from 'lucide-react-native';
-import LogomarkBlack from '@/assets/brand/Logomark-Black.svg';
-import LogomarkWhite from '@/assets/brand/Logomark-White.svg';
+import { KortixLogo } from '@/components/ui/KortixLogo';
 import * as Haptics from 'expo-haptics';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
   interpolate,
   Extrapolate,
-  LinearTransition,
   SharedValue,
+  FadeIn,
+  FadeOut,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '@/contexts';
-import { useBillingContext } from '@/contexts/BillingContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useAgent } from '@/contexts/AgentContext';
-import { 
-  TrialCard, 
-  PricingTierCard, 
-  BillingPeriodSelector 
-} from '@/components/billing';
-import { 
-  PRICING_TIERS, 
-  BillingPeriod, 
-  getPriceId, 
-  getDisplayPrice, 
-  startPlanCheckout, 
-  startTrialCheckout 
-} from '@/lib/billing';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useBillingContext } from '@/contexts/BillingContext';
+import { useAccountSetup } from '@/hooks/useAccountSetup';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { useQueryClient } from '@tanstack/react-query';
+import { agentKeys } from '@/lib/agents';
+import { modelKeys } from '@/lib/models';
+import { BackgroundLogo } from '@/components/home';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const ONBOARDING_KEY_PREFIX = '@onboarding_completed_';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 interface OnboardingSlide {
   id: string;
@@ -61,37 +51,25 @@ interface OnboardingSlide {
   gradient: [string, string];
   example?: string;
 }
-
-/**
- * Onboarding Screen
- * 
- * Protected by root layout AuthProtection - requires authentication
- * Welcome flow shown every time user logs in on this device
- * Shows key features and ends with billing/trial (skips trial if already subscribed)
- */
 export default function OnboardingScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
-  const { trialStatus, refetchAll, hasActiveTrial, hasActiveSubscription } = useBillingContext();
-  const { signOut, session } = useAuthContext();
+  const { signOut } = useAuthContext();
   const { loadAgents } = useAgent();
+  const { refetchAll: refetchBilling } = useBillingContext();
+  const { markSetupComplete } = useAccountSetup();
+  const { markAsCompleted } = useOnboarding();
+  const queryClient = useQueryClient();
   const [currentSlide, setCurrentSlide] = React.useState(0);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const scrollX = useSharedValue(0);
+  const scale2 = useSharedValue(1);
   const scrollViewRef = React.useRef<ScrollView>(null);
 
-  const Logomark = colorScheme === 'dark' ? LogomarkWhite : LogomarkBlack;
-
-  const canStartTrial = trialStatus?.can_start_trial ?? false;
-  
-  // If user already has active billing, skip directly to completion (no billing slide needed)
-  React.useEffect(() => {
-    if (hasActiveTrial || hasActiveSubscription) {
-      console.log('✅ User already has active billing, auto-completing onboarding');
-      handleComplete();
-    }
-  }, [hasActiveTrial, hasActiveSubscription]);
+  const animatedStyle2 = useAnimatedStyle(() => ({
+    transform: [{ scale: scale2.value }],
+  }));
 
   const slides: OnboardingSlide[] = [
     {
@@ -108,8 +86,8 @@ export default function OnboardingScreen() {
       icon: Search,
       title: t('onboarding.research.title'),
       description: t('onboarding.research.description'),
-      color: '#10B981',
-      gradient: ['#10B981', '#14B8A6'],
+      color: '#14B8A6',
+      gradient: ['#10B981', '#10B981'],
       example: t('onboarding.research.example'),
     },
     {
@@ -150,29 +128,27 @@ export default function OnboardingScreen() {
     },
   ];
 
-  const totalSlides = slides.length + 1; // feature slides + 1 billing slide
+  const totalSlides = slides.length;
 
   const handleComplete = React.useCallback(async () => {
     try {
-      // Save onboarding completion for this specific user on this device
-      const userId = session?.user?.id || 'anonymous';
-      const onboardingKey = `${ONBOARDING_KEY_PREFIX}${userId}`;
-      await AsyncStorage.setItem(onboardingKey, 'true');
-      
+      await markAsCompleted();
+      await markSetupComplete();
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // Refetch billing data and agents before routing
-      console.log('🔄 Refetching billing data and agents after onboarding completion...');
-      refetchAll();
+      refetchBilling();
+      queryClient.invalidateQueries({ queryKey: agentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: modelKeys.available() });
       await loadAgents();
       
-      console.log(`✅ Onboarding completed for user: ${userId}`);
+      console.log('✅ Onboarding completed successfully! Navigating to home...');
       router.replace('/home');
     } catch (error) {
-      console.error('Failed to save onboarding status:', error);
+      console.error('❌ Failed to complete onboarding:', error);
       router.replace('/home');
     }
-  }, [refetchAll, loadAgents, router, session?.user?.id]);
+  }, [loadAgents, refetchBilling, queryClient, router, markSetupComplete, markAsCompleted]);
 
   const handleLogout = React.useCallback(async () => {
     try {
@@ -181,9 +157,6 @@ export default function OnboardingScreen() {
       
       console.log('🔓 Logging out from onboarding...');
       await signOut();
-      
-      // Navigation will be handled by AuthProtection in _layout
-      // User will be automatically redirected to /auth
     } catch (error) {
       console.error('❌ Logout error:', error);
     } finally {
@@ -200,19 +173,14 @@ export default function OnboardingScreen() {
         x: nextSlide * SCREEN_WIDTH,
         animated: true,
       });
+    } else {
+      handleComplete();
     }
-    // Don't auto-complete on last slide (billing) - user must select plan
   };
 
   const handleSkip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Jump to billing slide (last slide)
-    const billingSlideIndex = totalSlides - 1;
-    setCurrentSlide(billingSlideIndex);
-    scrollViewRef.current?.scrollTo({
-      x: billingSlideIndex * SCREEN_WIDTH,
-      animated: true,
-    });
+    handleComplete();
   };
 
   const handleScroll = (event: any) => {
@@ -221,36 +189,30 @@ export default function OnboardingScreen() {
     const newSlide = Math.round(offsetX / SCREEN_WIDTH);
     setCurrentSlide(newSlide);
   };
-
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1 bg-background">
-        {/* Minimal Header */}
-        <View className="pt-16 px-6 pb-4 flex-row justify-between items-center">
-          <Logomark width={100} height={20} />
-          <View className="flex-row items-center gap-3">
-            {currentSlide < totalSlides - 1 && (
-              <Pressable onPress={handleSkip}>
-                <Text className="text-[14px] font-roobert text-muted-foreground">
-                  {t('onboarding.skip')}
-                </Text>
-              </Pressable>
-            )}
-            <Pressable 
+        <View className='absolute inset-0' pointerEvents="none">
+          <BackgroundLogo/>
+        </View>
+        <View className="pt-16 px-8 pb-4 flex-row justify-between items-center">
+          <KortixLogo variant="logomark" size={60} />
+          <View className="flex-row items-center gap-4">
+            <TouchableOpacity 
               onPress={handleLogout}
               disabled={isLoggingOut}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Icon 
                 as={LogOut} 
-                size={18} 
+                size={20} 
                 className={isLoggingOut ? "text-muted-foreground/50" : "text-muted-foreground"} 
               />
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
-
-        {/* Slides */}
+        
         <ScrollView
           ref={scrollViewRef}
           horizontal
@@ -268,46 +230,58 @@ export default function OnboardingScreen() {
               scrollX={scrollX}
             />
           ))}
-          {/* Billing Slide */}
-          <BillingSlide
-            index={slides.length}
-            scrollX={scrollX}
-            canStartTrial={canStartTrial}
-            onSuccess={handleComplete}
+        </ScrollView>
+        
+        <View className="px-8 pb-8">
+          <View className="flex-row gap-2 mb-6">
+            {Array.from({ length: totalSlides }).map((_, index) => (
+              <PaginationDot
+                key={index}
+                index={index}
+                currentIndex={currentSlide}
+                scrollX={scrollX}
+              />
+            ))}
+          </View>
+          
+          <ContinueButton
+            onPress={handleNext}
+            isLast={currentSlide === totalSlides - 1}
             t={t}
           />
-        </ScrollView>
-
-        {/* Minimal Pagination Dots */}
-        <View className="flex-row justify-center gap-1.5 mb-6">
-          {Array.from({ length: totalSlides }).map((_, index) => (
-            <PaginationDot
-              key={index}
-              index={index}
-              currentIndex={currentSlide}
-              scrollX={scrollX}
-            />
-          ))}
+           {currentSlide < totalSlides - 1 && (
+             <AnimatedPressable 
+               onPress={handleComplete}
+               onPressIn={() => {
+                 scale2.value = withSpring(0.96, { damping: 15, stiffness: 400 });
+               }}
+               onPressOut={() => {
+                 scale2.value = withSpring(1, { damping: 15, stiffness: 400 });
+               }}
+               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} 
+               style={[animatedStyle2, { 
+                 backgroundColor: 'transparent',
+                 borderWidth: 1,
+                 borderColor: colorScheme === 'dark' ? '#454444' : '#c2c2c2',
+                 height: 56,
+                 borderRadius: 28,
+                 justifyContent: 'center',
+                 alignItems: 'center',
+                 marginTop: 10,
+               }]}
+             >
+               <Text className='text-foreground text-[16px] font-roobert-medium'>
+                 {t('onboarding.skip')}
+               </Text>
+             </AnimatedPressable>
+           )}
         </View>
-
-        {/* Next Button - Only show on non-billing slides */}
-        {currentSlide < totalSlides - 1 && (
-          <View className="px-6 pb-8">
-            <ContinueButton
-              onPress={handleNext}
-              isLast={false}
-              t={t}
-            />
-          </View>
-        )}
       </View>
     </>
   );
 }
 
-/**
- * Onboarding Slide Component
- */
+
 interface OnboardingSlideProps {
   slide: OnboardingSlide;
   index: number;
@@ -324,13 +298,6 @@ function OnboardingSlide({ slide, index, scrollX }: OnboardingSlideProps) {
       (index + 1) * SCREEN_WIDTH,
     ];
 
-    const scale = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.92, 1, 0.92],
-      Extrapolate.CLAMP
-    );
-
     const opacity = interpolate(
       scrollX.value,
       inputRange,
@@ -339,75 +306,70 @@ function OnboardingSlide({ slide, index, scrollX }: OnboardingSlideProps) {
     );
 
     return {
-      transform: [{ scale }],
       opacity,
     };
   });
 
   const IconComponent = slide.icon;
+  const isDark = colorScheme === 'dark';
 
   return (
     <View
       style={{ width: SCREEN_WIDTH }}
-      className="flex-1 items-center justify-center px-8"
+      className="flex-1 justify-end px-8 pb-16"
     >
-      <Animated.View style={animatedStyle} className="items-center w-full max-w-sm">
-        {/* Minimalist Icon Container */}
-        <View className="w-full mb-12 items-center">
+      <AnimatedView 
+        entering={FadeIn.duration(400)}
+        style={animatedStyle} 
+        className="w-full"
+      >
+        <View className="mb-2">
           <View
-            className="w-20 h-20 rounded-2xl items-center justify-center mb-4"
+            className="w-24 h-24 rounded-3xl items-center justify-center mb-6"
             style={{
-              backgroundColor: colorScheme === 'dark' 
-                ? slide.color + '15' 
-                : slide.color + '10',
+              backgroundColor: isDark 
+                ? slide.color
+                : slide.color,
             }}
           >
             <IconComponent
               size={40}
-              color={slide.color}
-              strokeWidth={1.5}
+              color='white'
+              strokeWidth={2}
             />
           </View>
         </View>
 
-        {/* Title - Clean Typography */}
-        <Text className="text-[28px] font-roobert-semibold text-foreground text-center mb-3 leading-tight tracking-tight">
+        <Text className="text-[36px] font-roobert-semibold text-foreground mb-4 leading-tight tracking-tight">
           {slide.title}
         </Text>
 
-        {/* Description - Subtle and Readable */}
-        <Text className="text-[15px] font-roobert text-muted-foreground text-center leading-relaxed mb-6 opacity-80">
+        <Text className="text-[16px] font-roobert text-muted-foreground leading-relaxed mb-6">
           {slide.description}
         </Text>
 
-        {/* Minimalist Example Tag */}
         {slide.example && (
           <View 
-            className="px-4 py-2 rounded-full border"
+            className="px-5 py-3 rounded-full self-start"
             style={{
-              borderColor: colorScheme === 'dark' 
-                ? 'rgba(255, 255, 255, 0.1)' 
-                : 'rgba(0, 0, 0, 0.06)',
-              backgroundColor: colorScheme === 'dark'
-                ? 'rgba(255, 255, 255, 0.03)'
-                : 'rgba(0, 0, 0, 0.02)',
+              backgroundColor: isDark
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(0, 0, 0, 0.03)',
             }}
           >
             <Text 
-              className="text-[13px] font-roobert text-center text-muted-foreground"
+              className="text-[14px] font-roobert text-muted-foreground"
             >
               {slide.example}
             </Text>
           </View>
         )}
-      </Animated.View>
+      </AnimatedView>
     </View>
   );
 }
 
-/**
- * Pagination Dot Component
- */
+
 interface PaginationDotProps {
   index: number;
   currentIndex: number;
@@ -427,158 +389,7 @@ function PaginationDot({ index, scrollX }: PaginationDotProps) {
     const width = interpolate(
       scrollX.value,
       inputRange,
-      [6, 20, 6],
-      Extrapolate.CLAMP
-    );
-
-    const opacity = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.25, 1, 0.25],
-      Extrapolate.CLAMP
-    );
-
-    return {
-      width,
-      opacity,
-    };
-  });
-
-  return (
-    <Animated.View
-      style={[
-        animatedStyle,
-        {
-          backgroundColor: colorScheme === 'dark' 
-            ? 'rgba(255, 255, 255, 0.9)' 
-            : 'rgba(0, 0, 0, 0.9)',
-        }
-      ]}
-      className="h-1.5 rounded-full"
-    />
-  );
-}
-
-/**
- * Continue Button Component
- */
-interface ContinueButtonProps {
-  onPress: () => void;
-  isLast: boolean;
-  t: (key: string) => string;
-}
-
-function ContinueButton({ onPress, isLast, t }: ContinueButtonProps) {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <AnimatedPressable
-      onPress={onPress}
-      onPressIn={() => {
-        scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
-      }}
-      onPressOut={() => {
-        scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-      }}
-      style={animatedStyle}
-      className="bg-foreground h-12 rounded-xl flex-row items-center justify-center"
-    >
-      <Text className="text-[15px] font-roobert-medium text-background">
-        {isLast ? t('onboarding.getStarted') : t('onboarding.next')}
-      </Text>
-      <Icon as={ArrowRight} size={18} className="text-background ml-1" />
-    </AnimatedPressable>
-  );
-}
-
-/**
- * Billing Slide Component - Simplified using BillingContent
- */
-interface BillingSlideProps {
-  index: number;
-  scrollX: SharedValue<number>;
-  canStartTrial: boolean;
-  onSuccess: () => void;
-  t: (key: string, defaultValue?: string) => string;
-}
-
-function BillingSlide({
-  index,
-  scrollX,
-  canStartTrial,
-  onSuccess,
-  t,
-}: BillingSlideProps) {
-  const { colorScheme } = useColorScheme();
-  const [billingPeriod, setBillingPeriod] = React.useState<BillingPeriod>('yearly_commitment');
-  const [selectedPlan, setSelectedPlan] = React.useState<string | null>(null);
-  const cardScale = useSharedValue(1);
-  const cardOpacity = useSharedValue(1);
-
-  const handleStartTrial = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectedPlan('trial');
-    
-    try {
-      await startTrialCheckout(
-        () => {
-          setSelectedPlan(null);
-          onSuccess();
-        },
-        () => {
-          setSelectedPlan(null);
-        }
-      );
-    } catch (error) {
-      console.error('❌ Error starting trial:', error);
-      setSelectedPlan(null);
-    }
-  };
-
-  const handleSelectPlan = async (tier: typeof PRICING_TIERS[0]) => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setSelectedPlan(tier.name);
-
-    const priceId = getPriceId(tier, billingPeriod);
-    if (!priceId) {
-      console.error('❌ No price ID found for tier:', tier.name, billingPeriod);
-      setSelectedPlan(null);
-      return;
-    }
-
-    try {
-      await startPlanCheckout(
-        priceId,
-        billingPeriod,
-        () => {
-          setSelectedPlan(null);
-          onSuccess();
-        },
-        () => {
-          setSelectedPlan(null);
-        }
-      );
-    } catch (error) {
-      console.error('❌ Error starting checkout:', error);
-      setSelectedPlan(null);
-    }
-  };
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const inputRange = [
-      (index - 1) * SCREEN_WIDTH,
-      index * SCREEN_WIDTH,
-      (index + 1) * SCREEN_WIDTH,
-    ];
-
-    const scale = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.92, 1, 0.92],
+      [8, 24, 8],
       Extrapolate.CLAMP
     );
 
@@ -590,200 +401,77 @@ function BillingSlide({
     );
 
     return {
-      transform: [{ scale }],
+      width,
       opacity,
     };
   });
 
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cardScale.value }],
-    opacity: cardOpacity.value,
-  }));
-
-  const tiersToShow = PRICING_TIERS.slice(0, 2);
+  const isDark = colorScheme === 'dark';
 
   return (
-    <View
-      style={{ width: SCREEN_WIDTH }}
-      className="flex-1 px-8 justify-center"
-    >
-      <Animated.View style={animatedStyle} className="items-center max-w-sm mx-auto w-full">
-        <ScrollView showsVerticalScrollIndicator={false} className="w-full">
-          {/* Title */}
-          <View className="mb-8">
-            <Text className="text-[28px] font-roobert-semibold text-foreground text-center mb-2 leading-tight tracking-tight">
-              {canStartTrial 
-                ? 'Start Free Trial' 
-                : t('billing.subscription.title', 'Choose Your Plan')
-              }
-            </Text>
-            <Text className="text-[15px] font-roobert text-muted-foreground text-center opacity-70">
-              {canStartTrial
-                ? 'Experience all features for 7 days'
-                : t('billing.subtitle', 'Select a plan to get started')
-              }
-            </Text>
-          </View>
-
-          {/* Free Trial Card - Ultra Minimal */}
-          {canStartTrial && (
-            <AnimatedPressable
-              onPress={handleStartTrial}
-              disabled={selectedPlan === 'trial'}
-              onPressIn={() => {
-                cardScale.value = withSpring(0.98, { damping: 20, stiffness: 400 });
-              }}
-              onPressOut={() => {
-                cardScale.value = withSpring(1, { damping: 20, stiffness: 400 });
-              }}
-              style={[
-                cardAnimatedStyle,
-                {
-                  borderWidth: 1,
-                  borderColor: colorScheme === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.1)' 
-                    : 'rgba(0, 0, 0, 0.08)',
-                }
-              ]}
-              className={`p-6 bg-card rounded-xl mb-6 ${selectedPlan === 'trial' ? 'opacity-50' : ''}`}
-            >
-              {/* Header with subtle badge */}
-              <View className="mb-6">
-                <View className="flex-row items-center gap-2 mb-3">
-                  <View 
-                    className="px-2 py-1 rounded-md"
-                    style={{
-                      backgroundColor: colorScheme === 'dark'
-                        ? 'rgba(255, 255, 255, 0.06)'
-                        : 'rgba(0, 0, 0, 0.04)',
-                    }}
-                  >
-                    <Text className="text-[11px] font-roobert-medium text-foreground/60 uppercase tracking-wide">
-                      Trial
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-[24px] font-roobert-semibold text-foreground leading-tight mb-1">
-                  7 days free
-                </Text>
-                <Text className="text-[14px] font-roobert text-muted-foreground/80">
-                  Then $20/month, cancel anytime
-                </Text>
-              </View>
-              
-              {/* Benefits - Minimal List */}
-              <View className="space-y-3 mb-6">
-                <View className="flex-row items-start gap-3">
-                  <View 
-                    className="w-1 h-1 rounded-full mt-2" 
-                    style={{ 
-                      backgroundColor: colorScheme === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.4)' 
-                        : 'rgba(0, 0, 0, 0.4)' 
-                    }}
-                  />
-                  <Text className="text-[14px] font-roobert text-foreground/80 flex-1 leading-relaxed">
-                    Full access to all features
-                  </Text>
-                </View>
-                <View className="flex-row items-start gap-3">
-                  <View 
-                    className="w-1 h-1 rounded-full mt-2" 
-                    style={{ 
-                      backgroundColor: colorScheme === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.4)' 
-                        : 'rgba(0, 0, 0, 0.4)' 
-                    }}
-                  />
-                  <Text className="text-[14px] font-roobert text-foreground/80 flex-1 leading-relaxed">
-                    Unlimited agents and automations
-                  </Text>
-                </View>
-                <View className="flex-row items-start gap-3">
-                  <View 
-                    className="w-1 h-1 rounded-full mt-2" 
-                    style={{ 
-                      backgroundColor: colorScheme === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.4)' 
-                        : 'rgba(0, 0, 0, 0.4)' 
-                    }}
-                  />
-                  <Text className="text-[14px] font-roobert text-foreground/80 flex-1 leading-relaxed">
-                    Priority support
-                  </Text>
-                </View>
-              </View>
-
-              {/* CTA Section */}
-              <View 
-                className="pt-4 border-t"
-                style={{
-                  borderTopColor: colorScheme === 'dark'
-                    ? 'rgba(255, 255, 255, 0.06)'
-                    : 'rgba(0, 0, 0, 0.06)',
-                }}
-              >
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-[14px] font-roobert-medium text-foreground/60">
-                    {selectedPlan === 'trial' ? 'Starting trial...' : 'Start free trial'}
-                  </Text>
-                  <View className="w-5 h-5 rounded-full bg-foreground items-center justify-center">
-                    <Icon 
-                      as={ArrowRight} 
-                      size={14} 
-                      className="text-background"
-                      strokeWidth={2.5}
-                    />
-                  </View>
-                </View>
-              </View>
-            </AnimatedPressable>
-          )}
-
-          {/* Period Selector - Only if no trial */}
-          {!canStartTrial && (
-            <BillingPeriodSelector
-              selected={billingPeriod}
-              onChange={setBillingPeriod}
-              t={t}
-            />
-          )}
-
-          {/* Pricing Tiers - Only top 2 for onboarding */}
-          {!canStartTrial && (
-            <View className="space-y-3">
-              {tiersToShow.map((tier) => {
-                const displayPrice = getDisplayPrice(tier, billingPeriod);
-                const isSelected = selectedPlan === tier.name;
-
-                return (
-                  <PricingTierCard
-                    key={tier.name}
-                    tier={tier}
-                    displayPrice={displayPrice}
-                    billingPeriod={billingPeriod}
-                    isSelected={isSelected}
-                    onSelect={() => handleSelectPlan(tier)}
-                    disabled={isSelected}
-                    simplified={true}
-                    t={t}
-                  />
-                );
-              })}
-            </View>
-          )}
-
-          {/* Minimal Footer Note */}
-          {canStartTrial && (
-            <View className="mt-3">
-              <Text className="text-[12px] font-roobert text-center text-muted-foreground/50">
-                No credit card required
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-      </Animated.View>
-    </View>
+    <AnimatedView
+      style={[
+        animatedStyle,
+        {
+          backgroundColor: isDark 
+            ? '#FFFFFF' 
+            : '#000000',
+          height: 8,
+          borderRadius: 4,
+        }
+      ]}
+    />
   );
 }
 
+interface ContinueButtonProps {
+  onPress: () => void;
+  isLast: boolean;
+  t: (key: string) => string;
+}
+
+function ContinueButton({ onPress, isLast, t }: ContinueButtonProps) {
+  const { colorScheme } = useColorScheme();
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const isDark = colorScheme === 'dark';
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={() => {
+        scale.value = withSpring(0.96, { damping: 15, stiffness: 400 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+      }}
+      style={[animatedStyle, { 
+        backgroundColor: isDark ? '#FFFFFF' : '#000000',
+        height: 56,
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'row',
+      }]}
+    >
+      <Text style={{ 
+        color: isDark ? '#000000' : '#FFFFFF',
+        fontSize: 16,
+        fontFamily: 'Roobert-Medium',
+        marginRight: 4,
+      }}>
+        {isLast ? t('onboarding.getStarted') : t('onboarding.next')}
+      </Text>
+      <Icon 
+        as={ArrowRight} 
+        size={20} 
+        color={isDark ? '#000000' : '#FFFFFF'} 
+        strokeWidth={2.5}
+      />
+    </AnimatedPressable>
+  );
+}

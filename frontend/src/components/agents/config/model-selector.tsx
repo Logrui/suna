@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Check, Search, AlertTriangle, Crown, Cpu, Plus, Edit, Trash, KeyRound, Loader2 } from 'lucide-react';
+import { Check, Search, AlertTriangle, Crown, Cpu, Plus, Edit, Trash, KeyRound } from 'lucide-react';
 import { ModelProviderIcon } from '@/lib/model-provider-icons';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,16 +17,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useModelSelection } from '@/hooks/use-model-selection';
-import { formatModelName } from '@/lib/stores/model-store';
+import { useModelSelection } from '@/hooks/agents';
+import { formatModelName } from '@/stores/model-store';
 import { isLocalMode } from '@/lib/config';
 import { CustomModelDialog, CustomModelFormData } from '@/components/thread/chat-input/custom-model-dialog';
-import { PaywallDialog } from '@/components/payment/paywall-dialog';
-import { BillingModal } from '@/components/billing/billing-modal';
-import { useModelLoading } from '@/hooks/useModelLoading';
-import { warmupModel, unloadModel, getLocalModels } from '@/lib/api/models';
+import { PlanSelectionModal } from '@/components/billing/pricing';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
 
 interface CustomModel {
   id: string;
@@ -48,10 +44,6 @@ export function AgentModelSelector({
   variant = 'default',
   className,
 }: AgentModelSelectorProps) {
-  console.log('🔥🔥🔥 AGENT MODEL SELECTOR COMPONENT LOADED! 🔥🔥🔥');
-  console.log('🔥 Current value:', value);
-  console.log('🔥 Component variant:', variant);
-  
   const { 
     allModels, 
     canAccessModel, 
@@ -64,46 +56,12 @@ export function AgentModelSelector({
     removeCustomModel: storeRemoveCustomModel,
     modelsData // Now available directly from the hook
   } = useModelSelection();
-  
-  // Fetch local models (LM Studio + Ollama)
-  console.log('[model-selector] Component mounted, setting up useQuery...');
-  const { data: localModelsData, isLoading: isLoadingLocalModels } = useQuery({
-    queryKey: ['local-models'],
-    queryFn: async () => {
-      console.log('[model-selector] *** FETCHING LOCAL MODELS FROM /api/models/local ***');
-      const response = await getLocalModels();
-      console.log('[model-selector] *** LOCAL MODELS RESPONSE ***:', response);
-      
-      // Handle error response properly
-      if (!response.success || !response.data) {
-        console.error('[model-selector] Failed to fetch local models:', response.error);
-        throw new Error(response.error?.message || 'Failed to fetch local models');
-      }
-      
-      console.log('[model-selector] Local models data:', response.data);
-      return response.data;
-    },
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    retry: 1,
-  });
-  
-  // Always log the current state
-  console.log('[model-selector] Current localModelsData:', localModelsData);
-  console.log('[model-selector] Is loading local models:', isLoadingLocalModels);
-  
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Model loading state from WebSocket
-  const { isLoading, currentModel: loadingModel, status, error: loadingError, isConnected } = useModelLoading();
-  const [isWarmingUp, setIsWarmingUp] = useState(false);
-  
-  const [paywallOpen, setPaywallOpen] = useState(false);
-  const [lockedModel, setLockedModel] = useState<string | null>(null);
-  const [billingModalOpen, setBillingModalOpen] = useState(false);
+  const [planModalOpen, setPlanSelectionModalOpen] = useState(false);
   
   const [isCustomModelDialogOpen, setIsCustomModelDialogOpen] = useState(false);
   const [dialogInitialData, setDialogInitialData] = useState<CustomModelFormData>({ id: '', label: '' });
@@ -118,7 +76,6 @@ export function AgentModelSelector({
   const enhancedModelOptions = useMemo(() => {
     const modelMap = new Map();
 
-    // Add cloud models first
     if (modelsData?.models) {
       modelsData.models.forEach(model => {
         const displayName = model.display_name || model.short_name || model.id;
@@ -148,83 +105,6 @@ export function AgentModelSelector({
       });
     }
 
-    // Add local models (LM Studio + Ollama) with proper branding
-    if (localModelsData) {
-      console.log('[model-selector] Processing local models:', localModelsData);
-      
-      // Remove any existing cloud models that match local Ollama models
-      // This prevents duplicate entries and ensures we use the prefixed versions
-      if (localModelsData.ollama) {
-        console.log('[model-selector] Found', localModelsData.ollama.length, 'Ollama models to process');
-        localModelsData.ollama.forEach(localModel => {
-          // Remove models that have similar names (case-insensitive match on the model name)
-          const modelNameLower = localModel.name.toLowerCase();
-          for (const [existingId, existingModel] of modelMap.entries()) {
-            if (existingModel.label && existingModel.label.toLowerCase().includes(modelNameLower)) {
-              console.log('[model-selector] Removing duplicate cloud model:', existingId, '(matches local:', localModel.id, ')');
-              modelMap.delete(existingId);
-            }
-          }
-        });
-      }
-      
-      // Remove any existing cloud models that match local LM Studio models
-      if (localModelsData.lm_studio) {
-        console.log('[model-selector] Found', localModelsData.lm_studio.length, 'LM Studio models to process');
-        localModelsData.lm_studio.forEach(localModel => {
-          const modelNameLower = localModel.name.toLowerCase();
-          for (const [existingId, existingModel] of modelMap.entries()) {
-            if (existingModel.label && existingModel.label.toLowerCase().includes(modelNameLower)) {
-              console.log('[model-selector] Removing duplicate cloud model:', existingId, '(matches local:', localModel.id, ')');
-              modelMap.delete(existingId);
-            }
-          }
-        });
-      }
-
-      // Add LM Studio models with proper branding
-      if (localModelsData.lm_studio) {
-        localModelsData.lm_studio.forEach(model => {
-          console.log('[model-selector] Adding LM Studio model:', model.id);
-          modelMap.set(model.id, {
-            id: model.id, // e.g., "lm_studio:hermes-2-pro"
-            label: model.name, // e.g., "hermes-2-pro"
-            requiresSubscription: false,
-            priority: 100, // High priority for local models
-            recommended: false,
-            top: true,
-            capabilities: [],
-            contextWindow: model.context_window || 128000,
-            isCustom: false,
-            isLocal: true,
-            provider: 'lm_studio'
-          });
-        });
-      }
-      
-      // Add Ollama models with proper branding
-      if (localModelsData.ollama) {
-        localModelsData.ollama.forEach(model => {
-          console.log('[model-selector] Adding Ollama model:', model.id);
-          modelMap.set(model.id, {
-            id: model.id, // e.g., "ollama:qwen3-coder:30b"
-            label: model.name, // e.g., "qwen3-coder:30b"
-            requiresSubscription: false,
-            priority: 100, // High priority for local models
-            recommended: false,
-            top: true,
-            capabilities: [],
-            contextWindow: model.context_window || 128000,
-            isCustom: false,
-            isLocal: true,
-            provider: 'ollama'
-          });
-        });
-      }
-    } else {
-      console.log('[model-selector] No local models data available');
-    }
-
     if (isLocalMode()) {
       customModels.forEach(model => {
         if (!modelMap.has(model.id)) {
@@ -246,7 +126,7 @@ export function AgentModelSelector({
     }
 
     return Array.from(modelMap.values());
-  }, [modelsData?.models, allModels, customModels, localModelsData]);
+  }, [modelsData?.models, allModels, customModels]);
   
   const selectedModelDisplay = useMemo(() => {
     const model = enhancedModelOptions.find(m => m.id === selectedModel);
@@ -272,35 +152,7 @@ export function AgentModelSelector({
   const freeModels = sortedModels.filter(m => !m.requiresSubscription);
   const premiumModels = sortedModels.filter(m => m.requiresSubscription);
 
-  // Debug: Log what models are in freeModels
-  useEffect(() => {
-    if (freeModels.length > 0) {
-      console.log('[model-selector] FREE MODELS COUNT:', freeModels.length);
-      const localModels = freeModels.filter(m => m.isLocal);
-      console.log('[model-selector] LOCAL MODELS IN FREE:', localModels.length);
-      localModels.forEach(m => {
-        console.log('[model-selector] → Model ID:', m.id, '| Label:', m.label, '| Provider:', m.provider);
-      });
-    }
-  }, [freeModels]);
-
   const shouldDisplayAll = !isLocalMode() && premiumModels.length > 0;
-
-  // Debug: Always log which rendering path we're taking
-  console.log('[model-selector] *** RENDERING PATH DEBUG ***');
-  console.log('[model-selector] isLocalMode():', isLocalMode());
-  console.log('[model-selector] premiumModels.length:', premiumModels.length);
-  console.log('[model-selector] shouldDisplayAll:', shouldDisplayAll);
-  console.log('[model-selector] Will render:', shouldDisplayAll ? 'freeModels + premiumModels separately' : 'sortedModels only');
-
-  // Debug: Always log when component mounts or data changes
-  useEffect(() => {
-    console.log('[model-selector] *** COMPONENT STATE DEBUG ***');
-    console.log('[model-selector] localModelsData:', localModelsData);
-    console.log('[model-selector] enhancedModelOptions length:', enhancedModelOptions.length);
-    console.log('[model-selector] freeModels length:', freeModels.length);
-    console.log('[model-selector] premiumModels length:', premiumModels.length);
-  }, [localModelsData, enhancedModelOptions, freeModels, premiumModels]);
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
@@ -326,36 +178,14 @@ export function AgentModelSelector({
     if (hasAccess) {
       onChange(modelId);
       setIsOpen(false);
-      
-      // Trigger model warmup for local models (LM Studio, Ollama)
-      if (isLocalMode() && (modelId.includes('lm_studio') || modelId.includes('ollama'))) {
-        setIsWarmingUp(true);
-        warmupModel(modelId)
-          .then(response => {
-            if (!response.success && response.error) {
-              console.error('Failed to warmup model:', response.error);
-            }
-          })
-          .catch(err => {
-            console.error('Error warming up model:', err);
-          })
-          .finally(() => {
-            setIsWarmingUp(false);
-          });
-      }
     } else {
-      setLockedModel(modelId);
-      setPaywallOpen(true);
+      // If user doesn't have access, open plan selection modal
+      setPlanSelectionModalOpen(true);
     }
   };
 
   const handleUpgradeClick = () => {
-    setBillingModalOpen(true);
-  };
-
-  const closePaywallDialog = () => {
-    setPaywallOpen(false);
-    setLockedModel(null);
+    setPlanSelectionModalOpen(true);
   };
 
   const handleSearchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -446,7 +276,6 @@ export function AgentModelSelector({
   };
 
   const renderModelOption = (model: any, index: number) => {
-    console.log('[renderModelOption] Rendering model:', model.id, '| isLocal:', model.isLocal, '| provider:', model.provider);
     const isCustom = Boolean(model.isCustom) || 
       (isLocalMode() && customModels.some(m => m.id === model.id));
     const accessible = isCustom ? true : (isLocalMode() || canAccessModel(model.id));
@@ -572,9 +401,6 @@ export function AgentModelSelector({
                   >
                     <ModelProviderIcon modelId={selectedModel} size={24} />
                     <span className="text-sm">{selectedModelDisplay}</span>
-                    {(isWarmingUp || isLoading) && (
-                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                    )}
                   </Button>
                 )}
               </DropdownMenuTrigger>
@@ -658,12 +484,7 @@ export function AgentModelSelector({
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
                     Available Models
                   </div>
-                  {(() => {
-                    console.log('[model-selector] *** ABOUT TO RENDER FREE MODELS ***');
-                    console.log('[model-selector] freeModels.length:', freeModels.length);
-                    console.log('[model-selector] freeModels:', freeModels.map(m => ({ id: m.id, label: m.label, isLocal: m.isLocal })));
-                    return freeModels.map((model, index) => renderModelOption(model, index));
-                  })()}
+                  {freeModels.map((model, index) => renderModelOption(model, index))}
                   
                   {premiumModels.length > 0 && (
                     <>
@@ -764,12 +585,6 @@ export function AgentModelSelector({
                 </div>
               ) : (
                 <div>
-                  {(() => {
-                    console.log('[model-selector] *** RENDERING SORTED MODELS (shouldDisplayAll=false) ***');
-                    console.log('[model-selector] sortedModels.length:', sortedModels.length);
-                    console.log('[model-selector] sortedModels:', sortedModels.map(m => ({ id: m.id, label: m.label, isLocal: m.isLocal })));
-                    return null;
-                  })()}
                   {sortedModels.length > 0 ? (
                     sortedModels.map((model, index) => renderModelOption(model, index))
                   ) : (
@@ -799,25 +614,9 @@ export function AgentModelSelector({
           mode={dialogMode}
         />
       )}
-      {paywallOpen && (
-        <PaywallDialog
-          open={true}
-          onDialogClose={closePaywallDialog}
-          title="Premium Model"
-          description={
-            lockedModel
-              ? `Subscribe to access ${enhancedModelOptions.find(
-                  (m) => m.id === lockedModel
-                )?.label}`
-              : 'Subscribe to access premium models with enhanced capabilities'
-          }
-          ctaText="Subscribe Now"
-          cancelText="Maybe Later"
-        />
-      )}
-      <BillingModal
-        open={billingModalOpen}
-        onOpenChange={setBillingModalOpen}
+      <PlanSelectionModal
+        open={planModalOpen}
+        onOpenChange={setPlanSelectionModalOpen}
       />
     </div>
   );

@@ -1,9 +1,8 @@
-import asyncio
+﻿import asyncio
 import json
 import traceback
 import uuid
 import os
-import time
 from datetime import datetime, timezone
 from typing import Optional, List, Tuple, Dict
 from fastapi import APIRouter, HTTPException, Depends, Request, Body, File, UploadFile, Form
@@ -129,11 +128,6 @@ async def _check_billing_and_limits(client, account_id: str, model_name: Optiona
     Raises:
         HTTPException: If billing/limits checks fail
     """
-    # Skip all billing checks in local mode
-    if config.ENV_MODE == EnvMode.LOCAL:
-        logger.debug(f"[BILLING] Local mode detected - skipping billing and model access checks for account {account_id}")
-        return  # No checks needed in local mode
-    
     # Unified billing and model access check
     can_proceed, error_message, context = await billing_integration.check_model_and_billing_access(
         account_id, model_name, client
@@ -141,9 +135,10 @@ async def _check_billing_and_limits(client, account_id: str, model_name: Optiona
     
     if not can_proceed:
         if context.get("error_type") == "model_access_denied":
-            raise HTTPException(status_code=403, detail={
+            raise HTTPException(status_code=402, detail={
                 "message": error_message, 
-                "allowed_models": context.get("allowed_models", [])
+                "tier_name": context.get("tier_name"),
+                "error_code": "MODEL_ACCESS_DENIED"
             })
         elif context.get("error_type") == "insufficient_credits":
             raise HTTPException(status_code=402, detail={"message": error_message})
@@ -156,13 +151,14 @@ async def _check_billing_and_limits(client, account_id: str, model_name: Optiona
         limit_check = await check_agent_run_limit(client, account_id)
         if not limit_check['can_start']:
             error_detail = {
-                "message": f"Maximum of {config.MAX_PARALLEL_AGENT_RUNS} parallel agent runs allowed within 24 hours. You currently have {limit_check['running_count']} running.",
+                "message": f"Maximum of {limit_check['limit']} concurrent agent runs allowed. You currently have {limit_check['running_count']} running.",
                 "running_thread_ids": limit_check['running_thread_ids'],
                 "running_count": limit_check['running_count'],
-                "limit": config.MAX_PARALLEL_AGENT_RUNS
+                "limit": limit_check['limit'],
+                "error_code": "AGENT_RUN_LIMIT_EXCEEDED"
             }
-            logger.warning(f"Agent run limit exceeded for account {account_id}: {limit_check['running_count']} running agents")
-            raise HTTPException(status_code=429, detail=error_detail)
+            logger.warning(f"Agent run limit exceeded for account {account_id}: {limit_check['running_count']}/{limit_check['limit']} running agents")
+            raise HTTPException(status_code=402, detail=error_detail)
 
         # Check project limit if creating new thread
         if check_project_limit:
@@ -458,6 +454,16 @@ async def unified_agent_start(
     client = await utils.db.client
     account_id = user_id  # In Basejump, personal account_id is the same as user_id
     
+    # Debug logging - log what we received
+    logger.debug(f"Received agent start request: thread_id={thread_id!r}, prompt={prompt[:100] if prompt else None!r}, model_name={model_name!r}, agent_id={agent_id!r}, files_count={len(files)}")
+    logger.debug(f"Parameter types: thread_id={type(thread_id)}, prompt={type(prompt)}, model_name={type(model_name)}, agent_id={type(agent_id)}")
+    
+    # Additional validation logging
+    if not thread_id and (not prompt or (isinstance(prompt, str) and not prompt.strip())):
+        error_msg = f"VALIDATION ERROR: New thread requires prompt. Received: prompt={prompt!r} (type={type(prompt)}), thread_id={thread_id!r}"
+        logger.error(error_msg)
+        raise HTTPException(status_code=400, detail="prompt is required when creating a new thread")
+    
     # Resolve and validate model name
     if model_name is None:
         model_name = await model_manager.get_default_model_for_user(client, account_id)
@@ -563,7 +569,8 @@ async def unified_agent_start(
             # ================================================================
             
             # Validate that prompt is provided for new threads
-            if not prompt:
+            if not prompt or (isinstance(prompt, str) and not prompt.strip()):
+                logger.error(f"Validation failed: prompt is required for new threads. Received prompt={prompt!r}, type={type(prompt)}")
                 raise HTTPException(status_code=400, detail="prompt is required when creating a new thread")
             
             logger.debug(f"Creating new thread with prompt and {len(files)} files")
@@ -571,8 +578,22 @@ async def unified_agent_start(
             # Load agent configuration
             agent_config = await _load_agent_config(client, agent_id, account_id, user_id, is_new_thread=True)
             
-            # Check billing and limits (including project limit)
+            # Check billing and limits (including project and thread limits)
             await _check_billing_and_limits(client, account_id, model_name, check_project_limit=True)
+            
+            if config.ENV_MODE != EnvMode.LOCAL:
+                from core.utils.limits_checker import check_thread_limit
+                thread_limit_check = await check_thread_limit(client, account_id)
+                if not thread_limit_check['can_create']:
+                    error_detail = {
+                        "message": f"Maximum of {thread_limit_check['limit']} threads allowed for your current plan. You have {thread_limit_check['current_count']} threads.",
+                        "current_count": thread_limit_check['current_count'],
+                        "limit": thread_limit_check['limit'],
+                        "tier_name": thread_limit_check['tier_name'],
+                        "error_code": "THREAD_LIMIT_EXCEEDED"
+                    }
+                    logger.warning(f"Thread limit exceeded for account {account_id}: {thread_limit_check['current_count']}/{thread_limit_check['limit']}")
+                    raise HTTPException(status_code=402, detail=error_detail)
             
             # Get effective model
             effective_model = await _get_effective_model(model_name, agent_config, client, account_id)
@@ -660,8 +681,15 @@ async def unified_agent_start(
         raise
     except Exception as e:
         logger.error(f"Error in unified agent start: {str(e)}\n{traceback.format_exc()}")
+        # Log the actual error details for debugging
+        import traceback
+        error_details = {
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc()
+        }
+        logger.error(f"Full error details: {error_details}")
         raise HTTPException(status_code=500, detail=f"Failed to start agent: {str(e)}")
-
 
 @router.post("/agent-run/{agent_run_id}/stop", summary="Stop Agent Run", operation_id="stop_agent_run")
 async def stop_agent(agent_run_id: str, user_id: str = Depends(verify_and_get_user_id_from_jwt)):
@@ -903,7 +931,6 @@ async def stream_agent_run(
         listener_task = None
         terminate_stream = False
         initial_yield_complete = False
-        stream_start_time = time.time()  # Track stream start for keepalive logging
 
         try:
             # 1. Fetch and yield initial responses from Redis list
@@ -938,75 +965,39 @@ async def stream_agent_run(
             message_queue = asyncio.Queue()
 
             async def listen_messages():
-                pending_tasks = set()
-                try:
-                    listener = pubsub.listen()
-                    task = asyncio.create_task(listener.__anext__())
-                    pending_tasks.add(task)
+                listener = pubsub.listen()
+                task = asyncio.create_task(listener.__anext__())
 
-                    while not terminate_stream:
+                while not terminate_stream:
+                    done, _ = await asyncio.wait([task], return_when=asyncio.FIRST_COMPLETED)
+                    for finished in done:
                         try:
-                            done, _ = await asyncio.wait(pending_tasks, return_when=asyncio.FIRST_COMPLETED)
-                            for finished in done:
-                                try:
-                                    message = finished.result()
-                                    if message and isinstance(message, dict) and message.get("type") == "message":
-                                        channel = message.get("channel")
-                                        data = message.get("data")
-                                        if isinstance(data, bytes):
-                                            data = data.decode('utf-8')
+                            message = finished.result()
+                            if message and isinstance(message, dict) and message.get("type") == "message":
+                                channel = message.get("channel")
+                                data = message.get("data")
+                                if isinstance(data, bytes):
+                                    data = data.decode('utf-8')
 
-                                        if channel == response_channel and data == "new":
-                                            await message_queue.put({"type": "new_response"})
-                                        elif channel == control_channel and data in ["STOP", "END_STREAM", "ERROR"]:
-                                            logger.debug(f"Received control signal '{data}' for {agent_run_id}")
-                                            await message_queue.put({"type": "control", "data": data})
-                                            return  # Stop listening on control signal
+                                if channel == response_channel and data == "new":
+                                    await message_queue.put({"type": "new_response"})
+                                elif channel == control_channel and data in ["STOP", "END_STREAM", "ERROR"]:
+                                    logger.debug(f"Received control signal '{data}' for {agent_run_id}")
+                                    await message_queue.put({"type": "control", "data": data})
+                                    return  # Stop listening on control signal
 
-                                except StopAsyncIteration:
-                                    logger.warning(f"Listener stopped for {agent_run_id}.")
-                                    await message_queue.put({"type": "error", "data": "Listener stopped unexpectedly"})
-                                    return
-                                except asyncio.CancelledError:
-                                    logger.debug(f"Listener task cancelled for {agent_run_id}")
-                                    raise
-                                except ConnectionError as ce:
-                                    # Connection closed by server is expected during shutdown
-                                    logger.debug(f"Connection closed during shutdown for {agent_run_id}: {ce}")
-                                    return
-                                except Exception as e:
-                                    logger.error(f"Error in listener for {agent_run_id}: {e}")
-                                    await message_queue.put({"type": "error", "data": "Listener failed"})
-                                    return
-                                finally:
-                                    # Always remove finished task from pending set
-                                    pending_tasks.discard(finished)
-                                    # Resubscribe to the next message if continuing
-                                    if not terminate_stream:
-                                        try:
-                                            task = asyncio.create_task(listener.__anext__())
-                                            pending_tasks.add(task)
-                                        except Exception as e:
-                                            logger.debug(f"Failed to resubscribe listener for {agent_run_id}: {e}")
-                                            return
-                        except asyncio.CancelledError:
-                            logger.debug(f"asyncio.wait cancelled for {agent_run_id}")
-                            raise
-                except asyncio.CancelledError:
-                    logger.debug(f"listen_messages task cancelled for {agent_run_id}")
-                except Exception as e:
-                    logger.debug(f"listen_messages ended with exception for {agent_run_id}: {e}")
-                finally:
-                    # Clean up any pending tasks - suppress all exceptions
-                    for pending_task in pending_tasks:
-                        if not pending_task.done():
-                            pending_task.cancel()
-                    # Gather all pending tasks and await them to suppress their exceptions
-                    if pending_tasks:
-                        try:
-                            await asyncio.gather(*pending_tasks, return_exceptions=True)
-                        except Exception:
-                            pass  # Suppress any remaining exceptions
+                        except StopAsyncIteration:
+                            logger.warning(f"Listener stopped for {agent_run_id}.")
+                            await message_queue.put({"type": "error", "data": "Listener stopped unexpectedly"})
+                            return
+                        except Exception as e:
+                            logger.error(f"Error in listener for {agent_run_id}: {e}")
+                            await message_queue.put({"type": "error", "data": "Listener failed"})
+                            return
+                        finally:
+                            # Resubscribe to the next message if continuing
+                            if not terminate_stream:
+                                task = asyncio.create_task(listener.__anext__())
 
 
             listener_task = asyncio.create_task(listen_messages())
@@ -1014,11 +1005,7 @@ async def stream_agent_run(
             # 4. Main loop to process messages from the queue
             while not terminate_stream:
                 try:
-                    # Add 30-second timeout to send keepalive pings for long-running tasks
-                    queue_item = await asyncio.wait_for(
-                        message_queue.get(),
-                        timeout=30.0
-                    )
+                    queue_item = await message_queue.get()
 
                     if queue_item["type"] == "new_response":
                         # Fetch new responses from Redis list starting after the last processed index
@@ -1051,14 +1038,6 @@ async def stream_agent_run(
                         yield f"data: {json.dumps({'type': 'status', 'status': 'error'})}\n\n"
                         break
 
-                except asyncio.TimeoutError:
-                    # No new messages for 30 seconds - send keepalive ping
-                    # This prevents browsers from closing the connection during long agent processing
-                    elapsed = time.time() - stream_start_time
-                    logger.debug(f"[KEEPALIVE] Sending heartbeat ping for {agent_run_id} (streaming for ~{elapsed:.0f}s)")
-                    yield f"data: {json.dumps({'type': 'ping'})}\n\n"
-                    continue
-
                 except asyncio.CancelledError:
                      logger.debug(f"Stream generator main loop cancelled for {agent_run_id}")
                      terminate_stream = True
@@ -1076,26 +1055,24 @@ async def stream_agent_run(
                  yield f"data: {json.dumps({'type': 'status', 'status': 'error', 'message': f'Failed to start stream: {e}'})}\n\n"
         finally:
             terminate_stream = True
-            # Graceful shutdown order: cancel listener → close pubsub
-            if listener_task:
-                listener_task.cancel()
-                try:
-                    # Give the task a moment to handle cancellation before we close pubsub
-                    await asyncio.wait_for(listener_task, timeout=0.5)
-                except (asyncio.CancelledError, asyncio.TimeoutError):
-                    pass
-                except Exception as e:
-                    logger.debug(f"listener_task ended with: {e}")
-            
-            # Now close pubsub (this will cause any pending __anext__() calls to fail,
-            # but they should already be cancelled by listener_task.cancel() above)
+            # Graceful shutdown order: unsubscribe → close → cancel
             try:
                 if 'pubsub' in locals() and pubsub:
                     await pubsub.unsubscribe(response_channel, control_channel)
                     await pubsub.close()
             except Exception as e:
                 logger.debug(f"Error during pubsub cleanup for {agent_run_id}: {e}")
-            
+
+            if listener_task:
+                listener_task.cancel()
+                try:
+                    await listener_task  # Reap inner tasks & swallow their errors
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    logger.debug(f"listener_task ended with: {e}")
+            # Wait briefly for tasks to cancel
+            await asyncio.sleep(0.1)
             logger.debug(f"Streaming cleanup complete for agent run: {agent_run_id}")
 
     return StreamingResponse(stream_generator(agent_run_data), media_type="text/event-stream", headers={

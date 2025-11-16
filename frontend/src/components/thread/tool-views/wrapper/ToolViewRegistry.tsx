@@ -6,7 +6,6 @@ import { CommandToolView } from '../command-tool/CommandToolView';
 import { CheckCommandOutputToolView } from '../command-tool/CheckCommandOutputToolView';
 import { ExposePortToolView } from '../expose-port-tool/ExposePortToolView';
 import { FileOperationToolView } from '../file-operation/FileOperationToolView';
-import { FileEditToolView } from '../file-operation/FileEditToolView';
 import { StrReplaceToolView } from '../str-replace/StrReplaceToolView';
 import { WebCrawlToolView } from '../WebCrawlToolView';
 import { WebScrapeToolView } from '../web-scrape-tool/WebScrapeToolView';
@@ -72,7 +71,6 @@ import { createPresentationViewerToolContent, parsePresentationSlidePath } from 
 import { extractToolData } from '../utils';
 import { KbToolView } from '../KbToolView';
 import { ExpandMessageToolView } from '../expand-message-tool/ExpandMessageToolView';
-import { MalformedToolCallView } from '../MalformedToolCallView';
 
 
 export type ToolViewComponent = React.ComponentType<ToolViewProps>;
@@ -94,7 +92,7 @@ const defaultRegistry: ToolViewRegistryType = {
   'delete-file': FileOperationToolView,
   'full-file-rewrite': FileOperationToolView,
   'read-file': FileOperationToolView,
-  'edit-file': FileEditToolView,
+  'edit-file': FileOperationToolView,
 
   'parse-document': DocumentParserToolView,
 
@@ -237,10 +235,6 @@ const defaultRegistry: ToolViewRegistryType = {
   'monitor-call': MonitorCallToolView,
   'wait_for_call_completion': WaitForCallCompletionToolView,
   'wait-for-call-completion': WaitForCallCompletionToolView,
-
-  // System/Error tools
-  'malformed_tool_call': MalformedToolCallView,
-  'malformed-tool-call': MalformedToolCallView,
 };
 
 class ToolViewRegistry {

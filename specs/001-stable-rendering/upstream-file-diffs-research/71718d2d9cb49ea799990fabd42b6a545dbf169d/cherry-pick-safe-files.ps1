@@ -146,104 +146,65 @@ if ($DryRun) {
     exit 0
 }
 
-# Execute cherry-pick
-Write-Host "Starting cherry-pick of $($commitsToPickInOrder.Count) commits..."
+# Execute auto-merge for safe files
+Write-Host "Starting auto-merge of $($safeFilesToMerge.Count) safe files..."
+Write-Host "Strategy: Overwrite with production versions (no conflicts)"
 Write-Host ""
 
 $successCount = 0
-$conflictCount = 0
-$skipCount = 0
-$conflictedCommits = @()
+$failureCount = 0
+$failedFiles = @()
 
-foreach ($commit in $commitsToPickInOrder) {
-    Write-Host "Cherry-picking: $($commit.Hash) - $($commit.Message)"
-    
-    # Check if commit only touches manual review files
-    $touchesManualReviewFiles = $false
-    foreach ($file in $commit.Files) {
-        if ($file -in $manualReviewFiles) {
-            $touchesManualReviewFiles = $true
-            break
-        }
-    }
-    
-    if ($touchesManualReviewFiles) {
-        Write-Host "  ⚠️  SKIP: Commit touches manual review files"
-        $skipCount++
-        continue
-    }
-    
-    # Attempt cherry-pick
-    git cherry-pick $commit.Hash 2>&1 | Out-Null
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "  ✅ SUCCESS"
-        $successCount++
-    } else {
-        # Check if there's a conflict
-        $status = git status --porcelain
+foreach ($file in $safeFilesToMerge) {
+    try {
+        # Get file from production commit
+        $content = git show "${ProductionCommit}:$file" 2>$null
         
-        if ($status -match "^UU|^AA|^DD") {
-            Write-Host "  ⚠️  CONFLICT DETECTED"
-            $conflictCount++
-            $conflictedCommits += $commit
-            
-            if ($SkipConflicts) {
-                Write-Host "     Aborting cherry-pick and continuing..."
-                git cherry-pick --abort 2>&1 | Out-Null
-            } else {
-                Write-Host ""
-                Write-Host "CONFLICT RESOLUTION REQUIRED"
-                Write-Host "=============================="
-                Write-Host "Commit: $($commit.Hash)"
-                Write-Host "Message: $($commit.Message)"
-                Write-Host "Files in conflict:"
-                git diff --name-only --diff-filter=U | ForEach-Object { Write-Host "  - $_" }
-                Write-Host ""
-                Write-Host "Options:"
-                Write-Host "  1. Resolve conflicts manually, then run: git cherry-pick --continue"
-                Write-Host "  2. Skip this commit: git cherry-pick --skip"
-                Write-Host "  3. Abort and restart with -SkipConflicts flag"
-                Write-Host ""
-                Write-Host "Script paused. Resolve conflicts and press Enter to continue..."
-                Read-Host
-                
-                # Check if user resolved
-                $status = git status --porcelain
-                if ($status -match "^UU|^AA|^DD") {
-                    Write-Host "Conflicts still present. Aborting cherry-pick..."
-                    git cherry-pick --abort 2>&1 | Out-Null
-                } else {
-                    Write-Host "Conflicts resolved. Continuing..."
-                    $successCount++
-                }
-            }
-        } else {
-            Write-Host "  ❌ ERROR: Unknown issue"
-            git cherry-pick --abort 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  SKIP: $file (not found in production commit)"
+            $failureCount++
+            $failedFiles += $file
+            continue
         }
+        
+        # Create directory if needed (use -LiteralPath to avoid wildcard expansion)
+        $dir = Split-Path $file
+        if ($dir) {
+            # Use -LiteralPath to avoid wildcard expansion with brackets
+            if (-not (Test-Path -LiteralPath $dir)) {
+                New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            }
+        }
+        
+        # Write file content using -LiteralPath to avoid wildcard expansion
+        $content | Out-File -LiteralPath $file -Encoding UTF8 -Force
+        
+        Write-Host "  MERGED: $file"
+        $successCount++
+    }
+    catch {
+        Write-Host "  ERROR: $file - $_"
+        $failureCount++
+        $failedFiles += $file
     }
 }
 
 Write-Host ""
 Write-Host "=============================="
-Write-Host "Cherry-Pick Summary"
+Write-Host "Auto-Merge Summary"
 Write-Host "=============================="
-Write-Host "Successfully cherry-picked: $successCount commits"
-Write-Host "Conflicts encountered: $conflictCount commits"
-Write-Host "Skipped (manual review files): $skipCount commits"
+Write-Host "Successfully merged: $successCount files"
+Write-Host "Failed: $failureCount files"
 
-if ($conflictedCommits.Count -gt 0) {
+if ($failedFiles.Count -gt 0) {
     Write-Host ""
-    Write-Host "Conflicted commits:"
-    foreach ($commit in $conflictedCommits) {
-        Write-Host "  - $($commit.Hash): $($commit.Message)"
-    }
+    Write-Host "Failed files:"
+    $failedFiles | ForEach-Object { Write-Host "  - $_" }
 }
 
 Write-Host ""
 Write-Host "Next steps:"
-Write-Host "1. Review cherry-picked commits: git log --oneline -$successCount"
-Write-Host "2. Run tests to verify functionality"
-Write-Host "3. If conflicts remain, resolve them manually"
-Write-Host "4. Manually review and merge the 28 files marked as NEEDS MANUAL REVIEW"
+Write-Host "1. Review merged files: git status"
+Write-Host "2. Stage and commit: git add . && git commit -m 'auto-merge 381 safe files from production'"
+Write-Host "3. Run tests to verify functionality"
+Write-Host "4. Manually review and merge the 27 files marked as NEEDS MANUAL REVIEW"

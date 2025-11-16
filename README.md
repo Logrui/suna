@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # Kortix – Open Source Platform to Build, Manage and Train AI Agents
 
@@ -9,7 +9,7 @@
 Kortix is a comprehensive open source platform that empowers you to build, manage, and train sophisticated AI agents for any use case. Create powerful agents that act autonomously on your behalf, from general-purpose assistants to specialized automation tools.
 
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./license)
-[![Discord Follow](https://dcbadge.limes.pink/api/server/Py6pCBUUPw?style=flat)](https://discord.gg/Py6pCBUUPw)
+[![Discord Follow](https://dcbadge.limes.pink/api/server/Py6pCBUUPw?style=flat)](https://discord.gg/RvFhXUdZ9H)
 [![Twitter Follow](https://img.shields.io/twitter/follow/kortixai)](https://x.com/kortixai)
 [![GitHub Repo stars](https://img.shields.io/github/stars/kortix-ai/suna)](https://github.com/kortix-ai/suna)
 [![Issues](https://img.shields.io/github/issues/kortix-ai/suna)](https://github.com/kortix-ai/suna/labels/bug)
@@ -179,6 +179,6 @@ Kortix is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENS
 
 **Ready to build your first AI agent?** 
 
-[Get Started](./docs/SELF-HOSTING.md) • [Join Discord](https://discord.gg/Py6pCBUUPw) • [Follow on Twitter](https://x.com/kortix)
+[Get Started](./docs/SELF-HOSTING.md) • [Join Discord](https://discord.gg/RvFhXUdZ9H) • [Follow on Twitter](https://x.com/kortix)
 
 </div>

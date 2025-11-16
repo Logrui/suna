@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+﻿from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Union
 from enum import Enum
 
@@ -77,9 +77,6 @@ class Model:
     # NEW: Centralized model configuration
     config: Optional[ModelConfig] = None
     
-    # NEW: Fallback models for rate limiting and failures
-    fallback_models: List[str] = field(default_factory=list)
-    
     def __post_init__(self):        
         if ModelCapability.CHAT not in self.capabilities:
             self.capabilities.insert(0, ModelCapability.CHAT)
@@ -108,18 +105,9 @@ class Model:
     
     def get_litellm_params(self, **override_params) -> Dict[str, Any]:
         """Get complete LiteLLM parameters for this model, including all configuration."""
-        # Convert model ID format for litellm compatibility
-        model_id = self.id
-        
-        # litellm expects format like "lm_studio/model-name" or "ollama/model-name"
-        # Our internal format uses "lm_studio:model-name" or "ollama:model-name" 
-        # Convert the delimiter from colon to slash for litellm
-        if ":" in model_id:
-            model_id = model_id.replace(":", "/")
-        
         # Start with intelligent defaults
         params = {
-            "model": model_id,
+            "model": self.id,
             "num_retries": 5,
         }
         

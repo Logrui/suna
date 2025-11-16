@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useCallback } from 'react';
 import {
@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LoadingState } from '../shared/LoadingState';
 import { cn } from '@/lib/utils';
-import { getApiUrl } from '@/lib/get-api-url';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
 import { TipTapDocumentModal } from '@/components/thread/tiptap-document-modal';
 import { exportDocument, type ExportFormat } from '@/lib/utils/document-export';
@@ -72,7 +71,7 @@ export function DocsToolView({
         
         if (session?.access_token) {
           const response = await fetch(
-            `${getApiUrl()}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${data.sandbox_id}/files?path=${encodeURIComponent(doc.path)}`,
             {
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,

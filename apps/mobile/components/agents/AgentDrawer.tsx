@@ -1,4 +1,4 @@
-import { Icon } from '@/components/ui/icon';
+﻿import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { useLanguage } from '@/contexts';
@@ -89,7 +89,7 @@ export function AgentDrawer({
   
   // Get agents and models from context/API
   const agentContext = useAgent();
-  const { agents, selectedAgentId, selectedModelId, selectAgent, selectModel, isLoading } = agentContext;
+  const { agents, selectedAgentId, selectedModelId, selectAgent, selectModel, isLoading, loadAgents } = agentContext;
   
   // Debug: Log what we're getting from context
   React.useEffect(() => {
@@ -104,7 +104,7 @@ export function AgentDrawer({
   const { data: modelsData, isLoading: modelsLoading } = useAvailableModels();
   
   // Billing context for subscription checks
-  const { hasActiveSubscription, hasActiveTrial, subscriptionData } = useBillingContext();
+  const { hasActiveSubscription, subscriptionData } = useBillingContext();
   
   const models = modelsData?.models || [];
   const selectedAgent = agents.find(a => a.agent_id === selectedAgentId);
@@ -152,9 +152,9 @@ export function AgentDrawer({
   const canAccessModel = React.useCallback((model: Model) => {
     // If model doesn't require subscription, it's accessible
     if (!model.requires_subscription) return true;
-    // Otherwise, check if user has active subscription or trial
-    return hasActiveSubscription || hasActiveTrial;
-  }, [hasActiveSubscription, hasActiveTrial]);
+    // Otherwise, check if user has active subscription
+    return hasActiveSubscription;
+  }, [hasActiveSubscription]);
 
   // Handle visibility changes
   React.useEffect(() => {
@@ -164,6 +164,10 @@ export function AgentDrawer({
       
       // Ensure keyboard is dismissed when drawer opens
       Keyboard.dismiss();
+      
+      // Refetch agents when drawer opens to ensure fresh data
+      console.log('🔄 Refetching agents when drawer opens...');
+      loadAgents();
       
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       bottomSheetRef.current?.snapToIndex(0);
@@ -175,7 +179,7 @@ export function AgentDrawer({
       clearAgentSearch();
       clearModelSearch();
     }
-  }, [visible, clearAgentSearch, clearModelSearch]);
+  }, [visible, clearAgentSearch, clearModelSearch, loadAgents]);
 
   // Navigation functions
   const navigateToView = React.useCallback((view: ViewState) => {
@@ -555,12 +559,12 @@ export function AgentDrawer({
                     style={{ color: colorScheme === 'dark' ? 'rgba(248, 248, 248, 0.5)' : 'rgba(18, 18, 21, 0.5)' }}
                     className="text-xs font-roobert-medium ml-1.5 uppercase tracking-wide"
                   >
-                    {hasActiveSubscription || hasActiveTrial ? 'Premium Models' : 'Additional Models'}
+                    {hasActiveSubscription ? 'Premium Models' : 'Additional Models'}
                   </Text>
                 </View>
                 
                 {/* Show max 3 premium models if user doesn't have subscription */}
-                {(!hasActiveSubscription && !hasActiveTrial) ? (
+                {!hasActiveSubscription ? (
                   <>
                     <EntityList
                       entities={premiumModels.slice(0, 3)}

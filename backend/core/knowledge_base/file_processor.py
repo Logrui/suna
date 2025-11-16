@@ -1,4 +1,4 @@
-import os
+﻿import os
 import io
 import uuid
 import re
@@ -16,7 +16,7 @@ from core.services.llm import make_llm_api_call
 
 class FileProcessor:
     SUPPORTED_EXTENSIONS = {'.txt', '.pdf', '.docx'}
-    MAX_FILE_SIZE = 100 * 1024 * 1024 * 1024  # 100GB limit
+    MAX_FILE_SIZE = 50 * 1024 * 1024
     
     def __init__(self):
         self.db = DBConnection()
@@ -64,8 +64,7 @@ class FileProcessor:
         folder_id: str,
         file_content: bytes, 
         filename: str, 
-        mime_type: str,
-        skip_summary: bool = False
+        mime_type: str
     ) -> Dict[str, Any]:
         try:
             if len(file_content) > self.MAX_FILE_SIZE:
@@ -98,17 +97,14 @@ class FileProcessor:
                 s3_path, file_content, {"content-type": mime_type}
             )
             
-            # Extract content for summary (or skip if not needed)
-            if skip_summary:
-                summary = f"File: {filename}"
-            else:
-                content = self._extract_content(file_content, filename, mime_type)
-                if not content:
-                    # If no content could be extracted, create a basic file info summary
-                    content = f"File: {filename} ({len(file_content)} bytes, {mime_type})"
-                
-                # Generate LLM summary
-                summary = await self._generate_summary(content, filename)
+            # Extract content for summary
+            content = self._extract_content(file_content, filename, mime_type)
+            if not content:
+                # If no content could be extracted, create a basic file info summary
+                content = f"File: {filename} ({len(file_content)} bytes, {mime_type})"
+            
+            # Generate LLM summary
+            summary = await self._generate_summary(content, filename)
             
             # Save to database
             entry_data = {
@@ -129,8 +125,7 @@ class FileProcessor:
                 'success': True,
                 'entry_id': entry_id,
                 'filename': filename,
-                'summary_length': len(summary),
-                'summary_skipped': skip_summary
+                'summary_length': len(summary)
             }
             
         except Exception as e:
