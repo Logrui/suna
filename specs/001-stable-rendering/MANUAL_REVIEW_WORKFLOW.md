@@ -7,14 +7,15 @@
 
 ## Phase 1 Commits Reference
 
-| Commit Hash | Date | Branch | Subject | Priority |
-|-------------|------|--------|---------|----------|
-| `abadd6a6` | Nov 3, 2025 08:12 | upstream/PRODUCTION | fix string parsing task list bug, add graceful premature llm stoppage | 🔴 HIGH |
-| `8b6b16f5` | Oct 22, 2025 | upstream/PRODUCTION | fix: task list freezing issue - introduce buffer for 5 seconds | 🔴 HIGH |
-| `e56c2873` | Nov 3, 2025 | upstream/PRODUCTION | fix: don't save cancelled responses | 🟡 MEDIUM |
-| `26baa2ee` | Nov 6, 2025 | upstream/PRODUCTION | cleaning in progress (frontend cleanup) | 🟡 MEDIUM |
+| Commit Hash | Date & Time (UTC) | Branch | Subject | Priority |
+|-------------|-------------------|--------|---------|----------|
+| `abadd6a6` | 2025-11-03 15:12:46 +0800 | upstream/PRODUCTION | fix string parsing task list bug, add graceful premature llm stoppage | 🔴 HIGH |
+| `8b6b16f5` | 2025-10-22 00:05:54 +0530 | upstream/PRODUCTION | fix: task list freezing issue - introduce buffer for 5 seconds | 🔴 HIGH |
+| `e56c2873` | 2025-11-03 15:30:55 +0800 | upstream/PRODUCTION | fix (don't save cancelled responses) | 🟡 MEDIUM |
+| `26baa2ee` | 2025-11-06 16:14:52 +0800 | upstream/PRODUCTION | cleaning in progress (frontend cleanup) | 🟡 MEDIUM |
 
-**Branch Info**: All 4 commits from `upstream/PRODUCTION` (650 production-tested commits)
+**Branch Info**: All 4 commits from `upstream/PRODUCTION` (650 production-tested commits)  
+**Also in**: `upstream/native_tool_calling` (secondary branch)
 
 **Expected Impact**: 60-80% of streaming issues resolved
 
