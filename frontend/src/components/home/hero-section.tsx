@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { siteConfig } from '@/lib/home';
 import { AnimatedBg } from '@/components/ui/animated-bg';
 import { useIsMobile } from '@/hooks/utils';

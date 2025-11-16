@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, List, Any
 from core.services.supabase import DBConnection

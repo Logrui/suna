@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
     FileText, FileImage, FileCode, FileSpreadsheet, FileVideo,
     FileAudio, FileType, Database, Archive, File, ExternalLink,

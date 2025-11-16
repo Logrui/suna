@@ -1,4 +1,4 @@
-﻿from fastapi import HTTPException
+from fastapi import HTTPException
 from typing import Dict, Optional, List
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta

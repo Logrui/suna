@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useAllTriggers, type TriggerWithAgent } from '@/hooks/triggers/use-all-triggers';

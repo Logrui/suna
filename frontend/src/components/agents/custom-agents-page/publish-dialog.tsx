@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { Globe, Loader2, Plus, Trash2, User, Bot, Wrench } from 'lucide-react';

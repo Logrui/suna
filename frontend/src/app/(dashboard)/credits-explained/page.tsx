@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Zap, Clock, Sparkles, ShoppingCart, Info, Coins, Infinity, RefreshCw, Gift } from 'lucide-react';
 import {

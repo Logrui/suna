@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { DataTable, DataTableColumn } from '@/components/ui/data-table';

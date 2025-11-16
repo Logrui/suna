@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { SiteHeader } from '@/components/thread/thread-site-header';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
 import { ToolCallSidePanel } from '@/components/thread/tool-call-side-panel';

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { Cpu } from 'lucide-react';
 import { cn } from '@/lib/utils';

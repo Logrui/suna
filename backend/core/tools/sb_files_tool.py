@@ -1,4 +1,4 @@
-﻿from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
+from core.agentpress.tool import ToolResult, openapi_schema, tool_metadata
 from core.sandbox.tool_base import SandboxToolsBase
 from core.utils.files_utils import should_exclude_file, clean_path
 from core.agentpress.thread_manager import ThreadManager

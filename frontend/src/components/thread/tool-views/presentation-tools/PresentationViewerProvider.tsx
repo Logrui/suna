@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext } from 'react';
 import { usePresentationViewer } from '@/hooks/files';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
 

@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from core.utils.config import config

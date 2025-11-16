@@ -1,4 +1,4 @@
-﻿import sentry
+import sentry
 from fastapi import HTTPException, Request, Header
 from typing import Optional
 import jwt

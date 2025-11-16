@@ -1,4 +1,4 @@
-﻿import { extractToolData, normalizeContentToString } from '../utils';
+import { extractToolData, normalizeContentToString } from '../utils';
 
 export interface SeeImageData {
   filePath: string | null;

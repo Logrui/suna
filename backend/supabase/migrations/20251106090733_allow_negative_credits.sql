@@ -1,4 +1,4 @@
-﻿-- Allow negative credit balances (but controlled)
+-- Allow negative credit balances (but controlled)
 -- Users can only go slightly negative from a single request
 -- Once negative, they cannot start new requests until they add credits
 

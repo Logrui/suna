@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useCallback, useEffect } from 'react';
 import type { Editor as TiptapEditor } from '@tiptap/react';

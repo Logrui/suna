@@ -1,4 +1,4 @@
-﻿"""
+"""
 Auto-discovery system for tools.
 
 Uses Python's class inheritance to discover all Tool subclasses and extract their metadata.

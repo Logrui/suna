@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Sparkles, Wand2, Loader2 } from 'lucide-react';

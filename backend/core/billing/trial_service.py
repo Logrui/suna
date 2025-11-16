@@ -1,4 +1,4 @@
-﻿from fastapi import HTTPException
+from fastapi import HTTPException
 from typing import Dict, Optional
 from datetime import datetime, timezone
 import stripe

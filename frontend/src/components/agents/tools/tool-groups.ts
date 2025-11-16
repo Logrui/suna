@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tool Groups Types and Utilities
  * 
  * FULLY API-DRIVEN - NO STATIC DATA

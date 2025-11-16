@@ -1,4 +1,4 @@
-﻿"""
+"""
 Centralized error processing for AgentPress.
 
 This module provides a unified way to handle, format, and propagate errors

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Textarea } from "./textarea";
 import { Input } from "./input";
 import { cn, truncateString } from "@/lib/utils";

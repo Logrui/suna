@@ -1,4 +1,4 @@
-﻿import { Metadata } from 'next';
+import { Metadata } from 'next';
 import { getThread } from '@/lib/api/threads';
 import { getProject } from '@/lib/api/projects';
 

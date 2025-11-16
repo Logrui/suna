@@ -1,4 +1,4 @@
-﻿"""
+"""
 Unified agent loading and transformation.
 
 This module consolidates all agent data loading logic into one place,

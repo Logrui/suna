@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { type FC, useState, useEffect } from 'react'
 import { Button } from './button'

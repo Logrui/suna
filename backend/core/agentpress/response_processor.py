@@ -1,4 +1,4 @@
-﻿"""
+"""
 Response processing module for AgentPress.
 
 This module handles the processing of LLM responses, including:

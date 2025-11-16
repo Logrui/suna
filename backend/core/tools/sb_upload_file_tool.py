@@ -1,4 +1,4 @@
-﻿import os
+import os
 import uuid
 import mimetypes
 import structlog

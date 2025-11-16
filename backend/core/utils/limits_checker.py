@@ -1,4 +1,4 @@
-﻿from typing import Dict, Any
+from typing import Dict, Any
 from datetime import datetime, timezone, timedelta
 from core.utils.logger import logger
 from core.utils.config import config

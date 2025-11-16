@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { UnifiedMessage } from '@/components/thread/types';
 
 export interface PlaybackState {

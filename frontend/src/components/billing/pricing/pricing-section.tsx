@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import type { PricingTier } from '@/lib/home';
 import { siteConfig } from '@/lib/home';

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { Bot, FileEdit, Globe, Hammer, LayoutTemplate, Wrench, MessageSquare } from 'lucide-react';

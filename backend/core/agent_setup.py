@@ -1,4 +1,4 @@
-﻿"""
+"""
 Agent setup from natural language description.
 """
 import json

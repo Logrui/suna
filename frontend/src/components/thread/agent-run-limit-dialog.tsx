@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useMemo } from 'react';
 import { AlertTriangle, ExternalLink, X, Square, Loader2, Zap, Rocket } from 'lucide-react';

@@ -1,4 +1,4 @@
-﻿import { MetadataRoute } from 'next';
+import { MetadataRoute } from 'next';
 import { siteConfig } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {

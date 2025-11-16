@@ -1,4 +1,4 @@
-﻿"""
+"""
 Simplified conversation thread management system for AgentPress.
 """
 

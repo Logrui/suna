@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { extractToolData } from '../utils';
 import { useFileContentQuery, useDirectoryQuery } from '@/hooks/files/use-file-queries';
 import { Editor } from '@/components/agents/docs-agent/editor';

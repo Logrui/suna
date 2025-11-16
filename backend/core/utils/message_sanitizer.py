@@ -1,4 +1,4 @@
-﻿"""
+"""
 Message Sanitizer - Converts raw database messages to frontend-ready format.
 
 This module handles parsing of different message formats (XML tool calls, native function calls, etc.)

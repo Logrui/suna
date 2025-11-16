@@ -1,4 +1,4 @@
-﻿"""
+"""
 XML Tool Call Parser Module
 
 This module provides a reliable XML tool call parsing system that supports

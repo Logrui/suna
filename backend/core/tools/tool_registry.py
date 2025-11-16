@@ -1,4 +1,4 @@
-﻿"""
+"""
 Centralized Tool Registry - Single Source of Truth for Tool Names and Classes
 
 This registry maps tool names (used in configs) to their Python class names.

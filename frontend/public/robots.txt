@@ -1,4 +1,4 @@
-﻿# Kortix Robots.txt
+# Kortix Robots.txt
 User-agent: *
 Allow: /
 

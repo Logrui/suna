@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Zap, Server, Globe, Clock, Sparkles, ShoppingCart, Info } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';

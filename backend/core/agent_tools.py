@@ -1,4 +1,4 @@
-﻿import json
+import json
 import base64
 from datetime import datetime
 from typing import Optional, Dict, Any

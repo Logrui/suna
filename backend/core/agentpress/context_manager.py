@@ -1,4 +1,4 @@
-﻿"""
+"""
 Context Management for AgentPress Threads.
 
 This module handles token counting and thread summarization to prevent

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { OnboardingStep } from '@/hooks/onboarding';
 import { CEOIntroStep } from './steps/ceo-intro-step';

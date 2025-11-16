@@ -1,4 +1,4 @@
-﻿from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 

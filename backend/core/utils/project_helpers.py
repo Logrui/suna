@@ -1,4 +1,4 @@
-﻿"""Project-related helper functions."""
+"""Project-related helper functions."""
 import json
 import traceback
 from core.services.supabase import DBConnection

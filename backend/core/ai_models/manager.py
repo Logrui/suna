@@ -1,4 +1,4 @@
-﻿from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any, Tuple
 from .registry import registry
 from .ai_models import Model, ModelCapability
 from core.utils.logger import logger

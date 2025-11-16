@@ -1,4 +1,4 @@
-﻿export const CREDITS_PER_DOLLAR = 100;
+export const CREDITS_PER_DOLLAR = 100;
 
 export function dollarsToCredits(dollars: number): number {
   return Math.round(dollars * CREDITS_PER_DOLLAR);

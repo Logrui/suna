@@ -1,4 +1,4 @@
-﻿"""
+"""
 Icon and color generation utilities for agents and projects.
 """
 import json

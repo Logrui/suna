@@ -1,4 +1,4 @@
-﻿from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional
 
 from .template_service import AgentTemplate, MCPRequirementValue, ConfigType, ProfileId, QualifiedName
 from .installation_service import TemplateInstallationError

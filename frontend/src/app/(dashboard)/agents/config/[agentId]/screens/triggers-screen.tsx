@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useMemo } from 'react';
 import { Zap, Search, Plus, Play, Pause, Settings, Trash2, Clock, PlugZap } from 'lucide-react';

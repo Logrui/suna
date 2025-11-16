@@ -1,4 +1,4 @@
-﻿export const siteConfig = {
+export const siteConfig = {
   name: 'Kortix',
   url: 'https://kortix.com',
   description: 'Open Source Generalist AI Worker. Kortix is a fully open source AI assistant that helps you accomplish real-world tasks with ease through natural conversation.',

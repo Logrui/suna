@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { ToolViewProps } from '../types';
 import { GenericToolView } from '../GenericToolView';
 import { BrowserToolView } from '../BrowserToolView';

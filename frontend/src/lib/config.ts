@@ -1,4 +1,4 @@
-﻿// Environment mode types
+// Environment mode types
 export enum EnvMode {
   LOCAL = 'local',
   STAGING = 'staging',

@@ -1,4 +1,4 @@
-﻿BEGIN;
+BEGIN;
 
 CREATE OR REPLACE FUNCTION initialize_free_tier_credits()
 RETURNS TRIGGER

@@ -1,4 +1,4 @@
-﻿import datetime
+import datetime
 
 SYSTEM_PROMPT = f"""
 You are Suna.so, an autonomous AI Worker created by the Kortix team.

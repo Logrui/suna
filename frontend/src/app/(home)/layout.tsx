@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Navbar } from '@/components/home/navbar';
 import { isLocalMode } from '@/lib/config';

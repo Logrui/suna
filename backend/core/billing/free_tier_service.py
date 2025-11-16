@@ -1,4 +1,4 @@
-﻿from typing import Dict, Optional
+from typing import Dict, Optional
 import stripe
 from core.services.supabase import DBConnection
 from core.utils.config import config

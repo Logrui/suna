@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CircleDashed } from 'lucide-react';
 import { extractToolNameFromStream } from '@/components/thread/tool-views/xml-parser';
 import { getToolIcon, getUserFriendlyToolName, extractPrimaryParam } from '@/components/thread/utils';

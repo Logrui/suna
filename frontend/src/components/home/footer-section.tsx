@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { FlickeringGrid } from '@/components/ui/flickering-grid';
 import { useMediaQuery } from '@/hooks/utils';

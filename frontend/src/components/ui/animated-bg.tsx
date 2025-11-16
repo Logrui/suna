@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import type { TargetAndTransition } from 'framer-motion';

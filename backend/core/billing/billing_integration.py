@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 from typing import Optional, Dict, Tuple, List
 from core.billing.api import calculate_token_cost
 from core.billing.credit_manager import credit_manager

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';

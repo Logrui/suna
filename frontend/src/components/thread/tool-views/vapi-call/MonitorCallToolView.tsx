@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Loader2, User, PhoneCall, PhoneMissed, CheckCircle2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

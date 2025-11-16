@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { NavMenu } from '@/components/home/nav-menu';
 import { ThemeToggle } from '@/components/home/theme-toggle';

@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Play,

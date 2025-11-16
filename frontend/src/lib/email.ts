@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Email utility functions
  * Shared functions for sending emails from server-side code
  */

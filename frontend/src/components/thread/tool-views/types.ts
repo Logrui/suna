@@ -1,4 +1,4 @@
-﻿import { Project } from '@/lib/api/projects';
+import { Project } from '@/lib/api/projects';
 
 export interface ToolViewProps {
   assistantContent?: string;

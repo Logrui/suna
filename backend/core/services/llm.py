@@ -1,4 +1,4 @@
-﻿"""
+"""
 LLM API interface for making calls to various language models.
 
 This module provides a unified interface for making API calls to different LLM providers

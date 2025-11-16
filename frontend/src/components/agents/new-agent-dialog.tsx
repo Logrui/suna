@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Loader2, Plus, FileJson, Code } from 'lucide-react';

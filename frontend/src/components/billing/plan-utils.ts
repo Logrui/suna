@@ -1,4 +1,4 @@
-﻿import { siteConfig } from '@/lib/home';
+import { siteConfig } from '@/lib/home';
 
 /**
  * Helper function to get plan name - uses tier_key to match cloudPricingItems tier name

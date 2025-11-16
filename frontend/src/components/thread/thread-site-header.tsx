@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Button } from "@/components/ui/button"
 import { FolderOpen, ExternalLink, Monitor, Copy, Check } from "lucide-react"

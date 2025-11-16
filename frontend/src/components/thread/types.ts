@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { Project } from '@/lib/api/projects';
 import { Message as BaseApiMessageType } from '@/lib/api/threads';
 

@@ -1,4 +1,4 @@
-﻿ALTER TABLE credit_accounts
+ALTER TABLE credit_accounts
 ADD COLUMN IF NOT EXISTS scheduled_tier_change TEXT,
 ADD COLUMN IF NOT EXISTS scheduled_tier_change_date TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS scheduled_price_id TEXT;

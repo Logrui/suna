@@ -1,4 +1,4 @@
-﻿import { backendApi } from "@/lib/api-client";
+import { backendApi } from "@/lib/api-client";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
