@@ -274,7 +274,7 @@ Frontend requires these in `frontend/.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=http://supabase-kong:8000
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 NEXT_PUBLIC_BACKEND_URL=http://backend:8000/api
-NEXT_PUBLIC_URL=http://localhost:3000
+NEXT_PUBLIC_URL=http://localhost:9990
 NEXT_PUBLIC_ENV_MODE=LOCAL
 ```
 
@@ -374,7 +374,7 @@ See `.docs/sandbox_issues/BASEJUMP_SCHEMA_EXPOSURE_FIX_v2.md` for details.
 ### Multi-Domain Access (Cloudflare Tunnel)
 
 This fork supports simultaneous access via:
-- `http://localhost:3000` (local development)
+- `http://localhost:9990` (local development)
 - `https://kortix.syhc.dev` (Cloudflare Tunnel)
 
 **Implementation:** Three-layer dynamic URL detection
@@ -383,13 +383,13 @@ This fork supports simultaneous access via:
    ```typescript
    const supabaseUrl = typeof window !== 'undefined'
      ? window.location.origin
-     : 'http://localhost:3000'
+     : 'http://localhost:9990'
    ```
 
 2. **Server Client** (`frontend/src/lib/supabase/server.ts`):
    ```typescript
    const protocol = headers().get('x-forwarded-proto') || 'http'
-   const host = headers().get('host') || 'localhost:3000'
+   const host = headers().get('host') || 'localhost:9990'
    const supabaseUrl = `${protocol}://${host}`
    ```
 

@@ -515,8 +515,8 @@ async def admin_install_suna_for_user(
         )
 
 @router.get("/env-vars")
-def get_env_vars() -> Dict[str, str]:
-    """Get environment variables (local mode only)."""
+async def get_env_vars(admin: dict = Depends(require_admin)) -> Dict[str, str]:
+    """Get environment variables (local mode only, admin only)."""
     if config.ENV_MODE != EnvMode.LOCAL:
         raise HTTPException(status_code=403, detail="Env vars management only available in local mode")
     
@@ -532,8 +532,8 @@ def get_env_vars() -> Dict[str, str]:
         raise HTTPException(status_code=500, detail=f"Failed to get env variables: {e}")
 
 @router.post("/env-vars")
-def save_env_vars(request: Dict[str, str]) -> Dict[str, str]:
-    """Save environment variables (local mode only)."""
+async def save_env_vars(request: Dict[str, str], admin: dict = Depends(require_admin)) -> Dict[str, str]:
+    """Save environment variables (local mode only, admin only)."""
     if config.ENV_MODE != EnvMode.LOCAL:
         raise HTTPException(status_code=403, detail="Env vars management only available in local mode")
 

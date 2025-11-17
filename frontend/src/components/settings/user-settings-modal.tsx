@@ -51,6 +51,7 @@ import {
     useScheduledChanges,
     billingKeys
 } from '@/hooks/billing';
+import { useAdminRole } from '@/hooks/admin/use-admin-role';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -95,6 +96,7 @@ export function UserSettingsModal({
     const [activeTab, setActiveTab] = useState<TabId>(defaultTab);
     const [showPlanModal, setShowPlanModal] = useState(false);
     const isLocal = isLocalMode();
+    const { data: adminRole } = useAdminRole();
     const tabs: Tab[] = [
         { id: 'general', label: 'General', icon: Settings },
         { id: 'plan', label: 'Plan', icon: Zap },
@@ -102,7 +104,7 @@ export function UserSettingsModal({
         { id: 'usage', label: 'Usage', icon: TrendingDown },
         { id: 'knowledge-base', label: 'Knowledge Base', icon: FileText },
         { id: 'integrations', label: 'Integrations', icon: Plug },
-        ...(isLocal ? [{ id: 'env-manager' as TabId, label: 'Env Manager', icon: KeyRound }] : []),
+        ...(isLocal && adminRole?.isAdmin ? [{ id: 'env-manager' as TabId, label: 'Env Manager', icon: KeyRound }] : []),
     ];
     
     useEffect(() => {

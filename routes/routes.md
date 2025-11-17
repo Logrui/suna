@@ -531,16 +531,16 @@ To verify routes are working:
 
 ```bash
 # Frontend development server
-npm run dev  # http://localhost:3000
+npm run dev  # http://localhost:9990
 
 # Test authentication flow
-curl http://localhost:3000/auth
+curl http://localhost:9990/auth
 
 # Test dashboard (requires valid session)
-curl -b "auth_token=..." http://localhost:3000/dashboard
+curl -b "auth_token=..." http://localhost:9990/dashboard
 
 # Test API routes
-curl http://localhost:3000/api/og/template?title=Test
+curl http://localhost:9990/api/og/template?title=Test
 ```
 
 ---

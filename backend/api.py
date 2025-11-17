@@ -159,19 +159,19 @@ allow_origin_regex = None
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
-    allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://localhost:9990")
     allowed_origins.append("http://127.0.0.1:3000")
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.suna.so")
-    allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://localhost:9990")
     # Allow Vercel preview deployments for both legacy and new project names
     allow_origin_regex = r"https://(suna|kortixcom)-.*-prjcts\.vercel\.app"
 
 # Add localhost for production mode local testing (for master password login)
 if config.ENV_MODE == EnvMode.PRODUCTION:
-    allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://localhost:9990")
     allowed_origins.append("http://127.0.0.1:3000")
 
 # Add Cloudflare Tunnel domains for self-hosted deployments

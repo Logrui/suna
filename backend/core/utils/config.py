@@ -482,7 +482,7 @@ class Configuration:
         Returns:
         - Production: 'https://kortix.com' (or FRONTEND_URL_ENV if set)
         - Staging: 'https://staging.kortix.com' (or FRONTEND_URL_ENV if set)
-        - Local: FRONTEND_URL_ENV or 'http://localhost:3000'
+        - Local: FRONTEND_URL_ENV or 'http://localhost:9990'
         """
         # Check for environment variable override first
         if self.FRONTEND_URL_ENV:
@@ -495,7 +495,7 @@ class Configuration:
             return 'https://staging.kortix.com'
         else:
             # Local mode
-            return 'http://localhost:3000'
+            return 'http://localhost:9990'
     
     def _generate_admin_api_key(self) -> str:
         """Generate a secure admin API key for Kortix administrative functions."""

@@ -69,6 +69,25 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
   }, [activeSlashCommand]);
 
   /**
+   * Handle slash command selection from autocomplete
+   */
+  const handleSlashCommandSelect = useCallback((command: any) => {
+    const newValue = '/' + command.name + ' ';
+    setLocalValue(newValue);
+    setShowSlashCommands(false);
+    setSlashCommandFilter('');
+    setActiveSlashCommand(command); // Store the command for later injection
+    
+    // Notify parent in controlled mode
+    if (isControlled && controlledOnChange) {
+      controlledOnChange(newValue);
+    }
+    
+    // Focus textarea
+    textareaRef.current?.focus();
+  }, [setLocalValue, isControlled, controlledOnChange, textareaRef]);
+
+  /**
    * Handle keyboard navigation in slash commands autocomplete
    */
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -89,11 +108,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
         // Select the highlighted command
         const selectedCommand = filteredSlashCommands[selectedCommandIndex];
         if (selectedCommand) {
-          setLocalValue('/' + selectedCommand.name + ' ');
-          setShowSlashCommands(false);
-          setSlashCommandFilter('');
-          setActiveSlashCommand(selectedCommand); // Store command for prompt injection
-          textareaRef.current?.focus();
+          handleSlashCommandSelect(selectedCommand);
         }
         return;
       } else if (e.key === 'Escape') {
@@ -103,26 +118,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
         return;
       }
     }
-  }, [showSlashCommands, selectedCommandIndex, filteredSlashCommands, setLocalValue, textareaRef]);
-
-  /**
-   * Handle slash command selection from autocomplete
-   */
-  const handleSlashCommandSelect = useCallback((command: any) => {
-    const newValue = '/' + command.name + ' ';
-    setLocalValue(newValue);
-    setShowSlashCommands(false);
-    setSlashCommandFilter('');
-    setActiveSlashCommand(command); // Store the command for later injection
-    
-    // Notify parent in controlled mode
-    if (isControlled && controlledOnChange) {
-      controlledOnChange(newValue);
-    }
-    
-    // Focus textarea
-    textareaRef.current?.focus();
-  }, [setLocalValue, isControlled, controlledOnChange, textareaRef]);
+  }, [showSlashCommands, selectedCommandIndex, filteredSlashCommands, handleSlashCommandSelect]);
 
   /**
    * Handle closing slash commands autocomplete
@@ -184,10 +180,13 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
           overflowWrap: 'break-word',
         }}
       >
+<<<<<<< HEAD
         <span className="bg-primary/10 text-primary rounded px-1 font-medium">
+=======
+        <span className="bg-primary/20 text-transparent rounded px-1 font-medium">
+>>>>>>> ed298e23 (fixed slash commands styling and gate local env manager to admin accounts)
           /{activeSlashCommand.name}
         </span>
-        <span className="opacity-0">{value.slice(('/' + activeSlashCommand.name).length)}</span>
       </div>
     );
   }, [activeSlashCommand]);

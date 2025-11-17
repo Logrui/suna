@@ -7,7 +7,7 @@ export function createClient() {
   // This ensures:
   // 1. OAuth flows use same origin (no HTTPS auto-upgrade issues)
   // 2. All requests route through Kong via Next.js (handles protocol translation)
-  // 3. Works on both localhost:3000 and https://kortix.syhc.dev
+  // 3. Works on both localhost:9990 and https://kortix.syhc.dev
   // 4. Avoids Kong's self-signed certificate validation errors
   //
   // NOTE: WebSocket connections for Realtime CANNOT be proxied through Next.js rewrites.

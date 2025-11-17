@@ -36,4 +36,4 @@ npm run dev
 ```
 
 
-Access the main app via `http://localhost:3000`
+Access the main app via `http://localhost:9990`

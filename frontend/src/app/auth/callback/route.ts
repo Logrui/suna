@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('returnUrl') || searchParams.get('redirect') || '/dashboard'
   
   // Use configured URL instead of parsed origin to avoid 0.0.0.0 issues in self-hosted environments
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:9990'
   const error = searchParams.get('error')
   const errorDescription = searchParams.get('error_description')
 

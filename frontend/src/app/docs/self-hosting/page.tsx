@@ -342,8 +342,8 @@ docker compose down`
         <p className="text-lg mb-4">Once all services are running, open your browser and go to:</p>
         <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
           <p className="text-center font-mono text-lg">
-            <a href="http://localhost:3000" className="text-green-600 dark:text-green-400 hover:underline">
-              http://localhost:3000
+            <a href="http://localhost:9990" className="text-green-600 dark:text-green-400 hover:underline">
+              http://localhost:9990
             </a>
           </p>
         </div>

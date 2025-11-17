@@ -60,8 +60,8 @@ export async function middleware(request: NextRequest) {
   });
 
   // Use the request host to determine Supabase URL
-  // This allows the app to work from both localhost:3000 and kortix.syhc.dev
-  const host = request.headers.get('host') || 'localhost:3000'
+  // This allows the app to work from both localhost:9990 and kortix.syhc.dev
+  const host = request.headers.get('host') || 'localhost:9990'
   const protocol = request.headers.get('x-forwarded-proto') || 'http'
   const supabaseUrl = `${protocol}://${host}`
 

@@ -89,7 +89,7 @@ async def master_password_login(request: MasterLoginRequest):
                 'type': 'magiclink',
                 'email': request.email,
                 'options': {
-                    'redirect_to': 'http://localhost:3000/auth/callback?redirect=/dashboard'
+                    'redirect_to': 'http://localhost:9990/auth/callback?redirect=/dashboard'
                 }
             })
             
