@@ -78,8 +78,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const [filePathList, setFilePathList] = useState<string[] | undefined>(
     undefined,
   );
-  const debugMode = useState(false)[0];
-  const setDebugMode = useState(false)[1];
+  const [debugMode, setDebugMode] = useState(false);
   const [initialPanelOpenAttempted, setInitialPanelOpenAttempted] =
     useState(false);
   // Use Zustand store for agent selection persistence - skip in shared mode

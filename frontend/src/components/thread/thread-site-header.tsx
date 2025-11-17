@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button"
-import { FolderOpen, ExternalLink, Monitor, Copy, Check } from "lucide-react"
+import { FolderOpen, ExternalLink, Monitor, Copy, Check, Bug, PanelRight } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -212,6 +212,43 @@ export function SiteHeader({
                 <span>Share</span>
               </Button>
             )}
+
+            {/* Debug Mode Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('debug', 'true');
+                    window.location.href = url.toString();
+                  }}
+                  className="h-9 w-9 cursor-pointer"
+                >
+                  <Bug className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side={isMobile ? "bottom" : "bottom"}>
+                <p>Debug Mode</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Toggle Debug Side Panel Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 cursor-pointer"
+                >
+                  <PanelRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side={isMobile ? "bottom" : "bottom"}>
+                <p>Toggle Debug Panel</p>
+              </TooltipContent>
+            </Tooltip>
 
             <Tooltip>
               <TooltipTrigger asChild>

@@ -1,12 +1,34 @@
-Codemap title: Suna Legacy Workflow & Playbook System (Pre–Oct 2025, suna-main)
-Codemap ID: 'Suna_Legacy_Workflow_&_Playbook_System_(Pre–Oct_2025,_suna-main)_20251113_180751'
-Codemap description: This codemap documents the legacy workflow and playbook system in suna-main, covering database schema (agent_workflows table), backend CRUD operations (workflow_tool.py and triggers/api.py), workflow execution (execution_service.py), LLM prompt formatting (triggers/utils.py), versioning integration (sync to agent_versions.config), and frontend UI components for creating and executing workflows/playbooks. Key entry points: workflow creation [2c], API execution endpoint [3e], WorkflowExecutor [4c], playbook UI [7c].
+# Suna Legacy Workflow & Playbook System (Pre–Oct 2025, suna-main)
 
-Trace ID: 1
-Title: Database Schema: agent_workflows Table & Migration Evolution
-Description: Database layer: Shows the evolution of the workflow schema from complex execution tables to simplified agent_workflows with JSON steps column.
+**Codemap ID:** `Suna_Legacy_Workflow_&_Playbook_System_(Pre–Oct_2025,_suna-main)_20251113_180751`
 
-Trace text diagram:
+## Overview
+
+This codemap documents the legacy workflow and playbook system in `suna-main`, covering:
+
+- **Database Schema:** `agent_workflows` table with JSONB steps
+- **Backend CRUD:** `workflow_tool.py` and `triggers/api.py` operations
+- **Workflow Execution:** `execution_service.py` orchestration
+- **LLM Formatting:** `triggers/utils.py` prompt generation
+- **Versioning:** Sync to `agent_versions.config`
+- **Frontend UI:** Components for creating and executing workflows/playbooks
+
+### Key Entry Points
+
+- Workflow creation: [2c]
+- API execution endpoint: [3e]
+- WorkflowExecutor: [4c]
+- Playbook UI: [7c]
+
+---
+
+## Trace 1: Database Schema & Migration Evolution
+
+**Description:** Database layer showing the evolution of the workflow schema from complex execution tables to simplified `agent_workflows` with JSON steps column.
+
+### Schema Evolution Diagram
+
+```
 Database Schema Evolution (Migrations)
 ├── Initial Schema (20250705161610)
 │   ├── CREATE agent_workflows table <-- 1a
@@ -24,37 +46,28 @@ Database Schema Evolution (Migrations)
 └── Versioning Integration (20250814184554)
     └── CREATE sync function <-- 1f
         └── update_version_config() body <-- 20250814184554_add_workflows_to_config.sql:12
+```
 
-Location ID: 1a
-Title: agent_workflows table creation
-Description: Initial table with agent_id, name, description, status, trigger_phrase, is_default
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\supabase\migrations\20250705161610_agent_workflows.sql:28
-Location ID: 1b
-Title: workflow_steps table (later removed)
-Description: Original normalized steps table with step_order, type, config, conditions
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\supabase\migrations\20250705161610_agent_workflows.sql:41
-Location ID: 1c
-Title: Add steps JSONB column
-Description: Migration to denormalize steps into a flexible JSON field
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\supabase\migrations\20250708034613_add_steps_to_workflows.sql:4
-Location ID: 1d
-Title: Migrate existing steps to JSON
-Description: Data migration from workflow_steps table to agent_workflows.steps JSONB
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\supabase\migrations\20250708034613_add_steps_to_workflows.sql:9
-Location ID: 1e
-Title: Clean up old execution tables
-Description: Remove workflow_step_executions, workflow_executions, workflow_steps tables
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\supabase\migrations\20250726180605_remove_old_workflow_sys.sql:8
-Location ID: 1f
-Title: Version config sync function
-Description: Migration to sync workflows into agent_versions.config for versioning
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\supabase\migrations\20250814184554_add_workflows_to_config.sql:3
+### Location Details
 
-Trace ID: 2
-Title: Backend Workflow Tool: create_workflow in Agent Builder
-Description: Backend agent-builder tool: Shows how agents create workflows using the workflow_tool, including playbook structure creation and version sync.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **1a** | `agent_workflows` table creation | Initial table with `agent_id`, `name`, `description`, `status`, `trigger_phrase`, `is_default` | `d:\Homelab\suna-main\suna\backend\supabase\migrations\20250705161610_agent_workflows.sql:28` |
+| **1b** | `workflow_steps` table (later removed) | Original normalized steps table with `step_order`, `type`, `config`, `conditions` | `d:\Homelab\suna-main\suna\backend\supabase\migrations\20250705161610_agent_workflows.sql:41` |
+| **1c** | Add `steps` JSONB column | Migration to denormalize steps into a flexible JSON field | `d:\Homelab\suna-main\suna\backend\supabase\migrations\20250708034613_add_steps_to_workflows.sql:4` |
+| **1d** | Migrate existing steps to JSON | Data migration from `workflow_steps` table to `agent_workflows.steps` JSONB | `d:\Homelab\suna-main\suna\backend\supabase\migrations\20250708034613_add_steps_to_workflows.sql:9` |
+| **1e** | Clean up old execution tables | Remove `workflow_step_executions`, `workflow_executions`, `workflow_steps` tables | `d:\Homelab\suna-main\suna\backend\supabase\migrations\20250726180605_remove_old_workflow_sys.sql:8` |
+| **1f** | Version config sync function | Migration to sync workflows into `agent_versions.config` for versioning | `d:\Homelab\suna-main\suna\backend\supabase\migrations\20250814184554_add_workflows_to_config.sql:3` |
 
-Trace text diagram:
+---
+
+## Trace 2: Backend Workflow Tool - `create_workflow` in Agent Builder
+
+**Description:** Backend agent-builder tool showing how agents create workflows using `workflow_tool`, including playbook structure creation and version sync.
+
+### Execution Diagram
+
+```
 Backend Workflow Tool (workflow_tool.py)
 └── Agent calls create_workflow() <-- 2a
     ├── Build playbook step structure
@@ -70,33 +83,27 @@ Backend Workflow Tool (workflow_tool.py)
     │       ├── config['workflows'] = workflows <-- 2e
     │       └── Update agent_versions table <-- workflow_tool.py:52
     └── Return success response with workflow ID <-- workflow_tool.py:255
+```
 
-Location ID: 2a
-Title: create_workflow method signature
-Description: Agent-builder tool method for creating workflows/playbooks
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:194
-Location ID: 2b
-Title: Construct playbook step structure
-Description: Creates the Execute Workflow Template step with config.playbook containing template and variables
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:207
-Location ID: 2c
-Title: Insert workflow into database
-Description: Persists workflow with steps JSON to agent_workflows table
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:248
-Location ID: 2d
-Title: Sync to version config
-Description: Updates agent_versions.config with the new workflow
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:252
-Location ID: 2e
-Title: Set workflows in config
-Description: Adds workflows array to agent version config for runtime access
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:49
+### Location Details
 
-Trace ID: 3
-Title: Backend API: workflows_router CRUD Endpoints
-Description: Backend REST API: Exposes workflow CRUD operations via /triggers/workflows endpoints for frontend integration.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **2a** | `create_workflow` method signature | Agent-builder tool method for creating workflows/playbooks | `d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:194` |
+| **2b** | Construct playbook step structure | Creates the Execute Workflow Template step with `config.playbook` containing template and variables | `d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:207` |
+| **2c** | Insert workflow into database | Persists workflow with steps JSON to `agent_workflows` table | `d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:248` |
+| **2d** | Sync to version config | Updates `agent_versions.config` with the new workflow | `d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:252` |
+| **2e** | Set workflows in config | Adds workflows array to agent version config for runtime access | `d:\Homelab\suna-main\suna\backend\core\tools\agent_builder_tools\workflow_tool.py:49` |
 
-Trace text diagram:
+---
+
+## Trace 3: Backend API - `workflows_router` CRUD Endpoints
+
+**Description:** Backend REST API exposing workflow CRUD operations via `/triggers/workflows` endpoints for frontend integration.
+
+### Execution Diagram
+
+```
 Backend API: workflows_router CRUD Endpoints
 ├── FastAPI Application
 │   └── /triggers/workflows router <-- 3a
@@ -116,37 +123,28 @@ Backend API: workflows_router CRUD Endpoints
 │           ├── create TriggerResult & TriggerEvent <-- api.py:876
 │           └── execution_service
 │               .execute_trigger_result() <-- 3f
+```
 
-Location ID: 3a
-Title: Workflows router definition
-Description: FastAPI router for workflow endpoints under /triggers/workflows
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:29
-Location ID: 3b
-Title: Create workflow endpoint
-Description: POST endpoint for creating new workflows
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:724
-Location ID: 3c
-Title: Insert workflow via API
-Description: Converts WorkflowCreateRequest to database insert
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:737
-Location ID: 3d
-Title: Sync after creation
-Description: Triggers version config sync after workflow creation
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:748
-Location ID: 3e
-Title: Execute workflow endpoint
-Description: POST endpoint for manual workflow execution
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:821
-Location ID: 3f
-Title: Delegate to execution service
-Description: Hands off to ExecutionService for workflow execution
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:898
+### Location Details
 
-Trace ID: 4
-Title: Backend Execution: WorkflowExecutor Flow
-Description: Backend execution service: Traces workflow execution from trigger result through agent config enhancement to background agent run.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **3a** | Workflows router definition | FastAPI router for workflow endpoints under `/triggers/workflows` | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:29` |
+| **3b** | Create workflow endpoint | POST endpoint for creating new workflows | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:724` |
+| **3c** | Insert workflow via API | Converts `WorkflowCreateRequest` to database insert | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:737` |
+| **3d** | Sync after creation | Triggers version config sync after workflow creation | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:748` |
+| **3e** | Execute workflow endpoint | POST endpoint for manual workflow execution | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:821` |
+| **3f** | Delegate to execution service | Hands off to `ExecutionService` for workflow execution | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:898` |
 
-Trace text diagram:
+---
+
+## Trace 4: Backend Execution - `WorkflowExecutor` Flow
+
+**Description:** Backend execution service tracing workflow execution from trigger result through agent config enhancement to background agent run.
+
+### Execution Diagram
+
+```
 Workflow Execution Flow (Trace 4)
 └── ExecutionService.execute_trigger_result() <-- execution_service.py:26
     ├── Check trigger type <-- 4a
@@ -169,41 +167,29 @@ Workflow Execution Flow (Trace 4)
             ├── Check billing & model access <-- execution_service.py:685
             ├── Insert agent_run record <-- execution_service.py:692
             └── run_agent_background.send() <-- 4g
+```
 
-Location ID: 4a
-Title: Route to workflow executor
-Description: ExecutionService routes workflow executions to WorkflowExecutor
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:35
-Location ID: 4b
-Title: Call WorkflowExecutor
-Description: Delegates to WorkflowExecutor.execute_workflow method
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:36
-Location ID: 4c
-Title: Fetch workflow from database
-Description: Retrieves workflow config and steps JSON from agent_workflows table
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:443
-Location ID: 4d
-Title: Enhance agent config with workflow
-Description: Injects workflow prompt into agent system_prompt using format_workflow_for_llm
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:446
-Location ID: 4e
-Title: Format workflow for LLM
-Description: Converts workflow steps to LLM-readable prompt format
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:540
-Location ID: 4f
-Title: Create workflow session
-Description: Creates new project and thread for workflow execution
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:450
-Location ID: 4g
-Title: Start background agent run
-Description: Dispatches agent execution with enhanced config to background worker
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:708
+### Location Details
 
-Trace ID: 5
-Title: Backend LLM Formatting: Workflow & Playbook Prompts
-Description: Backend utilities: Shows how workflows and playbooks are formatted into LLM prompts, with different logic for playbooks vs regular workflows.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **4a** | Route to workflow executor | `ExecutionService` routes workflow executions to `WorkflowExecutor` | `d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:35` |
+| **4b** | Call `WorkflowExecutor` | Delegates to `WorkflowExecutor.execute_workflow` method | `d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:36` |
+| **4c** | Fetch workflow from database | Retrieves workflow config and steps JSON from `agent_workflows` table | `d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:443` |
+| **4d** | Enhance agent config with workflow | Injects workflow prompt into agent `system_prompt` using `format_workflow_for_llm` | `d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:446` |
+| **4e** | Format workflow for LLM | Converts workflow steps to LLM-readable prompt format | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:540` |
+| **4f** | Create workflow session | Creates new project and thread for workflow execution | `d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:450` |
+| **4g** | Start background agent run | Dispatches agent execution with enhanced config to background worker | `d:\Homelab\suna-main\suna\backend\core\triggers\execution_service.py:708` |
 
-Trace text diagram:
+---
+
+## Trace 5: Backend LLM Formatting - Workflow & Playbook Prompts
+
+**Description:** Backend utilities showing how workflows and playbooks are formatted into LLM prompts, with different logic for playbooks vs regular workflows.
+
+### Execution Diagram
+
+```
 Backend LLM Formatting Pipeline
 ├── format_workflow_for_llm() entry <-- 5a
 │   ├── is_playbook(steps) check <-- 5b
@@ -222,41 +208,29 @@ Backend LLM Formatting Pipeline
 │   └── Return formatted LLM prompt string <-- utils.py:301
 └── Called by _enhance_agent_config_for_workflow() <-- execution_service.py:530
     └── Injected into agent system_prompt <-- execution_service.py:548
+```
 
-Location ID: 5a
-Title: Main workflow formatting function
-Description: Entry point for converting workflow to LLM prompt
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:240
-Location ID: 5b
-Title: Check if playbook
-Description: Detects playbook structure (Start node with config.playbook child)
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:247
-Location ID: 5c
-Title: Route to playbook formatter
-Description: Uses simplified playbook prompt for template-based workflows
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:248
-Location ID: 5d
-Title: Extract playbook config
-Description: Retrieves template and variables from config.playbook
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:344
-Location ID: 5e
-Title: Generate playbook prompt
-Description: Returns simplified prompt with template and variable substitution rules
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:366
-Location ID: 5f
-Title: Parse regular workflow steps
-Description: For non-playbooks, parses steps into structured format with conditions
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:252
-Location ID: 5g
-Title: Generate workflow prompt
-Description: Returns detailed prompt with step-by-step execution instructions
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:269
+### Location Details
 
-Trace ID: 6
-Title: Versioning Integration: Sync Workflows to agent_versions.config
-Description: Backend versioning: Shows how workflows are synchronized into agent_versions.config for runtime access and version control.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **5a** | Main workflow formatting function | Entry point for converting workflow to LLM prompt | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:240` |
+| **5b** | Check if playbook | Detects playbook structure (Start node with `config.playbook` child) | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:247` |
+| **5c** | Route to playbook formatter | Uses simplified playbook prompt for template-based workflows | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:248` |
+| **5d** | Extract playbook config | Retrieves template and variables from `config.playbook` | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:344` |
+| **5e** | Generate playbook prompt | Returns simplified prompt with template and variable substitution rules | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:366` |
+| **5f** | Parse regular workflow steps | For non-playbooks, parses steps into structured format with conditions | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:252` |
+| **5g** | Generate workflow prompt | Returns detailed prompt with step-by-step execution instructions | `d:\Homelab\suna-main\suna\backend\core\triggers\utils.py:269` |
 
-Trace text diagram:
+---
+
+## Trace 6: Versioning Integration - Sync Workflows to `agent_versions.config`
+
+**Description:** Backend versioning showing how workflows are synchronized into `agent_versions.config` for runtime access and version control.
+
+### Execution Diagram
+
+```
 Versioning Integration: Sync Workflows to Config
 ├── API Workflow Operations
 │   ├── POST /workflows (create) <-- 6a
@@ -274,33 +248,27 @@ Versioning Integration: Sync Workflows to Config
 └── Migration: Backfill Existing Versions
     └── update_version_config_with_workflows() <-- 6e
         └── jsonb_agg(workflows) INTO config
+```
 
-Location ID: 6a
-Title: Sync function definition
-Description: Helper function to sync workflows into agent version config
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:145
-Location ID: 6b
-Title: Fetch all agent workflows
-Description: Retrieves all workflows for the agent from database
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:156
-Location ID: 6c
-Title: Set workflows in config
-Description: Adds workflows array to the version config object
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:166
-Location ID: 6d
-Title: Update version config
-Description: Persists updated config back to agent_versions table
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\core\triggers\api.py:168
-Location ID: 6e
-Title: Aggregate workflows to JSON
-Description: Migration function aggregates workflows into JSONB array for config
-Path:LineNumber: d:\Homelab\suna-main\suna\backend\supabase\migrations\20250814184554_add_workflows_to_config.sql:20
+### Location Details
 
-Trace ID: 7
-Title: Frontend Playbook Creation: PlaybookCreateModal Flow
-Description: Frontend playbook UI: Traces playbook creation from modal form through template parsing to API call and activation.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **6a** | Sync function definition | Helper function to sync workflows into agent version config | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:145` |
+| **6b** | Fetch all agent workflows | Retrieves all workflows for the agent from database | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:156` |
+| **6c** | Set workflows in config | Adds workflows array to the version config object | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:166` |
+| **6d** | Update version config | Persists updated config back to `agent_versions` table | `d:\Homelab\suna-main\suna\backend\core\triggers\api.py:168` |
+| **6e** | Aggregate workflows to JSON | Migration function aggregates workflows into JSONB array for config | `d:\Homelab\suna-main\suna\backend\supabase\migrations\20250814184554_add_workflows_to_config.sql:20` |
 
-Trace text diagram:
+---
+
+## Trace 7: Frontend Playbook Creation - `PlaybookCreateModal` Flow
+
+**Description:** Frontend playbook UI tracing playbook creation from modal form through template parsing to API call and activation.
+
+### Execution Diagram
+
+```
 Frontend Playbook Creation Flow
 ├── PlaybookCreateModal Component <-- playbook-create-modal.tsx:43
 │   ├── extractTokensFromTemplate() <-- 7a
@@ -317,33 +285,27 @@ Frontend Playbook Creation Flow
 │       └── updateWorkflowMutation.mutateAsync() <-- 7d
 │           └── Set status='active' <-- playbook-create-modal.tsx:154
 └── Result: Playbook created and activated
+```
 
-Location ID: 7a
-Title: Extract variable tokens
-Description: Parses {{variable}} tokens from playbook template
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:26
-Location ID: 7b
-Title: Construct playbook step
-Description: Creates Execute Playbook step with config.playbook structure
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:87
-Location ID: 7c
-Title: Create workflow via mutation
-Description: Calls createAgentWorkflow API with playbook structure
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:149
-Location ID: 7d
-Title: Auto-activate playbook
-Description: Immediately activates the playbook after creation
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:151
-Location ID: 7e
-Title: Mutation function
-Description: React Query mutation wraps createAgentWorkflow API call
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\use-agent-workflows.ts:33
+### Location Details
 
-Trace ID: 8
-Title: Frontend Playbook Execution: PlaybookExecuteDialog Flow
-Description: Frontend playbook execution: Shows user filling variables, clicking Run, and navigating to the execution thread.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **7a** | Extract variable tokens | Parses `{{variable}}` tokens from playbook template | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:26` |
+| **7b** | Construct playbook step | Creates Execute Playbook step with `config.playbook` structure | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:87` |
+| **7c** | Create workflow via mutation | Calls `createAgentWorkflow` API with playbook structure | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:149` |
+| **7d** | Auto-activate playbook | Immediately activates the playbook after creation | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-create-modal.tsx:151` |
+| **7e** | Mutation function | React Query mutation wraps `createAgentWorkflow` API call | `d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\use-agent-workflows.ts:33` |
 
-Trace text diagram:
+---
+
+## Trace 8: Frontend Playbook Execution - `PlaybookExecuteDialog` Flow
+
+**Description:** Frontend playbook execution showing user filling variables, clicking Run, and navigating to the execution thread.
+
+### Execution Diagram
+
+```
 Frontend Playbook Execution Flow
 ├── PlaybookExecuteDialog component <-- playbook-execute-dialog.tsx:35
 │   ├── useMemo: extract variables <-- 8a
@@ -362,33 +324,27 @@ Frontend Playbook Execution Flow
 │   └── Dialog shows "Playbook is running" <-- playbook-execute-dialog.tsx:161
 └── useExecuteWorkflow hook <-- use-agent-workflows.ts:74
     └── wraps executeWorkflow API call
+```
 
-Location ID: 8a
-Title: Extract playbook variables
-Description: Parses variable specs from config.playbook.variables
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:49
-Location ID: 8b
-Title: Execute workflow mutation
-Description: Calls executeWorkflow API with input_data containing variable values
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:93
-Location ID: 8c
-Title: Store execution result
-Description: Captures thread_id and agent_run_id from execution response
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:100
-Location ID: 8d
-Title: Fetch thread details
-Description: Retrieves thread to get project_id for navigation
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:171
-Location ID: 8e
-Title: Navigate to execution thread
-Description: Redirects user to the thread where workflow is executing
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:173
+### Location Details
 
-Trace ID: 9
-Title: Frontend API Integration: workflow-utils.ts
-Description: Frontend API layer: Shows how frontend makes authenticated REST calls to backend workflow endpoints.
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **8a** | Extract playbook variables | Parses variable specs from `config.playbook.variables` | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:49` |
+| **8b** | Execute workflow mutation | Calls `executeWorkflow` API with `input_data` containing variable values | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:93` |
+| **8c** | Store execution result | Captures `thread_id` and `agent_run_id` from execution response | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:100` |
+| **8d** | Fetch thread details | Retrieves thread to get `project_id` for navigation | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:171` |
+| **8e** | Navigate to execution thread | Redirects user to the thread where workflow is executing | `d:\Homelab\suna-main\suna\frontend\src\components\playbooks\playbook-execute-dialog.tsx:173` |
 
-Trace text diagram:
+---
+
+## Trace 9: Frontend API Integration - `workflow-utils.ts`
+
+**Description:** Frontend API layer showing how frontend makes authenticated REST calls to backend workflow endpoints.
+
+### Execution Diagram
+
+```
 Frontend API Integration (workflow-utils.ts)
 ├── List Workflows
 │   ├── getAgentWorkflows() <-- 9a
@@ -399,28 +355,15 @@ Frontend API Integration (workflow-utils.ts)
 └── Execute Workflow
     ├── executeWorkflow() <-- 9e
     └── fetch POST /workflows/{id}/execute <-- 9f
+```
 
-Location ID: 9a
-Title: Get workflows API function
-Description: Fetches all workflows for an agent from backend
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:144
-Location ID: 9b
-Title: GET workflows endpoint
-Description: Calls /triggers/workflows/agents/{agent_id}/workflows
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:153
-Location ID: 9c
-Title: Create workflow API function
-Description: Posts new workflow to backend
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:174
-Location ID: 9d
-Title: POST workflows endpoint
-Description: Creates workflow via POST with CreateWorkflowRequest body
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:183
-Location ID: 9e
-Title: Execute workflow API function
-Description: Triggers workflow execution with input_data
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:267
-Location ID: 9f
-Title: POST execute endpoint
-Description: Calls /execute endpoint with ExecuteWorkflowRequest containing input_data
-Path:LineNumber: d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:286
+### Location Details
+
+| ID | Title | Description | Path |
+|---|---|---|---|
+| **9a** | Get workflows API function | Fetches all workflows for an agent from backend | `d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:144` |
+| **9b** | GET workflows endpoint | Calls `/triggers/workflows/agents/{agent_id}/workflows` | `d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:153` |
+| **9c** | Create workflow API function | Posts new workflow to backend | `d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:174` |
+| **9d** | POST workflows endpoint | Creates workflow via POST with `CreateWorkflowRequest` body | `d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:183` |
+| **9e** | Execute workflow API function | Triggers workflow execution with `input_data` | `d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:267` |
+| **9f** | POST execute endpoint | Calls `/execute` endpoint with `ExecuteWorkflowRequest` containing `input_data` | `d:\Homelab\suna-main\suna\frontend\src\hooks\react-query\agents\workflow-utils.ts:286` |
