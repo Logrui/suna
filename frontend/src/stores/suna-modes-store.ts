@@ -25,7 +25,7 @@ export const useSunaModesStore = create<SunaModesState>()(
         set({ selectedMode: mode });
         
         // Reset data-specific selections when mode changes
-        if (mode !== 'data') {
+        if (mode !== 'data' && mode !== 'wide-research') {
           set({ selectedCharts: [], selectedOutputFormat: null });
         }
         if (mode !== 'slides') {

@@ -20,6 +20,7 @@ import {
   X,
   Eye,
   Loader2,
+  ScanSearch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -40,7 +41,7 @@ interface SunaModesPanelProps {
   onTemplateChange?: (template: string | null) => void;
 }
 
-type ModeType = 'image' | 'slides' | 'data' | 'docs' | 'people' | 'research';
+type ModeType = 'image' | 'slides' | 'data' | 'docs' | 'people' | 'research' | 'wide-research';
 
 interface Mode {
   id: ModeType;
@@ -186,6 +187,71 @@ const modes: Mode[] = [
         { id: 'wordcloud', name: 'Word cloud', description: 'Word cloud visualization' },
         { id: 'stacked', name: 'Stacked bar', description: 'Stacked bar chart' },
         { id: 'area', name: 'Area', description: 'Area chart' },
+      ],
+    },
+  },
+  {
+    id: 'wide-research',
+    label: 'Wide Research',
+    icon: <ScanSearch className="w-4 h-4" />,
+    samplePrompts: [
+      'Source 25 biotechnology startups focused on Diabetes, Obesity, Weightloss, and etc their most recent Series funding round, location, and website links',
+      'Map 250 NeuroPS researchers with areas affiliations citations and mobility insights',
+      'Compare 100 sneakers across features pricing segments aesthetics resale metrics performance',
+      'Profile 20 NASA legends with biographies missions ages quotes and notable milestones',
+      'Analyze 150 indie game developers with portfolios genres awards revenue streams and career trajectories',
+      'Catalog 75 vintage vinyl records across artists decades genres conditions and collector valuations',
+      'Document 30 climate scientists with recent research focuses publications impact factors and institutional affiliations',
+      'Map 20 biotech researchers with PhD institutions publications h-index citations and funding sources',
+      'Analyze 15 clinical trial databases with drug names phases patient counts efficacy rates and adverse events',
+      'Profile 15 venture capital partners focused in biotech, their education backgrounds, portfolio exits, and return profiles',
+      'Document 18 academic conferences with disciplines acceptance rates citation impact and networking value',
+      'Catalog 95 pharmaceutical compounds with mechanisms targets indications approval status and patent expirations',
+      'Survey 14 startup founders with educational backgrounds previous exits funding rounds and industry focus',
+      'Extract 60 research papers with authors institutions methodologies findings and citation networks',
+      'Compare 10 medical device companies with recent FDA approvals, market caps, R&D spending, and pipeline products',
+      'Analyze 25 university research centers with focus areas funding budgets faculty count and industry partnerships',
+      'Document 20 drug development timelines with phases costs success rates regulatory hurdles and commercialization strategies',
+      'Map 20 early-stage startup founders with backgrounds education previous exits and current funding stage',
+      'Analyze 50 Series A venture funds with check sizes portfolio companies returns and sector focus areas',
+      'Profile 20 startup accelerators with acceptance rates cohort sizes alumni success rates and industry specialization',
+      'Document 20 SaaS startups with founding dates ARR growth rates customer acquisition costs and churn metrics',
+      'Catalog 95 startup pitch decks with valuations funding rounds investor types and business model innovations',
+      'Survey 40 startup employees with roles salaries equity packages and career progression opportunities',
+      'Extract 20 startup failure case studies with reasons timelines lessons learned and founder insights',
+      'Compare 11 startup ecosystems with funding volumes talent availability regulatory environment and exit opportunities',
+      'Analyze 25 startup metrics dashboards with KPIs benchmarks growth trajectories and unit economics',
+      'Document 20 startup go-to-market strategies with customer segments pricing models distribution channels and retention tactics',
+    ],
+    options: {
+      title: 'Choose output format',
+      items: [
+        { id: 'spreadsheet', name: 'Spreadsheet', description: 'Table with formulas' },
+        { id: 'dashboard', name: 'Dashboard', description: 'Interactive charts' },
+        { id: 'report', name: 'Report', description: 'Analysis with visuals' },
+        { id: 'slides', name: 'Slides', description: 'Presentation format' },
+      ],
+    },
+    // Research Depth Options (Scaffolded - To be implemented)
+    // researchDepth: {
+    //   title: 'Wide Research Depth',
+    //   items: [
+    //     { id: 'exploratory', name: 'Exploratory', description: 'High-level summary for each researched item' },
+    //     { id: 'detailed', name: 'Detailed', description: 'In-depth analysis for each researched item' },
+    //     { id: 'competitive', name: 'Competitive Intelligence', description: 'Competitive analysis for each researched item' },
+    //   ],
+    // },
+    chartTypes: {
+      title: 'Preferred visualizations',
+      items: [
+        { id: 'timeline', name: 'Timeline', description: 'Timeline visualization' },
+        { id: 'comparison', name: 'Comparison', description: 'Comparison chart' },
+        { id: 'network', name: 'Network', description: 'Network diagram' },
+        { id: 'treemap', name: 'Treemap', description: 'Treemap visualization' },
+        { id: 'sankey', name: 'Sankey', description: 'Sankey diagram' },
+        { id: 'matrix', name: 'Matrix', description: 'Matrix visualization' },
+        { id: 'bar', name: 'Bar', description: 'Bar chart' },
+        { id: 'line', name: 'Line', description: 'Line chart' },
       ],
     },
   },
@@ -1521,11 +1587,78 @@ export function SunaModesPanel({
               })}
             </div>
           )}
+
+          {selectedMode === 'wide-research' && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {currentMode.options.items.map((item) => {
+                const isSelected = selectedOutputFormat === item.id;
+                return (
+                  <Card
+                    key={item.id}
+                    className={cn(
+                      "p-3 cursor-pointer transition-all duration-200 group rounded-xl relative",
+                      isSelected 
+                        ? "bg-primary/10 border-primary border-2 shadow-sm" 
+                        : "border border-border hover:bg-primary/5 hover:border-primary/30"
+                    )}
+                    onClick={() => handleOutputFormatSelect(item.id)}
+                  >
+                    <AnimatePresence>
+                      {isSelected && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-md z-10"
+                        >
+                          <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <div className="flex flex-col items-center gap-2.5 text-center">
+                      <div className={cn(
+                        "w-full aspect-square rounded-lg flex items-center justify-center p-3 transition-all duration-200",
+                        isSelected 
+                          ? "bg-primary/15" 
+                          : "bg-muted/30 group-hover:bg-muted/50"
+                      )}>
+                        <OutputFormatIcon 
+                          type={item.id} 
+                          className={cn(
+                            "transition-colors duration-200",
+                            isSelected 
+                              ? "text-primary" 
+                              : "text-foreground/50 group-hover:text-primary/70"
+                          )} 
+                        />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className={cn(
+                          "text-xs font-semibold transition-colors duration-200",
+                          isSelected 
+                            ? "text-primary" 
+                            : "text-foreground/80 group-hover:text-primary"
+                        )}>
+                          {item.name}
+                        </p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Chart Types Section (for Data mode) - Only show when data is selected */}
-      {selectedMode === 'data' && currentMode?.chartTypes && (
+      {/* Chart Types Section (for Data and Wide Research modes) - Only show when data or wide-research is selected */}
+      {(selectedMode === 'data' || selectedMode === 'wide-research') && currentMode?.chartTypes && (
         <div className="space-y-3 animate-in fade-in-0 zoom-in-95 duration-300 delay-150">
           <h3 className="text-sm font-medium text-muted-foreground">
             {currentMode.chartTypes.title}

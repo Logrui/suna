@@ -17,7 +17,7 @@ import { handleFiles, FileUploadHandler } from './file-upload-handler';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug } from 'lucide-react';
+import { X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug, ScanSearch } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { VoiceRecorder } from './voice-recorder';
 
@@ -52,6 +52,8 @@ const getModeIcon = (mode: string) => {
   switch (mode) {
     case 'research':
       return <Search className={iconClass} />;
+    case 'wide-research':
+      return <ScanSearch className={iconClass} />;
     case 'people':
       return <Users className={iconClass} />;
     case 'code':
@@ -206,8 +208,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-    const [isModeDismissing, setIsModeDismissing] = useState(false);    // Suna Agent Modes feature flag
-    const ENABLE_SUNA_AGENT_MODES = true;
+    const [isModeDismissing, setIsModeDismissing] = useState(false);    
+    const ENABLE_SUNA_AGENT_MODES = true; // Suna Agent Modes feature flag
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
 
 
@@ -366,6 +368,28 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       return `\n\n----\n\n**Presentation Template:** ${selectedTemplate}`;
     }, [selectedMode, selectedTemplate]);
 
+    // Generate Markdown for selected wide research options
+    const generateWideResearchMarkdown = useCallback(() => {
+      if (selectedMode !== 'wide-research' || (selectedCharts.length === 0 && !selectedOutputFormat)) {
+        return '';
+      }
+
+      let markdown = '\n\n----\n\n** Wide Research Configuration:**\n';
+
+      if (selectedOutputFormat) {
+        markdown += `\n- **Output Format:** ${selectedOutputFormat}`;
+      }
+
+      if (selectedCharts.length > 0) {
+        markdown += '\n- **Preferred Visualizations:**';
+        selectedCharts.forEach(chartId => {
+          markdown += `\n  - ${chartId}`;
+        });
+      }
+
+      return markdown;
+    }, [selectedMode, selectedCharts, selectedOutputFormat]);
+
     // Handle mode deselection with animation
     const handleModeDeselect = useCallback(() => {
       setIsModeDismissing(true);
@@ -462,6 +486,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         message = message + slidesTemplateMarkdown;
       }
 
+      // Append Markdown for wide research options
+      const wideResearchMarkdown = generateWideResearchMarkdown();
+      if (wideResearchMarkdown) {
+        message = message + wideResearchMarkdown;
+      }
+
       const baseModelName = selectedModel ? getActualModelId(selectedModel) : undefined;
 
       posthog.capture("task_prompt_submitted", { message });
@@ -475,7 +505,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       // For now, keep the text visible until stream starts
 
       setUploadedFiles([]);
-    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange]);
+    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, generateWideResearchMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange]);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
@@ -768,8 +798,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <div className="space-y-1">
-                      <p className="font-medium text-white">Adaptive</p>
-                      <p className="text-xs text-gray-200">Quick responses with smart context switching</p>
+                      <p className="font-medium">Adaptive</p>
+                      <p className="text-xs opacity-80">Quick responses with smart context switching</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -790,8 +820,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <div className="space-y-1">
-                      <p className="font-medium text-white">Autonomous</p>
-                      <p className="text-xs text-gray-200">Deep work mode for multi-step problem solving</p>
+                      <p className="font-medium">Autonomous</p>
+                      <p className="text-xs opacity-80">Deep work mode for multi-step problem solving</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -812,8 +842,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <div className="space-y-1">
-                      <p className="font-medium text-white">Chat</p>
-                      <p className="text-xs text-gray-200">Simple back-and-forth conversation</p>
+                      <p className="font-medium">Chat</p>
+                      <p className="text-xs opacity-80">Simple back-and-forth conversation</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -839,7 +869,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
               )}
             >
               {selectedMode && getModeIcon(selectedMode)}
-              <span className="text-sm">{selectedMode?.charAt(0).toUpperCase()}{selectedMode?.slice(1)}</span>
+              <span className="text-sm">{selectedMode === 'wide-research' ? 'Wide Research' : selectedMode?.charAt(0).toUpperCase()}{selectedMode !== 'wide-research' && selectedMode?.slice(1)}</span>
               <X className="w-4 h-4" />
             </Button>
           )}

@@ -1,0 +1,1 @@
+// scaffold file for enabling personal keys manager for self hosted or private servers
