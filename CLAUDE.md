@@ -23,7 +23,7 @@ Kortix (formerly Suna) is an open-source platform for building, managing, and tr
 1. **Backend API** (FastAPI/Python) - REST endpoints, thread management, LLM orchestration
 2. **Backend Worker** (Dramatiq) - Background agent task execution
 3. **Frontend** (Next.js/React) - Web UI for agent management
-4. **Agent Sandbox** (Daytona) - Isolated runtime for agent actions (OPTIONAL - graceful degradation)
+4. **Agent Sandbox** (Daytona) - Isolated runtime for agent actions - non optional - core part of Suna Kortix
 5. **Database** (Supabase) - PostgreSQL with authentication and real-time subscriptions
 
 ## This Fork: Self-Hosted Setup
