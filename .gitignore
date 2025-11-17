@@ -1,5 +1,8 @@
 ﻿.DS_Store
 
+# Internal documentation (contains sensitive info)
+.docs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
