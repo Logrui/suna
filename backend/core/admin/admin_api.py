@@ -407,14 +407,14 @@ async def get_user_threads_by_email(
         
         if not email_result.data:
             try:
-                oauth_result = await client.rpc('get_account_by_email', {'search_email': email}).execute()
+                oauth_result = await client.rpc('get_user_account_by_email', {'email_input': email}).execute()
                 if not oauth_result.data:
                     return await PaginationService.paginate_with_total_count(
                         items=[],
                         total_count=0,
                         params=pagination_params
                     )
-                account_id = oauth_result.data
+                account_id = oauth_result.data['id']
             except Exception as e:
                 logger.warning(f"Could not find account for email {email}: {e}")
                 return await PaginationService.paginate_with_total_count(

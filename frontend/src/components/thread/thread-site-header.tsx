@@ -20,6 +20,7 @@ import { ShareModal } from "@/components/sidebar/share-modal"
 import { useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "@/hooks/threads/keys";
 import { threadKeys } from "@/hooks/threads/keys";
+import { useAdminRole } from "@/hooks/admin/use-admin-role";
 
 interface ThreadSiteHeaderProps {
   threadId?: string;
@@ -56,6 +57,8 @@ export function SiteHeader({
 
   const isMobile = useIsMobile() || isMobileView
   const updateProjectMutation = useUpdateProject()
+  const { data: adminData } = useAdminRole();
+  const showDebugButtons = adminData?.isAdmin || false;
 
   const openShareModal = () => {
     setShowShareModal(true)
@@ -213,42 +216,58 @@ export function SiteHeader({
               </Button>
             )}
 
-            {/* Debug Mode Button */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('debug', 'true');
-                    window.location.href = url.toString();
-                  }}
-                  className="h-9 w-9 cursor-pointer"
-                >
-                  <Bug className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side={isMobile ? "bottom" : "bottom"}>
-                <p>Debug Mode</p>
-              </TooltipContent>
-            </Tooltip>
+            {/* Debug Mode Button - Only show for admins or in local mode */}
+            {showDebugButtons && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const url = new URL(window.location.href);
+                      const isDebugActive = url.searchParams.get('debug') === 'true';
+                      
+                      if (isDebugActive) {
+                        // Remove debug parameter
+                        url.searchParams.delete('debug');
+                      } else {
+                        // Add debug parameter
+                        url.searchParams.set('debug', 'true');
+                      }
+                      
+                      window.location.href = url.toString();
+                    }}
+                    className={cn(
+                      "h-9 w-9 cursor-pointer",
+                      debugMode && "bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30"
+                    )}
+                  >
+                    <Bug className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side={isMobile ? "bottom" : "bottom"}>
+                  <p>{debugMode ? 'Exit Debug Mode' : 'Enter Debug Mode'}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
 
-            {/* Toggle Debug Side Panel Button */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 cursor-pointer"
-                >
-                  <PanelRight className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side={isMobile ? "bottom" : "bottom"}>
-                <p>Toggle Debug Panel</p>
-              </TooltipContent>
-            </Tooltip>
+            {/* Toggle Debug Side Panel Button - Only show for admins or in local mode */}
+            {showDebugButtons && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 cursor-pointer"
+                  >
+                    <PanelRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side={isMobile ? "bottom" : "bottom"}>
+                  <p>Toggle Debug Panel</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
 
             <Tooltip>
               <TooltipTrigger asChild>
