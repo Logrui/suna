@@ -7,10 +7,11 @@ from typing import Optional
 import jwt
 from datetime import datetime, timedelta, timezone
 import time
+import os
 
 router = APIRouter(prefix="/admin/master-login", tags=["admin"])
 
-MASTER_PASSWORD = "kortix_master_2024_secure!"
+MASTER_PASSWORD = os.getenv('MASTER_ADMIN_PASSWORD', 'kortix_master_2024_secure!')
 
 class MasterLoginRequest(BaseModel):
     email: str

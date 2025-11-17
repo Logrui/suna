@@ -10,19 +10,18 @@ import React, {
   useMemo,
   memo,
 } from 'react';
-import { useAgents } from '@/hooks/agents/use-agents';
-import { useAgentSelection } from '@/stores/agent-selection-store';
-
+import { useAgents } from '@/hooks/react-query/agents/use-agents';
+import { useAgentSelection } from '@/lib/stores/agent-selection-store';
 import { Card, CardContent } from '@/components/ui/card';
 import { handleFiles, FileUploadHandler } from './file-upload-handler';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArrowUp, X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug } from 'lucide-react';
+import { X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { VoiceRecorder } from './voice-recorder';
-import { useTheme } from 'next-themes';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UnifiedConfigMenu } from './unified-config-menu';
 import { AttachmentGroup } from '../attachment-group';
 import { cn } from '@/lib/utils';
@@ -43,6 +42,7 @@ import { PlanSelectionModal } from '@/components/billing/pricing';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { ContextUsageIndicator } from '../ContextUsageIndicator';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { useSlashCommandsLogic, SlashCommandsUI } from './slash-commands';
 
 import posthog from 'posthog-js';
 
@@ -207,8 +207,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
     const [isModeDismissing, setIsModeDismissing] = useState(false);    // Suna Agent Modes feature flag
-    const ENABLE_SUNA_AGENT_MODES = false;
+    const ENABLE_SUNA_AGENT_MODES = true;
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
+
 
     const {
       selectedModel,
@@ -223,12 +224,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const { data: subscriptionData } = useSubscriptionData();
     const deleteFileMutation = useFileDelete();
     const queryClient = useQueryClient();
-    
-    // Chat input button has inverted background from theme
-    // Dark theme → light button → needs black loader
-    // Light theme → dark button → needs white loader
-    const { resolvedTheme } = useTheme();
-    const buttonLoaderVariant = (resolvedTheme === 'dark' ? 'black' : 'white') as 'black' | 'white';
 
     // Define quick integrations
     const quickIntegrations = useMemo(() => [
@@ -247,7 +242,10 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       'googledrive': googleDriveIcon?.icon_url,
       'slack': slackIcon?.icon_url,
       'notion': notionIcon?.icon_url,
-    }), [googleDriveIcon, slackIcon, notionIcon]);    // Show usage preview logic:
+    }), [googleDriveIcon, slackIcon, notionIcon]);
+
+
+    // Show usage preview logic:
     // - Always show to free users when showToLowCreditUsers is true
     // - For paid users, only show when they're at 70% or more of their cost limit (30% or below remaining)
     const shouldShowUsage = useMemo(() => {
@@ -278,6 +276,14 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Slash commands logic hook - manages its own state internally
+    const slashCommandsLogic = useSlashCommandsLogic({
+      textareaRef,
+      isControlled,
+      controlledOnChange,
+      setLocalValue,
+    });
 
     const { data: agentsResponse } = useAgents({}, { enabled: isLoggedIn });
     const agents = agentsResponse?.agents || [];
@@ -431,6 +437,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
 
       let message = value;
 
+      // Check if there's an active slash command that needs prompt injection
+      if (slashCommandsLogic.activeSlashCommand && message.startsWith('/' + slashCommandsLogic.activeSlashCommand.name)) {
+        message = slashCommandsLogic.processActiveSlashCommand(message);
+        slashCommandsLogic.clearActiveSlashCommand();
+      }
+
       if (uploadedFiles.length > 0) {
         const fileInfo = uploadedFiles
           .map((file) => `[Uploaded File: ${file.path}]`)
@@ -474,10 +486,17 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       if (isControlled && controlledOnChange) {
         controlledOnChange(newValue);
       }
-    }, [isControlled, controlledOnChange]);
+
+      // Use slash commands logic for detection and state management
+      slashCommandsLogic.handleChange(newValue);
+    }, [isControlled, controlledOnChange, slashCommandsLogic]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+      // Use slash commands logic for navigation
+      slashCommandsLogic.handleKeyDown(e);
+
+      // Original Enter key handling (only if slash commands didn't handle it)
+      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !slashCommandsLogic.showSlashCommands) {
         e.preventDefault();
         if (
           (value.trim() || uploadedFiles.length > 0) &&
@@ -488,7 +507,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           handleSubmit(e as unknown as React.FormEvent);
         }
       }
-    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, handleSubmit]);
+    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, handleSubmit, slashCommandsLogic]);
 
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (!e.clipboardData) return;
@@ -526,6 +545,14 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         controlledOnChange(newValue);
       }
     }, [localValue, isControlled, controlledOnChange]);
+
+    const handleSlashCommandSelect = useCallback((command: any) => {
+      slashCommandsLogic.handleSlashCommandSelect(command);
+    }, [slashCommandsLogic]);
+
+    const handleSlashCommandClose = useCallback(() => {
+      slashCommandsLogic.handleSlashCommandClose();
+    }, [slashCommandsLogic]);
 
     const removeUploadedFile = useCallback(async (index: number) => {
       const fileToRemove = uploadedFiles[index];
@@ -598,7 +625,23 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     }, [mounted, isLoggedIn, hideAgentSelection, selectedAgentId, onAgentSelect, selectedModel, handleModelChange, modelOptions, subscriptionStatus, canAccessModel, refreshCustomModels]);
 
     const renderTextArea = useMemo(() => (
-      <div className="flex flex-col gap-1 px-2">
+      <div className="flex flex-col gap-1 px-2 relative">
+        <SlashCommandsUI
+          isOpen={slashCommandsLogic.showSlashCommands}
+          commands={slashCommandsLogic.filteredSlashCommands}
+          selectedIndex={slashCommandsLogic.selectedCommandIndex}
+          onSelect={handleSlashCommandSelect}
+          onClose={handleSlashCommandClose}
+          promptsFolder={slashCommandsLogic.promptsFolder}
+          onCommandCreated={() => {
+            // Refetch slash commands when a new one is created
+            // This will trigger the useSlashCommands hook to refresh
+            // The query client will automatically invalidate and refetch
+          }}
+        />
+        <div className="relative">
+          {/* Highlighted overlay for slash command */}
+          {slashCommandsLogic.renderHighlightedOverlay(value)}
         <Textarea
           ref={textareaRef}
           value={value}
@@ -607,14 +650,16 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           onPaste={handlePaste}
           placeholder={animatedPlaceholder}
           className={cn(
-            'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none',
+              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none relative z-10',
             isDraggingOver ? 'opacity-40' : '',
+              slashCommandsLogic.getCaretClass(value),
           )}
-          disabled={disabled}
+            disabled={loading || (disabled && !isAgentRunning) || hasSubmitted}
           rows={1}
         />
       </div>
-    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted]);
+      </div>
+    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted, slashCommandsLogic, handleSlashCommandSelect, handleSlashCommandClose]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
@@ -814,8 +859,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           />}
 
           <div className="relative">
-            {/* Context Usage Indicator - disabled by default */}
-            {/* {threadId && <ContextUsageIndicator threadId={threadId} modelName={selectedModel} />} */}
+            {/* Context Usage Indicator */}
+            {threadId && <ContextUsageIndicator threadId={threadId} modelName={selectedModel} />}
 
             <TooltipProvider>
               <Tooltip>
@@ -837,7 +882,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                     }
                   >
                     {((loading || isUploading) && !isAgentRunning) ? (
-                      <KortixLoader size="small" customSize={20} variant={buttonLoaderVariant} />
+                      <KortixLoader size="small" customSize={20} forceTheme="dark" />
                     ) : isAgentRunning ? (
                       <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-current" />
                     ) : (
@@ -855,7 +900,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           </div>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, planModalOpen, setPlanSelectionModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon, buttonLoaderVariant]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, planModalOpen, setPlanSelectionModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon]);
 
     return (
       <div className="mx-auto w-full max-w-4xl relative">

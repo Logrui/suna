@@ -169,8 +169,8 @@ https://app.daytona.io/dashboard/snapshots
 
 **Step 2: Create New Snapshot**
 - Click "Create Snapshot" button
-- Set Name: `kortix/suna:0.1.3.23`
-- Set Snapshot ID: `kortix/suna:0.1.3.23`
+- Set Name: `notlogrui/suna:0.1.3.23`
+- Set Snapshot ID: `notlogrui/suna:0.1.3.23`
 - Select base environment (Ubuntu 22.04 recommended)
 
 **Step 3: Configure Snapshot with Tools**
