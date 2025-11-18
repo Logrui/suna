@@ -180,11 +180,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
           overflowWrap: 'break-word',
         }}
       >
-<<<<<<< HEAD
-        <span className="bg-primary/10 text-primary rounded px-1 font-medium">
-=======
-        <span className="bg-primary/20 text-transparent rounded px-1 font-medium">
->>>>>>> ed298e23 (fixed slash commands styling and gate local env manager to admin accounts)
+        <span className="bg-primary text-primary-foreground rounded px-1 font-medium">
           /{activeSlashCommand.name}
         </span>
       </div>

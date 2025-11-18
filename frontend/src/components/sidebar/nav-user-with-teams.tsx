@@ -375,41 +375,35 @@ export function NavUserWithTeams({
                 </DropdownMenuItem>
               </DropdownMenuGroup>
 
-              {(user.isAdmin || isLocalMode()) && (
+              {user.isAdmin && (
                 <>
                   <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuLabel className="text-muted-foreground text-xs px-2 py-1.5">
                     Advanced
                   </DropdownMenuLabel>
                   <DropdownMenuGroup>
-                    {user.isAdmin && (
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/billing" className="gap-2 p-2">
-                          <Shield className="h-4 w-4" />
-                          <span>Admin Panel</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    {user.isAdmin && (
-                      <DropdownMenuItem asChild>
-                        <Link href="/settings/api-keys" className="gap-2 p-2">
-                          <Key className="h-4 w-4" />
-                          <span>API Keys</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                    {isLocalMode() && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSettingsTab('env-manager');
-                          setShowSettingsModal(true);
-                        }}
-                        className="gap-2 p-2"
-                      >
-                        <KeyRound className="h-4 w-4" />
-                        <span>Local .Env Manager</span>
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/billing" className="gap-2 p-2">
+                        <Shield className="h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings/api-keys" className="gap-2 p-2">
+                        <Key className="h-4 w-4" />
+                        <span>API Keys</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSettingsTab('env-manager');
+                        setShowSettingsModal(true);
+                      }}
+                      className="gap-2 p-2"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                      <span>Local .Env Manager</span>
+                    </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </>
               )}
