@@ -3,7 +3,7 @@
 import { createTrialCheckout } from '@/lib/api/billing';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { sendWelcomeEmail } from '@/lib/email';
+// import { sendWelcomeEmail } from '@/lib/email'; // Disabled for self-hosted (no SMTP)
 
 
 export async function signIn(prevState: any, formData: FormData) {
