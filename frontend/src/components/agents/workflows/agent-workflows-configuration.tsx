@@ -160,9 +160,9 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
                 <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4 border">
                   <Workflow className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-sm font-semibold mb-2">No Agent Playbooks</h3>
+                <h3 className="text-sm font-semibold mb-2">No Workflows Configured</h3>
                 <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                  Create playbook to automate tasks and streamline your agent's operations.
+                  Create advanced workflows to automate tasks and streamline your agent's operations.
                 </p>
               </div>
             ) : (

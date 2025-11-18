@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAgent } from '@/hooks/agents/use-agents';
-import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle, Workflow, FileText } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,11 +15,13 @@ import { InstructionsScreen } from './screens/instructions-screen';
 import { KnowledgeScreen } from './screens/knowledge-screen';
 import { ToolsScreen } from './screens/tools-screen';
 import { IntegrationsScreen } from './screens/integrations-screen';
+import { WorkflowsScreen } from './screens/workflows-screen';
+import { PlaybooksScreen } from './screens/playbooks-screen';
 import { useUpdateAgent } from '@/hooks/agents/use-agents';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
-type ConfigView = 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations';
+type ConfigView = 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' | 'workflows' | 'playbooks';
 
 export default function AgentConfigPage() {
   const params = useParams();
@@ -76,6 +78,8 @@ export default function AgentConfigPage() {
     { id: 'tools' as const, label: 'Tools', icon: Wrench },
     { id: 'integrations' as const, label: 'Integrations', icon: Server },
     { id: 'knowledge' as const, label: 'Knowledge', icon: BookOpen },
+    { id: 'workflows' as const, label: 'Workflows', icon: Workflow },
+    { id: 'playbooks' as const, label: 'Playbooks', icon: FileText },
     { id: 'triggers' as const, label: 'Triggers', icon: Zap },
   ];
 
@@ -194,6 +198,8 @@ export default function AgentConfigPage() {
         {activeView === 'tools' && <ToolsScreen agentId={agentId} />}
         {activeView === 'integrations' && <IntegrationsScreen agentId={agentId} />}
         {activeView === 'knowledge' && <KnowledgeScreen agentId={agentId} />}
+        {activeView === 'workflows' && <WorkflowsScreen agentId={agentId} />}
+        {activeView === 'playbooks' && <PlaybooksScreen agentId={agentId} />}
         {activeView === 'triggers' && <TriggersScreen agentId={agentId} />}
       </div>
 

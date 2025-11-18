@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { icons } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AGENTPRESS_TOOL_DEFINITIONS } from '../tools';
+import { AGENTPRESS_TOOL_DEFINITIONS } from '@/components/agents/tools/tools';
 
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

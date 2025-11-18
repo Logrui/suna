@@ -42,6 +42,8 @@ import {
   ChevronDown,
   Search,
   Info,
+  Workflow,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -61,12 +63,14 @@ import { AgentTriggersConfiguration } from './triggers/agent-triggers-configurat
 import { AgentAvatar } from '../thread/content/agent-avatar';
 import { AgentIconEditorDialog } from './config/agent-icon-editor-dialog';
 import { AgentVersionSwitcher } from './agent-version-switcher';
+import { AgentWorkflowsConfiguration } from './workflows/agent-workflows-configuration';
+import { AgentPlaybooksConfiguration } from './playbooks/agent-playbooks-configuration';
 
 interface AgentConfigurationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agentId: string;
-  initialTab?: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers';
+  initialTab?: 'instructions' | 'tools' | 'integrations' | 'knowledge' | 'triggers' | 'workflows' | 'playbooks';
   onAgentChange?: (agentId: string) => void;
 }
 
@@ -375,6 +379,8 @@ export function AgentConfigurationDialog({
     { id: 'tools', label: 'Tools', icon: Wrench, disabled: false },
     { id: 'integrations', label: 'Integrations', icon: Server, disabled: false },
     { id: 'knowledge', label: 'Knowledge', icon: BookOpen, disabled: false },
+    { id: 'workflows', label: 'Workflows', icon: Workflow, disabled: false },
+    { id: 'playbooks', label: 'Playbooks', icon: FileText, disabled: false },
     { id: 'triggers', label: 'Triggers', icon: Zap, disabled: false },
   ];
 
@@ -695,6 +701,18 @@ export function AgentConfigurationDialog({
                 <TabsContent value="knowledge" className="p-6 mt-0 flex flex-col h-full">
                   <div className="flex flex-col flex-1 min-h-0 h-full">
                     <AgentKnowledgeBaseManager agentId={agentId} agentName={formData.name || 'Agent'} />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="workflows" className="p-6 mt-0 flex flex-col h-full">
+                  <div className="flex flex-col flex-1 min-h-0 h-full">
+                    <AgentWorkflowsConfiguration agentId={agentId} agentName={formData.name || 'Agent'} />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="playbooks" className="p-6 mt-0 flex flex-col h-full">
+                  <div className="flex flex-col flex-1 min-h-0 h-full">
+                    <AgentPlaybooksConfiguration agentId={agentId} agentName={formData.name || 'Agent'} />
                   </div>
                 </TabsContent>
 

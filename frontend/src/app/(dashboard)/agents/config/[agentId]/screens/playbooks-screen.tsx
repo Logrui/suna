@@ -2,14 +2,14 @@
 
 import React from 'react';
 import { useAgent } from '@/hooks/agents/use-agents';
-import { AgentWorkflowsConfiguration } from '@/components/agents/workflows/agent-workflows-configuration';
+import { AgentPlaybooksConfiguration } from '@/components/agents/playbooks/agent-playbooks-configuration';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface WorkflowsScreenProps {
+interface PlaybooksScreenProps {
     agentId: string;
 }
 
-export function WorkflowsScreen({ agentId }: WorkflowsScreenProps) {
+export function PlaybooksScreen({ agentId }: PlaybooksScreenProps) {
     const { data: agent, isLoading } = useAgent(agentId);
 
     if (isLoading) {
@@ -28,7 +28,7 @@ export function WorkflowsScreen({ agentId }: WorkflowsScreenProps) {
     return (
         <div className="flex-1 flex flex-col overflow-hidden pb-6">
             <div className="px-1 pt-1 flex flex-col flex-1 min-h-0 h-full">
-                <AgentWorkflowsConfiguration 
+                <AgentPlaybooksConfiguration 
                     agentId={agentId} 
                     agentName={agent?.name || 'Agent'}
                 />

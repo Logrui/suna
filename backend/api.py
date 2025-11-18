@@ -220,7 +220,11 @@ api_router.include_router(models_api.router)
 from core.knowledge_base import api as knowledge_base_api
 api_router.include_router(knowledge_base_api.router)
 
+from core.pipedream import api as pipedream_api
+api_router.include_router(pipedream_api.router)
+
 api_router.include_router(triggers_api.router)
+api_router.include_router(triggers_api.workflows_router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
