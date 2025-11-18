@@ -91,28 +91,47 @@ class UpcomingRunsResponse(BaseModel):
 
 # ===== WORKFLOW REQUEST/RESPONSE MODELS =====
 
+
+class WorkflowStepRequest(BaseModel):
+    id: Optional[str] = None
+    name: str
+    description: Optional[str] = None
+    type: Optional[str] = "instruction"
+    config: Dict[str, Any] = {}
+    conditions: Optional[Dict[str, Any]] = None
+    order: Optional[int] = None
+    parentConditionalId: Optional[str] = None
+    children: Optional[List['WorkflowStepRequest']] = None
+
+
+class WorkflowCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    trigger_phrase: Optional[str] = None
+    is_default: bool = False
+    steps: List[WorkflowStepRequest] = []
+
+
+class WorkflowUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    trigger_phrase: Optional[str] = None
+    is_default: Optional[bool] = None
+    status: Optional[str] = None
+    steps: Optional[List[WorkflowStepRequest]] = None
+
+
+class WorkflowExecuteRequest(BaseModel):
+    input_data: Optional[Dict[str, Any]] = None
+    model_name: Optional[str] = None
+
+
 class WorkflowStep(BaseModel):
     id: str
     type: str
     name: str
     config: Dict[str, Any]
     conditions: Optional[List[Dict[str, Any]]] = None
-
-
-class WorkflowCreateRequest(BaseModel):
-    name: str
-    description: Optional[str] = None
-    steps: List[WorkflowStep] = []
-    trigger_phrase: Optional[str] = None
-
-
-class WorkflowUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    steps: Optional[List[WorkflowStep]] = None
-    status: Optional[str] = None
-    trigger_phrase: Optional[str] = None
-    is_default: Optional[bool] = None
 
 
 class WorkflowResponse(BaseModel):
@@ -126,6 +145,9 @@ class WorkflowResponse(BaseModel):
     is_default: bool
     created_at: str
     updated_at: str
+
+
+WorkflowStepRequest.model_rebuild()
 
 
 def initialize(database: DBConnection):
