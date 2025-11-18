@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { sendWelcomeEmail } from '@/lib/email'
+// import { sendWelcomeEmail } from '@/lib/email' // Disabled for self-hosted (no SMTP)
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -44,16 +44,15 @@ export async function GET(request: NextRequest) {
           .eq('personal_account', true)
           .single();
 
-        // Send welcome email for new signups (both OAuth and email/password)
-        // This handles both OAuth signups and email confirmation callbacks
-        if (isNewUser && data.user.email) {
-          const userName = data.user.user_metadata?.full_name || 
-                          data.user.user_metadata?.name ||
-                          data.user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          
-          // Send welcome email asynchronously (don't block redirect)
-          sendWelcomeEmail(data.user.email, userName);
-        }
+        // Welcome email disabled for self-hosted setup (no SMTP configured)
+        // if (isNewUser && data.user.email) {
+        //   const userName = data.user.user_metadata?.full_name ||
+        //                   data.user.user_metadata?.name ||
+        //                   data.user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        //
+        //   // Send welcome email asynchronously (don't block redirect)
+        //   sendWelcomeEmail(data.user.email, userName);
+        // }
 
         if (accountData) {
           const { data: creditAccount } = await supabase
