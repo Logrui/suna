@@ -57,7 +57,7 @@ async function initializeSlashCommands() {
     // Get all folders
     const foldersRes = await fetch(`${API_URL}/knowledge-base/folders`, { headers });
     if (!foldersRes.ok) {
-      console.error('[SlashCommands] Failed to fetch folders:', foldersRes.status, foldersRes.statusText);
+      //console.error('[SlashCommands] Failed to fetch folders:', foldersRes.status, foldersRes.statusText);
       return null;
     }
     
@@ -81,7 +81,7 @@ async function initializeSlashCommands() {
       
       if (!createPromptsFolderRes.ok) {
         const errorText = await createPromptsFolderRes.text();
-        console.error('[SlashCommands] Failed to create prompts folder:', createPromptsFolderRes.status, errorText);
+        //console.error('[SlashCommands] Failed to create prompts folder:', createPromptsFolderRes.status, errorText);
         return null;
       }
       
@@ -96,7 +96,7 @@ async function initializeSlashCommands() {
     // Get existing entries in the folder
     const entriesRes = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/entries`, { headers });
     if (!entriesRes.ok) {
-      console.error('[SlashCommands] Failed to fetch folder entries:', entriesRes.status, entriesRes.statusText);
+      //console.error('[SlashCommands] Failed to fetch folder entries:', entriesRes.status, entriesRes.statusText);
       return folderId;
     }
     
@@ -119,8 +119,8 @@ async function initializeSlashCommands() {
       return !existingFilenames.has(mdFilename);
     });
     
-    console.log('[SlashCommands] Existing files:', Array.from(existingFilenames));
-    console.log('[SlashCommands] Missing commands to create:', missingCommands.map(c => c.name));
+    //console.log('[SlashCommands] Existing files:', Array.from(existingFilenames));
+    //console.log('[SlashCommands] Missing commands to create:', missingCommands.map(c => c.name));
     
     if (missingCommands.length > 0) {
       // console.log(`[SlashCommands] Creating ${missingCommands.length} missing slash commands...`);
@@ -134,7 +134,7 @@ async function initializeSlashCommands() {
           const formData = new FormData();
           formData.append('file', blob, `${example.name}.md`);
           
-          console.log(`[SlashCommands] File size: ${blob.size} bytes, MIME: text/markdown`);
+          //console.log(`[SlashCommands] File size: ${blob.size} bytes, MIME: text/markdown`);
           
           const uploadRes = await fetch(`${API_URL}/knowledge-base/folders/${folderId}/upload`, {
             method: 'POST',
@@ -144,15 +144,15 @@ async function initializeSlashCommands() {
             body: formData,
           });
           
-          console.log(`[SlashCommands] Upload response for ${example.name}.md:`, uploadRes.status, uploadRes.statusText);
+          //console.log(`[SlashCommands] Upload response for ${example.name}.md:`, uploadRes.status, uploadRes.statusText);
           
           if (uploadRes.ok) {
             const result = await uploadRes.json();
-            console.log(`[SlashCommands] Upload result for ${example.name}.md:`, {
-              entry_id: result.entry_id,
-              filename: result.filename,
-              success: result.success,
-            });
+            //console.log(`[SlashCommands] Upload result for ${example.name}.md:`, {
+            //  entry_id: result.entry_id,
+            //  filename: result.filename,
+            //  success: result.success,
+            //});
             
             // Update the entry summary to store the description
             if (result.entry_id) {
@@ -165,7 +165,7 @@ async function initializeSlashCommands() {
                   summary: example.description,
                 }),
               });
-              console.log(`[SlashCommands] Update summary response for ${example.name}.md:`, updateRes.status, updateRes.statusText);
+              //console.log(`[SlashCommands] Update summary response for ${example.name}.md:`, updateRes.status, updateRes.statusText);
               
               if (!updateRes.ok) {
                 const updateError = await updateRes.text();
@@ -173,22 +173,22 @@ async function initializeSlashCommands() {
               }
             }
             
-            console.log(`[SlashCommands] ✓ Created example command: ${example.name}.md`);
+            //console.log(`[SlashCommands] ✓ Created example command: ${example.name}.md`);
           } else {
             const errorText = await uploadRes.text();
             console.error(`[SlashCommands] Failed to create ${example.name}.md:`, uploadRes.status, errorText);
           }
         } catch (err) {
-          console.error(`[SlashCommands] Error creating example command ${example.name}:`, err);
+          //console.error(`[SlashCommands] Error creating example command ${example.name}:`, err);
         }
       }
     } else {
-      console.log('[SlashCommands] All example commands already exist, skipping upload');
+      //console.log('[SlashCommands] All example commands already exist, skipping upload');
     }
     
     return folderId;
   } catch (err) {
-    console.error('[SlashCommands] Error initializing slash commands:', err);
+    //console.error('[SlashCommands] Error initializing slash commands:', err);
     return null;
   }
 }
@@ -204,7 +204,7 @@ export function useSlashCommands() {
         const folderId = await initializeSlashCommands();
         
         if (!folderId) {
-          console.warn('[SlashCommands] useSlashCommands: Initialization failed, returning fallback commands');
+          //console.warn('[SlashCommands] useSlashCommands: Initialization failed, returning fallback commands');
           return EXAMPLE_COMMANDS.map(ex => ({
             name: ex.name,
             description: ex.description,
@@ -274,11 +274,11 @@ export function useSlashCommands() {
           };
         });
         
-        console.log('[SlashCommands] useSlashCommands: Converted to commands:', commands.map(c => ({
-          name: c.name,
-          descriptionLength: c.description.length,
-          promptLength: c.prompt.length,
-        })));
+        //console.log('[SlashCommands] useSlashCommands: Converted to commands:', commands.map(c => ({
+        //  name: c.name,
+        //  descriptionLength: c.description.length,
+        //  promptLength: c.prompt.length,
+        //})));
         
         return commands;
       } catch (err) {

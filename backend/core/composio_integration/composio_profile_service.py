@@ -37,9 +37,9 @@ class ComposioProfileService:
         self.db = db_connection or DBConnection()
         
     def _get_encryption_key(self) -> bytes:
-        key = os.getenv("ENCRYPTION_KEY")
+        key = os.getenv("MCP_CREDENTIAL_ENCRYPTION_KEY")
         if not key:
-            raise ValueError("ENCRYPTION_KEY environment variable is required")
+            raise ValueError("MCP_CREDENTIAL_ENCRYPTION_KEY environment variable is required")
         return key.encode()
 
     def _encrypt_config(self, config_json: str) -> str:

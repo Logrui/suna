@@ -389,6 +389,7 @@ async def check_profile_name_availability(
     current_user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict[str, Any]:
     try:
+        logger.debug(f"check_profile_name_availability called with user_id: {current_user_id}, toolkit_slug: {toolkit_slug}, profile_name: {profile_name}")
         profile_service = ComposioProfileService(db)
         profiles = await profile_service.get_profiles(current_user_id, toolkit_slug)
         
@@ -425,6 +426,7 @@ async def get_profiles(
     current_user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict[str, Any]:
     try:
+        logger.debug(f"get_profiles called with user_id: {current_user_id}, toolkit_slug: {toolkit_slug}")
         profile_service = ComposioProfileService(db)
         profiles = await profile_service.get_profiles(current_user_id, toolkit_slug)
         
@@ -437,11 +439,7 @@ async def get_profiles(
         
     except Exception as e:
         logger.error(f"Failed to get profiles: {e}", exc_info=True)
-        return {
-            "success": False,
-            "profiles": [],
-            "error": str(e)
-        }
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/profiles/{profile_id}/mcp-config")
