@@ -21,8 +21,8 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''
-            }`,
+          // Optional: specify where to redirect after successful OAuth
+          redirectTo: returnUrl ? `${window.location.origin}${returnUrl}` : undefined,
         },
       });
 
