@@ -20,6 +20,7 @@ import { KortixLoader } from '@/components/ui/kortix-loader';
 import { useAuth } from '@/components/AuthProvider';
 import { useAuthMethodTracking } from '@/stores/auth-tracking';
 import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
 
 import {
   Dialog,
@@ -86,18 +87,29 @@ function LoginContent() {
   const handleSignIn = async (prevState: any, formData: FormData) => {
     markEmailAsUsed();
 
-    const finalReturnUrl = returnUrl || '/dashboard';
-    formData.append('returnUrl', finalReturnUrl);
     const result = await signIn(prevState, formData);
 
-    if (
-      result &&
-      typeof result === 'object' &&
-      'success' in result &&
-      result.success &&
-      'redirectTo' in result
-    ) {
-      window.location.href = result.redirectTo as string;
+    // Handle client-side auth
+    if (result && typeof result === 'object' && 'useClientAuth' in result && result.useClientAuth) {
+      const { email, password } = result as { email: string; password: string };
+      const supabase = createClient();
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast.error('Login failed', {
+          description: error.message || 'Could not authenticate user',
+          duration: 5000,
+        });
+        return {};
+      }
+
+      // Successful login - redirect
+      const finalReturnUrl = returnUrl || '/dashboard';
+      window.location.href = finalReturnUrl;
       return null;
     }
 
@@ -118,25 +130,46 @@ function LoginContent() {
     const email = formData.get('email') as string;
     setRegistrationEmail(email);
 
-    const finalReturnUrl = returnUrl || '/dashboard';
-    formData.append('returnUrl', finalReturnUrl);
-
-    // Add origin for email redirects
-    formData.append('origin', window.location.origin);
-
     const result = await signUp(prevState, formData);
 
-    // Check for success and redirectTo properties (direct login case)
-    if (
-      result &&
-      typeof result === 'object' &&
-      'success' in result &&
-      result.success &&
-      'redirectTo' in result
-    ) {
-      // Use window.location for hard navigation to avoid stale state
-      window.location.href = result.redirectTo as string;
-      return null; // Return null to prevent normal form action completion
+    // Handle client-side auth
+    if (result && typeof result === 'object' && 'useClientAuth' in result && result.useClientAuth) {
+      const { email, password } = result as { email: string; password: string };
+      const supabase = createClient();
+
+      // Sign up
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (signUpError) {
+        toast.error('Sign up failed', {
+          description: signUpError.message || 'Could not create account',
+          duration: 5000,
+        });
+        return {};
+      }
+
+      // Auto sign in (works because ENABLE_EMAIL_AUTOCONFIRM=true)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        // Account created but couldn't auto-login
+        setRegistrationSuccess(true);
+        return {};
+      }
+
+      // Successful signup and login - redirect
+      const finalReturnUrl = returnUrl || '/dashboard';
+      window.location.href = finalReturnUrl;
+      return null;
     }
 
     // Check if registration was successful but needs email verification

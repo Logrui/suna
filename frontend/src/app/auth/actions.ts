@@ -19,19 +19,14 @@ export async function signIn(prevState: any, formData: FormData) {
     return { message: 'Password must be at least 6 characters' };
   }
 
-  const supabase = await createClient();
-
-  const { error } = await supabase.auth.signInWithPassword({
+  // Return credentials to client for client-side auth
+  // This avoids server action cookie issues with Supabase SSR
+  return {
+    success: true,
     email,
     password,
-  });
-
-  if (error) {
-    return { message: error.message || 'Could not authenticate user' };
-  }
-
-  // Use client-side navigation instead of server-side redirect
-  return { success: true, redirectTo: returnUrl || '/dashboard' };
+    useClientAuth: true
+  };
 }
 
 export async function signUp(prevState: any, formData: FormData) {
@@ -53,43 +48,21 @@ export async function signUp(prevState: any, formData: FormData) {
     return { message: 'Passwords do not match' };
   }
 
-  const supabase = await createClient();
+  // Welcome email disabled for self-hosted setup (no SMTP configured)
+  // const userName = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  // sendWelcomeEmail(email, userName).catch(err => {
+  //   console.error('Failed to send welcome email:', err);
+  // });
 
-  const { error } = await supabase.auth.signUp({
+  // Return credentials to client for client-side auth
+  // This avoids server action cookie issues with Supabase SSR
+  return {
+    success: true,
     email,
     password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl || '/dashboard')}`,
-    },
-  });
-
-  if (error) {
-    return { message: error.message || 'Could not create account' };
-  }
-
-  // Send welcome email immediately after signup (don't wait for sign-in)
-  // The email will also be sent when they confirm via callback route, but sending here
-  // ensures it's sent even if they don't need to confirm email
-  const userName = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  // Don't await - send in background to not block signup flow
-  sendWelcomeEmail(email, userName).catch(err => {
-    console.error('Failed to send welcome email:', err);
-  });
-
-  const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (signInError) {
-    return {
-      message:
-        'Account created! Check your email to confirm your registration.',
-    };
-  }
-
-  // Use client-side navigation instead of server-side redirect
-  return { success: true, redirectTo: returnUrl || '/dashboard' };
+    useClientAuth: true,
+    isSignUp: true
+  };
 }
 
 export async function forgotPassword(prevState: any, formData: FormData) {
