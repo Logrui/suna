@@ -363,6 +363,12 @@ export function NavUserWithTeams({
                   <Settings className="h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/notifications" className="gap-2 p-2">
+                    <Bell className="h-4 w-4" />
+                    <span>Notifications</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
                   className="gap-2 p-2"

@@ -13,6 +13,7 @@ import { MaintenancePage } from '@/components/maintenance/maintenance-page';
 import { useDeleteOperationEffects } from '@/stores/delete-operation-store';
 import { StatusOverlay } from '@/components/ui/status-overlay';
 import { useAdminRole } from '@/hooks/admin';
+import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 
 import { useProjects, useThreads } from '@/hooks/sidebar/use-sidebar';
 import { useIsMobile } from '@/hooks/utils';
@@ -120,6 +121,7 @@ export default function DashboardLayoutContent({
           <SidebarProvider>
             <SidebarLeft />
             <SidebarInset>
+              <DashboardHeader />
               {mantenanceBanner}
               <div className="bg-background">{children}</div>
             </SidebarInset>
