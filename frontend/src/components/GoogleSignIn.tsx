@@ -18,11 +18,15 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
+      
+      // Always redirect back to current origin + returnUrl (or /dashboard)
+      // This overrides Supabase's SITE_URL and provides true dual support
+      const redirectUrl = returnUrl ? `${window.location.origin}${returnUrl}` : `${window.location.origin}/dashboard`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // Optional: specify where to redirect after successful OAuth
-          redirectTo: returnUrl ? `${window.location.origin}${returnUrl}` : undefined,
+          redirectTo: redirectUrl,
         },
       });
 
