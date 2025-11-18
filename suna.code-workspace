@@ -11,6 +11,9 @@
 		},
 		{
 			"path": "../suna-main"
+		},
+		{
+			"path": "../../DevelopmentFiles/.Zero/Zero"
 		}
 	],
 	"settings": {}
