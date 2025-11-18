@@ -180,7 +180,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
           overflowWrap: 'break-word',
         }}
       >
-        <span className="bg-primary text-primary-foreground rounded px-1 font-medium">
+        <span className="bg-primary/20 text-transparent rounded px-1 font-medium">
           /{activeSlashCommand.name}
         </span>
       </div>
