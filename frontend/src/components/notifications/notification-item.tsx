@@ -3,7 +3,7 @@
 import React from 'react';
 import { CheckCircle2, Info, AlertCircle, XCircle, CheckCheck } from 'lucide-react';
 import { useMarkNotificationAsRead } from '@/hooks/react-query/notifications/use-notifications';
-import type { Notification } from '@/lib/api';
+import type { Notification } from '@/hooks/react-query/notifications/use-notifications';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 

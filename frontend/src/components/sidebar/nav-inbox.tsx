@@ -6,8 +6,7 @@ import { Loader2, Bell, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { useNotifications, useMarkNotificationAsRead } from '@/hooks/react-query/notifications/use-notifications';
-import { Notification } from '@/lib/api';
+import { useNotifications, useMarkNotificationAsRead, type Notification } from '@/hooks/react-query/notifications/use-notifications';
 import { cn } from '@/lib/utils';
 
 // Helper function to group notifications by date
@@ -108,30 +107,30 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
       )}
     >
       <SpotlightCard>
-      <div className="p-3">
-        <div className="flex items-start gap-2">
-          <Bell className={cn('h-4 w-4 mt-0.5 flex-shrink-0', getTypeColor(notification.type))} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className={cn(
-                'text-sm truncate',
-                notification.is_read ? 'font-normal' : 'font-semibold'
-              )}>
-                {notification.title}
+        <div className="p-3">
+          <div className="flex items-start gap-2">
+            <Bell className={cn('h-4 w-4 mt-0.5 flex-shrink-0', getTypeColor(notification.type))} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className={cn(
+                  'text-sm truncate',
+                  notification.is_read ? 'font-normal' : 'font-semibold'
+                )}>
+                  {notification.title}
+                </p>
+                {!notification.is_read && (
+                  <div className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                {notification.message}
               </p>
-              {!notification.is_read && (
-                <div className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
-              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Date(notification.created_at).toLocaleString()}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-              {notification.message}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {new Date(notification.created_at).toLocaleString()}
-            </p>
           </div>
         </div>
-      </div>
       </SpotlightCard>
     </div>
   );

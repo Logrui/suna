@@ -14,58 +14,14 @@ class NoAccessTokenAvailableError extends Error {
 // TYPES
 // ============================================================================
 
-export type Notification = {
-  id: string;
-  account_id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  type: string;
-  category?: string;
-  thread_id?: string;
-  agent_run_id?: string;
-  related_entity_type?: string;
-  related_entity_id?: string;
-  is_global: boolean;
-  created_by?: string;
-  metadata?: Record<string, any>;
-  email_sent: boolean;
-  email_sent_at?: string;
-  email_error?: string;
-  push_sent: boolean;
-  push_sent_at?: string;
-  push_error?: string;
-  retry_count: number;
-  last_retry_at?: string;
-  is_read: boolean;
-  read_at?: string;
-  created_at: string;
-  updated_at: string;
-};
+// Migrated to use-notifications.ts
+// export type Notification = ...
+// export type NotificationListResponse = ...
+// export type NotificationPreferences = ...
 
-export type NotificationListResponse = {
-  notifications: Notification[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-  unread_count?: number;
-};
-
-export type NotificationPreferences = {
-  user_id: string;
-  account_id: string;
-  email_enabled: boolean;
-  push_enabled: boolean;
-  email_categories: Record<string, boolean>;
-  push_categories: Record<string, boolean>;
-  push_token?: string | null;
-  push_token_updated_at?: string | null;
-  created_at: string;
-  updated_at: string;
-};
+// ============================================================================
+// TYPES
+// ============================================================================
 
 export type GlobalNotificationRequest = {
   title: string;
@@ -130,149 +86,8 @@ export type GlobalNotificationBatchListResponse = {
 // API FUNCTIONS
 // ============================================================================
 
-export const getNotifications = async (
-  params?: {
-    page?: number;
-    page_size?: number;
-    is_read?: boolean;
-    category?: string;
-    notification_type?: string;
-  }
-): Promise<NotificationListResponse> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+// Migrated functions removed.
 
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-
-    const { page = 1, page_size = 10, is_read, category, notification_type } = params;
-    const queryParams = new URLSearchParams({ page: page.toString(), page_size: page_size.toString() });
-
-    if (is_read !== undefined) queryParams.set('is_read', is_read.toString());
-    if (category) queryParams.set('category', category);
-    if (notification_type) queryParams.set('notification_type', notification_type);
-
-    const response = await backendApi.get<NotificationListResponse>(`/notifications/?${queryParams}`);
-    if (!response.success) {
-      throw new Error(`Failed to fetch notifications: ${response.error?.message || 'Unknown error'}`);
-    }
-    return response.data!;
-  } catch (error) {
-    console.error('Failed to get notifications:', error);
-    handleApiError(error, { operation: 'get notifications', resource: 'notifications' });
-    throw error;
-  }
-};
-
-export const markNotificationAsRead = async (
-  notificationIds: string[],
-  isRead: boolean = true
-): Promise<{ success: boolean; message: string }> => {
-  try {
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new NoAccessTokenAvailableError();
-    }
-
-    const response = await backendApi.post('/notifications/mark-as-read', {
-      notification_ids: notificationIds,
-      is_read: isRead
-    });
-
-    if (response.error) {
-      throw new Error(`Failed to mark notifications as read: ${response.error.message}`);
-    }
-
-    return response.data || { success: true, message: 'Notifications marked as read' };
-  } catch (error) {
-    console.error('Failed to mark notification as read:', error);
-    handleApiError(error, { operation: 'mark notification as read', resource: 'notifications' });
-    throw error;
-  }
-};
-
-export const getNotificationPreferences = async (): Promise<NotificationPreferences | null> => {
-  try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      return null;
-    }
-
-    const response = await backendApi.get('/notifications/preferences');
-
-    if (response.error) {
-      return null;
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error('Failed to get notification preferences:', error);
-    return null;
-  }
-};
-
-export const updateNotificationPreferences = async (
-  preferences: Partial<{
-    email_enabled: boolean;
-    push_enabled: boolean;
-    email_categories: Record<string, boolean>;
-    push_categories: Record<string, boolean>;
-  }>
-): Promise<NotificationPreferences | null> => {
-  try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await backendApi.post('/notifications/preferences', preferences);
-
-    if (response.error) {
-      throw new Error(`Failed to update notification preferences: ${response.error.message}`);
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error('Failed to update notification preferences:', error);
-    handleApiError(error, { operation: 'update notification preferences', resource: 'notifications' });
-    throw error;
-  }
-};
-
-export const registerPushToken = async (pushToken: string): Promise<{ success: boolean }> => {
-  try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await backendApi.post('/notifications/push-token', { push_token: pushToken });
-
-    if (response.error) {
-      throw new Error(`Failed to register push token: ${response.error.message}`);
-    }
-
-    return response.data || { success: true };
-  } catch (error) {
-    console.error('Failed to register push token:', error);
-    handleApiError(error, { operation: 'register push token', resource: 'notifications' });
-    throw error;
-  }
-};
 
 // ============================================================================
 // ADMIN NOTIFICATION FUNCTIONS
