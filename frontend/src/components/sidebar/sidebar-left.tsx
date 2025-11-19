@@ -12,6 +12,8 @@ import { NavTriggerRuns } from '@/components/sidebar/nav-trigger-runs';
 import { NavKnowledgeBase } from '@/components/sidebar/nav-knowledge-base';
 import { NavLibrary } from '@/components/sidebar/nav-library';
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
+import { NavInbox } from '@/components/sidebar/nav-inbox';
+import { useNotifications } from '@/hooks/react-query/notifications/use-notifications';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { CTACard } from '@/components/sidebar/cta';
 import { siteConfig } from '@/lib/home';
@@ -178,6 +180,18 @@ function FloatingMobileMenuButton() {
   );
 }
 
+// Component for inbox button with unread badge
+const InboxButton: React.FC<{ unreadCount: number }> = ({ unreadCount }) => (
+  <div className="relative inline-flex">
+    <Bell className="!h-4 !w-4" />
+    {unreadCount > 0 && (
+      <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 text-[8px] text-white flex items-center justify-center font-bold">
+        {unreadCount > 9 ? '9+' : unreadCount}
+      </span>
+    )}
+  </div>
+);
+
 export function SidebarLeft({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -187,6 +201,14 @@ export function SidebarLeft({
   const router = useRouter();
   const [activeView, setActiveView] = useState<'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
+
+  // Fetch unread notification count for inbox badge
+  const { data: notificationData } = useNotifications({
+    page: 1,
+    page_size: 1,
+    is_read: false,
+  });
+  const unreadCount = notificationData?.unread_count || 0;
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -407,11 +429,15 @@ export function SidebarLeft({
                             activeView === view ? 'bg-card border-[1.5px] border-border' : ''
                           )}
                         >
-                          <Icon className="!h-4 !w-4" />
+                          {view === 'inbox' ? (
+                            <InboxButton unreadCount={unreadCount} />
+                          ) : (
+                            <Icon className="!h-4 !w-4" />
+                          )}
                         </Button>
                       </Link>
                     </TooltipTrigger>
-                    <TooltipContent side="right">{label}</TooltipContent>
+                    <TooltipContent side="right">{label}{view === 'inbox' && unreadCount > 0 ? ` (${unreadCount})` : ''}</TooltipContent>
                   </Tooltip>
                 ))}
               </div>
@@ -507,7 +533,11 @@ export function SidebarLeft({
                           activeView === view ? 'bg-card border-[1.5px] border-border' : 'border-[1.5px] border-transparent'
                         )}
                       >
-                        <Icon className="!h-4 !w-4" />
+                        {view === 'inbox' ? (
+                          <InboxButton unreadCount={unreadCount} />
+                        ) : (
+                          <Icon className="!h-4 !w-4" />
+                        )}
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {label}
                         </span>
@@ -531,12 +561,7 @@ export function SidebarLeft({
                 {activeView === 'knowledge' && (
                   <NavKnowledgeBase />
                 )}
-                {activeView === 'inbox' && (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Inbox placeholder</p>
-                  </div>
-                )}
+                {activeView === 'inbox' && <NavInbox />}
               </div>
             </motion.div>
           )}

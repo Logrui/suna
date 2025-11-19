@@ -2317,3 +2317,133 @@ export const transcribeAudio = async (audioFile: File): Promise<TranscriptionRes
     throw error;
   }
 };
+
+// Notification API Types
+export interface Notification {
+  id: string;
+  account_id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error' | 'agent_complete';
+  category?: string;
+  thread_id?: string;
+  agent_run_id?: string;
+  metadata: Record<string, any>;
+  email_sent: boolean;
+  email_sent_at?: string;
+  push_sent: boolean;
+  push_sent_at?: string;
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+  unread_count: number;
+}
+
+export interface NotificationPreferences {
+  user_id: string;
+  account_id: string;
+  email_enabled: boolean;
+  push_enabled: boolean;
+  email_categories: Record<string, boolean>;
+  push_categories: Record<string, boolean>;
+  push_token?: string;
+  push_token_updated_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Notification API Functions
+export const getNotifications = async (
+  params?: {
+    page?: number;
+    page_size?: number;
+    is_read?: boolean;
+    category?: string;
+    notification_type?: string;
+  }
+): Promise<NotificationListResponse> => {
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new NoAccessTokenAvailableError();
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.is_read !== undefined) queryParams.append('is_read', params.is_read.toString());
+    if (params?.category) queryParams.append('category', params.category);
+    if (params?.notification_type) queryParams.append('notification_type', params.notification_type);
+
+    const response = await fetch(`${API_URL}/notifications?${queryParams}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch notifications: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Convert paginated response to list format
+    return {
+      notifications: data.items || [],
+      total: data.total || 0,
+      unread_count: data.unread_count || 0,
+    };
+  } catch (error) {
+    console.error('Failed to get notifications:', error);
+    handleApiError(error, { operation: 'get notifications', resource: 'notifications' });
+    throw error;
+  }
+};
+
+export const markNotificationAsRead = async (
+  notificationIds: string[],
+  isRead: boolean = true
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new NoAccessTokenAvailableError();
+    }
+
+    const response = await fetch(`${API_URL}/notifications/read-all`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ notification_ids: notificationIds, is_read: isRead }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to mark notifications as read: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Failed to mark notification as read:', error);
+    handleApiError(error, { operation: 'mark notification as read', resource: 'notifications' });
+    throw error;
+  }
+};

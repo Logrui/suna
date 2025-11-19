@@ -407,14 +407,14 @@ async def get_user_threads_by_email(
         
         if not email_result.data:
             try:
-                oauth_result = await client.rpc('get_user_account_by_email', {'email_input': email}).execute()
+                oauth_result = await client.rpc('get_account_by_email', {'search_email': email}).execute()
                 if not oauth_result.data:
                     return await PaginationService.paginate_with_total_count(
                         items=[],
                         total_count=0,
                         params=pagination_params
                     )
-                account_id = oauth_result.data['id']
+                account_id = oauth_result.data
             except Exception as e:
                 logger.warning(f"Could not find account for email {email}: {e}")
                 return await PaginationService.paginate_with_total_count(
@@ -515,8 +515,8 @@ async def admin_install_suna_for_user(
         )
 
 @router.get("/env-vars")
-async def get_env_vars(admin: dict = Depends(require_admin)) -> Dict[str, str]:
-    """Get environment variables (local mode only, admin only)."""
+def get_env_vars() -> Dict[str, str]:
+    """Get environment variables (local mode only)."""
     if config.ENV_MODE != EnvMode.LOCAL:
         raise HTTPException(status_code=403, detail="Env vars management only available in local mode")
     
@@ -532,8 +532,8 @@ async def get_env_vars(admin: dict = Depends(require_admin)) -> Dict[str, str]:
         raise HTTPException(status_code=500, detail=f"Failed to get env variables: {e}")
 
 @router.post("/env-vars")
-async def save_env_vars(request: Dict[str, str], admin: dict = Depends(require_admin)) -> Dict[str, str]:
-    """Save environment variables (local mode only, admin only)."""
+def save_env_vars(request: Dict[str, str]) -> Dict[str, str]:
+    """Save environment variables (local mode only)."""
     if config.ENV_MODE != EnvMode.LOCAL:
         raise HTTPException(status_code=403, detail="Env vars management only available in local mode")
 
