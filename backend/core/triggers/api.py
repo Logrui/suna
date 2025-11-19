@@ -163,6 +163,37 @@ async def verify_and_authorize_trigger_agent_access(agent_id: str, user_id: str)
         raise HTTPException(status_code=404, detail="Agent not found or access denied")
 
 
+async def sync_workflows_to_version_config(agent_id: str):
+    try:
+        client = await db.client
+        
+        agent_result = await client.table('agents').select('current_version_id').eq('agent_id', agent_id).single().execute()
+        if not agent_result.data or not agent_result.data.get('current_version_id'):
+            logger.warning(f"No current version found for agent {agent_id}")
+            return
+        
+        current_version_id = agent_result.data['current_version_id']
+        
+        workflows_result = await client.table('agent_workflows').select('*').eq('agent_id', agent_id).execute()
+        workflows = workflows_result.data if workflows_result.data else []
+        
+        version_result = await client.table('agent_versions').select('config').eq('version_id', current_version_id).single().execute()
+        if not version_result.data:
+            logger.warning(f"Version {current_version_id} not found")
+            return
+        
+        config = version_result.data.get('config', {})
+        
+        config['workflows'] = workflows
+        
+        await client.table('agent_versions').update({'config': config}).eq('version_id', current_version_id).execute()
+        
+        logger.debug(f"Synced {len(workflows)} workflows to version config for agent {agent_id}")
+        
+    except Exception as e:
+        logger.error(f"Failed to sync workflows to version config: {e}")
+
+
 async def sync_triggers_to_version_config(agent_id: str):
     try:
         client = await db.client
