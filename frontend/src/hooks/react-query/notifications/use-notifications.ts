@@ -69,7 +69,7 @@ export const useUpdateNotificationPreferences = () => {
       push_enabled: boolean;
       email_categories: Record<string, boolean>;
       push_categories: Record<string, boolean>;
-    }>) => updateNotificationPreferences(preferences),
+    }>) => updateNotificationPreferences(preferences).then(result => result || {}),
     {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: notificationKeys.preferences() });

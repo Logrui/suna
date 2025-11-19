@@ -9,6 +9,7 @@ from .threads import router as threads_router
 from .tools_api import router as tools_api_router
 from .vapi_api import router as vapi_router
 from .account_deletion import router as account_deletion_router
+from .notifications_api import router as notifications_router
 
 router = APIRouter()
 
@@ -22,6 +23,7 @@ router.include_router(threads_router)
 router.include_router(tools_api_router)
 router.include_router(vapi_router)
 router.include_router(account_deletion_router)
+router.include_router(notifications_router)
 
 # Re-export the initialize and cleanup functions
 __all__ = ['router', 'initialize', 'cleanup']

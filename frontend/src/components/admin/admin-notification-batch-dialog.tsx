@@ -119,8 +119,8 @@ export function AdminNotificationBatchDialog({
                 >
                   {batch.status}
                 </Badge>
-                <Badge variant="outline" className={typeColors[batch.type] || typeColors.info}>
-                  {batch.type}
+                <Badge variant="outline" className={typeColors[batch.notification_type] || typeColors.info}>
+                  {batch.notification_type}
                 </Badge>
                 {batch.send_email && <Badge variant="outline">Email</Badge>}
                 {batch.send_push && <Badge variant="outline">Push</Badge>}

@@ -100,13 +100,14 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
   };
 
   return (
-    <SpotlightCard
+    <div
+      onClick={handleClick}
       className={cn(
         'mb-2 cursor-pointer transition-colors',
         notification.is_read ? 'opacity-60' : 'opacity-100'
       )}
-      onClick={handleClick}
     >
+      <SpotlightCard>
       <div className="p-3">
         <div className="flex items-start gap-2">
           <Bell className={cn('h-4 w-4 mt-0.5 flex-shrink-0', getTypeColor(notification.type))} />
@@ -131,7 +132,8 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
           </div>
         </div>
       </div>
-    </SpotlightCard>
+      </SpotlightCard>
+    </div>
   );
 };
 

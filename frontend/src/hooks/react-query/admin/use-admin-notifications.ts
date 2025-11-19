@@ -47,7 +47,8 @@ export function useSendGlobalNotification() {
 
   return useMutation({
     mutationFn: (request: GlobalNotificationRequest) => sendGlobalNotification(request),
-    onSuccess: (data: { batch_id: string; status: string; message: string; title: string }) => {
+    onSuccess: (data: GlobalNotificationBatch | null) => {
+      if (!data) return;
       queryClient.invalidateQueries({ queryKey: adminNotificationKeys.lists() });
       toast.success(`Global notification "${data.title}" queued for sending`, {
         description: 'Sending will begin immediately in the background. Check Batch History to track progress.',
@@ -67,12 +68,12 @@ export function useCancelGlobalNotificationBatch() {
 
   return useMutation({
     mutationFn: (batchId: string) => cancelGlobalNotificationBatch(batchId),
-    onSuccess: (data: { batch_id: string; status: string; message: string }, batchId: string) => {
+    onSuccess: (_data: void, batchId: string) => {
       // Invalidate both list and detail queries to refresh status
       queryClient.invalidateQueries({ queryKey: adminNotificationKeys.lists() });
       queryClient.invalidateQueries({ queryKey: adminNotificationKeys.detail(batchId) });
       toast.success('Notification batch cancellation requested', {
-        description: data.message || 'Processing will stop at next checkpoint.',
+        description: 'Processing will stop at next checkpoint.',
         duration: 5000,
       });
     },

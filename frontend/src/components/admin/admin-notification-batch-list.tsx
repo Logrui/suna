@@ -69,7 +69,7 @@ export function AdminNotificationBatchList() {
     );
   }
 
-  if (!batches || batches.length === 0) {
+  if (!batches || !batches.batches || batches.batches.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -101,7 +101,7 @@ export function AdminNotificationBatchList() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {batches.map((batch: GlobalNotificationBatch) => {
+            {batches.batches.map((batch: GlobalNotificationBatch) => {
               const statusInfo: Record<string, { label: string; description: string }> = {
                 pending: { label: 'Pending', description: 'Queued, starting soon' },
                 sending: { label: 'Sending', description: 'Currently being delivered' },

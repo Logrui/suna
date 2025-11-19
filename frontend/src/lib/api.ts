@@ -2447,3 +2447,283 @@ export const markNotificationAsRead = async (
     throw error;
   }
 };
+
+export const getNotificationPreferences = async (): Promise<NotificationPreferences | null> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      return null;
+    }
+
+    const response = await fetch(`${API_URL}/notifications/preferences`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Failed to get notification preferences:', error);
+    return null;
+  }
+};
+
+export const updateNotificationPreferences = async (
+  preferences: Partial<{
+    email_enabled: boolean;
+    push_enabled: boolean;
+    email_categories: Record<string, boolean>;
+    push_categories: Record<string, boolean>;
+  }>
+): Promise<NotificationPreferences | null> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_URL}/notifications/preferences`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(preferences),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update preferences: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Failed to update notification preferences:', error);
+    handleApiError(error, { operation: 'update preferences', resource: 'notification preferences' });
+    throw error;
+  }
+};
+
+export const registerPushToken = async (pushToken: string): Promise<void> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_URL}/notifications/push-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ push_token: pushToken }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to register push token: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Failed to register push token:', error);
+    handleApiError(error, { operation: 'register push token', resource: 'push token' });
+    throw error;
+  }
+};
+
+// Global notification types
+export type GlobalNotificationRequest = {
+  title: string;
+  message: string;
+  notification_type: 'info' | 'success' | 'warning' | 'error';
+  category?: string;
+  target_user_ids?: string[];
+  target_account_ids?: string[];
+  send_email?: boolean;
+  send_push?: boolean;
+  metadata?: Record<string, any>;
+};
+
+export type GlobalNotificationBatch = {
+  id: string;
+  batch_id?: string; // Alias for id
+  created_by: string;
+  title: string;
+  message: string;
+  notification_type: 'info' | 'success' | 'warning' | 'error';
+  type?: 'info' | 'success' | 'warning' | 'error'; // Alias for notification_type
+  category?: string;
+  total_recipients: number;
+  total_count?: number; // Alias for total_recipients
+  sent_count: number;
+  failed_count: number;
+  emails_sent_count?: number;
+  pushes_sent_count?: number;
+  status: 'pending' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  started_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GlobalNotificationBatchDetail = GlobalNotificationBatch & {
+  metadata?: Record<string, any>;
+  error_message?: string | null;
+  send_email?: boolean;
+  send_push?: boolean;
+  emails_sent?: number;
+  pushes_sent?: number;
+  started_at?: string | null;
+  completed_at?: string | null;
+  cancelled_at?: string | null;
+  notifications?: Array<{
+    id: string;
+    status: string;
+    [key: string]: any;
+  }>;
+};
+
+export const sendGlobalNotification = async (
+  request: GlobalNotificationRequest
+): Promise<GlobalNotificationBatch | null> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_URL}/admin/notifications/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send notification: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Failed to send global notification:', error);
+    handleApiError(error, { operation: 'send notification', resource: 'global notification' });
+    throw error;
+  }
+};
+
+export const listGlobalNotificationBatches = async (params?: {
+  page?: number;
+  page_size?: number;
+  status?: string;
+}): Promise<{
+  batches: GlobalNotificationBatch[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      return {
+        batches: [],
+        pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+      };
+    }
+
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params?.status) queryParams.append('status', params.status);
+
+    const response = await fetch(`${API_URL}/admin/notifications/batches?${queryParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      return {
+        batches: [],
+        pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+      };
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Failed to list notification batches:', error);
+    return {
+      batches: [],
+      pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+    };
+  }
+};
+
+export const getGlobalNotificationBatch = async (
+  batchId: string
+): Promise<GlobalNotificationBatchDetail | null> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      return null;
+    }
+
+    const response = await fetch(`${API_URL}/admin/notifications/batches/${batchId}`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Failed to get notification batch:', error);
+    return null;
+  }
+};
+
+export const cancelGlobalNotificationBatch = async (batchId: string): Promise<void> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_URL}/admin/notifications/batches/${batchId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to cancel batch: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Failed to cancel notification batch:', error);
+    handleApiError(error, { operation: 'cancel batch', resource: 'notification batch' });
+    throw error;
+  }
+};
