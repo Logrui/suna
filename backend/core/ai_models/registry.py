@@ -114,72 +114,6 @@ class ModelRegistry:
             ]
         ))
         
-        # Sonnet 3.7 - No global inference profile available yet
-        # self.register(Model(
-        #     id="anthropic/claude-3-7-sonnet-latest" if SHOULD_USE_ANTHROPIC else "global.anthropic.claude-3-7-sonnet-20250219-v1:0",
-        #     name="Sonnet 3.7",
-        #     provider=ModelProvider.ANTHROPIC,
-        #     aliases=["claude-3.7", "Claude 3.7 Sonnet", "claude-3-7-sonnet-latest", "global.anthropic.claude-3-7-sonnet-20250219-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-3-7-sonnet-20250219-v1:0", "bedrock/global.anthropic.claude-3-7-sonnet-20250219-v1:0"],
-        #     context_window=200_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #         ModelCapability.VISION,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=3.00,
-        #         output_cost_per_million_tokens=15.00
-        #     ),
-        #     tier_availability=["paid"],
-        #     priority=99,
-        #     enabled=True,
-        #     config=ModelConfig(
-        #         # extra_headers={
-        #         #     "anthropic-beta": "prompt-caching-2024-07-31"
-        #         # },
-        #     )
-        # ))
-
-        # Commented out non-Anthropic models as requested
-        # self.register(Model(
-        #     id="xai/grok-4-fast-non-reasoning",
-        #     name="Grok 4 Fast",
-        #     provider=ModelProvider.XAI,
-        #     aliases=["grok-4-fast-non-reasoning", "Grok 4 Fast"],
-        #     context_window=2_000_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=0.20,
-        #         output_cost_per_million_tokens=0.50
-        #     ),
-        #     tier_availability=["paid"],
-        #     priority=98,
-        #     enabled=True
-        # ))        
-        
-        # self.register(Model(
-        #     id="anthropic/claude-3-5-sonnet-latest",
-        #     name="Claude 3.5 Sonnet",
-        #     provider=ModelProvider.ANTHROPIC,
-        #     aliases=["sonnet-3.5", "claude-3.5", "Claude 3.5 Sonnet", "claude-3-5-sonnet-latest"],
-        #     context_window=200_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #         ModelCapability.VISION,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=3.00,
-        #         output_cost_per_million_tokens=15.00
-        #     ),
-        #     tier_availability=["paid"],
-        #     priority=90,
-        #     enabled=True
-        # ))
-        
         # OpenAI Models - Updated with GPT-5 lineup (Nov 1, 2025)
         self.register(Model(
             id="openai/gpt-5",
@@ -280,10 +214,10 @@ class ModelRegistry:
         
         # Google Gemini Models - Updated with latest pricing (Nov 1, 2025)
         self.register(Model(
-            id="gemini/gemini-2.5-flash-lite",
-            name="Gemini 2.5 Flash-Lite",
+            id="gemini/gemini-3-pro-preview",
+            name="Gemini 3 Pro Preview",
             provider=ModelProvider.GOOGLE,
-            aliases=["gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite"],
+            aliases=["gemini-3-pro-preview", "Gemini 3 Pro Preview"],
             context_window=1_000_000,
             capabilities=[
                 ModelCapability.CHAT,
@@ -291,8 +225,34 @@ class ModelRegistry:
                 ModelCapability.VISION,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.10,
-                output_cost_per_million_tokens=0.40
+                input_cost_per_million_tokens=2.00,
+                output_cost_per_million_tokens=12.00
+            ),
+            tier_availability=["free", "paid"],
+            priority=98,
+            enabled=config.GEMINI_API_KEY is not None,  # Only enable if API key exists
+            fallback_models=[
+                "anthropic/claude-haiku-4-5",
+                "gemini/gemini-2.5-pro",
+                "openai/gpt-4o" if config.OPENAI_API_KEY else "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
+            ]
+        ))
+        
+        # Google Gemini Models - Updated with latest pricing (Nov 1, 2025)
+        self.register(Model(
+            id="gemini/gemini-2.5-pro",
+            name="Gemini 2.5 Pro",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-2.5-pro", "Gemini 2.5 Pro"],
+            context_window=1_000_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.25,
+                output_cost_per_million_tokens=10.00
             ),
             tier_availability=["free", "paid"],
             priority=98,
@@ -327,27 +287,29 @@ class ModelRegistry:
                 "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
             ]
         ))
-        
+
+        # Google Gemini Models - Updated with latest pricing (Nov 1, 2025)
         self.register(Model(
-            id="gemini/gemini-2.5-pro",
-            name="Gemini 2.5 Pro",
+            id="gemini/gemini-2.5-flash-lite",
+            name="Gemini 2.5 Flash-Lite",
             provider=ModelProvider.GOOGLE,
-            aliases=["gemini-2.5-pro", "Gemini 2.5 Pro"],
-            context_window=2_000_000,
+            aliases=["gemini-2.5-flash-lite", "Gemini 2.5 Flash-Lite"],
+            context_window=1_000_000,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25,
-                output_cost_per_million_tokens=10.00
+                input_cost_per_million_tokens=0.30,
+                output_cost_per_million_tokens=0.40
             ),
-            tier_availability=["paid"],
-            priority=96,
+            tier_availability=["free", "paid"],
+            priority=98,
             enabled=config.GEMINI_API_KEY is not None,  # Only enable if API key exists
             fallback_models=[
+                "gemini/gemini-2.5-flash",
+                "gemini/gemini-2.5-pro",
                 "openai/gpt-4o" if config.OPENAI_API_KEY else "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
             ]
         ))

@@ -2,9 +2,17 @@ import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
 
-// =====================================================
+// Use existing error class from main API
+class NoAccessTokenAvailableError extends Error {
+  constructor(message?: string, options?: { cause?: Error }) {
+    super(message || 'No access token available', options);
+  }
+  name = 'NoAccessTokenAvailableError';
+}
+
+// ============================================================================
 // TYPES
-// =====================================================
+// ============================================================================
 
 export type Notification = {
   id: string;
@@ -12,25 +20,25 @@ export type Notification = {
   user_id: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error' | 'agent_complete';
+  type: string;
   category?: string;
-  thread_id?: string | null;
-  agent_run_id?: string | null;
-  related_entity_type?: string | null;
-  related_entity_id?: string | null;
+  thread_id?: string;
+  agent_run_id?: string;
+  related_entity_type?: string;
+  related_entity_id?: string;
   is_global: boolean;
-  created_by?: string | null;
+  created_by?: string;
   metadata?: Record<string, any>;
   email_sent: boolean;
-  email_sent_at?: string | null;
-  email_error?: string | null;
+  email_sent_at?: string;
+  email_error?: string;
   push_sent: boolean;
-  push_sent_at?: string | null;
-  push_error?: string | null;
+  push_sent_at?: string;
+  push_error?: string;
   retry_count: number;
-  last_retry_at?: string | null;
+  last_retry_at?: string;
   is_read: boolean;
-  read_at?: string | null;
+  read_at?: string;
   created_at: string;
   updated_at: string;
 };
@@ -43,6 +51,7 @@ export type NotificationListResponse = {
     total: number;
     pages: number;
   };
+  unread_count?: number;
 };
 
 export type NotificationPreferences = {
@@ -65,20 +74,28 @@ export type GlobalNotificationRequest = {
   category?: string;
   target_user_ids?: string[];
   target_account_ids?: string[];
+  send_email?: boolean;
+  send_push?: boolean;
   metadata?: Record<string, any>;
 };
 
 export type GlobalNotificationBatch = {
   id: string;
+  batch_id?: string; // Alias for id
   created_by: string;
   title: string;
   message: string;
   notification_type: 'info' | 'success' | 'warning' | 'error';
+  type?: 'info' | 'success' | 'warning' | 'error'; // Alias for notification_type
   category?: string;
   total_recipients: number;
+  total_count?: number; // Alias for total_recipients
   sent_count: number;
   failed_count: number;
+  emails_sent_count?: number;
+  pushes_sent_count?: number;
   status: 'pending' | 'sending' | 'completed' | 'failed' | 'cancelled';
+  started_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -86,121 +103,98 @@ export type GlobalNotificationBatch = {
 export type GlobalNotificationBatchDetail = GlobalNotificationBatch & {
   metadata?: Record<string, any>;
   error_message?: string | null;
+  send_email?: boolean;
+  send_push?: boolean;
+  emails_sent?: number;
+  pushes_sent?: number;
+  completed_at?: string | null;
+  cancelled_at?: string | null;
+  notifications?: Array<{
+    id: string;
+    status: string;
+    [key: string]: any;
+  }>;
 };
 
-// =====================================================
-// USER NOTIFICATIONS
-// =====================================================
+export type GlobalNotificationBatchListResponse = {
+  batches: GlobalNotificationBatch[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+};
 
-export const getNotifications = async (params?: {
-  page?: number;
-  page_size?: number;
-  is_read?: boolean;
-  category?: string;
-  notification_type?: string;
-}): Promise<NotificationListResponse> => {
+// ============================================================================
+// API FUNCTIONS
+// ============================================================================
+
+export const getNotifications = async (
+  params?: {
+    page?: number;
+    page_size?: number;
+    is_read?: boolean;
+    category?: string;
+    notification_type?: string;
+  }
+): Promise<NotificationListResponse> => {
   try {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
     if (!session?.access_token) {
-      return {
-        notifications: [],
-        pagination: {
-          page: params?.page || 1,
-          limit: params?.page_size || 20,
-          total: 0,
-          pages: 0,
-        },
-      };
+      throw new NoAccessTokenAvailableError();
     }
 
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
-    if (params?.is_read !== undefined) queryParams.append('is_read', params.is_read.toString());
-    if (params?.category) queryParams.append('category', params.category);
-    if (params?.notification_type) queryParams.append('type', params.notification_type);
+    const { page = 1, page_size = 10, is_read, category, notification_type } = params;
+    const queryParams = new URLSearchParams({ page: page.toString(), page_size: page_size.toString() });
 
-    const response = await backendApi.get<NotificationListResponse>(
-      `/notifications?${queryParams.toString()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    if (is_read !== undefined) queryParams.set('is_read', is_read.toString());
+    if (category) queryParams.set('category', category);
+    if (notification_type) queryParams.set('notification_type', notification_type);
 
-    if (response.error) {
-      console.error('Error fetching notifications:', response.error);
-      return {
-        notifications: [],
-        pagination: {
-          page: params?.page || 1,
-          limit: params?.page_size || 20,
-          total: 0,
-          pages: 0,
-        },
-      };
+    const response = await backendApi.get<NotificationListResponse>(`/notifications/?${queryParams}`);
+    if (!response.success) {
+      throw new Error(`Failed to fetch notifications: ${response.error?.message || 'Unknown error'}`);
     }
-
-    return response.data || {
-      notifications: [],
-      pagination: {
-        page: params?.page || 1,
-        limit: params?.page_size || 20,
-        total: 0,
-        pages: 0,
-      },
-    };
+    return response.data!;
   } catch (error) {
     console.error('Failed to get notifications:', error);
-    handleApiError(error, { operation: 'load notifications', resource: 'notifications' });
-    return {
-      notifications: [],
-      pagination: {
-        page: params?.page || 1,
-        limit: params?.page_size || 20,
-        total: 0,
-        pages: 0,
-      },
-    };
+    handleApiError(error, { operation: 'get notifications', resource: 'notifications' });
+    throw error;
   }
 };
 
 export const markNotificationAsRead = async (
   notificationIds: string[],
   isRead: boolean = true
-): Promise<void> => {
+): Promise<{ success: boolean; message: string }> => {
   try {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
     if (!session?.access_token) {
-      throw new Error('Not authenticated');
+      throw new NoAccessTokenAvailableError();
     }
 
-    const response = await backendApi.post(
-      '/notifications/mark-as-read',
-      {
-        notification_ids: notificationIds,
-        is_read: isRead,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.post('/notifications/mark-as-read', {
+      notification_ids: notificationIds,
+      is_read: isRead
+    });
 
     if (response.error) {
-      throw response.error;
+      throw new Error(`Failed to mark notifications as read: ${response.error.message}`);
     }
+
+    return response.data || { success: true, message: 'Notifications marked as read' };
   } catch (error) {
     console.error('Failed to mark notification as read:', error);
-    handleApiError(error, { operation: 'mark as read', resource: 'notification' });
+    handleApiError(error, { operation: 'mark notification as read', resource: 'notifications' });
     throw error;
   }
 };
@@ -214,25 +208,15 @@ export const getNotificationPreferences = async (): Promise<NotificationPreferen
       return null;
     }
 
-    const response = await backendApi.get<NotificationPreferences>(
-      '/notifications/preferences',
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.get('/notifications/preferences');
 
     if (response.error) {
-      console.error('Error fetching notification preferences:', response.error);
       return null;
     }
 
-    return response.data || null;
+    return response.data;
   } catch (error) {
     console.error('Failed to get notification preferences:', error);
-    handleApiError(error, { operation: 'load preferences', resource: 'notification preferences' });
     return null;
   }
 };
@@ -253,30 +237,21 @@ export const updateNotificationPreferences = async (
       throw new Error('Not authenticated');
     }
 
-    const response = await backendApi.post<NotificationPreferences>(
-      '/notifications/preferences',
-      preferences,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.post('/notifications/preferences', preferences);
 
     if (response.error) {
-      throw response.error;
+      throw new Error(`Failed to update notification preferences: ${response.error.message}`);
     }
 
-    return response.data || null;
+    return response.data;
   } catch (error) {
     console.error('Failed to update notification preferences:', error);
-    handleApiError(error, { operation: 'update preferences', resource: 'notification preferences' });
+    handleApiError(error, { operation: 'update notification preferences', resource: 'notifications' });
     throw error;
   }
 };
 
-export const registerPushToken = async (pushToken: string): Promise<void> => {
+export const registerPushToken = async (pushToken: string): Promise<{ success: boolean }> => {
   try {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -285,30 +260,23 @@ export const registerPushToken = async (pushToken: string): Promise<void> => {
       throw new Error('Not authenticated');
     }
 
-    const response = await backendApi.post(
-      '/notifications/push-token',
-      { push_token: pushToken },
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.post('/notifications/push-token', { push_token: pushToken });
 
     if (response.error) {
-      throw response.error;
+      throw new Error(`Failed to register push token: ${response.error.message}`);
     }
+
+    return response.data || { success: true };
   } catch (error) {
     console.error('Failed to register push token:', error);
-    handleApiError(error, { operation: 'register push token', resource: 'push token' });
+    handleApiError(error, { operation: 'register push token', resource: 'notifications' });
     throw error;
   }
 };
 
-// =====================================================
-// ADMIN GLOBAL NOTIFICATIONS
-// =====================================================
+// ============================================================================
+// ADMIN NOTIFICATION FUNCTIONS
+// ============================================================================
 
 export const sendGlobalNotification = async (
   request: GlobalNotificationRequest
@@ -321,56 +289,33 @@ export const sendGlobalNotification = async (
       throw new Error('Not authenticated');
     }
 
-    const response = await backendApi.post<GlobalNotificationBatch>(
-      '/admin/notifications/send',
-      request,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.post('/admin/notifications/send', request);
 
     if (response.error) {
-      throw response.error;
+      throw new Error(`Failed to send global notification: ${response.error.message}`);
     }
 
-    return response.data || null;
+    return response.data;
   } catch (error) {
     console.error('Failed to send global notification:', error);
-    handleApiError(error, { operation: 'send notification', resource: 'global notification' });
+    handleApiError(error, { operation: 'send global notification', resource: 'admin notifications' });
     throw error;
   }
 };
 
-export const listGlobalNotificationBatches = async (params?: {
-  page?: number;
-  page_size?: number;
-  status?: string;
-}): Promise<{
-  batches: GlobalNotificationBatch[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}> => {
+export const listGlobalNotificationBatches = async (
+  params?: {
+    page?: number;
+    page_size?: number;
+    status?: string;
+  }
+): Promise<GlobalNotificationBatchListResponse> => {
   try {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session?.access_token) {
-      return {
-        batches: [],
-        pagination: {
-          page: params?.page || 1,
-          limit: params?.page_size || 20,
-          total: 0,
-          pages: 0,
-        },
-      };
+      throw new Error('Not authenticated');
     }
 
     const queryParams = new URLSearchParams();
@@ -378,53 +323,17 @@ export const listGlobalNotificationBatches = async (params?: {
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
     if (params?.status) queryParams.append('status', params.status);
 
-    const response = await backendApi.get<{
-      batches: GlobalNotificationBatch[];
-      pagination: any;
-    }>(
-      `/admin/notifications/batches?${queryParams.toString()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.get(`/admin/notifications/batches?${queryParams.toString()}`);
 
     if (response.error) {
-      console.error('Error fetching notification batches:', response.error);
-      return {
-        batches: [],
-        pagination: {
-          page: params?.page || 1,
-          limit: params?.page_size || 20,
-          total: 0,
-          pages: 0,
-        },
-      };
+      throw new Error(`Failed to list notification batches: ${response.error.message}`);
     }
 
-    return response.data || {
-      batches: [],
-      pagination: {
-        page: params?.page || 1,
-        limit: params?.page_size || 20,
-        total: 0,
-        pages: 0,
-      },
-    };
+    return response.data;
   } catch (error) {
-    console.error('Failed to list notification batches:', error);
-    handleApiError(error, { operation: 'list batches', resource: 'notification batches' });
-    return {
-      batches: [],
-      pagination: {
-        page: params?.page || 1,
-        limit: params?.page_size || 20,
-        total: 0,
-        pages: 0,
-      },
-    };
+    console.error('Failed to list global notification batches:', error);
+    handleApiError(error, { operation: 'list notification batches', resource: 'admin notifications' });
+    throw error;
   }
 };
 
@@ -439,25 +348,15 @@ export const getGlobalNotificationBatch = async (
       return null;
     }
 
-    const response = await backendApi.get<GlobalNotificationBatchDetail>(
-      `/admin/notifications/batches/${batchId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.get(`/admin/notifications/batches/${batchId}`);
 
     if (response.error) {
-      console.error('Error fetching notification batch:', response.error);
       return null;
     }
 
-    return response.data || null;
+    return response.data;
   } catch (error) {
-    console.error('Failed to get notification batch:', error);
-    handleApiError(error, { operation: 'get batch', resource: 'notification batch' });
+    console.error('Failed to get global notification batch:', error);
     return null;
   }
 };
@@ -471,23 +370,14 @@ export const cancelGlobalNotificationBatch = async (batchId: string): Promise<vo
       throw new Error('Not authenticated');
     }
 
-    const response = await backendApi.post(
-      `/admin/notifications/batches/${batchId}/cancel`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        showErrors: false,
-      }
-    );
+    const response = await backendApi.post(`/admin/notifications/batches/${batchId}/cancel`);
 
     if (response.error) {
-      throw response.error;
+      throw new Error(`Failed to cancel notification batch: ${response.error.message}`);
     }
   } catch (error) {
-    console.error('Failed to cancel notification batch:', error);
-    handleApiError(error, { operation: 'cancel batch', resource: 'notification batch' });
+    console.error('Failed to cancel global notification batch:', error);
+    handleApiError(error, { operation: 'cancel notification batch', resource: 'admin notifications' });
     throw error;
   }
 };

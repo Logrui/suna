@@ -26,11 +26,14 @@ export const getApiUrl = () => {
   if (typeof window !== 'undefined') {
     // Browser context: use relative URL
     // Next.js will proxy /api requests to the backend
-    return `${window.location.origin}/api`;
+    const browserUrl = `${window.location.origin}/api`;
+    console.log('[getApiUrl] Browser context detected, returning:', browserUrl);
+    return browserUrl;
   }
 
   // Server context: use environment variable for Docker internal communication
   // This is used for SSR, API routes, and server-side logic
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  return process.env.NEXT_PUBLIC_BACKEND_URL! || 'http://backend:8000/api';
+  const serverUrl = process.env.NEXT_PUBLIC_BACKEND_URL! || 'http://backend:8000/api';
+  console.log('[getApiUrl] Server context detected, returning:', serverUrl);
+  return serverUrl;
 };

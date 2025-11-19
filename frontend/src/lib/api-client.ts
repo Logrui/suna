@@ -3,7 +3,8 @@ import { handleApiError, handleNetworkError, ErrorContext, ApiError } from './er
 import { parseTierRestrictionError } from './api/errors';
 import { getApiUrl } from './get-api-url';
 
-const API_URL = getApiUrl();
+// Don't cache API_URL at module load time - call getApiUrl() dynamically
+// This ensures browser gets window.location.origin and server gets Docker hostname
 
 export interface ApiClientOptions {
   showErrors?: boolean;
@@ -62,6 +63,7 @@ async function makeRequest<T = any>(
         headers['X-Refresh-Token'] = session.refresh_token;
       }
 
+    console.log('[makeRequest] About to fetch URL:', url);
     const response = await fetch(url, {
         ...fetchOptions,
         headers,
@@ -241,39 +243,42 @@ export const supabaseClient = {
 };
 
 export const backendApi = {
-  get: <T = any>(endpoint: string, options?: Omit<RequestInit & ApiClientOptions, 'method' | 'body'>) =>
-    makeRequest<T>(`${API_URL}${endpoint}`, { ...options, method: 'GET' }),
+  get: <T = any>(endpoint: string, options?: Omit<RequestInit & ApiClientOptions, 'method' | 'body'>) => {
+    const fullUrl = `${getApiUrl()}${endpoint}`;
+    console.log('[backendApi.get] Constructed URL:', fullUrl);
+    return makeRequest<T>(fullUrl, { ...options, method: 'GET' });
+  },
 
   post: <T = any>(endpoint: string, data?: any, options?: Omit<RequestInit & ApiClientOptions, 'method'>) =>
-    makeRequest<T>(`${API_URL}${endpoint}`, {
+    makeRequest<T>(`${getApiUrl()}${endpoint}`, {
       ...options,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     }),
 
   put: <T = any>(endpoint: string, data?: any, options?: Omit<RequestInit & ApiClientOptions, 'method'>) =>
-    makeRequest<T>(`${API_URL}${endpoint}`, {
+    makeRequest<T>(`${getApiUrl()}${endpoint}`, {
       ...options,
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     }),
 
   patch: <T = any>(endpoint: string, data?: any, options?: Omit<RequestInit & ApiClientOptions, 'method'>) =>
-    makeRequest<T>(`${API_URL}${endpoint}`, {
+    makeRequest<T>(`${getApiUrl()}${endpoint}`, {
       ...options,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     }),
 
   delete: <T = any>(endpoint: string, options?: Omit<RequestInit & ApiClientOptions, 'method' | 'body'>) =>
-    makeRequest<T>(`${API_URL}${endpoint}`, { ...options, method: 'DELETE' }),
+    makeRequest<T>(`${getApiUrl()}${endpoint}`, { ...options, method: 'DELETE' }),
 
   upload: <T = any>(endpoint: string, formData: FormData, options?: Omit<RequestInit & ApiClientOptions, 'method' | 'body'>) => {
     const { headers, ...restOptions } = options || {};
     const uploadHeaders = { ...headers as Record<string, string> };
     delete uploadHeaders['Content-Type'];
 
-    return makeRequest<T>(`${API_URL}${endpoint}`, {
+    return makeRequest<T>(`${getApiUrl()}${endpoint}`, {
       ...restOptions,
       method: 'POST',
       body: formData,

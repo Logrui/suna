@@ -14,7 +14,8 @@ import { NotificationList } from './notification-list';
 export function NotificationBell() {
   const { data, isLoading } = useNotifications({ page: 1, page_size: 10, is_read: false });
 
-  const unreadCount = data?.unread_count || 0;
+  // Get unread count from response (now properly calculated by backend)
+  const unreadCount = data?.unread_count ?? 0;
 
   return (
     <DropdownMenu>

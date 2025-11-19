@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from pydantic import BaseModel
-from core.auth import require_auth
+from core.auth import get_current_user
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
 
@@ -49,6 +49,7 @@ class Notification(BaseModel):
 class NotificationListResponse(BaseModel):
     notifications: List[Notification]
     pagination: Dict[str, Any]
+    unread_count: Optional[int] = None
 
 
 class NotificationPreferences(BaseModel):
@@ -75,12 +76,13 @@ async def get_notifications(
     is_read: Optional[bool] = None,
     category: Optional[str] = None,
     notification_type: Optional[str] = None,
-    user_id: str = Depends(require_auth),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Get user's notifications with pagination and filtering.
     """
     try:
+        user_id = current_user["user_id"]
         db = DBConnection()
         
         # Build query
@@ -106,6 +108,10 @@ async def get_notifications(
         
         total = count_result.execute().count
         
+        # Get unread count
+        unread_count_result = db.table("notifications").select("id", count="exact").eq("user_id", user_id).eq("is_read", False)
+        unread_count = unread_count_result.execute().count
+        
         # Apply pagination
         offset = (page - 1) * page_size
         query = query.order("created_at", desc=True).range(offset, offset + page_size - 1)
@@ -122,7 +128,8 @@ async def get_notifications(
                 "limit": page_size,
                 "total": total,
                 "pages": pages,
-            }
+            },
+            unread_count=unread_count
         )
     except Exception as e:
         logger.error(f"Error fetching notifications: {str(e)}")
@@ -133,12 +140,13 @@ async def get_notifications(
 async def mark_notifications_as_read(
     notification_ids: List[str],
     is_read: bool = True,
-    user_id: str = Depends(require_auth),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Mark notifications as read/unread.
     """
     try:
+        user_id = current_user["user_id"]
         db = DBConnection()
         
         # Update notifications
@@ -163,11 +171,12 @@ async def mark_notifications_as_read(
 
 
 @router.get("/preferences", response_model=NotificationPreferences)
-async def get_notification_preferences(user_id: str = Depends(require_auth)):
+async def get_notification_preferences(current_user: dict = Depends(get_current_user)):
     """
     Get user's notification preferences.
     """
     try:
+        user_id = current_user["user_id"]
         db = DBConnection()
         
         result = (
@@ -200,12 +209,13 @@ async def get_notification_preferences(user_id: str = Depends(require_auth)):
 @router.post("/preferences")
 async def update_notification_preferences(
     preferences: Dict[str, Any],
-    user_id: str = Depends(require_auth),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Update user's notification preferences.
     """
     try:
+        user_id = current_user["user_id"]
         db = DBConnection()
         
         update_data = {
@@ -240,12 +250,13 @@ async def update_notification_preferences(
 @router.post("/push-token")
 async def register_push_token(
     push_token: str,
-    user_id: str = Depends(require_auth),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Register or update user's push notification token.
     """
     try:
+        user_id = current_user["user_id"]
         db = DBConnection()
         
         update_data = {

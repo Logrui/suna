@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createRealtimeClient } from '@/lib/supabase/client';
-import { isLocalMode } from '@/lib/config';
 
 interface VapiCall {
   id: string;

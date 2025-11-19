@@ -7,7 +7,7 @@ import { getApiUrl } from '@/lib/get-api-url';
 
 const API_URL = getApiUrl();
 
-const EXAMPLE_COMMANDS = [
+const DEFAULT_COMMANDS = [
   {
     name: 'summarize',
     description: 'Summarize content into 5 bullet points.',
@@ -114,7 +114,7 @@ async function initializeSlashCommands() {
     
     // Check which example commands are missing and create only those
     const existingFilenames = new Set(entries.map((e: any) => e.filename.toLowerCase()));
-    const missingCommands = EXAMPLE_COMMANDS.filter(cmd => {
+    const missingCommands = DEFAULT_COMMANDS.filter(cmd => {
       const mdFilename = `${cmd.name}.md`.toLowerCase();
       return !existingFilenames.has(mdFilename);
     });
@@ -205,7 +205,7 @@ export function useSlashCommands() {
         
         if (!folderId) {
           //console.warn('[SlashCommands] useSlashCommands: Initialization failed, returning fallback commands');
-          return EXAMPLE_COMMANDS.map(ex => ({
+          return DEFAULT_COMMANDS.map(ex => ({
             name: ex.name,
             description: ex.description,
             prompt: ex.content,
@@ -284,7 +284,7 @@ export function useSlashCommands() {
       } catch (err) {
         console.error('[SlashCommands] useSlashCommands: Error fetching slash commands:', err);
         // Return fallback commands on error
-        return EXAMPLE_COMMANDS.map(ex => ({
+        return DEFAULT_COMMANDS.map(ex => ({
           name: ex.name,
           description: ex.description,
           prompt: ex.content,

@@ -31,6 +31,7 @@ export const useNotifications = (
       staleTime: 30 * 1000,
       refetchOnWindowFocus: true,
       refetchInterval: 60 * 1000, // Refetch every minute
+      enabled: typeof window !== 'undefined', // Only run in browser context
     }
   )();
 };
@@ -42,6 +43,7 @@ export const useNotificationPreferences = () => {
     {
       staleTime: 5 * 60 * 1000,
       refetchOnWindowFocus: false,
+      enabled: typeof window !== 'undefined', // Only run in browser context
     }
   )();
 };
@@ -76,7 +78,6 @@ export const useUpdateNotificationPreferences = () => {
         toast.success('Notification preferences updated');
       },
       onError: (error) => {
-        toast.error('Failed to update preferences');
         console.error('Error updating preferences:', error);
       },
     }

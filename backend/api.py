@@ -28,14 +28,17 @@ from core.billing.setup_api import router as setup_router
 from core.admin.admin_api import router as admin_router
 from core.admin.billing_admin_api import router as billing_admin_router
 from core.admin.master_password_api import router as master_password_router
+
+#Import New Notification Routers
 from core.admin.notification_admin_api import router as notification_admin_router
+from core.notifications_api import router as notifications_router
+
 from core.services import transcription as transcription_api
 import sys
 from core.services import email_api
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
 from core import models_api
-
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -57,7 +60,6 @@ async def lifespan(app: FastAPI):
             db,
             instance_id
         )
-        
         
         sandbox_api.initialize(db)
         
@@ -160,13 +162,13 @@ allow_origin_regex = None
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
-    allowed_origins.append("http://localhost:9990")
+    allowed_origins.append("http://localhost:3000")
     allowed_origins.append("http://127.0.0.1:3000")
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.suna.so")
-    allowed_origins.append("http://localhost:9990")
+    allowed_origins.append("http://localhost:9991")
     # Allow Vercel preview deployments for both legacy and new project names
     allow_origin_regex = r"https://(suna|kortixcom)-.*-prjcts\.vercel\.app"
 
@@ -175,7 +177,7 @@ if config.ENV_MODE == EnvMode.PRODUCTION:
     allowed_origins.append("http://localhost:9990")
     allowed_origins.append("http://127.0.0.1:3000")
 
-# Add Cloudflare Tunnel domains for self-hosted deployments
+# Add Cloudflare Tunnel domains for production self-hosted deployments
 allowed_origins.extend([
     "https://kortix.syhc.dev",          # Frontend via Cloudflare Tunnel
     "http://kong.kortix.syhc.dev",      # Kong/Supabase via Cloudflare Tunnel (HTTP)
@@ -203,7 +205,10 @@ api_router.include_router(api_keys_api.router)
 api_router.include_router(billing_admin_router)
 api_router.include_router(admin_router)
 api_router.include_router(master_password_router)
+
+# New Notifications Routers
 api_router.include_router(notification_admin_router)
+api_router.include_router(notifications_router)
 
 from core.mcp_module import api as mcp_api
 from core.credentials import api as credentials_api
