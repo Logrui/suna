@@ -18,7 +18,15 @@ export function useBilling(
   initialLoadCompleted: boolean
 ): UseBillingReturn {
   const [showBillingAlert, setShowBillingAlert] = useState(false);
-  const [billingData, setBillingData] = useState<BillingData>({});
+  const [billingData, setBillingData] = useState<BillingData>({
+    balance: 0,
+    tier: 'free',
+    can_run: true,
+    message: '',
+    currentUsage: 0,
+    limit: 0,
+    accountId: '',
+  });
   const previousAgentStatus = useRef<AgentStatus>('idle');
   const billingStatusQuery = useBillingStatusQuery();
 
@@ -33,10 +41,13 @@ export function useBilling(
 
       if (result && !result.can_run) {
         setBillingData({
+          balance: 0,
+          tier: result.subscription?.plan_name || 'free',
+          can_run: result.can_run,
           currentUsage: result.subscription?.minutes_limit || 0,
           limit: result.subscription?.minutes_limit || 0,
           message: result.message || 'Usage limit reached',
-          accountId: projectAccountId || null,
+          accountId: projectAccountId || '',
         });
         setShowBillingAlert(true);
         return true;

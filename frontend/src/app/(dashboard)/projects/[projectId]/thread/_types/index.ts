@@ -1,6 +1,8 @@
 // Re-export types from the main thread types file
 export type { ApiMessageType } from '@/components/thread/types';
 
+export type AgentStatus = 'idle' | 'running';
+
 export interface BillingData {
   balance: number;
   tier: string;
