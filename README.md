@@ -1,8 +1,20 @@
 ﻿<div align="center">
 
-# Kortix – Open Source Platform to Build, Manage and Train AI Agents
+# Kortix – Open Source Platform to Build, Manage and Train AI Agents - SYHC Private Build
 
 ![Kortix Screenshot](frontend/public/banner.png)
+
+Private Server Build of Kortix AI - Actively Maintained as of <!-- DATE_START -->2025-11-20<!-- DATE_END -->
+
+Current Implemented Features:
+-Feature: Notifications/Inbox System
+-Auto Continue MVP
+-Restored Feature: Workflow/Playbooks System
+
+Planned Features/WIP:
+-Native Tool: Subagent System
+-Native Tool: Gemini ComputerUse + BrowserUse Support
+
 
 **The complete platform for creating autonomous AI agents that work for you**
 

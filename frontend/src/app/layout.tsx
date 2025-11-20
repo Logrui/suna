@@ -50,9 +50,9 @@ export const metadata: Metadata = {
     'generalist AI',
   ],
   authors: [
-    { 
-      name: 'Kortix Team', 
-      url: 'https://kortix.com' 
+    {
+      name: 'Kortix Team',
+      url: 'https://kortix.com'
     }
   ],
   creator: 'Kortix Team',
@@ -81,17 +81,7 @@ export const metadata: Metadata = {
     title: 'Kortix - Open Source Generalist AI Worker',
     description: siteConfig.description,
     url: siteConfig.url,
-    siteName: 'Kortix',
     locale: 'en_US',
-    images: [
-      {
-        url: '/banner.png',
-        width: 1200,
-        height: 630,
-        alt: 'Kortix - Open Source Generalist AI Worker',
-        type: 'image/png',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -99,7 +89,6 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     creator: '@kortix',
     site: '@kortix',
-    images: ['/banner.png'],
   },
   icons: {
     icon: [
@@ -150,7 +139,7 @@ export default function RootLayout({
             }),
           }}
         />
-        
+
         {/* Structured Data for Software Application */}
         <script
           type="application/ld+json"
@@ -175,7 +164,7 @@ export default function RootLayout({
             }),
           }}
         />
-        
+
         <Script id="google-tag-manager" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
