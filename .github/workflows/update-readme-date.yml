@@ -11,6 +11,7 @@ on:
       - release/*
       - dev/*
       - stable
+      - feature/workflows-playbooks
 
 jobs:
   update-date:
