@@ -180,8 +180,8 @@ export function NavInbox() {
     return (
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="px-2.5 py-3 border-b">
-          <h3 className="font-semibold text-sm">Inbox</h3>
+        <div className="px-2.5 py-3 border-b border-transparent">
+          <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
         </div>
         {/* Loading skeleton */}
         <div className="flex-1 overflow-y-auto">
@@ -196,8 +196,8 @@ export function NavInbox() {
     return (
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="px-2.5 py-3 border-b">
-          <h3 className="font-semibold text-sm">Inbox</h3>
+        <div className="px-2.5 py-3 border-b border-transparent">
+          <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
         </div>
         {/* Empty state - flex-1 allows it to take remaining space and center */}
         <div className="flex-1">
@@ -210,9 +210,9 @@ export function NavInbox() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-2.5 py-3 border-b">
+      <div className="px-2.5 py-3 border-b border-transparent">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm">Inbox</h3>
+          <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
           <Link href="/notifications">
             <Button variant="ghost" size="sm" className="h-7 text-xs">
               View All <ExternalLink className="ml-1 h-3 w-3" />

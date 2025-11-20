@@ -21,7 +21,7 @@ import {
 import { useGlobalFileViewerStore } from '@/stores/global-file-viewer-store';
 
 // Pagination constants
-const THREADS_PER_PAGE = 8;
+const THREADS_PER_PAGE = 10;
 const MAX_FILES_PER_THREAD = 3;
 
 // ============= SUB-COMPONENTS =============
@@ -397,7 +397,7 @@ export function NavLibrary() {
   return (
     <div
       ref={scrollContainerRef}
-      className="overflow-y-auto max-h-[calc(100vh-280px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32"
+      className="overflow-y-scroll max-h-[calc(100vh-280px)] min-h-[400px] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32"
     >
       {!allFilesLoaded ? (
         <LoadingSkeleton />
@@ -423,6 +423,13 @@ export function NavLibrary() {
               </div>
             </div>
           ))}
+
+          {/* Show loading indicator when loading more */}
+          {displayedThreadCount < allThreads.length && (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
         </>
       )}
     </div>

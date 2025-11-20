@@ -20,7 +20,13 @@ import { useAgents } from '@/hooks/agents/use-agents';
 import { SubscriptionStoreSync } from '@/stores/subscription-store';
 import { PresentationViewerWrapper } from '@/stores/presentation-viewer-store';
 import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
-import { GlobalFileViewer } from '@/components/global-file-viewer';
+import dynamic from 'next/dynamic';
+
+// Dynamic import to prevent SSR (FileViewerModal uses JSZip which references 'self')
+const GlobalFileViewer = dynamic(
+  () => import('@/components/global-file-viewer').then(mod => ({ default: mod.GlobalFileViewer })),
+  { ssr: false }
+);
 
 interface DashboardLayoutContentProps {
   children: React.ReactNode;
