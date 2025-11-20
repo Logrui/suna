@@ -4,17 +4,30 @@
 
 ![Kortix Screenshot](frontend/public/banner.png)
 
-Private Server Build of Kortix AI - Actively Maintained as of <!-- DATE_START -->2025-11-20<!-- DATE_END -->
+## **Private Server Build of Kortix AI - Last Updated as Of: <!-- DATE_START -->2025-11-20<!-- DATE_END -->**
 
-Current Implemented Features:
--Feature: Notifications/Inbox System
--Auto Continue MVP
--Restored Feature: Workflow/Playbooks System
 
-Planned Features/WIP:
--Native Tool: Subagent System
--Native Tool: Gemini ComputerUse + BrowserUse Support
+## **Current Implemented Features:**
+-New Feature: Notifications/Inbox System
+-New Feature: Auto Continue Prompting System (MVP)
+-New Feature: Library Implementation - Access Files Across Projects
+-New Feature: KB Based Slash Commands (Github Copilot Style and Text Based Prompts) - Knowledge Base
+-New Feature: Left Sidebar with Inbox, 
+-Bugfix: Dev Mode + New Dev Mode Button Toggle
+-Bugfix: Uses New getAPI module to support local docker/cloudflare tunnel
+-New Feature: Native Ollama and LMStudio support w/ activation and hot/cold startup
+-Custom Models via OpenRouter, LMStudio, Ollama, Google, and OpenAI
 
+## **Planned Features/WIP:**
+-New Feature: RestoredWorkflow/Playbooks System (WIP)
+-Native Tool: Subagent System (Depends on Wide Research System)
+-Native Tool: Manus like Wide Research System (Depends on Subagent System)
+-Native Tool: Gemini ComputerUse + BrowserUse Support (Depends on Subagent System)
+-RAG System Support/Embeddings/RAG as a Service module support (likely depends on Google Drive/OneDrive Native File Support and Syncing)
+-Google Drive/OneDrive Native File Support and Syncing
+-Native Support for continuous prompting for custom budget models
+-Structured Output Workflows/Playbooks System (Depends on working RestoredWorkflow/Playbooks System)
+-Plugin System (Modularized Code for Future Expansion)
 
 **The complete platform for creating autonomous AI agents that work for you**
 
