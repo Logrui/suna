@@ -22,6 +22,7 @@ import { projectKeys } from "@/hooks/threads/keys";
 import { threadKeys } from "@/hooks/threads/keys";
 import { useAdminRole } from "@/hooks/admin/use-admin-role";
 import { NotificationBell } from '@/components/notifications/notification-bell';
+import { DebugModal } from "./debug-modal";
 
 interface ThreadSiteHeaderProps {
   threadId?: string;
@@ -55,6 +56,7 @@ export function SiteHeader({
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
+  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false)
 
   const isMobile = useIsMobile() || isMobileView
   const updateProjectMutation = useUpdateProject()
