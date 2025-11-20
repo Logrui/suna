@@ -21,12 +21,12 @@ const cleanupEventSource = (agentRunId: string, reason?: string): void => {
     if (reason) {
       console.log(`[STREAM] Cleaning up EventSource for ${agentRunId}: ${reason}`);
     }
-    
+
     // Close the connection
     if (stream.readyState !== EventSource.CLOSED) {
       stream.close();
     }
-    
+
     // Remove from active streams
     activeStreams.delete(agentRunId);
   }
@@ -38,7 +38,7 @@ const cleanupEventSource = (agentRunId: string, reason?: string): void => {
  */
 const cleanupAllEventSources = (reason = 'batch cleanup'): void => {
   console.log(`[STREAM] Running batch cleanup: ${activeStreams.size} active streams`);
-  
+
   const streamIds = Array.from(activeStreams.keys());
   streamIds.forEach(agentRunId => {
     cleanupEventSource(agentRunId, reason);
@@ -51,11 +51,11 @@ export { cleanupAllEventSources };
 // Custom error for billing issues
 export class BillingError extends Error {
   status: number;
-  detail: { message: string; [key: string]: any }; // Allow other properties in detail
+  detail: { message: string;[key: string]: any }; // Allow other properties in detail
 
   constructor(
     status: number,
-    detail: { message: string; [key: string]: any },
+    detail: { message: string;[key: string]: any },
     message?: string,
   ) {
     super(message || detail.message || `Billing Error: ${status}`);
@@ -71,7 +71,7 @@ export class BillingError extends Error {
 // Custom error for agent run limit exceeded
 export class AgentRunLimitError extends Error {
   status: number;
-  detail: { 
+  detail: {
     message: string;
     running_thread_ids: string[];
     running_count: number;
@@ -79,7 +79,7 @@ export class AgentRunLimitError extends Error {
 
   constructor(
     status: number,
-    detail: { 
+    detail: {
       message: string;
       running_thread_ids: string[];
       running_count: number;
@@ -99,7 +99,7 @@ export class AgentRunLimitError extends Error {
 
 export class AgentCountLimitError extends Error {
   status: number;
-  detail: { 
+  detail: {
     message: string;
     current_count: number;
     limit: number;
@@ -109,7 +109,7 @@ export class AgentCountLimitError extends Error {
 
   constructor(
     status: number,
-    detail: { 
+    detail: {
       message: string;
       current_count: number;
       limit: number;
@@ -129,7 +129,7 @@ export class AgentCountLimitError extends Error {
 
 export class ProjectLimitError extends Error {
   status: number;
-  detail: { 
+  detail: {
     message: string;
     current_count: number;
     limit: number;
@@ -139,7 +139,7 @@ export class ProjectLimitError extends Error {
 
   constructor(
     status: number,
-    detail: { 
+    detail: {
       message: string;
       current_count: number;
       limit: number;
@@ -659,7 +659,7 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
   // Extract context_usage from the latest llm_response_end message
   try {
     const llmResponseEndMessages = allMessages.filter(msg => msg.type === 'llm_response_end');
-    
+
     // Find the most recent llm_response_end message
     if (llmResponseEndMessages.length > 0) {
       const latestMsg = llmResponseEndMessages[llmResponseEndMessages.length - 1];
@@ -718,23 +718,23 @@ export const unifiedAgentStart = async (options: {
 
     // Build FormData
     const formData = new FormData();
-    
+
     if (options.threadId) {
       formData.append('thread_id', options.threadId);
     }
-    
+
     if (options.prompt) {
       formData.append('prompt', options.prompt);
     }
-    
+
     if (options.model_name) {
       formData.append('model_name', options.model_name);
     }
-    
+
     if (options.agent_id) {
       formData.append('agent_id', options.agent_id);
     }
-    
+
     // Add files if provided
     if (options.files && options.files.length > 0) {
       options.files.forEach((file) => {
@@ -757,7 +757,7 @@ export const unifiedAgentStart = async (options: {
         try {
           const errorData = await response.json();
           const detail = errorData?.detail || {};
-          
+
           // Check for project limit error
           if (detail.error_code === 'PROJECT_LIMIT_EXCEEDED') {
             throw new ProjectLimitError(response.status, {
@@ -768,7 +768,7 @@ export const unifiedAgentStart = async (options: {
               error_code: detail.error_code
             });
           }
-          
+
           // Regular billing error
           if (typeof detail.message !== 'string') {
             detail.message = 'Payment Required';
@@ -789,7 +789,7 @@ export const unifiedAgentStart = async (options: {
       // Handle rate limit errors (429)
       if (response.status === 429) {
         const errorData = await response.json();
-        const detail = errorData?.detail || { 
+        const detail = errorData?.detail || {
           message: 'Too many agent runs running',
           running_thread_ids: [],
           running_count: 0,
@@ -810,18 +810,18 @@ export const unifiedAgentStart = async (options: {
       const errorText = await response
         .text()
         .catch(() => 'No error details available');
-      
+
       console.error(
         `[API] Error starting agent: ${response.status} ${response.statusText}`,
         errorText,
       );
-    
+
       if (response.status === 401) {
         throw new Error('Authentication error: Please sign in again');
       } else if (response.status >= 500) {
         throw new Error('Server error: Please try again later');
       }
-    
+
       throw new Error(
         `Error starting agent: ${response.statusText} (${response.status})`,
       );
@@ -839,7 +839,7 @@ export const unifiedAgentStart = async (options: {
     }
 
     console.error('[API] Failed to start agent:', error);
-    
+
     if (
       error instanceof TypeError &&
       error.message.includes('Failed to fetch')
@@ -1089,7 +1089,7 @@ export const streamAgent = (
 ): (() => void) => {
   // Track reconnection attempts per agent run for exponential backoff
   const reconnectAttemptsMap: Record<string, number> = {};
-  
+
   const getReconnectAttempts = (runId: string) => reconnectAttemptsMap[runId] || 0;
   const incrementReconnectAttempts = (runId: string) => {
     reconnectAttemptsMap[runId] = (getReconnectAttempts(runId)) + 1;
@@ -1104,7 +1104,7 @@ export const streamAgent = (
       callbacks.onClose();
     }, 0);
 
-    return () => {};
+    return () => { };
   }
 
   const existingStream = activeStreams.get(agentRunId);
@@ -1179,10 +1179,10 @@ export const streamAgent = (
             const jsonData = JSON.parse(rawData);
             if (jsonData.status === 'error') {
               console.error(`[STREAM] Error status received for ${agentRunId}:`, jsonData);
-              
+
               // Pass the error message to the callback
               callbacks.onError(jsonData.message || 'Unknown error occurred');
-              
+
               // Don't close the stream for error status messages as they may continue
               return;
             }
@@ -1235,7 +1235,7 @@ export const streamAgent = (
             //
             // This prevents the "Agent Chat Premature Termination" bug where tool results were lost
             // because the EventSource was closed before they could be processed.
-            
+
             // Don't call cleanup here - let the backend close the connection
             // cleanupEventSource(agentRunId, 'agent run completed');
             // callbacks.onClose();
@@ -1263,7 +1263,7 @@ export const streamAgent = (
 
       eventSource.onerror = (event) => {
         console.error(`[STREAM] EventSource error for ${agentRunId}:`, event);
-        
+
         // Check if the agent is still running
         getAgentStatus(agentRunId)
           .then((status) => {
@@ -1363,7 +1363,7 @@ export const streamAgent = (
     console.error(`[STREAM] Error setting up stream for ${agentRunId}:`, error);
     callbacks.onError(error instanceof Error ? error : String(error));
     callbacks.onClose();
-    return () => {};
+    return () => { };
   }
 };
 
@@ -1498,10 +1498,10 @@ export const listSandboxFiles = async (
     } = await supabase.auth.getSession();
 
     const url = new URL(`${API_URL}/sandboxes/${sandboxId}/files`);
-    
+
     // Normalize the path to handle Unicode escape sequences
     const normalizedPath = normalizePathWithUnicode(path);
-    
+
     // Properly encode the path parameter for UTF-8 support
     url.searchParams.append('path', normalizedPath);
 
@@ -1547,10 +1547,10 @@ export const getSandboxFileContent = async (
     } = await supabase.auth.getSession();
 
     const url = new URL(`${API_URL}/sandboxes/${sandboxId}/files/content`);
-    
+
     // Normalize the path to handle Unicode escape sequences
     const normalizedPath = normalizePathWithUnicode(path);
-    
+
     // Properly encode the path parameter for UTF-8 support
     url.searchParams.append('path', normalizedPath);
 
@@ -1838,15 +1838,15 @@ export interface AvailableModelsResponse {
 
 export interface CreateCheckoutSessionResponse {
   status:
-    | 'upgraded'
-    | 'downgrade_scheduled'
-    | 'checkout_created'
-    | 'no_change'
-    | 'new'
-    | 'updated'
-    | 'scheduled'
-    | 'commitment_created'
-    | 'commitment_blocks_downgrade';
+  | 'upgraded'
+  | 'downgrade_scheduled'
+  | 'checkout_created'
+  | 'no_change'
+  | 'new'
+  | 'updated'
+  | 'scheduled'
+  | 'commitment_created'
+  | 'commitment_blocks_downgrade';
   subscription_id?: string;
   schedule_id?: string;
   session_id?: string;
@@ -1907,10 +1907,10 @@ export const createCheckoutSession = async (
     if (!session?.access_token) {
       throw new NoAccessTokenAvailableError();
     }
-    
-    
+
+
     const requestBody = { ...request, tolt_referral: (window as any).tolt_referral };
-    
+
     // Use the new billing v2 API endpoint
     const response = await fetch(`${API_URL}/billing/create-checkout-session`, {
       method: 'POST',
@@ -1993,7 +1993,7 @@ export const createPortalSession = async (
     }
 
     const data = await response.json();
-    
+
     return {
       url: data.portal_url
     };
@@ -2046,7 +2046,7 @@ export const getSubscription = async (): Promise<SubscriptionStatus> => {
       cost_limit: data.tier?.credits || 0,
       credit_balance: data.credits?.balance || 0,
       can_purchase_credits: data.credits?.can_purchase || false,
-      ...data 
+      ...data
     } as SubscriptionStatus;
   } catch (error) {
     if (error instanceof NoAccessTokenAvailableError) {
@@ -2324,9 +2324,6 @@ export const transcribeAudio = async (audioFile: File): Promise<TranscriptionRes
 // ============================================================================
 
 export type {
-  Notification,
-  NotificationListResponse,
-  NotificationPreferences,
   GlobalNotificationRequest,
   GlobalNotificationBatch,
   GlobalNotificationBatchDetail,
@@ -2334,11 +2331,6 @@ export type {
 } from './api/notifications';
 
 export {
-  getNotifications,
-  markNotificationAsRead,
-  getNotificationPreferences,
-  updateNotificationPreferences,
-  registerPushToken,
   sendGlobalNotification,
   listGlobalNotificationBatches,
   getGlobalNotificationBatch,
