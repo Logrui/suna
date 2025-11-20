@@ -136,16 +136,25 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
   );
 };
 
-// Loading state component
-const LoadingState = () => (
-  <div className="flex items-center justify-center p-8">
-    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+// Loading skeleton - matches Knowledge Base pattern
+const LoadingSkeleton = () => (
+  <div className="space-y-2 px-2.5">
+    {Array.from({ length: 7 }).map((_, index) => (
+      <div key={`skeleton-${index}`} className="flex items-start gap-2 p-3">
+        <div className="h-4 w-4 bg-muted rounded-full animate-pulse flex-shrink-0 mt-0.5"></div>
+        <div className="flex-1 space-y-2">
+          <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+          <div className="h-3 bg-muted/60 rounded w-full animate-pulse"></div>
+          <div className="h-3 bg-muted/60 rounded w-1/2 animate-pulse"></div>
+        </div>
+      </div>
+    ))}
   </div>
 );
 
-// Empty state component
+// Empty state component - needs to be in a flex container
 const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center p-8 text-center">
+  <div className="flex flex-col items-center justify-center h-full min-h-[300px] p-8 text-center">
     <Bell className="h-12 w-12 text-muted-foreground opacity-50 mb-3" />
     <p className="text-sm font-medium text-muted-foreground">No notifications</p>
     <p className="text-xs text-muted-foreground mt-1">
@@ -166,12 +175,36 @@ export function NavInbox() {
     return groupNotificationsByDate(data.notifications);
   }, [data?.notifications]);
 
+  // Render loading skeleton
   if (isLoading) {
-    return <LoadingState />;
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="px-2.5 py-3 border-b">
+          <h3 className="font-semibold text-sm">Inbox</h3>
+        </div>
+        {/* Loading skeleton */}
+        <div className="flex-1 overflow-y-auto">
+          <LoadingSkeleton />
+        </div>
+      </div>
+    );
   }
 
+  // Render empty state
   if (!data?.notifications?.length) {
-    return <EmptyState />;
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="px-2.5 py-3 border-b">
+          <h3 className="font-semibold text-sm">Inbox</h3>
+        </div>
+        {/* Empty state - flex-1 allows it to take remaining space and center */}
+        <div className="flex-1">
+          <EmptyState />
+        </div>
+      </div>
+    );
   }
 
   return (

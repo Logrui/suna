@@ -13,7 +13,6 @@ import { MaintenancePage } from '@/components/maintenance/maintenance-page';
 import { useDeleteOperationEffects } from '@/stores/delete-operation-store';
 import { StatusOverlay } from '@/components/ui/status-overlay';
 import { useAdminRole } from '@/hooks/admin';
-import { DashboardHeader } from '@/components/dashboard/dashboard-header';
 
 import { useProjects, useThreads } from '@/hooks/sidebar/use-sidebar';
 import { useIsMobile } from '@/hooks/utils';
@@ -21,6 +20,7 @@ import { useAgents } from '@/hooks/agents/use-agents';
 import { SubscriptionStoreSync } from '@/stores/subscription-store';
 import { PresentationViewerWrapper } from '@/stores/presentation-viewer-store';
 import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
+import { GlobalFileViewer } from '@/components/global-file-viewer';
 
 interface DashboardLayoutContentProps {
   children: React.ReactNode;
@@ -103,7 +103,7 @@ export default function DashboardLayoutContent({
   // Only show if we have actual data (not placeholder) or if explicitly enabled
   // Bypass maintenance for admins after role check completes
   if (maintenanceNotice?.enabled && !maintenanceLoading && !isCheckingAdminRole && !isAdmin) {
-    return <MaintenancePage/>
+    return <MaintenancePage />
   }
 
   // Show maintenance page if API is not healthy OR if health check failed
@@ -121,7 +121,6 @@ export default function DashboardLayoutContent({
           <SidebarProvider>
             <SidebarLeft />
             <SidebarInset>
-              <DashboardHeader />
               {mantenanceBanner}
               <div className="bg-background">{children}</div>
             </SidebarInset>
@@ -147,6 +146,7 @@ export default function DashboardLayoutContent({
           </SidebarProvider>
         </OnboardingProvider>
         <PresentationViewerWrapper />
+        <GlobalFileViewer />
       </SubscriptionStoreSync>
     </DeleteOperationEffectsWrapper>
   );

@@ -11,13 +11,14 @@ import { formatDateForList } from '@/lib/utils/date-formatting';
 import { Button } from '@/components/ui/button';
 import { listSandboxFiles, getProjects } from '@/lib/api';
 import { getFileType, FILE_ICONS } from '@/lib/utils/fileTypeDetector';
-import { 
-  ThreadWithProject, 
-  processThreadsWithProjects, 
+import {
+  ThreadWithProject,
+  processThreadsWithProjects,
   groupThreadsByDate,
   useThreads,
   useProjects
 } from '@/hooks/react-query/sidebar/use-sidebar';
+import { useGlobalFileViewerStore } from '@/stores/global-file-viewer-store';
 
 // Pagination constants
 const THREADS_PER_PAGE = 8;
@@ -47,6 +48,7 @@ const ThreadListItem: React.FC<{
 }> = ({ thread, isActive, isFavorite, onThreadClick, onToggleFavorite, onFileLoadingChange }) => {
   const [showAllFiles, setShowAllFiles] = useState(false);
   const router = useRouter();
+  const { openFileViewer } = useGlobalFileViewerStore();
 
   // Fetch project to get sandboxId
   const { data: projects = [] } = useQuery({
@@ -153,7 +155,19 @@ const ThreadListItem: React.FC<{
                     <div
                       key={file.path}
                       className="flex items-center gap-2 py-1 px-2 hover:bg-muted/40 transition-colors cursor-pointer rounded text-xs group"
-                      onClick={() => router.push(thread.url)}
+                      onClick={() => {
+                        // Open file in global file viewer modal if sandboxId exists
+                        if (sandboxId) {
+                          openFileViewer({
+                            sandboxId,
+                            filePath: file.path,
+                            project,
+                          });
+                        } else {
+                          // Fallback to navigating to thread if no sandbox
+                          router.push(thread.url);
+                        }
+                      }}
                     >
                       <IconComponent className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
                       <span className="truncate text-muted-foreground group-hover:text-foreground transition-colors">
@@ -206,7 +220,7 @@ const LoadingSkeleton = () => (
           <div className="h-3 w-12 bg-muted rounded animate-pulse flex-shrink-0"></div>
           <div className="h-5 w-5 bg-muted rounded-full animate-pulse flex-shrink-0"></div>
         </div>
-        
+
         {/* File items underneath */}
         <div className="ml-8 space-y-1">
           {Array.from({ length: 2 }).map((_, fileIdx) => (
@@ -241,7 +255,7 @@ export function NavLibrary() {
   // Fetch data
   const { data: threads = [], isLoading: threadsLoading } = useThreads();
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
-  
+
   const initialDataLoading = threadsLoading || projectsLoading;
 
   // Pagination state
@@ -312,13 +326,13 @@ export function NavLibrary() {
   const allFilesLoaded = useMemo(() => {
     // Force show after timeout
     if (forceShowContent) return true;
-    
+
     // Wait for initial data
     if (initialDataLoading) return false;
-    
+
     // If no threads, we're ready
     if (paginatedThreads.length === 0) return true;
-    
+
     // Check if any displayed thread is actively loading files
     for (const thread of paginatedThreads) {
       const isLoading = filesLoadingState.get(thread.threadId);
@@ -327,7 +341,7 @@ export function NavLibrary() {
         return false;
       }
     }
-    
+
     // Everything is loaded or queries are disabled
     return true;
   }, [paginatedThreads, initialDataLoading, filesLoadingState, forceShowContent]);
@@ -341,7 +355,7 @@ export function NavLibrary() {
       const { scrollTop, scrollHeight, clientHeight } = container;
       // When user scrolls near bottom (within 200px), load more threads
       if (scrollHeight - scrollTop - clientHeight < 200) {
-        setDisplayedThreadCount(prev => 
+        setDisplayedThreadCount(prev =>
           Math.min(prev + THREADS_PER_PAGE, allThreads.length)
         );
       }
@@ -379,9 +393,9 @@ export function NavLibrary() {
 
   // Render
   const dateGroups = Object.entries(paginatedGroupedThreads);
-  
+
   return (
-    <div 
+    <div
       ref={scrollContainerRef}
       className="overflow-y-auto max-h-[calc(100vh-280px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32"
     >

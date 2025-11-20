@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "@/hooks/threads/keys";
 import { threadKeys } from "@/hooks/threads/keys";
 import { useAdminRole } from "@/hooks/admin/use-admin-role";
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 interface ThreadSiteHeaderProps {
   threadId?: string;
@@ -226,7 +227,7 @@ export function SiteHeader({
                     onClick={() => {
                       const url = new URL(window.location.href);
                       const isDebugActive = url.searchParams.get('debug') === 'true';
-                      
+
                       if (isDebugActive) {
                         // Remove debug parameter
                         url.searchParams.delete('debug');
@@ -234,7 +235,7 @@ export function SiteHeader({
                         // Add debug parameter
                         url.searchParams.set('debug', 'true');
                       }
-                      
+
                       window.location.href = url.toString();
                     }}
                     className={cn(
@@ -285,6 +286,7 @@ export function SiteHeader({
               </TooltipContent>
             </Tooltip>
 
+            <NotificationBell />
 
 
             <Tooltip>

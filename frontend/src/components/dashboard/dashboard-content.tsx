@@ -8,9 +8,9 @@ import {
   ChatInput,
   ChatInputHandles,
 } from '@/components/thread/chat-input/chat-input';
-import { 
-  AgentRunLimitError, 
-  ProjectLimitError, 
+import {
+  AgentRunLimitError,
+  ProjectLimitError,
   BillingError,
   ThreadLimitError,
   AgentCountLimitError,
@@ -42,6 +42,7 @@ import { Info, X } from 'lucide-react';
 import { useLimits } from '@/hooks/dashboard/use-limits';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Progress } from '../ui/progress';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
@@ -53,7 +54,7 @@ export function DashboardContent() {
   const [configAgentId, setConfigAgentId] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [autoSubmit, setAutoSubmit] = useState(false);
-  
+
   // Use centralized Suna modes persistence hook
   const {
     selectedMode,
@@ -65,9 +66,9 @@ export function DashboardContent() {
     setSelectedOutputFormat,
     setSelectedTemplate,
   } = useSunaModePersistence();
-  
+
   const [viewMode, setViewMode] = useState<'super-worker' | 'worker-templates'>('super-worker');
-  
+
   const {
     selectedAgentId,
     setSelectedAgent,
@@ -107,7 +108,7 @@ export function DashboardContent() {
   const { data: threadLimit } = useThreadLimit();
   const { data: limits } = useLimits();
   const canCreateThread = true; // Hardcoded to allow thread creation
-  
+
   const isDismissed = true; // Hardcoded to disable limits alert
   const showAlert = !canCreateThread && !isDismissed;
 
@@ -154,12 +155,12 @@ export function DashboardContent() {
     const checkoutSuccess = searchParams.get('checkout');
     const sessionId = searchParams.get('session_id');
     const clientSecret = searchParams.get('client_secret');
-    
+
     // If we have checkout success indicators, invalidate billing queries
     if (checkoutSuccess === 'success' || sessionId || clientSecret) {
       console.log('🔄 Checkout success detected, invalidating billing queries...');
       queryClient.invalidateQueries({ queryKey: billingKeys.all });
-      
+
       // Clean up URL params
       const url = new URL(window.location.href);
       url.searchParams.delete('checkout');
@@ -190,7 +191,7 @@ export function DashboardContent() {
       localStorage.removeItem(PENDING_PROMPT_KEY);
 
       const formData = new FormData();
-      
+
       // Always append prompt - it's required for new threads
       // The message should never be empty due to validation above, but ensure we always send it
       const trimmedMessage = message.trim();
@@ -237,25 +238,25 @@ export function DashboardContent() {
     } catch (error: any) {
       console.error('Error during submission process:', error);
       if (error instanceof ProjectLimitError) {
-        pricingModalStore.openPricingModal({ 
+        pricingModalStore.openPricingModal({
           isAlert: true,
-          alertTitle: `Upgrade to create more projects (currently ${error.detail.current_count}/${error.detail.limit})` 
+          alertTitle: `Upgrade to create more projects (currently ${error.detail.current_count}/${error.detail.limit})`
         });
       } else if (error instanceof ThreadLimitError) {
-        pricingModalStore.openPricingModal({ 
+        pricingModalStore.openPricingModal({
           isAlert: true,
-          alertTitle: `Upgrade to create more threads (currently ${error.detail.current_count}/${error.detail.limit})` 
+          alertTitle: `Upgrade to create more threads (currently ${error.detail.current_count}/${error.detail.limit})`
         });
       } else if (error instanceof BillingError) {
         const message = error.detail?.message?.toLowerCase() || '';
-        const isCreditsExhausted = 
+        const isCreditsExhausted =
           message.includes('credit') ||
           message.includes('balance') ||
           message.includes('insufficient') ||
           message.includes('out of credits') ||
           message.includes('no credits');
-        
-        pricingModalStore.openPricingModal({ 
+
+        pricingModalStore.openPricingModal({
           isAlert: true,
           alertTitle: isCreditsExhausted ? 'You ran out of credits. Upgrade now.' : 'Pick the plan that works for you.'
         });
@@ -309,10 +310,11 @@ export function DashboardContent() {
         {/* Credits Display - Top right corner */}
         <div className="absolute flex items-center gap-2 top-4 right-4 z-10">
           <CreditsDisplay />
+          <NotificationBell />
           <Popover>
             <PopoverTrigger asChild>
               <Button size='icon' variant='outline'>
-                <Info className='h-4 w-4'/>
+                <Info className='h-4 w-4' />
               </Button>
             </PopoverTrigger>
             <PopoverContent align='end' className="w-70">
@@ -324,9 +326,9 @@ export function DashboardContent() {
                       <span className="text-muted-foreground">Threads</span>
                       <span className="font-medium">{limits?.thread_count?.current_count || 0} / {limits?.thread_count?.limit || 0}</span>
                     </div>
-                    <Progress 
+                    <Progress
                       className='h-1'
-                      value={((limits?.thread_count?.current_count || 0) / (limits?.thread_count?.limit || 1)) * 100} 
+                      value={((limits?.thread_count?.current_count || 0) / (limits?.thread_count?.limit || 1)) * 100}
                     />
                   </div>
                   <div className='space-y-2'>
@@ -334,9 +336,9 @@ export function DashboardContent() {
                       <span className="text-muted-foreground">Custom Workers</span>
                       <span className="font-medium">{limits?.agent_count?.current_count || 0} / {limits?.agent_count?.limit || 0}</span>
                     </div>
-                    <Progress 
+                    <Progress
                       className='h-1'
-                      value={((limits?.agent_count?.current_count || 0) / (limits?.agent_count?.limit || 1)) * 100} 
+                      value={((limits?.agent_count?.current_count || 0) / (limits?.agent_count?.limit || 1)) * 100}
                     />
                   </div>
                   <div className='space-y-2'>
@@ -344,9 +346,9 @@ export function DashboardContent() {
                       <span className="text-muted-foreground">Scheduled Triggers</span>
                       <span className="font-medium">{limits?.trigger_count?.scheduled?.current_count || 0} / {limits?.trigger_count?.scheduled?.limit || 0}</span>
                     </div>
-                    <Progress 
+                    <Progress
                       className='h-1'
-                      value={((limits?.trigger_count?.scheduled?.current_count || 0) / (limits?.trigger_count?.scheduled?.limit || 1)) * 100} 
+                      value={((limits?.trigger_count?.scheduled?.current_count || 0) / (limits?.trigger_count?.scheduled?.limit || 1)) * 100}
                     />
                   </div>
                   <div className='space-y-2'>
@@ -354,9 +356,9 @@ export function DashboardContent() {
                       <span className="text-muted-foreground">App Triggers</span>
                       <span className="font-medium">{limits?.trigger_count?.app?.current_count || 0} / {limits?.trigger_count?.app?.limit || 0}</span>
                     </div>
-                    <Progress 
+                    <Progress
                       className='h-1'
-                      value={((limits?.trigger_count?.app?.current_count || 0) / (limits?.trigger_count?.app?.limit || 1)) * 100} 
+                      value={((limits?.trigger_count?.app?.current_count || 0) / (limits?.trigger_count?.app?.limit || 1)) * 100}
                     />
                   </div>
                 </div>
@@ -406,7 +408,7 @@ export function DashboardContent() {
               </div>
             )}
             */}
-            
+
 
             <div className="flex-1 flex items-start justify-center pt-[30vh]">
               {viewMode === 'super-worker' && (
