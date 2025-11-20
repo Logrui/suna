@@ -8,13 +8,13 @@
 
 
 ## **Current Implemented Features:**
--New Feature: Notifications/Inbox System
+-New Feature: Admin + User based Notifications/Inbox System
 -New Feature: Auto Continue Prompting System (MVP)
 -New Feature: Library Implementation - Access Files Across Projects
 -New Feature: KB Based Slash Commands (Github Copilot Style and Text Based Prompts) - Knowledge Base
 -New Feature: Left Sidebar with Inbox, 
 -Bugfix: Dev Mode + New Dev Mode Button Toggle
--Bugfix: Uses New getAPI module to support local docker/cloudflare tunnel
+-Bugfix: Uses new getAPI module to support local docker/cloudflare tunnel
 -New Feature: Native Ollama and LMStudio support w/ activation and hot/cold startup
 -Custom Models via OpenRouter, LMStudio, Ollama, Google, and OpenAI
 
