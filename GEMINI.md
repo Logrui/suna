@@ -1,6 +1,6 @@
-# CLAUDE.md
+# GEMINI.md
 
-This file provides guidance to Gemini hen working with code in this repository.
+This file provides guidance to Gemini when working with code in this repository.
 
 ## 🚨 Critical Constraint: Documentation Hard Limit
 

@@ -41,7 +41,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
   // Filter slash commands based on current input
   const filteredSlashCommands = useMemo(() => {
     if (!slashCommandFilter) return slashCommands;
-    return slashCommands.filter(cmd => 
+    return slashCommands.filter(cmd =>
       cmd.name.toLowerCase().includes(slashCommandFilter.toLowerCase())
     );
   }, [slashCommands, slashCommandFilter]);
@@ -77,12 +77,12 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
     setShowSlashCommands(false);
     setSlashCommandFilter('');
     setActiveSlashCommand(command); // Store the command for later injection
-    
+
     // Notify parent in controlled mode
     if (isControlled && controlledOnChange) {
       controlledOnChange(newValue);
     }
-    
+
     // Focus textarea
     textareaRef.current?.focus();
   }, [setLocalValue, isControlled, controlledOnChange, textareaRef]);
@@ -95,7 +95,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
     if (showSlashCommands && filteredSlashCommands.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setSelectedCommandIndex(prev => 
+        setSelectedCommandIndex(prev =>
           prev < filteredSlashCommands.length - 1 ? prev + 1 : prev
         );
         return;
@@ -139,20 +139,12 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
     // Extract the user's text after the command
     const commandPattern = new RegExp(`^\\/${activeSlashCommand.name}\\s*`);
     const userText = message.replace(commandPattern, '').trim();
-    
-    // Handle GitHub-format commands differently
-    if (activeSlashCommand.isGitHubFormat && activeSlashCommand.instructionFile) {
-      // GitHub format: Inject instruction file reference before user message
-      const instructionReference = `Follow instructions in ${activeSlashCommand.instructionFile}`;
-      return userText 
-        ? `${instructionReference}\n\n${userText}`
-        : instructionReference;
-    } else {
-      // Standard format: Inject the full prompt before user message
-      return userText 
-        ? `${activeSlashCommand.prompt}\n\n${userText}`
-        : activeSlashCommand.prompt;
-    }
+
+    // Always inject the full prompt content
+    // We treat all commands the same way now - injecting their content directly
+    return userText
+      ? `${activeSlashCommand.prompt}\n\n${userText}`
+      : activeSlashCommand.prompt;
   }, [activeSlashCommand]);
 
   /**
@@ -171,7 +163,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
     }
 
     return (
-      <div 
+      <div
         className="absolute inset-0 pointer-events-none px-0.5 pb-6 pt-4 whitespace-pre-wrap break-words"
         style={{
           font: 'inherit',
@@ -199,11 +191,11 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
     showSlashCommands,
     selectedCommandIndex,
     activeSlashCommand,
-    
+
     // Data
     filteredSlashCommands,
     promptsFolder,
-    
+
     // Handlers
     handleChange,
     handleKeyDown,
@@ -211,7 +203,7 @@ export const useSlashCommandsLogic = (props: SlashCommandsProps) => {
     handleSlashCommandClose,
     processActiveSlashCommand,
     clearActiveSlashCommand,
-    
+
     // Render helpers
     renderHighlightedOverlay,
     getCaretClass,
