@@ -2,16 +2,17 @@ import { Metadata } from 'next';
 import { siteConfig } from '@/lib/site';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: siteConfig.name,
   description: siteConfig.description,
   keywords: ['Kortix', 'Kortix AI', 'Suna', 'Kortix Suna', 'AI', 'Agent', 'Open Source', 'AI assistant', 'generalist AI worker'],
   authors: [
     {
-      name: 'Kortix AI Corp',
-      url: 'https://kortix.com',
+      name: 'SYHC Logrui',
+      url: 'https://kortix.syhc.dev',
     },
   ],
-  creator: 'Kortix AI Corp',
+  creator: 'SYHC Logrui',
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: siteConfig.name,
     description: siteConfig.description,
-    creator: '@kortix',
+    creator: '@logrui',
     images: ['/banner.png'],
   },
   robots: {
