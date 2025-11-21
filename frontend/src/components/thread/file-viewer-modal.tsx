@@ -24,6 +24,8 @@ import {
   Copy,
   Check,
   Edit,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -52,6 +54,8 @@ import JSZip from 'jszip';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { TipTapDocumentModal } from './tiptap-document-modal';
 import { getApiUrl } from '@/lib/get-api-url';
+import { FileCard } from '@/components/library/file-card';
+import { getFileType, FILE_ICONS } from '@/lib/utils/fileTypeDetector';
 
 // Define API_URL
 const API_URL = getApiUrl();
@@ -82,6 +86,7 @@ export function FileViewerModal({
   // File navigation state
   const [currentPath, setCurrentPath] = useState('/workspace');
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Add navigation state for file list mode
   const [currentFileIndex, setCurrentFileIndex] = useState<number>(-1);
@@ -159,7 +164,7 @@ export function FileViewerModal({
   // Add state for copy functionality
   const [isCopyingPath, setIsCopyingPath] = useState(false);
   const [isCopyingContent, setIsCopyingContent] = useState(false);
-  
+
   // Add state for TipTap document editor
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editorDocumentData, setEditorDocumentData] = useState<any>(null);
@@ -170,6 +175,16 @@ export function FileViewerModal({
       setProjectWithSandbox(project);
     }
   }, [project, sandboxId]);
+
+  // Helper to format bytes
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
 
   // Function to ensure a path starts with /workspace - Defined early
   const normalizePath = useCallback((path: unknown): string => {
@@ -730,14 +745,14 @@ export function FileViewerModal({
   const isMarkdownFile = useCallback((filePath: string | null) => {
     return filePath ? filePath.toLowerCase().endsWith('.md') : false;
   }, []);
-  
+
 
   const isDocumentFile = useCallback((filePath: string | null) => {
     if (!filePath) return false;
     const lower = filePath.toLowerCase();
     return lower.endsWith('.doc');
   }, []);
-  
+
   const isTipTapDocumentContent = useCallback((content: string | null) => {
     if (!content) return false;
     try {
@@ -759,7 +774,7 @@ export function FileViewerModal({
 
   const handleCopyPath = useCallback(async () => {
     if (!textContentForRenderer) return;
-    
+
     setIsCopyingPath(true);
     const success = await copyToClipboard(textContentForRenderer);
     if (success) {
@@ -772,7 +787,7 @@ export function FileViewerModal({
 
   const handleCopyContent = useCallback(async () => {
     if (!textContentForRenderer) return;
-    
+
     setIsCopyingContent(true);
     const success = await copyToClipboard(textContentForRenderer);
     if (success) {
@@ -782,19 +797,19 @@ export function FileViewerModal({
     }
     setTimeout(() => setIsCopyingContent(false), 500);
   }, [textContentForRenderer, copyToClipboard]);
-  
+
   // Handle opening the TipTap document editor
   const handleOpenEditor = useCallback(() => {
     if (!selectedFilePath || !textContentForRenderer || !isDocumentFile(selectedFilePath)) {
       return;
     }
-    
+
     // Check if it's actually a TipTap document by examining content
     if (!isTipTapDocumentContent(textContentForRenderer)) {
       toast.error('This document format is not supported for editing');
       return;
     }
-    
+
     // Parse the TipTap document JSON
     try {
       const documentData = JSON.parse(textContentForRenderer);
@@ -804,7 +819,7 @@ export function FileViewerModal({
       toast.error('Failed to parse document data');
     }
   }, [selectedFilePath, textContentForRenderer, isDocumentFile, isTipTapDocumentContent]);
-  
+
   // Handle document save from editor
   const handleDocumentSave = useCallback(() => {
     // Refresh the file content after saving
@@ -814,7 +829,7 @@ export function FileViewerModal({
       const contentType = FileCache.getContentTypeFromPath(normalizedPath);
       const cacheKey = `${sandboxId}:${normalizedPath}:${contentType}`;
       FileCache.delete(cacheKey);
-      
+
       // Re-open the file to reload content
       const fileName = selectedFilePath.split('/').pop() || '';
       openFile({
@@ -1176,429 +1191,516 @@ export function FileViewerModal({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[90vw] md:max-w-[1200px] w-[95vw] h-[90vh] max-h-[900px] flex flex-col p-0 gap-0 overflow-hidden">
-        {/* Header */}
-        <DialogHeader className="px-4 py-3 flex-shrink-0 flex flex-row gap-4 items-center border-b">
-          <DialogTitle className="text-lg font-semibold">
-            Workspace Files
-          </DialogTitle>
+        <DialogContent className="sm:max-w-[90vw] md:max-w-[1200px] w-[95vw] h-[90vh] max-h-[900px] flex flex-col p-0 gap-0 overflow-hidden">
+          {/* Header */}
+          <DialogHeader className="px-4 py-3 flex-shrink-0 flex flex-row gap-4 items-center border-b">
+            <DialogTitle className="text-lg font-semibold">
+              Workspace Files
+            </DialogTitle>
 
-          {/* Download progress display */}
-          {downloadProgress && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1.5">
-                <Loader className="h-4 w-4 animate-spin" />
-                <span>
-                  {downloadProgress.total > 0
-                    ? `${downloadProgress.current}/${downloadProgress.total}`
-                    : 'Preparing...'
-                  }
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-0.5 bg-muted/50 border border-border/50 rounded-lg p-0.5 ml-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className={`h-6 w-6 p-0 rounded-md transition-all ${viewMode === 'grid' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                title="Grid view"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={`h-6 w-6 p-0 rounded-md transition-all ${viewMode === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                title="List view"
+              >
+                <List className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+
+            {/* Download progress display */}
+            {downloadProgress && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <Loader className="h-4 w-4 animate-spin" />
+                  <span>
+                    {downloadProgress.total > 0
+                      ? `${downloadProgress.current}/${downloadProgress.total}`
+                      : 'Preparing...'
+                    }
+                  </span>
+                </div>
+                <span className="max-w-[200px] truncate">
+                  {downloadProgress.currentFile}
                 </span>
               </div>
-              <span className="max-w-[200px] truncate">
-                {downloadProgress.currentFile}
-              </span>
-            </div>
-          )}
+            )}
 
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Navigation arrows for file list mode */}
-            {(() => {
-              return isFileListMode && selectedFilePath && filePathList && filePathList.length > 1 && currentFileIndex >= 0;
-            })() && (
+            <div className="flex items-center gap-2 ml-auto">
+              {/* Navigation arrows for file list mode */}
+              {(() => {
+                return isFileListMode && selectedFilePath && filePathList && filePathList.length > 1 && currentFileIndex >= 0;
+              })() && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={navigatePrevious}
+                      disabled={currentFileIndex <= 0}
+                      className="h-8 w-8 p-0"
+                      title="Previous file (←)"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="text-xs text-muted-foreground px-2">
+                      {currentFileIndex + 1} / {(filePathList?.length || 0)}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={navigateNext}
+                      disabled={currentFileIndex >= (filePathList?.length || 0) - 1}
+                      className="h-8 w-8 p-0"
+                      title="Next file (→)"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+            </div>
+          </DialogHeader>
+
+          {/* Breadcrumb Navigation */}
+          <div className="px-4 py-2 flex items-center gap-2 border-b">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={navigateHome}
+              className="h-8 w-8"
+              title="Go to home directory"
+            >
+              <Home className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center overflow-x-auto flex-1 min-w-0 scrollbar-hide whitespace-nowrap">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-sm font-medium min-w-fit flex-shrink-0"
+                onClick={navigateHome}
+              >
+                home
+              </Button>
+
+              {currentPath !== '/workspace' && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={navigatePrevious}
-                    disabled={currentFileIndex <= 0}
-                    className="h-8 w-8 p-0"
-                    title="Previous file (←)"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="text-xs text-muted-foreground px-2">
-                    {currentFileIndex + 1} / {(filePathList?.length || 0)}
+                  {getBreadcrumbSegments(currentPath).map((segment) => (
+                    <Fragment key={segment.path}>
+                      <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground flex-shrink-0" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-sm font-medium truncate max-w-[200px]"
+                        onClick={() => navigateToBreadcrumb(segment.path)}
+                      >
+                        {segment.name}
+                      </Button>
+                    </Fragment>
+                  ))}
+                </>
+              )}
+
+              {selectedFilePath && (
+                <>
+                  <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground flex-shrink-0" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">
+                      {selectedFilePath.split('/').pop()}
+                    </span>
                   </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {selectedFilePath && (
+                <>
+                  {/* Copy content button - only show for text files */}
+                  {textContentForRenderer && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyContent}
+                      disabled={isCopyingContent || isCachedFileLoading}
+                      className="h-8 gap-1"
+                    >
+                      {isCopyingContent ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">Copy</span>
+                    </Button>
+                  )}
+
+                  {/* Edit button - only show for document files that are TipTap format */}
+                  {isDocumentFile(selectedFilePath) && textContentForRenderer && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenEditor}
+                      disabled={isCachedFileLoading}
+                      className="h-8 gap-1"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="hidden sm:inline">Edit</span>
+                    </Button>
+                  )}
+
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={navigateNext}
-                    disabled={currentFileIndex >= (filePathList?.length || 0) - 1}
-                    className="h-8 w-8 p-0"
-                    title="Next file (→)"
+                    onClick={handleDownload}
+                    disabled={isDownloading || isCachedFileLoading}
+                    className="h-8 gap-1"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    {isDownloading ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline">Download</span>
+                  </Button>
+
+                  {isMarkdownFile(selectedFilePath) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            isExportingPdf ||
+                            isCachedFileLoading ||
+                            contentError !== null
+                          }
+                          className="h-8 gap-1"
+                        >
+                          {isExportingPdf ? (
+                            <Loader className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline">Export as PDF</span>
+                          <ChevronDown className="h-3 w-3 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleExportPdf('portrait')}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <span className="rotate-90">⬌</span> Portrait
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleExportPdf('landscape')}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <span>⬌</span> Landscape
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </>
+              )}
+
+              {!selectedFilePath && (
+                <>
+                  {/* Download All button - only show when in home directory */}
+                  {currentPath === '/workspace' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownloadAll}
+                      disabled={isDownloadingAll || isLoadingFiles}
+                      className="h-8 gap-1"
+                    >
+                      {isDownloadingAll ? (
+                        <Loader className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Archive className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">Download All</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUpload}
+                    disabled={isUploading}
+                    className="h-8 gap-1"
+                  >
+                    {isUploading ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline">Upload</span>
                   </Button>
                 </>
               )}
-          </div>
-        </DialogHeader>
 
-        {/* Breadcrumb Navigation */}
-        <div className="px-4 py-2 flex items-center gap-2 border-b">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={navigateHome}
-            className="h-8 w-8"
-            title="Go to home directory"
-          >
-            <Home className="h-4 w-4" />
-          </Button>
-
-          <div className="flex items-center overflow-x-auto flex-1 min-w-0 scrollbar-hide whitespace-nowrap">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-sm font-medium min-w-fit flex-shrink-0"
-              onClick={navigateHome}
-            >
-              home
-            </Button>
-
-            {currentPath !== '/workspace' && (
-              <>
-                {getBreadcrumbSegments(currentPath).map((segment) => (
-                  <Fragment key={segment.path}>
-                    <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground flex-shrink-0" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-sm font-medium truncate max-w-[200px]"
-                      onClick={() => navigateToBreadcrumb(segment.path)}
-                    >
-                      {segment.name}
-                    </Button>
-                  </Fragment>
-                ))}
-              </>
-            )}
-
-            {selectedFilePath && (
-              <>
-                <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground flex-shrink-0" />
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium truncate">
-                    {selectedFilePath.split('/').pop()}
-                  </span>
-                </div>
-              </>
-            )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={processUpload}
+                disabled={isUploading}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {selectedFilePath && (
-              <>
-                {/* Copy content button - only show for text files */}
-                {textContentForRenderer && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopyContent}
-                    disabled={isCopyingContent || isCachedFileLoading}
-                    className="h-8 gap-1"
-                  >
-                    {isCopyingContent ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">Copy</span>
-                  </Button>
-                )}
-                
-                {/* Edit button - only show for document files that are TipTap format */}
-                {isDocumentFile(selectedFilePath) && textContentForRenderer && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleOpenEditor}
-                    disabled={isCachedFileLoading}
-                    className="h-8 gap-1"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span className="hidden sm:inline">Edit</span>
-                  </Button>
-                )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownload}
-                  disabled={isDownloading || isCachedFileLoading}
-                  className="h-8 gap-1"
-                >
-                  {isDownloading ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline">Download</span>
-                </Button>
-
-                {isMarkdownFile(selectedFilePath) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={
-                          isExportingPdf ||
-                          isCachedFileLoading ||
-                          contentError !== null
-                        }
-                        className="h-8 gap-1"
-                      >
-                        {isExportingPdf ? (
-                          <Loader className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <FileText className="h-4 w-4" />
-                        )}
-                        <span className="hidden sm:inline">Export as PDF</span>
-                        <ChevronDown className="h-3 w-3 ml-1" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => handleExportPdf('portrait')}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <span className="rotate-90">⬌</span> Portrait
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleExportPdf('landscape')}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <span>⬌</span> Landscape
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </>
-            )}
-
-            {!selectedFilePath && (
-              <>
-                {/* Download All button - only show when in home directory */}
-                {currentPath === '/workspace' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadAll}
-                    disabled={isDownloadingAll || isLoadingFiles}
-                    className="h-8 gap-1"
-                  >
-                    {isDownloadingAll ? (
-                      <Loader className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Archive className="h-4 w-4" />
-                    )}
-                    <span className="hidden sm:inline">Download All</span>
-                  </Button>
-                )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleUpload}
-                  disabled={isUploading}
-                  className="h-8 gap-1"
-                >
-                  {isUploading ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline">Upload</span>
-                </Button>
-              </>
-            )}
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              onChange={processUpload}
-              disabled={isUploading}
-            />
-          </div>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-hidden">
-          {selectedFilePath ? (
-            /* File Viewer */
-            <div className="h-full w-full overflow-auto">
-              {isCachedFileLoading ? (
-                <div className="h-full w-full flex flex-col items-center justify-center">
-                  <Loader className="h-8 w-8 animate-spin text-primary mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    Loading {selectedFilePath ? selectedFilePath.split('/').pop() : 'file'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                        {(() => {
-                          // Normalize the path for consistent cache checks
-                          if (!selectedFilePath) return "Preparing...";
-
-                          let normalizedPath = selectedFilePath;
-                          if (!normalizedPath.startsWith('/workspace')) {
-                            normalizedPath = `/workspace/${normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath}`;
-                          }
-
-                          // Detect the appropriate content type based on file extension
-                          const detectedContentType = FileCache.getContentTypeFromPath(normalizedPath);
-
-                          // Check for cache with the correct content type
-                          const isCached = FileCache.has(`${sandboxId}:${normalizedPath}:${detectedContentType}`);
-
-                          return isCached
-                            ? "Using cached version"
-                            : "Fetching from server";
-                        })()}
-                  </p>
-                </div>
-              ) : contentError ? (
-                <div className="h-full w-full flex items-center justify-center p-4">
-                  <div className="max-w-md p-6 text-center border rounded-lg bg-muted/10">
-                    <AlertTriangle className="h-10 w-10 text-orange-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">
-                      Error Loading File
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {contentError}
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden">
+            {selectedFilePath ? (
+              /* File Viewer */
+              <div className="h-full w-full overflow-auto">
+                {isCachedFileLoading ? (
+                  <div className="h-full w-full flex flex-col items-center justify-center">
+                    <Loader className="h-8 w-8 animate-spin text-primary mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Loading {selectedFilePath ? selectedFilePath.split('/').pop() : 'file'}
                     </p>
-                    <div className="flex justify-center gap-3">
-                      <Button
-                        onClick={() => {
-                          setContentError(null);
-                          openFile({
-                            path: selectedFilePath,
-                            name: selectedFilePath.split('/').pop() || '',
-                            is_dir: false,
-                            size: 0,
-                            mod_time: new Date().toISOString(),
-                          } as FileInfo);
-                        }}
-                      >
-                        Retry
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          clearSelectedFile();
-                        }}
-                      >
-                        Back to Files
-                      </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {(() => {
+                        // Normalize the path for consistent cache checks
+                        if (!selectedFilePath) return "Preparing...";
+
+                        let normalizedPath = selectedFilePath;
+                        if (!normalizedPath.startsWith('/workspace')) {
+                          normalizedPath = `/workspace/${normalizedPath.startsWith('/') ? normalizedPath.substring(1) : normalizedPath}`;
+                        }
+
+                        // Detect the appropriate content type based on file extension
+                        const detectedContentType = FileCache.getContentTypeFromPath(normalizedPath);
+
+                        // Check for cache with the correct content type
+                        const isCached = FileCache.has(`${sandboxId}:${normalizedPath}:${detectedContentType}`);
+
+                        return isCached
+                          ? "Using cached version"
+                          : "Fetching from server";
+                      })()}
+                    </p>
+                  </div>
+                ) : contentError ? (
+                  <div className="h-full w-full flex items-center justify-center p-4">
+                    <div className="max-w-md p-6 text-center border rounded-lg bg-muted/10">
+                      <AlertTriangle className="h-10 w-10 text-orange-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium mb-2">
+                        Error Loading File
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {contentError}
+                      </p>
+                      <div className="flex justify-center gap-3">
+                        <Button
+                          onClick={() => {
+                            setContentError(null);
+                            openFile({
+                              path: selectedFilePath,
+                              name: selectedFilePath.split('/').pop() || '',
+                              is_dir: false,
+                              size: 0,
+                              mod_time: new Date().toISOString(),
+                            } as FileInfo);
+                          }}
+                        >
+                          Retry
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            clearSelectedFile();
+                          }}
+                        >
+                          Back to Files
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="h-full w-full relative">
-                  {(() => {
-                    // Safety check: don't render text content for binary files
-                    const isImageFile = FileCache.isImageFile(selectedFilePath);
-                    const isPdfFile = FileCache.isPdfFile(selectedFilePath);
-                    const extension = selectedFilePath?.split('.').pop()?.toLowerCase();
-                    const isOfficeFile = ['xlsx', 'xls', 'docx', 'pptx', 'ppt'].includes(extension || '');
-                    const isBinaryFile = isImageFile || isPdfFile || isOfficeFile;
+                ) : (
+                  <div className="h-full w-full relative">
+                    {(() => {
+                      // Safety check: don't render text content for binary files
+                      const isImageFile = FileCache.isImageFile(selectedFilePath);
+                      const isPdfFile = FileCache.isPdfFile(selectedFilePath);
+                      const extension = selectedFilePath?.split('.').pop()?.toLowerCase();
+                      const isOfficeFile = ['xlsx', 'xls', 'docx', 'pptx', 'ppt'].includes(extension || '');
+                      const isBinaryFile = isImageFile || isPdfFile || isOfficeFile;
 
-                    // For binary files, only render if we have a blob URL
-                    if (isBinaryFile && !blobUrlForRenderer) {
-                      return (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <div className="text-sm text-muted-foreground">
-                            Loading {isPdfFile ? 'PDF' : isImageFile ? 'image' : 'file'}...
+                      // For binary files, only render if we have a blob URL
+                      if (isBinaryFile && !blobUrlForRenderer) {
+                        return (
+                          <div className="h-full w-full flex items-center justify-center">
+                            <div className="text-sm text-muted-foreground">
+                              Loading {isPdfFile ? 'PDF' : isImageFile ? 'image' : 'file'}...
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }
+                        );
+                      }
 
-                    return (
-                      <FileRenderer
-                        key={selectedFilePath}
-                        content={isBinaryFile ? null : textContentForRenderer}
-                        binaryUrl={blobUrlForRenderer}
-                        fileName={selectedFilePath?.split('/').pop() || selectedFilePath}
-                        filePath={selectedFilePath}
-                        className="h-full w-full"
-                        project={projectWithSandbox}
-                        markdownRef={
-                          isMarkdownFile(selectedFilePath) ? markdownRef : undefined
-                        }
-                        onDownload={handleDownload}
-                        isDownloading={isDownloading}
-                      />
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          ) : (
-            /* File Explorer */
-            <div className="h-full w-full">
-              {isLoadingFiles ? (
-                <div className="h-full w-full flex items-center justify-center">
-                  <Loader className="h-6 w-6 animate-spin text-primary" />
-                </div>
-              ) : files.length === 0 ? (
-                <div className="h-full w-full flex flex-col items-center justify-center">
-                  <Folder className="h-12 w-12 mb-2 text-muted-foreground opacity-30" />
-                  <p className="text-sm text-muted-foreground">
-                    Directory is empty
-                  </p>
-                </div>
-              ) : (
-                <ScrollArea className="h-full w-full p-2">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 p-4">
-                    {files.map((file) => (
-                      <button
-                        key={file.path}
-                        className={`flex flex-col items-center p-3 rounded-2xl border hover:bg-muted/50 transition-colors ${selectedFilePath === file.path
-                          ? 'bg-muted border-primary/20'
-                          : ''
-                          }`}
-                        onClick={() => {
-                          if (file.is_dir) {
-                            navigateToFolder(file);
-                          } else {
-                            openFile(file);
+                      return (
+                        <FileRenderer
+                          key={selectedFilePath}
+                          content={isBinaryFile ? null : textContentForRenderer}
+                          binaryUrl={blobUrlForRenderer}
+                          fileName={selectedFilePath?.split('/').pop() || selectedFilePath}
+                          filePath={selectedFilePath}
+                          className="h-full w-full"
+                          project={projectWithSandbox}
+                          markdownRef={
+                            isMarkdownFile(selectedFilePath) ? markdownRef : undefined
                           }
-                        }}
-                      >
-                        <div className="w-12 h-12 flex items-center justify-center mb-1">
-                          {file.is_dir ? (
-                            <Folder className="h-9 w-9 text-blue-500" />
-                          ) : (
-                            <File className="h-8 w-8 text-muted-foreground" />
-                          )}
-                        </div>
-                        <span className="text-xs text-center font-medium truncate max-w-full">
-                          {file.name}
-                        </span>
-                      </button>
-                    ))}
+                          onDownload={handleDownload}
+                          isDownloading={isDownloading}
+                        />
+                      );
+                    })()}
                   </div>
-                </ScrollArea>
-              )}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-    
-    {/* TipTap Document Editor Modal */}
-    {selectedFilePath && isDocumentFile(selectedFilePath) && editorDocumentData && (
-      <TipTapDocumentModal
-        open={isEditorOpen}
-        onOpenChange={setIsEditorOpen}
-        filePath={selectedFilePath}
-        documentData={editorDocumentData}
-        sandboxId={sandboxId}
-        onSave={handleDocumentSave}
-      />
-    )}
+                )}
+              </div>
+            ) : (
+              /* File Explorer */
+              <div className="h-full w-full">
+                {isLoadingFiles ? (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <Loader className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                ) : files.length === 0 ? (
+                  <div className="h-full w-full flex flex-col items-center justify-center">
+                    <Folder className="h-12 w-12 mb-2 text-muted-foreground opacity-30" />
+                    <p className="text-sm text-muted-foreground">
+                      Directory is empty
+                    </p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-full w-full p-2">
+                    {viewMode === 'grid' ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 p-4">
+                        {files.map((file) => {
+                          if (file.is_dir) {
+                            return (
+                              <button
+                                key={file.path}
+                                className={`flex flex-col items-center p-3 rounded-xl border hover:bg-muted/50 transition-colors aspect-square justify-center ${selectedFilePath === file.path
+                                  ? 'bg-muted border-primary/20'
+                                  : 'bg-card border-border/50'
+                                  }`}
+                                onClick={() => navigateToFolder(file)}
+                              >
+                                <Folder className="h-10 w-10 text-blue-500 mb-2" />
+                                <span className="text-xs text-center font-medium truncate max-w-full w-full px-1">
+                                  {file.name}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground mt-1">
+                                  Folder
+                                </span>
+                              </button>
+                            );
+                          }
+
+                          const fileType = getFileType(file.name);
+                          const IconComponent = FILE_ICONS[fileType];
+                          const isMarkdown = file.name.endsWith('.md');
+
+                          return (
+                            <FileCard
+                              key={file.path}
+                              file={file}
+                              IconComponent={IconComponent}
+                              isMarkdown={isMarkdown}
+                              sandboxId={sandboxId}
+                              onFileClick={(e, path) => {
+                                e.stopPropagation();
+                                openFile(file);
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col min-w-full p-2">
+                        {/* List Header */}
+                        <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 px-4 py-2 text-xs font-medium text-muted-foreground border-b sticky top-0 bg-background z-10">
+                          <div className="w-6"></div>
+                          <div>Name</div>
+                          <div className="w-24 text-right">Size</div>
+                          <div className="w-32 text-right">Modified</div>
+                        </div>
+
+                        {/* List Items */}
+                        <div className="flex flex-col gap-1 mt-1">
+                          {files.map((file) => {
+                            const fileType = getFileType(file.name);
+                            const IconComponent = file.is_dir ? Folder : FILE_ICONS[fileType];
+
+                            return (
+                              <button
+                                key={file.path}
+                                className={`grid grid-cols-[auto_1fr_auto_auto] gap-4 items-center px-4 py-2 rounded-lg hover:bg-muted/50 transition-colors text-left group ${selectedFilePath === file.path ? 'bg-muted' : ''
+                                  }`}
+                                onClick={() => {
+                                  if (file.is_dir) {
+                                    navigateToFolder(file);
+                                  } else {
+                                    openFile(file);
+                                  }
+                                }}
+                              >
+                                <div className="w-6 flex justify-center">
+                                  {file.is_dir ? (
+                                    <Folder className="h-5 w-5 text-blue-500" />
+                                  ) : (
+                                    <IconComponent className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                  )}
+                                </div>
+                                <span className="text-sm font-medium truncate">
+                                  {file.name}
+                                </span>
+                                <span className="text-xs text-muted-foreground text-right w-24 font-mono">
+                                  {file.is_dir ? '-' : formatBytes(file.size || 0)}
+                                </span>
+                                <span className="text-xs text-muted-foreground text-right w-32 truncate">
+                                  {new Date(file.mod_time).toLocaleDateString()}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </ScrollArea>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* TipTap Document Editor Modal */}
+      {selectedFilePath && isDocumentFile(selectedFilePath) && editorDocumentData && (
+        <TipTapDocumentModal
+          open={isEditorOpen}
+          onOpenChange={setIsEditorOpen}
+          filePath={selectedFilePath}
+          documentData={editorDocumentData}
+          sandboxId={sandboxId}
+          onSave={handleDocumentSave}
+        />
+      )}
     </>
   );
 }
