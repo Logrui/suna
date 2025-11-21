@@ -11,6 +11,8 @@ class ModelProvider(Enum):
     GOOGLE = "google"
     XAI = "xai"
     MOONSHOTAI = "moonshotai"
+    ALIBABA = "alibaba"
+    DEEPSEEK = "deepseek"
 
 class ModelCapability(Enum):
     CHAT = "chat"

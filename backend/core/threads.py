@@ -287,11 +287,14 @@ async def create_thread(
             sandbox_id = sandbox.id
             logger.debug(f"Created new sandbox {sandbox_id} for project {project_id}")
             
-            # Get preview links
+            # Get preview links using proxy URLs to bypass Daytona warning
+            from core.utils.preview_urls import get_vnc_preview_url, get_website_preview_url
+            
+            vnc_url = get_vnc_preview_url(sandbox_id)
+            website_url = get_website_preview_url(sandbox_id)
+            
+            # Still need to get token from Daytona for authentication
             vnc_link = await sandbox.get_preview_link(6080)
-            website_link = await sandbox.get_preview_link(8080)
-            vnc_url = vnc_link.url if hasattr(vnc_link, 'url') else str(vnc_link).split("url='")[1].split("'")[0]
-            website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
             token = None
             if hasattr(vnc_link, 'token'):
                 token = vnc_link.token

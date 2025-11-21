@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button"
-import { FolderOpen, ExternalLink, Monitor, Copy, Check, Bug, PanelRight } from "lucide-react"
+import { FolderOpen, ExternalLink, Monitor, Copy, Check, Bug, PanelRight, DollarSign } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -23,6 +23,7 @@ import { threadKeys } from "@/hooks/threads/keys";
 import { useAdminRole } from "@/hooks/admin/use-admin-role";
 import { NotificationBell } from '@/components/notifications/notification-bell';
 import { DebugModal } from "./debug-modal";
+import { CostModal } from "./cost-modal";
 
 interface ThreadSiteHeaderProps {
   threadId?: string;
@@ -57,6 +58,7 @@ export function SiteHeader({
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false)
+  const [isCostModalOpen, setIsCostModalOpen] = useState(false)
 
   const isMobile = useIsMobile() || isMobileView
   const updateProjectMutation = useUpdateProject()
@@ -273,6 +275,25 @@ export function SiteHeader({
               </Tooltip>
             )}
 
+            {/* Cost Estimate Button - Only show for admins */}
+            {showDebugButtons && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsCostModalOpen(true)}
+                    className="h-9 w-9 cursor-pointer"
+                  >
+                    <DollarSign className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side={isMobile ? "bottom" : "bottom"}>
+                  <p>View Cost & Token Usage</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -323,6 +344,11 @@ export function SiteHeader({
         onClose={() => setIsDebugModalOpen(false)}
         threadId={threadId}
       />
+      <CostModal
+        isOpen={isCostModalOpen}
+        onClose={() => setIsCostModalOpen(false)}
+        threadId={threadId}
+      />
     </>
   )
-} 
+}

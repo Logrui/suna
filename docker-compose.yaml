@@ -50,6 +50,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - /app/.venv
       - ./backend/.env:/app/.env:ro
     environment:
       - ENV_MODE=local
@@ -78,6 +79,8 @@ services:
       dockerfile: Dockerfile
     command: uv run dramatiq --skip-logging --processes 4 --threads 4 run_agent_background
     volumes:
+      - ./backend:/app
+      - /app/.venv
       - ./backend/.env:/app/.env:ro
     environment:
       - ENV_MODE=local

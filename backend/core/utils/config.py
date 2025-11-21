@@ -329,10 +329,12 @@ class Configuration:
     REDIS_PASSWORD: Optional[str] = None
     REDIS_SSL: Optional[bool] = True
     
-    # Daytona sandbox configuration (optional - sandbox features disabled if not configured)
+    # Daytona Configuration
     DAYTONA_API_KEY: Optional[str] = None
-    DAYTONA_SERVER_URL: Optional[str] = None
-    DAYTONA_TARGET: Optional[str] = None
+    DAYTONA_SERVER_URL: Optional[str] = "https://app.daytona.io/api"
+    DAYTONA_TARGET: Optional[str] = "us"
+    DAYTONA_WEB_PORT: int = 8080
+    DAYTONA_VNC_PORT: int = 6080
     
     # Search and other API keys (all optional tools)
     TAVILY_API_KEY: Optional[str] = None

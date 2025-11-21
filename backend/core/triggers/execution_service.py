@@ -86,26 +86,29 @@ class SessionManager:
         client = await self._db.client
         
         try:
-            from core.sandbox.sandbox import create_sandbox, delete_sandbox
-            
+            sandbox_id = str(uuid.uuid4())
             sandbox_pass = str(uuid.uuid4())
-            sandbox = await create_sandbox(sandbox_pass, project_id)
-            sandbox_id = sandbox.id
             
-            vnc_link = await sandbox.get_preview_link(6080)
-            website_link = await sandbox.get_preview_link(8080)
-            vnc_url = self._extract_url(vnc_link)
-            website_url = self._extract_url(website_link)
-            token = self._extract_token(vnc_link)
+            sandbox_url = get_proxy_preview_url(sandbox_id, 8080)
+            vnc_url = get_vnc_preview_url(sandbox_id)
+            website_url = get_website_preview_url(sandbox_id)
             
-            update_result = await client.table('projects').update({
-                'sandbox': {
-                    'id': sandbox_id,
-                    'pass': sandbox_pass,
-                    'vnc_preview': vnc_url,
-                    'sandbox_url': website_url,
-                    'token': token
-                }
+            token = str(uuid.uuid4())
+            
+            await client.table('sandboxes').insert({
+                'sandbox_id': sandbox_id,
+                'project_id': project_id,
+                'pass': sandbox_pass,
+                'vnc_preview': vnc_url,
+                'sandbox_url': website_url,
+                'token': token
+            }).execute()
+            
+            await client.table('projects').update({
+                'pass': sandbox_pass,
+                'vnc_preview': vnc_url,
+                'sandbox_url': website_url,
+                'token': token
             }).eq('project_id', project_id).execute()
             
             if not update_result.data:

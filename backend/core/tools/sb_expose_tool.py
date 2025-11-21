@@ -59,22 +59,19 @@ class SandboxExposeTool(SandboxToolsBase):
                     # If we can't check, proceed anyway - the user might be starting a service
                     pass
 
-            # Get the preview link for the specified port
+            # Construct the Suna proxy URL to bypass Daytona warning
+            from core.utils.preview_urls import get_proxy_preview_url
+            proxy_url = get_proxy_preview_url(self.sandbox.id, port)
+            
+            # Get original URL for debugging
             preview_link = await self.sandbox.get_preview_link(port)
-            
-            # Extract the actual URL from the preview link object
-            # url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
-            
-            # Construct the Suna proxy URL
-            from core.utils.config import config
-            base_url = config.WEBHOOK_BASE_URL or "http://localhost:8000"
-            proxy_url = f"{base_url}/api/sandboxes/{self.sandbox.id}/proxy/{port}/"
+            original_url = preview_link.url if hasattr(preview_link, 'url') else str(preview_link)
             
             return self.success_response({
                 "url": proxy_url,
-                "original_url": preview_link.url if hasattr(preview_link, 'url') else str(preview_link),
+                "original_url": original_url,
                 "port": port,
-                "message": f"Successfully exposed port {port}. Access via: {proxy_url}"
+                "message": f"Successfully exposed port {port} to the public. Users can now access this service at: {proxy_url}"
             })
                 
         except ValueError:

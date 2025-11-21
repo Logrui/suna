@@ -13,9 +13,6 @@
 			"path": "../suna-main"
 		},
 		{
-			"path": "../../DevelopmentFiles/.Zero/Zero"
-		},
-		{
 			"path": "../n8n-nodes-suna-kortix"
 		}
 	],

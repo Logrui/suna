@@ -503,16 +503,16 @@ async def proxy_daytona_preview(
     Proxy a request to the Daytona preview URL, injecting the header to skip the warning.
     """
     # Construct the Daytona preview URL
-    # Format: https://{port}-{sandbox_id}.proxy.daytona.works/{path}
+    # Format: https://{port}-{sandbox_id}.proxy.daytona.work/{path}
     # Note: We might need to check if the sandbox ID needs to be the full ID or if there's a specific format.
     # Based on docs: https://3000-sandbox-123456.proxy.daytona.work
     # We'll assume sandbox_id is the full ID.
     
     # Check if we have a custom Daytona server URL that implies a different proxy structure
-    # But for now, we'll stick to the standard daytona.works structure or try to derive it.
-    # Actually, the docs say: https://{port}-{sandbox_id}.proxy.daytona.works
+    # But for now, we'll stick to the standard daytona.work structure or try to derive it.
+    # Actually, the docs say: https://{port}-{sandbox_id}.proxy.daytona.work
     
-    target_url = f"https://{port}-{sandbox_id}.proxy.daytona.works/{path}"
+    target_url = f"https://{port}-{sandbox_id}.proxy.daytona.work/{path}"
     if request.query_params:
         target_url += f"?{request.query_params}"
         

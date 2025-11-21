@@ -1629,4 +1629,25 @@ async def get_tier_configurations() -> Dict:
     
     except Exception as e:
         logger.error(f"Error getting tier configurations: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get tier configurations") 
+        raise HTTPException(status_code=500, detail="Failed to get tier configurations")
+
+@router.get("/thread-token-usage/{thread_id}")
+async def get_thread_token_usage(
+    thread_id: str,
+    current_user: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """
+    Get aggregated token usage and cost estimates for a specific thread.
+    """
+    try:
+        from . import token_usage_service
+        
+        usage_data = await token_usage_service.get_thread_token_usage(thread_id, current_user)
+        
+        return {
+            "success": True,
+            "data": usage_data
+        }
+    except Exception as e:
+        logger.error(f"Error getting thread token usage: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) 

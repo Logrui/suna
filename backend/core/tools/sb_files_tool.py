@@ -137,15 +137,15 @@ class SandboxFilesTool(SandboxToolsBase):
             
             message = f"File '{file_path}' created successfully."
             
-            # Check if index.html was created and add 8080 server info (only in root workspace)
+            # Check if index.html was created and add 8080 server info
             if file_path.lower() == 'index.html':
                 try:
-                    website_link = await self.sandbox.get_preview_link(8080)
-                    website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    from core.utils.preview_urls import get_proxy_preview_url
+                    website_url = get_proxy_preview_url(self.sandbox.id, 8080)
                     message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
                     message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:
-                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
+                    logger.warning(f"Failed to construct website URL for index.html: {str(e)}")
             
             return self.success_response(message)
         except Exception as e:
@@ -262,12 +262,12 @@ class SandboxFilesTool(SandboxToolsBase):
             # Check if index.html was rewritten and add 8080 server info (only in root workspace)
             if file_path.lower() == 'index.html':
                 try:
-                    website_link = await self.sandbox.get_preview_link(8080)
-                    website_url = website_link.url if hasattr(website_link, 'url') else str(website_link).split("url='")[1].split("'")[0]
+                    from core.utils.preview_urls import get_proxy_preview_url
+                    website_url = get_proxy_preview_url(self.sandbox.id, 8080)
                     message += f"\n\n[Auto-detected index.html - HTTP server available at: {website_url}]"
                     message += "\n[Note: Use the provided HTTP server URL above instead of starting a new server]"
                 except Exception as e:
-                    logger.warning(f"Failed to get website URL for index.html: {str(e)}")
+                    logger.warning(f"Failed to construct website URL for index.html: {str(e)}")
             
             # Auto-validate presentation slides
             slide_pattern = r'^presentations/([^/]+)/slide_(\d+)\.html$'

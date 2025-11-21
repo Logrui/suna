@@ -61,7 +61,7 @@ async def test_proxy_daytona_preview():
         MockClient.assert_called()
         mock_client_instance.build_request.assert_called_with(
             'GET', 
-            'https://3000-sandbox-123.proxy.daytona.works/index.html', 
+            'https://3000-sandbox-123.proxy.daytona.work/index.html', 
             headers={'X-Daytona-Skip-Preview-Warning': 'true'}
         )
 
@@ -100,6 +100,6 @@ async def test_proxy_daytona_preview_with_query_params():
         # Verify URL includes query params
         mock_client_instance.build_request.assert_called_with(
             'GET', 
-            'https://8080-sandbox-123.proxy.daytona.works/api/data?foo=bar&baz=qux', 
+            'https://8080-sandbox-123.proxy.daytona.work/api/data?foo=bar&baz=qux', 
             headers={'X-Daytona-Skip-Preview-Warning': 'true'}
         )
