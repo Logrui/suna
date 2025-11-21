@@ -261,6 +261,7 @@ export function SiteHeader({
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={() => setIsDebugModalOpen(true)}
                     className="h-9 w-9 cursor-pointer"
                   >
                     <PanelRight className="h-4 w-4" />
@@ -317,6 +318,11 @@ export function SiteHeader({
           projectId={projectId}
         />
       )}
+      <DebugModal
+        isOpen={isDebugModalOpen}
+        onClose={() => setIsDebugModalOpen(false)}
+        threadId={threadId}
+      />
     </>
   )
 } 
