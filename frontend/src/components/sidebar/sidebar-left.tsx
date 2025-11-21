@@ -63,11 +63,10 @@ import {
   DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { usePathname, useSearchParams } from 'next/navigation';
 import posthog from 'posthog-js';
-import { useDocumentModalStore } from '@/lib/stores/use-document-modal-store';
+import { useDocumentModalStore } from '@/stores/use-document-modal-store';
 import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Image from 'next/image';
@@ -151,8 +150,7 @@ const routeMap: Record<string, string> = {
 };
 
 function FloatingMobileMenuButton() {
-  const { setOpenMobile, openMobile, setOpen } = useSidebar();
-  const isMobile = useIsMobile();
+  const { setOpenMobile, openMobile, setOpen, isMobile } = useSidebar();
 
   if (!isMobile || openMobile) return null;
 
@@ -195,8 +193,7 @@ const InboxButton: React.FC<{ unreadCount: number }> = ({ unreadCount }) => (
 export function SidebarLeft({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const { state, setOpen, setOpenMobile } = useSidebar();
-  const isMobile = useIsMobile();
+  const { state, setOpen, setOpenMobile, isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [activeView, setActiveView] = useState<'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox'>('chats');

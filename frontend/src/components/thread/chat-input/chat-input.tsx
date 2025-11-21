@@ -11,7 +11,7 @@ import React, {
   memo,
 } from 'react';
 import { useAgents } from '@/hooks/react-query/agents/use-agents';
-import { useAgentSelection } from '@/lib/stores/agent-selection-store';
+import { useAgentSelection } from '@/stores/agent-selection-store';
 import { Card, CardContent } from '@/components/ui/card';
 import { handleFiles, FileUploadHandler } from './file-upload-handler';
 import { Textarea } from '@/components/ui/textarea';
@@ -208,7 +208,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-    const [isModeDismissing, setIsModeDismissing] = useState(false);    
+    const [isModeDismissing, setIsModeDismissing] = useState(false);
     const ENABLE_SUNA_AGENT_MODES = true; // Suna Agent Modes feature flag
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
 
@@ -364,7 +364,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       if (selectedMode !== 'slides' || !selectedTemplate) {
         return '';
       }
-      
+
       return `\n\n----\n\n**Presentation Template:** ${selectedTemplate}`;
     }, [selectedMode, selectedTemplate]);
 
@@ -433,7 +433,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       if (isAgentRunning) {
         setLocalValue('');
         setHasSubmitted(false);
-        
+
         // Notify parent in controlled mode
         if (isControlled && controlledOnChange) {
           controlledOnChange('');
@@ -672,22 +672,22 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
         <div className="relative">
           {/* Highlighted overlay for slash command */}
           {slashCommandsLogic.renderHighlightedOverlay(value)}
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={animatedPlaceholder}
-          className={cn(
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            placeholder={animatedPlaceholder}
+            className={cn(
               'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none relative z-10',
-            isDraggingOver ? 'opacity-40' : '',
+              isDraggingOver ? 'opacity-40' : '',
               slashCommandsLogic.getCaretClass(value),
-          )}
+            )}
             disabled={loading || (disabled && !isAgentRunning) || hasSubmitted}
-          rows={1}
-        />
-      </div>
+            rows={1}
+          />
+        </div>
       </div>
     ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted, slashCommandsLogic, handleSlashCommandSelect, handleSlashCommandClose]);
 

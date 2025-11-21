@@ -1,6 +1,6 @@
 'use client';
 
-import { useModelStore } from '@/lib/stores/model-store';
+import { useModelStore } from '@/stores/model-store';
 import { useSubscriptionData } from '@/contexts/SubscriptionContext';
 import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -27,14 +27,14 @@ const getDefaultModel = (models: ModelOption[], hasActiveSubscription: boolean):
     const recommendedModel = models.find(m => m.recommended);
     if (recommendedModel) return recommendedModel.id;
   }
-  
+
   // For free users, find the first non-subscription model with highest priority
   const freeModels = models.filter(m => !m.requiresSubscription);
   if (freeModels.length > 0) {
     const sortedFreeModels = freeModels.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     return sortedFreeModels[0].id;
   }
-  
+
   // Fallback to first available model
   return models.length > 0 ? models[0].id : '';
 };
@@ -56,13 +56,13 @@ export const useModelSelection = () => {
       // console.log('🔧 useModelSelection: Fetching local models...');
       const response = await getLocalModels();
       // console.log('🔧 useModelSelection: Local models response:', response);
-      
+
       // Handle error response properly
       if (!response.success || !response.data) {
         console.error('🔧 useModelSelection: Failed to fetch local models:', response.error);
         throw new Error(response.error?.message || 'Failed to fetch local models');
       }
-      
+
       // console.log('🔧 useModelSelection: Local models data:', response.data);
       return response.data;
     },
@@ -79,7 +79,7 @@ export const useModelSelection = () => {
   // Transform API data to ModelOption format, merging cloud and local models
   const availableModels = useMemo<ModelOption[]>(() => {
     const models: ModelOption[] = [];
-    
+
     // Add cloud models first
     if (modelsData?.models) {
       const cloudModels = modelsData.models.map(model => ({
@@ -99,11 +99,11 @@ export const useModelSelection = () => {
     // Add local models and remove any duplicates
     if (localModelsData) {
       // console.log('🔧 useModelSelection: Processing local models:', localModelsData);
-      
+
       // Process Ollama models
       if (localModelsData.ollama) {
         // console.log('🔧 useModelSelection: Found', localModelsData.ollama.length, 'Ollama models');
-        
+
         // Remove any cloud models that match local Ollama models by name
         localModelsData.ollama.forEach(localModel => {
           const modelNameLower = localModel.name.toLowerCase();
@@ -114,7 +114,7 @@ export const useModelSelection = () => {
             }
           }
         });
-        
+
         // Add Ollama models with high priority
         localModelsData.ollama.forEach(model => {
           // console.log('🔧 useModelSelection: Adding Ollama model:', model.id);
@@ -131,11 +131,11 @@ export const useModelSelection = () => {
           });
         });
       }
-      
+
       // Process LM Studio models
       if (localModelsData.lm_studio) {
         // console.log('🔧 useModelSelection: Found', localModelsData.lm_studio.length, 'LM Studio models');
-        
+
         // Remove any cloud models that match local LM Studio models
         localModelsData.lm_studio.forEach(localModel => {
           const modelNameLower = localModel.name.toLowerCase();
@@ -146,7 +146,7 @@ export const useModelSelection = () => {
             }
           }
         });
-        
+
         // Add LM Studio models with high priority
         localModelsData.lm_studio.forEach(model => {
           // console.log('🔧 useModelSelection: Adding LM Studio model:', model.id);
@@ -188,12 +188,12 @@ export const useModelSelection = () => {
     if (!selectedModel || !accessibleModels.some(m => m.id === selectedModel)) {
       const hasActiveSubscription = subscriptionData?.status === 'active' || subscriptionData?.status === 'trialing';
       const defaultModelId = getDefaultModel(availableModels, hasActiveSubscription);
-      
+
       // Make sure the default model is accessible
-      const finalModel = accessibleModels.some(m => m.id === defaultModelId) 
-        ? defaultModelId 
+      const finalModel = accessibleModels.some(m => m.id === defaultModelId)
+        ? defaultModelId
         : accessibleModels[0]?.id;
-        
+
       if (finalModel) {
         console.log('🔧 useModelSelection: Setting API-determined default model:', finalModel);
         setSelectedModel(finalModel);
@@ -224,18 +224,18 @@ export const useModelSelection = () => {
       const model = availableModels.find(m => m.id === modelId);
       return model?.requiresSubscription || false;
     },
-    
+
     // Compatibility stubs for custom models (not needed with API-driven approach)
     handleModelChange,
     customModels: [] as any[], // Empty array since we're not using custom models
-    addCustomModel: (_model: any) => {}, // No-op
-    updateCustomModel: (_id: string, _model: any) => {}, // No-op
-    removeCustomModel: (_id: string) => {}, // No-op
-    
+    addCustomModel: (_model: any) => { }, // No-op
+    updateCustomModel: (_id: string, _model: any) => { }, // No-op
+    removeCustomModel: (_id: string) => { }, // No-op
+
     // Get the actual model ID to send to the backend (no transformation needed now)
     getActualModelId: (modelId: string) => modelId,
-    
+
     // Refresh function for compatibility (no-op since we use API)
-    refreshCustomModels: () => {},
+    refreshCustomModels: () => { },
   };
 };

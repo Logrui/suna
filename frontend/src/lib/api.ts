@@ -667,7 +667,7 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
         const content = typeof latestMsg.content === 'string' ? JSON.parse(latestMsg.content) : latestMsg.content;
         if (content?.usage?.total_tokens) {
           // Store context usage
-          const { useContextUsageStore } = await import('@/lib/stores/context-usage-store');
+          const { useContextUsageStore } = await import('@/stores/context-usage-store');
           useContextUsageStore.getState().setUsage(threadId, {
             current_tokens: content.usage.total_tokens
           });

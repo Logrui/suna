@@ -40,7 +40,7 @@ import { getAgents } from '@/hooks/react-query/agents/utils';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
 import { SunaModesPanel } from '@/components/dashboard/suna-modes-panel';
 import { useSunaModePersistence } from '@/hooks/use-suna-modes-persistence';
-import { useAgentSelection } from '@/lib/stores/agent-selection-store';
+import { useAgentSelection } from '@/stores/agent-selection-store';
 
 // Custom dialog overlay with blur effect
 const BlurredDialogOverlay = () => (

@@ -19,17 +19,17 @@ export interface ApiResponse<T = any> {
 }
 
 async function makeRequest<T = any>(
-    url: string,
-    options: RequestInit & ApiClientOptions = {}
-  ): Promise<ApiResponse<T>> {
-    const {
-      showErrors = true,
-      errorContext,
-      timeout = 30000,
-      ...fetchOptions
-    } = options;
+  url: string,
+  options: RequestInit & ApiClientOptions = {}
+): Promise<ApiResponse<T>> {
+  const {
+    showErrors = true,
+    errorContext,
+    timeout = 30000,
+    ...fetchOptions
+  } = options;
 
-      const controller = new AbortController();
+  const controller = new AbortController();
   let timeoutId: NodeJS.Timeout | null = null;
   let isAborted = false;
 
@@ -41,96 +41,96 @@ async function makeRequest<T = any>(
       }
     }, timeout);
 
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
 
     // Don't set Content-Type for FormData - browser will set it automatically with boundary
     const isFormData = fetchOptions.body instanceof FormData;
     const headers: Record<string, string> = {};
-    
+
     if (!isFormData) {
       headers['Content-Type'] = 'application/json';
     }
-    
+
     // Merge with any headers from fetchOptions
     Object.assign(headers, fetchOptions.headers as Record<string, string>);
 
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
 
-      if (session?.refresh_token) {
-        headers['X-Refresh-Token'] = session.refresh_token;
-      }
+    if (session?.refresh_token) {
+      headers['X-Refresh-Token'] = session.refresh_token;
+    }
 
-    console.log('[makeRequest] About to fetch URL:', url);
+    //console.log('[makeRequest] About to fetch URL:', url);
     const response = await fetch(url, {
-        ...fetchOptions,
-        headers,
-        signal: controller.signal,
-      });
+      ...fetchOptions,
+      headers,
+      signal: controller.signal,
+    });
 
     if (timeoutId) {
       clearTimeout(timeoutId);
       timeoutId = null;
     }
 
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        let errorData: any = null;
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      let errorData: any = null;
 
-        try {
-          errorData = await response.json();
-          if (errorData.message) {
-            errorMessage = errorData.message;
+      try {
+        errorData = await response.json();
+        if (errorData.message) {
+          errorMessage = errorData.message;
         } else if (errorData.detail?.message) {
           errorMessage = errorData.detail.message;
-          }
-        } catch {
         }
+      } catch {
+      }
 
       let error: ApiError | Error = Object.assign(Object.create(Error.prototype), {
-          message: errorMessage,
-          name: 'ApiError',
-          status: response.status,
-          response: response,
-          details: errorData || undefined,
+        message: errorMessage,
+        name: 'ApiError',
+        status: response.status,
+        response: response,
+        details: errorData || undefined,
         data: errorData,
         detail: errorData?.detail,
         code: errorData?.code || errorData?.error_code || errorData?.detail?.error_code || response.status.toString()
-        });
+      });
 
       if (response.status === 402) {
         error = parseTierRestrictionError(error);
       }
 
-        if (showErrors) {
-          handleApiError(error, errorContext);
-        }
-
-        return {
-          error,
-          success: false,
-        };
-      }
-
-      let data: T;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType?.includes('application/json')) {
-        data = await response.json();
-      } else if (contentType?.includes('text/')) {
-        data = await response.text() as T;
-      } else {
-        data = await response.blob() as T;
+      if (showErrors) {
+        handleApiError(error, errorContext);
       }
 
       return {
-        data,
-        success: true,
+        error,
+        success: false,
       };
+    }
 
-    } catch (error: any) {
+    let data: T;
+    const contentType = response.headers.get('content-type');
+
+    if (contentType?.includes('application/json')) {
+      data = await response.json();
+    } else if (contentType?.includes('text/')) {
+      data = await response.text() as T;
+    } else {
+      data = await response.blob() as T;
+    }
+
+    return {
+      data,
+      success: true,
+    };
+
+  } catch (error: any) {
     // Always clear timeout on error
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -138,56 +138,56 @@ async function makeRequest<T = any>(
     }
 
     // Check if this is an abort error (timeout or manual abort)
-    const isAbortError = error?.name === 'AbortError' || 
-                         error?.name === 'AbortSignal' ||
-                         (error instanceof Error && error.message.includes('aborted'));
+    const isAbortError = error?.name === 'AbortError' ||
+      error?.name === 'AbortSignal' ||
+      (error instanceof Error && error.message.includes('aborted'));
 
     // If it was aborted, mark it so we don't try to abort again
     if (isAbortError) {
       isAborted = true;
     }
 
-      let apiError: ApiError;
-      
+    let apiError: ApiError;
+
     if (isAbortError) {
-        apiError = Object.assign(Object.create(Error.prototype), {
-          message: 'Request timeout',
-          name: 'ApiError',
-          code: 'TIMEOUT'
-        });
-      
+      apiError = Object.assign(Object.create(Error.prototype), {
+        message: 'Request timeout',
+        name: 'ApiError',
+        code: 'TIMEOUT'
+      });
+
       // Only show timeout errors if showErrors is true
       // This prevents spam from multiple concurrent timeouts or React Query cancellations
       if (showErrors) {
         handleNetworkError(apiError, errorContext);
       }
-      } else if (error instanceof Error) {
-        // Create a copy of the error to avoid read-only issues
-        apiError = Object.assign(Object.create(Error.prototype), {
-          message: error.message,
-          name: error.name || 'ApiError',
-          stack: error.stack
-        });
+    } else if (error instanceof Error) {
+      // Create a copy of the error to avoid read-only issues
+      apiError = Object.assign(Object.create(Error.prototype), {
+        message: error.message,
+        name: error.name || 'ApiError',
+        stack: error.stack
+      });
 
       if (showErrors) {
         handleNetworkError(apiError, errorContext);
       }
-      } else {
-        apiError = Object.assign(Object.create(Error.prototype), {
-          message: String(error),
-          name: 'ApiError'
-        });
+    } else {
+      apiError = Object.assign(Object.create(Error.prototype), {
+        message: String(error),
+        name: 'ApiError'
+      });
 
       if (showErrors) {
         handleNetworkError(apiError, errorContext);
       }
-      }
-
-      return {
-        error: apiError,
-        success: false,
-      };
     }
+
+    return {
+      error: apiError,
+      success: false,
+    };
+  }
 }
 
 export const supabaseClient = {
@@ -221,17 +221,17 @@ export const supabaseClient = {
       };
     } catch (error: any) {
       // Create a copy of the error to avoid read-only issues
-      const apiError: ApiError = error instanceof Error 
+      const apiError: ApiError = error instanceof Error
         ? Object.assign(Object.create(Error.prototype), {
-            message: error.message,
-            name: error.name || 'ApiError',
-            stack: error.stack
-          })
+          message: error.message,
+          name: error.name || 'ApiError',
+          stack: error.stack
+        })
         : Object.assign(Object.create(Error.prototype), {
-            message: String(error),
-            name: 'ApiError'
-          });
-      
+          message: String(error),
+          name: 'ApiError'
+        });
+
       handleApiError(apiError, errorContext);
 
       return {
@@ -245,7 +245,7 @@ export const supabaseClient = {
 export const backendApi = {
   get: <T = any>(endpoint: string, options?: Omit<RequestInit & ApiClientOptions, 'method' | 'body'>) => {
     const fullUrl = `${getApiUrl()}${endpoint}`;
-    console.log('[backendApi.get] Constructed URL:', fullUrl);
+    //console.log('[backendApi.get] Constructed URL:', fullUrl);
     return makeRequest<T>(fullUrl, { ...options, method: 'GET' });
   },
 

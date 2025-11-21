@@ -40,7 +40,7 @@ import { createQueryHook } from '@/hooks/use-query';
 import { agentKeys } from '@/hooks/react-query/agents/keys';
 import { getAgents } from '@/hooks/react-query/agents/utils';
 import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
-import { useAgentSelection } from '@/lib/stores/agent-selection-store';
+import { useAgentSelection } from '@/stores/agent-selection-store';
 
 // Custom dialog overlay with blur effect
 const BlurredDialogOverlay = () => (
