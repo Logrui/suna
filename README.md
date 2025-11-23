@@ -4,7 +4,7 @@
 
 ![Kortix Screenshot](frontend/public/banner.png)
 
-## **Private Server Build of Kortix AI - Last Updated as Of: <!-- DATE_START -->2025-11-21<!-- DATE_END -->**
+## **Private Server Build of Kortix AI - Last Updated as Of: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
 **This is a private server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker.**
 
 
