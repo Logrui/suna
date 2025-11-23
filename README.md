@@ -57,6 +57,7 @@ docker compose up -d --build
 ```
 ## **Configuration Self Hosted Architecture:**
 **Cloudflare Tunnels: (Optional, Recommended for Secure Remote Access)** 
+```
 -Cloudflare Tunnels are recommended for secure remote access to your self-hosted Kortix AI instance
 -Required: Automatic HTTPS encryption is also provided by Cloudflare w/ TLS Total + subdomain - Needed for Realtime Websocket Streaming/HTTPS
 -SSL/TLS Setting: Flexible
@@ -64,43 +65,52 @@ docker compose up -d --build
 -Backend: kong.yourdomain.com ---> supabase-kong
 -Frontend: kortix.yourdomain.com ---> suna-frontend
 -Supabase: supabase.yourdomain.com ---> supabase-kong
--**Note:** Ensure your domain and subdomains are covered by Cloudflare TLS Total otherwise you will get errors with realtime streaming/HTTPS
+```
+**Note:** Ensure your domain and subdomains are covered by Cloudflare TLS Total otherwise you will get errors with realtime streaming/HTTPS
 
 **Docker Container (Suna):**
+```
 -suna-backend 8000:8000
 -suna-frontend 9990:3000
 -suna-redis 6380:6379
 -suna-worker
-
+```
 **Docker Container (Supabase):**
+```
 -realtime-dev.supabase-realtime 8002:4000
 -supabase-db 5434:5432
 -supabase-auth 8100:9999
 -supabase-kong 8888:8000
-
+```
 **Docker Container (Daytona):**
+```
 -Optional (highly recommend not running Daytona in Docker)
 -Have tried this and it is not recommended - difficult to set up docker in docker correctly
 -Recommend using Cloud based Daytona even while self hosted
 -Even on powerful homelab or compute centers - Cloud Daytona is still much faster and more reliable
-
+```
 **Supabase Setup/Configuration:**
+```
 -WIP - git clone supabase/supabase 
 -Ensure to run migrations in Supabase once it is set up correctly
 -Will try to add a guide for the below items in the future
-
+```
 **Env Configuration:** 
+```
 -WIP
-
+```
 **Google/Github OAuth Configuration:**
+```
 -WIP
-
+```
 **Composio Configuration:**
+```
 -WIP
-
+```
 **Daytona Configuration:**
+```
 -WIP
-
+```
 
 </div>
 
@@ -131,6 +141,8 @@ Kortix is a comprehensive open source platform that empowers you to build, manag
 [中文](https://www.readme-i18n.com/kortix-ai/suna?lang=zh)
 
 </div>
+
+<div align="left">
 
 ## 🌟 What Makes Kortix Special
 
@@ -280,6 +292,7 @@ Just use "setup.py". Ty mate.
 Kortix is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for the full license text.
 
 ---
+</div>
 
 <div align="center">
 

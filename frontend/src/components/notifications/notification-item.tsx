@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Info, CheckCircle2, AlertCircle, XCircle, CheckCheck, MoreHorizontal } from 'lucide-react';
-import { useMarkNotificationAsRead } from '@/hooks/react-query/notifications/use-notifications';
+import { Info, CheckCircle2, AlertCircle, XCircle, CheckCheck, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useMarkNotificationAsRead, useDeleteNotification } from '@/hooks/react-query/notifications/use-notifications';
 import type { Notification } from '@/hooks/react-query/notifications/use-notifications';
 import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -39,8 +39,9 @@ function formatNotificationTime(date: Date): string {
   }
 }
 
-export function NotificationItem({ notification }: NotificationItemProps) {
+export function NotificationItem({ notification, onClick }: { notification: Notification; onClick: () => void }) {
   const markAsRead = useMarkNotificationAsRead();
+  const deleteNotification = useDeleteNotification();
   const Icon = typeIcons[notification.type] || Info;
   const notificationDate = new Date(notification.created_at);
 
@@ -52,19 +53,18 @@ export function NotificationItem({ notification }: NotificationItemProps) {
     });
   };
 
-  const handleClick = () => {
-    if (!notification.is_read) {
-      markAsRead.mutate({ notificationIds: [notification.id] });
-    }
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteNotification.mutate([notification.id]);
   };
 
   return (
     <div
       className={cn(
-        'group flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b last:border-b-0',
+        'group flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b last:border-b-0 relative',
         !notification.is_read && 'bg-muted/20'
       )}
-      onClick={handleClick}
+      onClick={onClick}
     >
       {/* Read/Unread Indicator */}
       <div className="flex-shrink-0 w-2">
@@ -98,18 +98,56 @@ export function NotificationItem({ notification }: NotificationItemProps) {
         </p>
       </div>
 
-      {/* Empty Column (placeholder for future use) */}
-      <div className="flex-shrink-0 w-20"></div>
-
       {/* Time */}
-      <div className="flex-shrink-0 w-28 text-right">
+      <div className="flex-shrink-0 w-20 text-right group-hover:opacity-0 transition-opacity">
         <p className="text-xs text-muted-foreground">
           {formatNotificationTime(notificationDate)}
         </p>
       </div>
 
-      {/* Actions Menu (visible on hover) */}
-      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Actions (visible on hover, replaces time) */}
+      <div className="absolute right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded-md pl-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          onClick={handleToggleRead}
+          title={notification.is_read ? "Mark as unread" : "Mark as read"}
+        >
+          {notification.is_read ? (
+            <CheckCircle2 className="h-4 w-4" />
+          ) : (
+            <div className="h-3 w-3 rounded-full border-2 border-current" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          onClick={handleDelete}
+          title="Delete notification"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleToggleRead}>
+              {notification.is_read ? 'Mark as unread' : 'Mark as read'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+              Delete notification
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Mobile/Accessible Actions Menu (Always visible on mobile, or focusable) */}
+      <div className="md:hidden absolute right-2 top-1/2 -translate-y-1/2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -119,6 +157,9 @@ export function NotificationItem({ notification }: NotificationItemProps) {
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleToggleRead}>
               {notification.is_read ? 'Mark as unread' : 'Mark as read'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+              Delete notification
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

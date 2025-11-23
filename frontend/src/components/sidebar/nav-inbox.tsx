@@ -1,15 +1,22 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Bell, ExternalLink } from 'lucide-react';
+import { Loader2, Bell, ExternalLink, Trash2, CheckCircle2, Circle, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { useNotifications, useMarkNotificationAsRead } from '@/hooks/react-query/notifications/use-notifications';
+import { useNotifications, useMarkNotificationAsRead, useDeleteNotification } from '@/hooks/react-query/notifications/use-notifications';
 import type { Notification } from '@/hooks/react-query/notifications/use-notifications';
 import { SenderIcon } from '@/components/notifications/sender-icon';
 import { cn } from '@/lib/utils';
+import { NotificationDetailsModal } from '@/components/notifications/notification-details-modal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Helper function to group notifications by date
 function groupNotificationsByDate(notifications: Notification[]): Record<string, Notification[]> {
@@ -59,7 +66,7 @@ function groupNotificationsByDate(notifications: Notification[]): Record<string,
 // Date group header component
 const DateGroupHeader: React.FC<{ dateGroup: string; count: number }> = ({ dateGroup, count }) => {
   return (
-    <div className="py-2 mt-4 first:mt-2">
+    <div className="py-2 mt-4 first:mt-2 px-2.5">
       <div className="text-xs font-medium text-muted-foreground pl-2.5">
         {dateGroup}
       </div>
@@ -68,28 +75,32 @@ const DateGroupHeader: React.FC<{ dateGroup: string; count: number }> = ({ dateG
 };
 
 // Notification list item component
-const NotificationListItem: React.FC<{ notification: Notification }> = ({ notification }) => {
-  const router = useRouter();
+const NotificationListItem: React.FC<{
+  notification: Notification;
+  onClick: () => void;
+}> = ({ notification, onClick }) => {
   const markAsRead = useMarkNotificationAsRead();
+  const deleteNotification = useDeleteNotification();
 
-  const handleClick = () => {
-    // Mark as read if unread
-    if (!notification.is_read) {
-      markAsRead.mutate({ notificationIds: [notification.id] });
-    }
+  const handleToggleRead = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    markAsRead.mutate({
+      notificationIds: [notification.id],
+      isRead: !notification.is_read
+    });
+  };
 
-    // Navigate to thread if available
-    if (notification.thread_id) {
-      router.push(`/projects/${notification.thread_id}/thread`);
-    }
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteNotification.mutate([notification.id]);
   };
 
   return (
     <div
-      onClick={handleClick}
+      onClick={onClick}
       className={cn(
-        'mb-1.5 cursor-pointer transition-colors',
-        notification.is_read ? 'opacity-60' : 'opacity-100'
+        'group relative mb-1.5 cursor-pointer transition-colors px-2.5',
+        notification.is_read ? 'opacity-60 hover:opacity-100' : 'opacity-100'
       )}
     >
       <SpotlightCard>
@@ -103,7 +114,7 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className={cn(
-                  'text-sm truncate',
+                  'text-sm truncate pr-16', // Add padding for actions
                   notification.is_read ? 'font-normal' : 'font-semibold'
                 )}>
                   {notification.title}
@@ -122,6 +133,32 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
           </div>
         </div>
       </SpotlightCard>
+
+      {/* Actions (visible on hover) */}
+      <div className="absolute right-4 top-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded-md pl-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
+          onClick={handleToggleRead}
+          title={notification.is_read ? "Mark as unread" : "Mark as read"}
+        >
+          {notification.is_read ? (
+            <CheckCircle2 className="h-3 w-3" />
+          ) : (
+            <div className="h-2.5 w-2.5 rounded-full border-2 border-current" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+          onClick={handleDelete}
+          title="Delete notification"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   );
 };
@@ -155,6 +192,9 @@ const EmptyState = () => (
 
 // Main NavInbox component
 export function NavInbox() {
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const markAsRead = useMarkNotificationAsRead();
+
   const { data, isLoading } = useNotifications({
     page: 1,
     page_size: 50,
@@ -164,6 +204,13 @@ export function NavInbox() {
     if (!data?.notifications) return {};
     return groupNotificationsByDate(data.notifications);
   }, [data?.notifications]);
+
+  const handleNotificationClick = (notification: Notification) => {
+    setSelectedNotification(notification);
+    if (!notification.is_read) {
+      markAsRead.mutate({ notificationIds: [notification.id] });
+    }
+  };
 
   // Render loading skeleton
   if (isLoading) {
@@ -198,35 +245,47 @@ export function NavInbox() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-2.5 py-3 border-b border-transparent">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
-          <Link href="/notifications">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-muted-foreground hover:text-foreground"
-              aria-label="View all notifications"
-            >
-              <ExternalLink className="h-3 w-3" />
-            </Button>
-          </Link>
+    <>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="px-2.5 py-3 border-b border-transparent">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
+            <Link href="/notifications">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                aria-label="View all notifications"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Scrollable notification list - Removed px-2.5 to make full width, added padding to items instead */}
+        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+          {Object.entries(groupedNotifications).map(([dateGroup, notifications]) => (
+            <div key={dateGroup}>
+              <DateGroupHeader dateGroup={dateGroup} count={notifications.length} />
+              {notifications.map((notification) => (
+                <NotificationListItem
+                  key={notification.id}
+                  notification={notification}
+                  onClick={() => handleNotificationClick(notification)}
+                />
+              ))}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Scrollable notification list */}
-      <div className="flex-1 overflow-y-auto px-2.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-        {Object.entries(groupedNotifications).map(([dateGroup, notifications]) => (
-          <div key={dateGroup}>
-            <DateGroupHeader dateGroup={dateGroup} count={notifications.length} />
-            {notifications.map((notification) => (
-              <NotificationListItem key={notification.id} notification={notification} />
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
+      <NotificationDetailsModal
+        notification={selectedNotification}
+        isOpen={!!selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+      />
+    </>
   );
 }

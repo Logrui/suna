@@ -228,9 +228,85 @@ export const useMarkNotificationAsRead = () => {
       return { success: true };
     },
     {
-      onSuccess: () => {
+      onMutate: async ({ notificationIds, isRead = true }) => {
+        await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
+        const previousData = queryClient.getQueryData(notificationKeys.lists());
+
+        queryClient.setQueryData(notificationKeys.lists(), (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            notifications: old.notifications.map((n: Notification) =>
+              notificationIds.includes(n.id) ? { ...n, is_read: isRead } : n
+            ),
+            unread_count: isRead
+              ? Math.max(0, (old.unread_count || 0) - notificationIds.length)
+              : (old.unread_count || 0) + notificationIds.length
+          };
+        });
+
+        return { previousData };
+      },
+      onError: (err, newTodo, context) => {
+        queryClient.setQueryData(notificationKeys.lists(), context?.previousData);
+        toast.error('Failed to update notification status');
+      },
+      onSettled: () => {
         queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
       },
+    }
+  )();
+};
+
+export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
+
+  return createMutationHook(
+    async (notificationIds: string[]) => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .in('id', notificationIds)
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+      return { success: true };
+    },
+    {
+      onMutate: async (notificationIds) => {
+        await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
+        const previousData = queryClient.getQueryData(notificationKeys.lists());
+
+        queryClient.setQueryData(notificationKeys.lists(), (old: any) => {
+          if (!old) return old;
+          const deletedCount = old.notifications.filter((n: Notification) =>
+            notificationIds.includes(n.id) && !n.is_read
+          ).length;
+
+          return {
+            ...old,
+            notifications: old.notifications.filter((n: Notification) => !notificationIds.includes(n.id)),
+            unread_count: Math.max(0, (old.unread_count || 0) - deletedCount)
+          };
+        });
+
+        return { previousData };
+      },
+      onError: (err, newTodo, context) => {
+        queryClient.setQueryData(notificationKeys.lists(), context?.previousData);
+        toast.error('Failed to delete notification');
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: notificationKeys.lists() });
+      },
+      onSuccess: () => {
+        toast.success('Notification deleted');
+      }
     }
   )();
 };
