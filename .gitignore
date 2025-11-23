@@ -228,12 +228,11 @@ apps/mobile/*.pem
 apps/mobile/.env
 apps/mobile/.env*.local
 apps/mobile/app-example
+
 # Docker-specific env files
 *.env.docker
 
-
-
-.claude
-.specify
-.vscode
-.windsurf
+.claude/
+.specify/
+.vscode/
+.windsurf/
