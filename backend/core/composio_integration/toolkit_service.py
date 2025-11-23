@@ -210,7 +210,7 @@ class ToolkitService:
             logger.debug("list_toolkits returned response")
             
             if hasattr(toolkits_response, 'get'):
-            toolkits = toolkits_response.get("items", [])
+                toolkits = toolkits_response.get("items", [])
             else:
                 logger.debug(f"toolkits_response type: {type(toolkits_response)}")
                 toolkits = getattr(toolkits_response, 'items', [])
