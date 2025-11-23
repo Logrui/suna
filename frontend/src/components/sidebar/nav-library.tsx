@@ -30,8 +30,8 @@ const MAX_FILES_PER_THREAD = 3;
 // Date group header
 const DateGroupHeader: React.FC<{ dateGroup: string; count: number }> = ({ dateGroup, count }) => {
   return (
-    <div className="py-2 mt-4 first:mt-2">
-      <div className="text-xs font-medium text-muted-foreground pl-2.5">
+    <div className="py-2 mt-2 first:mt-0 px-2">
+      <div className="text-xs font-medium text-muted-foreground pl-1">
         {dateGroup}
       </div>
     </div>
@@ -95,7 +95,7 @@ const ThreadListItem: React.FC<{
   const hasMoreFiles = files.length > maxFilesShown;
 
   return (
-    <div className="mb-2">
+    <div className="mb-1.5 px-2">
       {/* Thread Header Row */}
       <SpotlightCard
         className={cn(
@@ -103,7 +103,7 @@ const ThreadListItem: React.FC<{
           isActive ? "bg-muted" : "bg-transparent"
         )}
       >
-        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2 px-2 py-2.5">
           {/* Thread name */}
           <div
             className="flex-1 min-w-0"

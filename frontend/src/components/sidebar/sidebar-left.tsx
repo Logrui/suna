@@ -180,10 +180,12 @@ function FloatingMobileMenuButton() {
 
 // Component for inbox button with unread badge
 const InboxButton: React.FC<{ unreadCount: number }> = ({ unreadCount }) => {
-  void unreadCount;
   return (
     <div className="relative inline-flex">
       <Bell className="!h-4 !w-4" />
+      {unreadCount > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500" />
+      )}
     </div>
   );
 };

@@ -66,8 +66,8 @@ function groupNotificationsByDate(notifications: Notification[]): Record<string,
 // Date group header component
 const DateGroupHeader: React.FC<{ dateGroup: string; count: number }> = ({ dateGroup, count }) => {
   return (
-    <div className="py-2 mt-4 first:mt-2 px-2.5">
-      <div className="text-xs font-medium text-muted-foreground pl-2.5">
+    <div className="py-2 mt-2 first:mt-0 px-2">
+      <div className="text-xs font-medium text-muted-foreground pl-1">
         {dateGroup}
       </div>
     </div>
@@ -99,7 +99,7 @@ const NotificationListItem: React.FC<{
     <div
       onClick={onClick}
       className={cn(
-        'group relative mb-1.5 cursor-pointer transition-colors px-2.5',
+        'group relative mb-1.5 cursor-pointer transition-colors px-2',
         notification.is_read ? 'opacity-60 hover:opacity-100' : 'opacity-100'
       )}
     >
@@ -114,7 +114,7 @@ const NotificationListItem: React.FC<{
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className={cn(
-                  'text-sm truncate pr-16', // Add padding for actions
+                  'text-sm truncate',
                   notification.is_read ? 'font-normal' : 'font-semibold'
                 )}>
                   {notification.title}
@@ -133,32 +133,6 @@ const NotificationListItem: React.FC<{
           </div>
         </div>
       </SpotlightCard>
-
-      {/* Actions (visible on hover) */}
-      <div className="absolute right-4 top-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded-md pl-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-foreground"
-          onClick={handleToggleRead}
-          title={notification.is_read ? "Mark as unread" : "Mark as read"}
-        >
-          {notification.is_read ? (
-            <CheckCircle2 className="h-3 w-3" />
-          ) : (
-            <div className="h-2.5 w-2.5 rounded-full border-2 border-current" />
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-destructive"
-          onClick={handleDelete}
-          title="Delete notification"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </div>
     </div>
   );
 };

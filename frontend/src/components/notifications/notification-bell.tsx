@@ -23,9 +23,7 @@ export function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
+            <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-blue-500" />
           )}
         </Button>
       </DropdownMenuTrigger>
