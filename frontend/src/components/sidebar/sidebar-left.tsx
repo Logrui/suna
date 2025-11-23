@@ -141,12 +141,12 @@ function UserProfileSection({ user }: { user: any }) {
 
 // Route to view mapping
 const routeMap: Record<string, string> = {
-  '/chats': '/chats',
+  '/chats': '/dashboard',
   '/agents': '/agents',
   '/triggers': '/triggers',
   '/library': '/library',
   '/knowledge': '/knowledge',
-  '/inbox': '/inbox',
+  '/inbox': '/notifications',
 };
 
 function FloatingMobileMenuButton() {

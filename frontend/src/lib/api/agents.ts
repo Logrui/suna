@@ -75,26 +75,26 @@ export const unifiedAgentStart = async (options: {
     }
 
     const formData = new FormData();
-    
+
     if (options.threadId) {
       formData.append('thread_id', options.threadId);
     }
-    
+
     // For new threads (no threadId), prompt is required
     // Always append prompt if provided (even if empty string) so backend can validate
     if (options.prompt !== undefined) {
       const promptValue = typeof options.prompt === 'string' ? options.prompt.trim() : options.prompt;
       formData.append('prompt', promptValue);
     }
-    
+
     if (options.model_name && options.model_name.trim()) {
       formData.append('model_name', options.model_name.trim());
     }
-    
+
     if (options.agent_id) {
       formData.append('agent_id', options.agent_id);
     }
-    
+
     if (options.files && options.files.length > 0) {
       options.files.forEach((file) => {
         formData.append('files', file);
@@ -110,7 +110,7 @@ export const unifiedAgentStart = async (options: {
       agent_id: options.agent_id,
       filesCount: options.files?.length || 0,
     });
-    
+
     // Debug: Log FormData contents
     console.log('[unifiedAgentStart] FormData entries:');
     for (const [key, value] of formData.entries()) {
@@ -129,13 +129,13 @@ export const unifiedAgentStart = async (options: {
 
     if (response.error) {
       const status = response.error.status || 500;
-      
+
       if (status === 402) {
         throw response.error;
       }
 
       if (status === 429) {
-        const detail = response.error.details?.detail || { 
+        const detail = response.error.details?.detail || {
           message: 'Too many agent runs running',
           running_thread_ids: [],
           running_count: 0,
@@ -155,13 +155,13 @@ export const unifiedAgentStart = async (options: {
       console.error(
         `[API] Error starting agent: ${status} ${response.error.message}`,
       );
-    
+
       if (status === 401) {
         throw new Error('Authentication error: Please sign in again');
       } else if (status >= 500) {
         throw new Error('Server error: Please try again later');
       }
-    
+
       throw new Error(
         `Error starting agent: ${response.error.message} (${status})`,
       );
@@ -178,7 +178,7 @@ export const unifiedAgentStart = async (options: {
     }
 
     console.error('[API] Failed to start agent:', error);
-    
+
     if (
       error instanceof TypeError &&
       error.message.includes('Failed to fetch')
@@ -284,7 +284,7 @@ export const setupAgentFromChat = async (request: AgentSetupFromChatRequest): Pr
     const response = await backendApi.post<AgentSetupFromChatResponse>(
       '/agents/setup-from-chat',
       request,
-      { showErrors: true, timeout: 20000 } // 20 seconds (single optimized LLM call)
+      { showErrors: true, timeout: 60000 } // 60 seconds (single optimized LLM call)
     );
 
     if (response.error) {
@@ -353,7 +353,7 @@ export const streamAgent = (
       callbacks.onClose();
     }, 0);
 
-    return () => {};
+    return () => { };
   }
 
   const existingStream = activeStreams.get(agentRunId);
@@ -473,7 +473,7 @@ export const streamAgent = (
 
       eventSource.onerror = (event) => {
         console.error(`[STREAM] EventSource error for ${agentRunId}:`, event);
-        
+
         getAgentStatus(agentRunId)
           .then((status) => {
             if (status.status !== 'running') {
@@ -517,7 +517,7 @@ export const streamAgent = (
     console.error(`[STREAM] Error setting up stream for ${agentRunId}:`, error);
     callbacks.onError(error instanceof Error ? error : String(error));
     callbacks.onClose();
-    return () => {};
+    return () => { };
   }
 };
 

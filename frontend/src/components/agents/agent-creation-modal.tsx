@@ -177,14 +177,14 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl" hideCloseButton>
+        <DialogContent className="max-w-3xl" hideCloseButton>
           {!showChatStep ? (
             <>
-              <DialogHeader className="text-center pb-8 flex items-center justify-center pt-6">
-                <DialogTitle className="text-3xl font-medium">Let's get started with your new Worker.</DialogTitle>
+              <DialogHeader className="text-center pb-6 flex items-center justify-center pt-5">
+                <DialogTitle className="text-2xl font-medium">Let's get started with your new Worker.</DialogTitle>
               </DialogHeader>
 
-              <div className="flex flex-col items-center gap-6 py-4 pb-8">
+              <div className="flex flex-col items-center gap-4 py-3 pb-6">
                 {[
                   { id: 'scratch' as const, icon: Wrench, label: 'Configure Manually' },
                   { id: 'chat' as const, icon: MessageSquare, label: 'Configure by Chat' },
@@ -195,7 +195,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
 
                   if (index === 0) {
                     return (
-                      <div key="top-row" className="flex gap-6">
+                      <div key="top-row" className="flex gap-4">
                         {[
                           { id: 'scratch' as const, icon: Wrench, label: 'Configure Manually' },
                           { id: 'chat' as const, icon: MessageSquare, label: 'Configure by Chat' }
@@ -206,14 +206,14 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                               key={topOption.id}
                               onClick={() => handleOptionClick(topOption.id)}
                               disabled={createNewAgentMutation.isPending}
-                              className={`flex-1 min-w-[380px] h-[144px] rounded-3xl border transition-all ${selectedOption === topOption.id
+                              className={`flex-1 min-w-[280px] h-[110px] rounded-2xl border transition-all ${selectedOption === topOption.id
                                 ? 'border-primary bg-primary text-primary-foreground'
                                 : 'border-border bg-card hover:bg-muted/30'
                                 } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                              <div className="flex flex-col items-center justify-center gap-4 h-full">
-                                <TopIcon className="h-8 w-8" />
-                                <span className="text-2xl font-medium">{topOption.label}</span>
+                              <div className="flex flex-col items-center justify-center gap-3 h-full">
+                                <TopIcon className="h-6 w-6" />
+                                <span className="text-xl font-medium">{topOption.label}</span>
                               </div>
                             </button>
                           );
@@ -228,14 +228,14 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                         key={option.id}
                         onClick={() => handleOptionClick(option.id)}
                         disabled={createNewAgentMutation.isPending}
-                        className={`min-w-[380px] h-[144px] rounded-3xl border transition-all ${selectedOption === option.id
+                        className={`min-w-[280px] h-[110px] rounded-2xl border transition-all ${selectedOption === option.id
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-border bg-card hover:bg-muted/30'
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
-                        <div className="flex flex-col items-center justify-center gap-4 h-full">
-                          <Icon className="h-8 w-8" />
-                          <span className="text-2xl font-medium">{option.label}</span>
+                        <div className="flex flex-col items-center justify-center gap-3 h-full">
+                          <Icon className="h-6 w-6" />
+                          <span className="text-xl font-medium">{option.label}</span>
                         </div>
                       </button>
                     );
@@ -247,8 +247,8 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
             </>
           ) : (
             <>
-              <DialogHeader className="text-center pb-8 flex items-center justify-center pt-6">
-                <DialogTitle className="text-3xl font-medium">What should your Worker be able to do?</DialogTitle>
+              <DialogHeader className="text-center pb-6 flex items-center justify-center pt-5">
+                <DialogTitle className="text-2xl font-medium">What should your Worker be able to do?</DialogTitle>
               </DialogHeader>
 
               <div className="flex flex-col gap-6 px-8 py-4 pb-2">

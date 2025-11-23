@@ -5,29 +5,37 @@
 ![Kortix Screenshot](frontend/public/banner.png)
 
 ## **Private Server Build of Kortix AI - Last Updated as Of: <!-- DATE_START -->2025-11-21<!-- DATE_END -->**
+**This is a private server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker.**
+
 
 
 ## **Current Implemented Features:**
--New Feature: Admin + User based Notifications/Inbox System
--New Feature: Auto Continue Prompting System (MVP)
--New Feature: Library Implementation - Access Files Across Projects
--New Feature: KB Based Slash Commands (Github Copilot Style and Text Based Prompts) - Knowledge Base
--New Feature: Left Sidebar with Inbox, 
--Bugfix: Dev Mode + New Dev Mode Button Toggle
--Bugfix: Uses new getAPI module to support local docker/cloudflare tunnel
--New Feature: Native Ollama and LMStudio support w/ activation and hot/cold startup
--Custom Models via OpenRouter, LMStudio, Ollama, Google, and OpenAI
+
+| Category | Feature/Bugfix | Description |
+| :--- | :--- | :--- |
+| **New Feature** | Admin + User based Notifications/Inbox System | Centralized system for notifications and user-specific inboxes. |
+| **New Feature** | Auto Continue Prompting System (MVP) | Minimal viable product for automatically continuing prompts/conversations. |
+| **New Feature** | Library Implementation | Allows access to files and resources across different projects. |
+| **New Feature** | KB Based Slash Commands | Knowledge Base (KB) driven commands (similar to Github Copilot) and text-based prompts. |
+| **New Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
+| **Bugfix** | Dev Mode + New Dev Mode Button Toggle | Fixes and adds a toggle button for the Development Mode. |
+| **Bugfix** | Uses new getAPI module | Updated module to support local docker and cloudflare tunnel configurations. |
+| **New Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
+| **New Feature** | Custom Models | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
 
 ## **Planned Features/WIP:**
--New Feature: RestoredWorkflow/Playbooks System (WIP)
--Native Tool: Subagent System (Depends on Wide Research System)
--Native Tool: Manus like Wide Research System (Depends on Subagent System)
--Native Tool: Gemini ComputerUse + BrowserUse Support (Depends on Subagent System)
--RAG System Support/Embeddings/RAG as a Service module support (likely depends on Google Drive/OneDrive Native File Support and Syncing)
--Google Drive/OneDrive Native File Support and Syncing
--Native Support for continuous prompting for custom budget models
--Structured Output Workflows/Playbooks System (Depends on working RestoredWorkflow/Playbooks System)
--Plugin System (Modularized Code for Future Expansion)
+
+| Feature Category | Item | Dependencies/Notes |
+| :--- | :--- | :--- |
+| **Core Workflow** | Restored Workflow/Playbooks System | Currently a Work In Progress (WIP). |
+| **Native Tool** | Subagent System | Depends on the Wide Research System being implemented. |
+| **Native Tool** | Manus like Wide Research System | Depends on the Subagent System being implemented. |
+| **Native Tool** | Gemini ComputerUse + BrowserUse Support | Depends on the Subagent System being implemented. |
+| **Data/Files** | RAG System Support/Embeddings/RAG as a Service module support | Likely depends on Google Drive/OneDrive Native File Support and Syncing. |
+| **Data/Files** | Google Drive/OneDrive Native File Support and Syncing | Direct integration for cloud file management. |
+| **Core Workflow** | Native Support for continuous prompting | For custom budget models. |
+| **Core Workflow** | Structured Output Workflows/Playbooks System | Depends on a working Restored Workflow/Playbooks System. |
+| **Platform Expansion** | Plugin System | Modularized code architecture for future expansion. |
 
 **The complete platform for creating autonomous AI agents that work for you**
 

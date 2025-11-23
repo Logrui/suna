@@ -46,8 +46,8 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
   const handleCreateWorkflow = useCallback(async () => {
     try {
       const defaultWorkflow = {
-        name: 'Untitled Playbook',
-        description: 'A new playbook',
+        name: 'Untitled Workflow',
+        description: 'A new workflow for automating tasks',
         steps: []
       };
       const newWorkflow = await createWorkflowMutation.mutateAsync({ 

@@ -466,17 +466,29 @@ export const ComposioConnector: React.FC<ComposioConnectorProps> = ({
   const handleSaveTools = async () => {
     if (!selectedProfile || !agentId) return;
 
-    const mcpConfigResponse = await composioApi.getMcpConfigForProfile(selectedProfile.profile_id);
-    const response = await backendApi.put(`/agents/${agentId}/custom-mcp-tools`, {
-      custom_mcps: [{
-        ...mcpConfigResponse.mcp_config,
-        enabledTools: selectedTools
-      }]
-    });
-    if (response.data.success) {
-      toast.success(`Added ${selectedTools.length} ${selectedProfile.toolkit_name} tools to your agent!`);
-      onComplete(selectedProfile.profile_id, app.name, app.slug);
-      onOpenChange(false);
+    try {
+      const mcpConfigResponse = await composioApi.getMcpConfigForProfile(selectedProfile.profile_id);
+      const response = await backendApi.put(`/agents/${agentId}/custom-mcp-tools`, {
+        custom_mcps: [{
+          ...mcpConfigResponse.mcp_config,
+          enabledTools: selectedTools
+        }]
+      });
+
+      // Check for errors FIRST
+      if (response.error || !response.success) {
+        throw new Error(response.error?.message || 'Failed to save tools');
+      }
+
+      // Now safe to access response.data
+      if (response.data?.success) {
+        toast.success(`Added ${selectedTools.length} ${selectedProfile.toolkit_name} tools to your agent!`);
+        onComplete(selectedProfile.profile_id, app.name, app.slug);
+        onOpenChange(false);
+      }
+    } catch (error: any) {
+      console.error('Error saving tools:', error);
+      toast.error(error.message || 'Failed to save tools');
     }
   };
 

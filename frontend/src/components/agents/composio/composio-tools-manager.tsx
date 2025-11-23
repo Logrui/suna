@@ -87,26 +87,21 @@ export const ComposioToolsManager: React.FC<ComposioToolsManagerProps> = ({
           enabledTools: selectedTools
         }]
       });
-      
-      if (response?.data?.success) {
+
+      // Check for errors FIRST
+      if (response.error || !response.success) {
+        throw new Error(response.error?.message || 'Failed to update tools');
+      }
+
+      // Now safe to access response.data
+      if (response.data?.success) {
         toast.success(`Added ${selectedTools.length} ${currentProfile.toolkit_name} tools to your agent!`);
         onToolsUpdate?.();
         onOpenChange(false);
-      } else {
-        throw new Error('Failed to update tools');
       }
     } catch (error: any) {
       console.error('Failed to save tools:', error);
-      
-      if (error.response?.status === 403) {
-        toast.error('Access denied. Please check your permissions.');
-      } else if (error.response?.status === 404) {
-        toast.error('Agent not found');
-      } else if (error.response?.data?.detail) {
-        toast.error(error.response.data.detail);
-      } else {
-        toast.error('Failed to save tools. Please try again.');
-      }
+      toast.error(error.message || 'Failed to save tools. Please try again.');
     }
   };
 
