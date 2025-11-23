@@ -51,6 +51,8 @@ class CreateNotificationRequest(BaseModel):
     notification_type: str = "info"  # info, success, warning, error
     category: Optional[str] = "system"
     link: Optional[str] = None
+    sender_type: str = "system"  # system, agent, user
+    sender_id: Optional[str] = None
     send_email: bool = False
     send_push: bool = False
     metadata: Optional[Dict[str, Any]] = None
@@ -270,6 +272,8 @@ async def create_notification(
             message=request.message,
             notification_type=request.notification_type,
             category=request.category,
+            sender_type=request.sender_type,
+            sender_id=request.sender_id,
             send_email=request.send_email,
             send_push=request.send_push,
             metadata=request.metadata

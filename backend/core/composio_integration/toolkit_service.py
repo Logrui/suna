@@ -205,11 +205,22 @@ class ToolkitService:
     
     async def get_toolkit_by_slug(self, slug: str) -> Optional[ToolkitInfo]:
         try:
+            logger.debug(f"get_toolkit_by_slug called with slug: {slug} (type: {type(slug)})")
             toolkits_response = await self.list_toolkits()
+            logger.debug("list_toolkits returned response")
+            
+            if hasattr(toolkits_response, 'get'):
             toolkits = toolkits_response.get("items", [])
+            else:
+                logger.debug(f"toolkits_response type: {type(toolkits_response)}")
+                toolkits = getattr(toolkits_response, 'items', [])
+                
+            logger.debug(f"Iterating {len(toolkits)} toolkits to find {slug}")
             for toolkit in toolkits:
                 if toolkit.slug == slug:
+                    logger.debug(f"Found toolkit: {toolkit.slug}")
                     return toolkit
+            logger.debug("Toolkit not found in list")
             return None
         except Exception as e:
             logger.error(f"Failed to get toolkit {slug}: {e}", exc_info=True)

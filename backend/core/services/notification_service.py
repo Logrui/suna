@@ -32,6 +32,8 @@ class NotificationService:
         category: Optional[str] = None,
         thread_id: Optional[str] = None,
         agent_run_id: Optional[str] = None,
+        sender_type: str = "system",
+        sender_id: Optional[str] = None,
         send_email: bool = True,
         send_push: bool = True,
         metadata: Optional[Dict[str, Any]] = None
@@ -48,6 +50,8 @@ class NotificationService:
             category: Category of notification (agent, system, billing, admin)
             thread_id: Optional thread ID if related to a thread
             agent_run_id: Optional agent run ID if related to an agent run
+            sender_type: Type of sender (system, agent, user)
+            sender_id: ID of the sender (agent_id or user_id)
             send_email: Whether to send email notification
             send_push: Whether to send push notification
             metadata: Optional metadata dictionary
@@ -99,6 +103,8 @@ class NotificationService:
                 'category': category,
                 'thread_id': thread_id,
                 'agent_run_id': agent_run_id,
+                'sender_type': sender_type,
+                'sender_id': sender_id,
                 'metadata': metadata or {},
                 'email_sent': False,
                 'push_sent': False,

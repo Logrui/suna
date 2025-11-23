@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bot, FileEdit, Globe, Hammer, LayoutTemplate, Wrench, MessageSquare } from 'lucide-react';
+import { Bot, FileEdit, Globe, Hammer, LayoutTemplate, Wrench, MessageSquare, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useCreateNewAgent } from '@/hooks/agents/use-agents';
@@ -33,6 +34,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
   const [selectedOption, setSelectedOption] = useState<'scratch' | 'chat' | 'template' | null>(null);
   const [showChatStep, setShowChatStep] = useState(false);
   const [chatDescription, setChatDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createNewAgentMutation = useCreateNewAgent();
   const { data: templates, isLoading } = useKortixTeamTemplates();
@@ -145,6 +147,8 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       const { setupAgentFromChat } = await import('@/lib/api/agents');
 
@@ -165,6 +169,8 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
       } else {
         console.error('Error creating agent from chat:', error);
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -205,7 +211,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                             <button
                               key={topOption.id}
                               onClick={() => handleOptionClick(topOption.id)}
-                              disabled={createNewAgentMutation.isPending}
+                              disabled={createNewAgentMutation.isPending || isSubmitting}
                               className={`flex-1 min-w-[280px] h-[110px] rounded-2xl border transition-all ${selectedOption === topOption.id
                                 ? 'border-primary bg-primary text-primary-foreground'
                                 : 'border-border bg-card hover:bg-muted/30'
@@ -227,7 +233,7 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                       <button
                         key={option.id}
                         onClick={() => handleOptionClick(option.id)}
-                        disabled={createNewAgentMutation.isPending}
+                        disabled={createNewAgentMutation.isPending || isSubmitting}
                         className={`min-w-[280px] h-[110px] rounded-2xl border transition-all ${selectedOption === option.id
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-border bg-card hover:bg-muted/30'
@@ -249,6 +255,9 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
             <>
               <DialogHeader className="text-center pb-6 flex items-center justify-center pt-5">
                 <DialogTitle className="text-2xl font-medium">What should your Worker be able to do?</DialogTitle>
+                <DialogDescription className="text-center text-muted-foreground hidden">
+                  Describe the capabilities and role of your new AI worker.
+                </DialogDescription>
               </DialogHeader>
 
               <div className="flex flex-col gap-6 px-8 py-4 pb-2">
@@ -264,16 +273,23 @@ export function AgentCreationModal({ open, onOpenChange, onSuccess }: AgentCreat
                   <Button
                     variant="ghost"
                     onClick={handleBack}
-                    disabled={createNewAgentMutation.isPending}
+                    disabled={createNewAgentMutation.isPending || isSubmitting}
                   >
                     Back
                   </Button>
 
                   <Button
                     onClick={handleChatContinue}
-                    disabled={!chatDescription.trim() || createNewAgentMutation.isPending}
+                    disabled={!chatDescription.trim() || createNewAgentMutation.isPending || isSubmitting}
                   >
-                    Continue
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Continue'
+                    )}
                   </Button>
                 </div>
               </div>

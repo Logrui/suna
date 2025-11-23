@@ -376,9 +376,13 @@ async def create_profile(
         return ProfileResponse.from_composio_profile(created_profile)
         
     except ValueError as e:
+        logger.error(f"Caught ValueError: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Failed to create profile: {e}")
+        import traceback
+        tb_str = traceback.format_exc()
+        logger.error(f"Caught Exception type: {type(e)}")
+        logger.error(f"Failed to create profile: {e}\nTraceback:\n{tb_str}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

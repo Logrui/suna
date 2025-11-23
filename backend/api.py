@@ -236,6 +236,9 @@ api_router.include_router(triggers_api.workflows_router)
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
 
+from core import users_api
+api_router.include_router(users_api.router)
+
 from core.google.google_slides_api import router as google_slides_router
 api_router.include_router(google_slides_router)
 
