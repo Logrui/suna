@@ -7,7 +7,7 @@
 <div align="left">
 
 ## **Self Hosted Server Build of Kortix AI - Last Updated: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
-**This is a self hosted server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker with some networking fixes and additional features. Networking is the primary issue with self-hosting Kortix AI - spend some time configuring and setting up properly to avoid issues.**
+**This is a self hosted server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker with some networking fixes and additional features. Networking is the primary issue with self-hosting Kortix AI - see set up instructions below and disclaimers to avoid issues.**
 
 ## **Current Implemented Features:**
 
@@ -21,7 +21,7 @@
 | **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
 | **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
 | **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
-| **Feature** | Custom Models | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
+| **Feature** | Extended Model Support | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
 
 ## **Planned Features/WIP:**
 
@@ -59,10 +59,11 @@ docker compose up -d --build
 **Cloudflare Tunnels: (Optional, Recommended for Secure Remote Access)** 
 -Cloudflare Tunnels are recommended for secure remote access to your self-hosted Kortix AI instance
 -Required: Automatic HTTPS encryption is also provided by Cloudflare w/ TLS Total + subdomain - Needed for Realtime Websocket Streaming/HTTPS
+-SSL/TLS Setting: Flexible
 -Your domain: yourdomain.com
 -Backend: kong.yourdomain.com ---> supabase-kong
 -Frontend: kortix.yourdomain.com ---> suna-frontend
--Supabase: yourdomain.com ---> supabase-kong
+-Supabase: supabase.yourdomain.com ---> supabase-kong
 -**Note:** Ensure your domain and subdomains are covered by Cloudflare TLS Total otherwise you will get errors with realtime streaming/HTTPS
 
 **Docker Container (Suna):**
@@ -87,7 +88,6 @@ docker compose up -d --build
 -WIP - git clone supabase/supabase 
 -Ensure to run migrations in Supabase once it is set up correctly
 -Will try to add a guide for the below items in the future
-
 
 **Env Configuration:** 
 -WIP
