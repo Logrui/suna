@@ -1,27 +1,27 @@
 ﻿<div align="center">
 
-# Kortix – Open Source Platform to Build, Manage and Train AI Agents - SYHC Private Build
+# SYHC Self Hosted Build - Kortix – Open Source Platform to Build, Manage and Train AI Agents
 
 ![Kortix Screenshot](frontend/public/banner.png)
 
-## **Private Server Build of Kortix AI - Last Updated as Of: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
-**This is a private server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker.**
+<div align="left">
 
-
+## **Self Hosted Server Build of Kortix AI - Last Updated: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
+**This is a self hosted server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker with some networking fixes and additional features. Networking is the primary issue with self-hosting Kortix AI - spend some time configuring and setting up properly to avoid issues.**
 
 ## **Current Implemented Features:**
 
 | Category | Feature/Bugfix | Description |
 | :--- | :--- | :--- |
-| **New Feature** | Admin + User based Notifications/Inbox System | Centralized system for notifications and user-specific inboxes. |
-| **New Feature** | Auto Continue Prompting System (MVP) | Minimal viable product for automatically continuing prompts/conversations. |
-| **New Feature** | Library Implementation | Allows access to files and resources across different projects. |
-| **New Feature** | KB Based Slash Commands | Knowledge Base (KB) driven commands (similar to Github Copilot) and text-based prompts. |
-| **New Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
-| **Bugfix** | Dev Mode + New Dev Mode Button Toggle | Fixes and adds a toggle button for the Development Mode. |
-| **Bugfix** | Uses new getAPI module | Updated module to support local docker and cloudflare tunnel configurations. |
-| **New Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
-| **New Feature** | Custom Models | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
+| **Feature** | Dev Mode + New Dev Mode Button Toggle | Fixes and adds a toggle button for the Development Mode. |
+| **Feature** | New getAPI module | Updated all network calls to support localhost and cloudflare tunnel configurations. |
+| **Feature** | Admin + User based Notifications/Inbox System | Centralized system for notifications and user-specific inboxes. |
+| **Feature** | Auto Continue Prompting System (MVP) | Minimal viable product for automatically continuing prompts/conversations. |
+| **Feature** | Library Implementation | Allows access to files and resources across different projects. |
+| **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
+| **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
+| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
+| **Feature** | Custom Models | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
 
 ## **Planned Features/WIP:**
 
@@ -36,6 +36,79 @@
 | **Core Workflow** | Native Support for continuous prompting | For custom budget models. |
 | **Core Workflow** | Structured Output Workflows/Playbooks System | Depends on a working Restored Workflow/Playbooks System. |
 | **Platform Expansion** | Plugin System | Modularized code architecture for future expansion. |
+
+## **Setup Instructions for Self Hosted: (Recommended only for Experienced Devs/Homelab Users)**
+
+**Note:** Self-hosting Kortix AI can be a bit of a process that requires a good understanding of Docker, Cloudflare Tunnels, and Supabase. If you are not comfortable with these technologies, it is recommended to use the cloud-hosted version of Kortix AI. After going through the setup process personally, I highly recommend using the cloud-hosted version of Kortix AI - its a really good deal compared to Manus. Self hosting w/ Cloudflare has a base cost of $10/mo minimum - Tunnel is free but you need TLS Total
+
+**Is Self Hosting Worth It?**
+-Pro: Long term reduced costs - pay API costs for LLM providers
+-Pro: Enables custom features and workflows and early access to more 'advanced' features
+-Pro: Enables access to local running LLMs via Ollama, LMStudio, and more
+-Pro: Customize to your liking and incorporate your own integrations as needed
+-Con: Self-hosting requires a good understanding of Docker, Cloudflare Tunnels, and Supabase
+-Con: Maintenance and keeping up to date with main can be a bit of a process
+
+**Git Clone + Docker Compose: (Recommended)**
+-Clone the repository to your local machine
+-From root /suna/
+```
+docker compose up -d --build
+```
+## **Configuration Self Hosted Architecture:**
+**Cloudflare Tunnels: (Optional, Recommended for Secure Remote Access)** 
+-Cloudflare Tunnels are recommended for secure remote access to your self-hosted Kortix AI instance
+-Required: Automatic HTTPS encryption is also provided by Cloudflare w/ TLS Total + subdomain - Needed for Realtime Websocket Streaming/HTTPS
+-Your domain: yourdomain.com
+-Backend: kong.yourdomain.com ---> supabase-kong
+-Frontend: kortix.yourdomain.com ---> suna-frontend
+-Supabase: yourdomain.com ---> supabase-kong
+-**Note:** Ensure your domain and subdomains are covered by Cloudflare TLS Total otherwise you will get errors with realtime streaming/HTTPS
+
+**Docker Container (Suna):**
+-suna-backend 8000:8000
+-suna-frontend 9990:3000
+-suna-redis 6380:6379
+-suna-worker
+
+**Docker Container (Supabase):**
+-realtime-dev.supabase-realtime 8002:4000
+-supabase-db 5434:5432
+-supabase-auth 8100:9999
+-supabase-kong 8888:8000
+
+**Docker Container (Daytona):**
+-Optional (highly recommend not running Daytona in Docker)
+-Have tried this and it is not recommended - difficult to set up docker in docker correctly
+-Recommend using Cloud based Daytona even while self hosted
+-Even on powerful homelab or compute centers - Cloud Daytona is still much faster and more reliable
+
+**Supabase Setup/Configuration:**
+-WIP - git clone supabase/supabase 
+-Ensure to run migrations in Supabase once it is set up correctly
+-Will try to add a guide for the below items in the future
+
+
+**Env Configuration:** 
+-WIP
+
+**Google/Github OAuth Configuration:**
+-WIP
+
+**Composio Configuration:**
+-WIP
+
+**Daytona Configuration:**
+-WIP
+
+
+</div>
+
+<div align="center">
+
+# Kortix – Open Source Platform to Build, Manage and Train AI Agents
+
+![Kortix Screenshot](frontend/public/banner.png)
 
 **The complete platform for creating autonomous AI agents that work for you**
 
