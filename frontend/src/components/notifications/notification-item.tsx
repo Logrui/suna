@@ -1,11 +1,19 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle2, Info, AlertCircle, XCircle, CheckCheck } from 'lucide-react';
+import { Info, CheckCircle2, AlertCircle, XCircle, CheckCheck, MoreHorizontal } from 'lucide-react';
 import { useMarkNotificationAsRead } from '@/hooks/react-query/notifications/use-notifications';
 import type { Notification } from '@/hooks/react-query/notifications/use-notifications';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { SenderIcon } from './sender-icon';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -19,17 +27,30 @@ const typeIcons = {
   agent_complete: CheckCheck,
 };
 
-const typeColors = {
-  info: 'text-blue-500',
-  success: 'text-green-500',
-  warning: 'text-yellow-500',
-  error: 'text-red-500',
-  agent_complete: 'text-purple-500',
-};
+// Format time intelligently (without "about")
+function formatNotificationTime(date: Date): string {
+  if (isToday(date)) {
+    const distance = formatDistanceToNow(date, { addSuffix: true });
+    return distance.replace('about ', '');
+  } else if (isYesterday(date)) {
+    return 'Yesterday';
+  } else {
+    return format(date, 'MMM d');
+  }
+}
 
 export function NotificationItem({ notification }: NotificationItemProps) {
   const markAsRead = useMarkNotificationAsRead();
   const Icon = typeIcons[notification.type] || Info;
+  const notificationDate = new Date(notification.created_at);
+
+  const handleToggleRead = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    markAsRead.mutate({
+      notificationIds: [notification.id],
+      isRead: !notification.is_read
+    });
+  };
 
   const handleClick = () => {
     if (!notification.is_read) {
@@ -40,26 +61,69 @@ export function NotificationItem({ notification }: NotificationItemProps) {
   return (
     <div
       className={cn(
-        'p-4 cursor-pointer hover:bg-muted/50 transition-colors',
-        !notification.is_read && 'bg-muted/30'
+        'group flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors border-b last:border-b-0',
+        !notification.is_read && 'bg-muted/20'
       )}
       onClick={handleClick}
     >
-      <div className="flex items-start gap-3">
-        <Icon className={cn('h-5 w-5 mt-0.5 flex-shrink-0', typeColors[notification.type])} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-medium text-sm">{notification.title}</p>
-            {!notification.is_read && (
-              <div className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-          </p>
-        </div>
+      {/* Read/Unread Indicator */}
+      <div className="flex-shrink-0 w-2">
+        {!notification.is_read && (
+          <div className="h-2 w-2 rounded-full bg-blue-500" />
+        )}
+      </div>
+
+      {/* Sender Icon */}
+      <SenderIcon
+        senderType={notification.sender_type}
+        senderId={notification.sender_id}
+        size="md"
+      />
+
+      {/* Title */}
+      <div className="flex-shrink-0 w-48 min-w-0">
+        <p className={cn(
+          'text-sm truncate',
+          notification.is_read ? 'font-normal text-muted-foreground' : 'font-semibold'
+        )}>
+          {notification.title}
+        </p>
+      </div>
+
+      {/* Icon + Snippet */}
+      <div className="flex-1 flex items-center gap-3 min-w-0">
+        <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground truncate">
+          {notification.message}
+        </p>
+      </div>
+
+      {/* Empty Column (placeholder for future use) */}
+      <div className="flex-shrink-0 w-20"></div>
+
+      {/* Time */}
+      <div className="flex-shrink-0 w-28 text-right">
+        <p className="text-xs text-muted-foreground">
+          {formatNotificationTime(notificationDate)}
+        </p>
+      </div>
+
+      {/* Actions Menu (visible on hover) */}
+      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleToggleRead}>
+              {notification.is_read ? 'Mark as unread' : 'Mark as read'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
 }
+

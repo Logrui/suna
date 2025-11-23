@@ -20,6 +20,8 @@ export type Notification = {
   agent_run_id?: string;
   related_entity_type?: string;
   related_entity_id?: string;
+  sender_type?: 'system' | 'agent' | 'user';
+  sender_id?: string;
   is_global: boolean;
   created_by?: string;
   metadata?: Record<string, any>;

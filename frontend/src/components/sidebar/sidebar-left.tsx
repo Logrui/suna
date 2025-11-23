@@ -179,25 +179,25 @@ function FloatingMobileMenuButton() {
 }
 
 // Component for inbox button with unread badge
-const InboxButton: React.FC<{ unreadCount: number }> = ({ unreadCount }) => (
-  <div className="relative inline-flex">
-    <Bell className="!h-4 !w-4" />
-    {unreadCount > 0 && (
-      <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 text-[8px] text-white flex items-center justify-center font-bold">
-        {unreadCount > 9 ? '9+' : unreadCount}
-      </span>
-    )}
-  </div>
-);
+const InboxButton: React.FC<{ unreadCount: number }> = ({ unreadCount }) => {
+  void unreadCount;
+  return (
+    <div className="relative inline-flex">
+      <Bell className="!h-4 !w-4" />
+    </div>
+  );
+};
 
 export function SidebarLeft({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
-  const { state, setOpen, setOpenMobile, isMobile } = useSidebar();
+  const { state, setOpen, setOpenMobile, isMobile, openMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [activeView, setActiveView] = useState<'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
+
+  //console.log('SidebarLeft rendering:', { state, isMobile, openMobile, activeView });
 
   // Fetch unread notification count for inbox badge
   const { data: notificationData } = useNotifications({
@@ -434,7 +434,7 @@ export function SidebarLeft({
                         </Button>
                       </Link>
                     </TooltipTrigger>
-                    <TooltipContent side="right">{label}{view === 'inbox' && unreadCount > 0 ? ` (${unreadCount})` : ''}</TooltipContent>
+                    <TooltipContent side="right">{label}</TooltipContent>
                   </Tooltip>
                 ))}
               </div>

@@ -5,7 +5,7 @@ import { UnifiedMessage, ParsedMetadata, StreamingToolCall, AgentStatus } from '
 import { safeJsonParse } from '@/components/thread/utils';
 import { ParsedContent } from '@/components/thread/types';
 import { extractToolName } from '@/components/thread/tool-views/xml-parser';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils';
 import { extractAskData } from '@/components/thread/tool-views/ask-tool/_utils';
 
 interface UseToolCallsReturn {
@@ -35,7 +35,7 @@ function parseToolContent(content: any): {
   try {
     // First try to parse as JSON if it's a string
     const parsed = typeof content === 'string' ? safeJsonParse(content, content) : content;
-    
+
     // Check if it's the new structured format
     if (parsed && typeof parsed === 'object') {
       // New format: { tool_name, xml_tag_name, parameters, result }
@@ -46,7 +46,7 @@ function parseToolContent(content: any): {
           result: parsed.result || null
         };
       }
-      
+
       // Check if it has a content field that might contain the structured data
       if ('content' in parsed && typeof parsed.content === 'object') {
         const innerContent = parsed.content;
@@ -62,7 +62,7 @@ function parseToolContent(content: any): {
   } catch (e) {
     // Continue with old format parsing
   }
-  
+
   return null;
 }
 
@@ -71,7 +71,7 @@ function shouldFilterAskTool(toolName: string, assistantContent: any, toolConten
   if (toolName.toLowerCase() !== 'ask') {
     return false; // Not an ask tool, don't filter
   }
-  
+
   const { attachments } = extractAskData(assistantContent, toolContent, true);
   return !attachments || attachments.length === 0;
 }
@@ -131,14 +131,14 @@ export function useToolCalls(
       if (resultMessage) {
         let toolName = 'unknown';
         let isSuccess = true;
-        
+
         // First try to parse the new format from the tool message
         const toolContentParsed = parseToolContent(resultMessage.content);
-        
+
         if (toolContentParsed) {
           // New format detected
           toolName = toolContentParsed.toolName.replace(/_/g, '-').toLowerCase();
-          
+
           // Extract success status from the result
           if (toolContentParsed.result && typeof toolContentParsed.result === 'object') {
             isSuccess = toolContentParsed.result.success !== false;
@@ -154,7 +154,7 @@ export function useToolCalls(
                 return assistantMsg.content;
               }
             })();
-            
+
             const extractedToolName = extractToolName(assistantContent);
             if (extractedToolName) {
               toolName = extractedToolName;
@@ -183,7 +183,7 @@ export function useToolCalls(
                 return resultMessage.content;
               }
             })();
-            
+
             if (toolResultContent && typeof toolResultContent === 'string') {
               const toolResultMatch = toolResultContent.match(/ToolResult\s*\(\s*success\s*=\s*(True|False|true|false)/i);
               if (toolResultMatch) {
@@ -277,17 +277,17 @@ export function useToolCalls(
       console.warn(
         `[PAGE] Could not find matching tool call in toolCalls array for assistant message ID: ${clickedAssistantMessageId}`,
       );
-      
+
       // Fallback: Try to find by matching the tool name and approximate position
       const assistantMessage = messages.find(
         m => m.message_id === clickedAssistantMessageId && m.type === 'assistant'
       );
-      
+
       if (assistantMessage) {
         // Find the index of this assistant message among all assistant messages
         const assistantMessages = messages.filter(m => m.type === 'assistant' && m.message_id);
         const messageIndex = assistantMessages.findIndex(m => m.message_id === clickedAssistantMessageId);
-        
+
         // Check if we have a tool call at this index
         if (messageIndex !== -1 && messageIndex < toolCalls.length) {
           setExternalNavIndex(messageIndex);
@@ -297,7 +297,7 @@ export function useToolCalls(
           return;
         }
       }
-      
+
       toast.info('Could not find details for this tool call.');
     }
   }, [messages, toolCalls]);
@@ -335,7 +335,7 @@ export function useToolCalls(
               if (matchingTag === 'edit-file') {
                 formattedContent = `<${matchingTag} target_file="${filePath}">`;
               } else {
-              formattedContent = `<${matchingTag} file_path="${filePath}">`;
+                formattedContent = `<${matchingTag} file_path="${filePath}">`;
               }
             } else {
               formattedContent = `<${matchingTag}>${toolArguments}</${matchingTag}>`;
@@ -348,7 +348,7 @@ export function useToolCalls(
 
       const newToolCall: ToolCallInput = {
         assistantCall: {
-          name: toolName, 
+          name: toolName,
           content: formattedContent,
           timestamp: new Date().toISOString(),
         },
@@ -364,7 +364,7 @@ export function useToolCalls(
         const existingStreamingIndex = prev.findIndex(
           tc => tc.toolResult?.content === 'STREAMING'
         );
-        
+
         if (existingStreamingIndex !== -1 && prev[existingStreamingIndex].assistantCall.name === toolName) {
           // Update existing streaming tool
           const updated = [...prev];
@@ -389,7 +389,7 @@ export function useToolCalls(
           return newLength - 1;
         });
       }
-      
+
       if (!compact) {
         setIsSidePanelOpen(true);
       }

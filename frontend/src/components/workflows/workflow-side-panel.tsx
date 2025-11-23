@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConditionalStep } from '@/components/agents/workflows/conditional-workflow-builder';
 import { getStepIconAndColor } from './workflow-definitions';
@@ -122,11 +122,11 @@ export function WorkflowSidePanel({
         queryClient.invalidateQueries({ queryKey: ['agents'] });
         queryClient.invalidateQueries({ queryKey: ['agent', agentId] });
         queryClient.invalidateQueries({ queryKey: ['composio', 'profiles'] });
-        
+
         if (onToolsUpdate) {
             onToolsUpdate();
         }
-        
+
         toast.success(`Connected ${appName} integration!`);
     };
 

@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Loader2, BookOpen, Star, FileText, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, BookOpen, Star, FileText, ChevronDown, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
@@ -395,43 +396,62 @@ export function NavLibrary() {
   const dateGroups = Object.entries(paginatedGroupedThreads);
 
   return (
-    <div
-      ref={scrollContainerRef}
-      className="overflow-y-scroll max-h-[calc(100vh-280px)] min-h-[400px] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32"
-    >
-      {!allFilesLoaded ? (
-        <LoadingSkeleton />
-      ) : dateGroups.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <>
-          {dateGroups.map(([dateGroup, groupThreads]) => (
-            <div key={dateGroup}>
-              <DateGroupHeader dateGroup={dateGroup} count={groupThreads.length} />
-              <div className="space-y-1">
-                {groupThreads.map((thread) => (
-                  <ThreadListItem
-                    key={thread.threadId}
-                    thread={thread}
-                    isActive={isThreadActive(thread)}
-                    isFavorite={favorites.has(thread.threadId)}
-                    onThreadClick={handleThreadClick}
-                    onToggleFavorite={handleToggleFavorite}
-                    onFileLoadingChange={updateFileLoading}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="px-2.5 py-3 border-b border-transparent">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Library</h3>
+          <Link href="/library">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 text-muted-foreground hover:text-foreground"
+              aria-label="View all library items"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-          {/* Show loading indicator when loading more */}
-          {displayedThreadCount < allThreads.length && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </>
-      )}
+      <div
+        ref={scrollContainerRef}
+        className="overflow-y-scroll max-h-[calc(100vh-280px)] min-h-[400px] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32"
+      >
+        {!allFilesLoaded ? (
+          <LoadingSkeleton />
+        ) : dateGroups.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <>
+            {dateGroups.map(([dateGroup, groupThreads]) => (
+              <div key={dateGroup}>
+                <DateGroupHeader dateGroup={dateGroup} count={groupThreads.length} />
+                <div className="space-y-1">
+                  {groupThreads.map((thread) => (
+                    <ThreadListItem
+                      key={thread.threadId}
+                      thread={thread}
+                      isActive={isThreadActive(thread)}
+                      isFavorite={favorites.has(thread.threadId)}
+                      onThreadClick={handleThreadClick}
+                      onToggleFavorite={handleToggleFavorite}
+                      onFileLoadingChange={updateFileLoading}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Show loading indicator when loading more */}
+            {displayedThreadCount < allThreads.length && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

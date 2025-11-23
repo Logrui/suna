@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Zap, BookOpen, ChevronRight, Plus, Clock, PlugZap, Loader2 } from 'lucide-react';
+import { Zap, BookOpen, ChevronRight, Plus, Clock, PlugZap, Loader2, ExternalLink } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -39,9 +39,19 @@ export function NavGlobalConfig() {
     return (
         <div className="space-y-1">
             {/* Section Header */}
-            <div className="py-2 mt-4 first:mt-2">
-                <div className="text-xs font-medium text-muted-foreground pl-2.5">
-                    Trigger Config
+            <div className="px-2.5 py-3 border-b border-transparent">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Trigger Config</h3>
+                    <Link href="/triggers">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                            aria-label="View all triggers"
+                        >
+                            <ExternalLink className="h-3 w-3" />
+                        </Button>
+                    </Link>
                 </div>
             </div>
 

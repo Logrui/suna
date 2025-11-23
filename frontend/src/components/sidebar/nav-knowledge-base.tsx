@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { FolderIcon, FileIcon, ChevronRight, Database, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { FolderIcon, FileIcon, ChevronRight, Database, Loader2, ExternalLink } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 import { useKnowledgeFolders, type Folder, type Entry } from '@/hooks/react-query/knowledge-base/use-folders';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -103,38 +105,55 @@ export function NavKnowledgeBase() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+
   // Fetch data - note: uses loading (not isLoading) due to hook implementation
   const { folders, recentFiles, loading } = useKnowledgeFolders();
-  
+
   // Track active items from URL
   const activeFolderId = searchParams.get('folder');
   const activeFileId = searchParams.get('file');
-  
+
   // Navigation handlers
   const handleBrowseAll = () => {
     router.push('/knowledge');
     if (isMobile) setOpenMobile(false);
   };
-  
+
   const handleFolderClick = (folderId: string) => {
     router.push(`/knowledge?folder=${folderId}`);
     if (isMobile) setOpenMobile(false);
   };
-  
+
   const handleFileClick = (entryId: string, folderId: string) => {
     router.push(`/knowledge?folder=${folderId}&file=${entryId}`);
     if (isMobile) setOpenMobile(false);
   };
-  
+
   return (
-    <div>
+    <div className="flex flex-col h-full">
+      {(state !== 'collapsed' || isMobile) && (
+        <div className="px-2.5 py-3 border-b border-transparent">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Knowledge Base</h3>
+            <Link href="/knowledge">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                aria-label="View all knowledge base items"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-y-auto max-h-[calc(100vh-280px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32">
         {(state !== 'collapsed' || isMobile) && (
           <>
-            {/* Section Header */}
-            <DateGroupHeader title="Knowledge Base" count={folders.length} />
-            
+            {/* Section Header Removed */}
+
             {/* Browse All Link */}
             <SpotlightCard className="mb-2 transition-colors cursor-pointer hover:bg-muted/60">
               <div onClick={handleBrowseAll} className="flex items-center gap-3 p-2.5 text-sm">
@@ -145,12 +164,12 @@ export function NavKnowledgeBase() {
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </div>
             </SpotlightCard>
-            
+
             {/* Loading State */}
             {loading && <LoadingSkeleton />}
-            
+
             {/* Recent Files Section */}
-{/*             {!loading && recentFiles.length > 0 && (
+            {/*             {!loading && recentFiles.length > 0 && (
               <>
                 <DateGroupHeader title="Recent Files" count={Math.min(recentFiles.length, 5)} />
                 <div className="space-y-1">
@@ -183,7 +202,7 @@ export function NavKnowledgeBase() {
                 </div>
               </>
             )}
-            
+
             {/* Empty State */}
             {!loading && folders.length === 0 && <EmptyState />}
           </>

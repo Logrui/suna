@@ -3,7 +3,7 @@ import { HeroVideoSection } from '@/components/home/sections/hero-video-section'
 import { siteConfig } from '@/lib/home';
 import { ArrowRight, Github, X, AlertCircle, Square } from 'lucide-react';
 import { AnimatedBg } from '@/components/home/ui/AnimatedBg';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils';
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

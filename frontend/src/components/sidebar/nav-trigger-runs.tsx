@@ -145,13 +145,8 @@ export function NavTriggerRuns() {
     }
 
     return (
-        <div>
-            {/* Section Header */}
-            <div className="py-2 mt-4 first:mt-2">
-                <div className="text-xs font-medium text-muted-foreground pl-2.5">
-                    Trigger Runs
-                </div>
-            </div>
+        <div className="flex flex-col h-full">
+            {/* Section Header Removed */}
 
             <div className="overflow-y-auto max-h-[calc(100vh-480px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-10">
                 {(state !== 'collapsed' || isMobile) && (

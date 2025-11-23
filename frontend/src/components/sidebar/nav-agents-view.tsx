@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Plus, MoreHorizontal, Trash2, ExternalLink } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAgents, useDeleteAgent } from '@/hooks/agents/use-agents';
@@ -23,16 +24,7 @@ import { toast } from "sonner";
 import { useQueryClient } from '@tanstack/react-query';
 import { agentKeys } from '@/hooks/agents/keys';
 
-// Component for date group headers (reusing the style from nav-agents)
-const DateGroupHeader: React.FC<{ title: string; count: number }> = ({ title, count }) => {
-    return (
-        <div className="py-2 mt-4 first:mt-2">
-            <div className="text-xs font-medium text-muted-foreground pl-2.5">
-                {title}
-            </div>
-        </div>
-    );
-};
+
 
 // Component for individual agent item
 const AgentItem: React.FC<{
@@ -179,13 +171,28 @@ export function NavAgentsView() {
     };
 
     return (
-        <div>
+        <div className="flex flex-col h-full">
+            {(state !== 'collapsed' || isMobile) && (
+                <div className="px-2.5 py-3 border-b border-transparent">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-medium text-muted-foreground pl-0.5">My Workforce</h3>
+                        <Link href="/agents">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                                aria-label="View all agents"
+                            >
+                                <ExternalLink className="h-3 w-3" />
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+            )}
+
             <div className="overflow-y-auto max-h-[calc(100vh-280px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-32">
                 {(state !== 'collapsed' || isMobile) && (
                     <>
-                        {/* Always show header */}
-                        <DateGroupHeader title="My Workforce" count={agents.length} />
-
                         {isAgentsLoading ? (
                             // Show skeleton loaders while loading
                             <div className="space-y-1">

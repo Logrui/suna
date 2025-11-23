@@ -6,7 +6,9 @@ import { Loader2, Bell, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { useNotifications, useMarkNotificationAsRead, type Notification } from '@/hooks/react-query/notifications/use-notifications';
+import { useNotifications, useMarkNotificationAsRead } from '@/hooks/react-query/notifications/use-notifications';
+import type { Notification } from '@/hooks/react-query/notifications/use-notifications';
+import { SenderIcon } from '@/components/notifications/sender-icon';
 import { cn } from '@/lib/utils';
 
 // Helper function to group notifications by date
@@ -82,34 +84,22 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
     }
   };
 
-  // Get notification type color
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'success':
-        return 'text-green-500';
-      case 'error':
-        return 'text-red-500';
-      case 'warning':
-        return 'text-yellow-500';
-      case 'agent_complete':
-        return 'text-blue-500';
-      default:
-        return 'text-muted-foreground';
-    }
-  };
-
   return (
     <div
       onClick={handleClick}
       className={cn(
-        'mb-2 cursor-pointer transition-colors',
+        'mb-1.5 cursor-pointer transition-colors',
         notification.is_read ? 'opacity-60' : 'opacity-100'
       )}
     >
       <SpotlightCard>
-        <div className="p-3">
+        <div className="p-2">
           <div className="flex items-start gap-2">
-            <Bell className={cn('h-4 w-4 mt-0.5 flex-shrink-0', getTypeColor(notification.type))} />
+            <SenderIcon
+              senderType={notification.sender_type}
+              senderId={notification.sender_id}
+              size="sm"
+            />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <p className={cn(
@@ -125,7 +115,7 @@ const NotificationListItem: React.FC<{ notification: Notification }> = ({ notifi
               <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
                 {notification.message}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {new Date(notification.created_at).toLocaleString()}
               </p>
             </div>
@@ -184,7 +174,7 @@ export function NavInbox() {
           <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
         </div>
         {/* Loading skeleton */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           <LoadingSkeleton />
         </div>
       </div>
@@ -214,20 +204,20 @@ export function NavInbox() {
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
           <Link href="/notifications">
-            <Button variant="ghost" size="sm" className="h-7 text-xs">
-              View All <ExternalLink className="ml-1 h-3 w-3" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 text-muted-foreground hover:text-foreground"
+              aria-label="View all notifications"
+            >
+              <ExternalLink className="h-3 w-3" />
             </Button>
           </Link>
         </div>
-        {data.unread_count > 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
-            {data.unread_count} unread
-          </p>
-        )}
       </div>
 
       {/* Scrollable notification list */}
-      <div className="flex-1 overflow-y-auto px-2.5">
+      <div className="flex-1 overflow-y-auto px-2.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         {Object.entries(groupedNotifications).map(([dateGroup, notifications]) => (
           <div key={dateGroup}>
             <DateGroupHeader dateGroup={dateGroup} count={notifications.length} />

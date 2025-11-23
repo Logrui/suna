@@ -15,7 +15,7 @@ import { StatusOverlay } from '@/components/ui/status-overlay';
 import { useAdminRole } from '@/hooks/admin';
 
 import { useProjects, useThreads } from '@/hooks/sidebar/use-sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/utils';
 import { useAgents } from '@/hooks/agents/use-agents';
 import { SubscriptionStoreSync } from '@/stores/subscription-store';
 import { PresentationViewerWrapper } from '@/stores/presentation-viewer-store';
