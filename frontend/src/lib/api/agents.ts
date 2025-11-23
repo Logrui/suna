@@ -8,6 +8,48 @@ import { getApiUrl } from '../get-api-url';
 
 const API_URL = getApiUrl();
 
+// Helper function to check if a model is a local model (Ollama or LM Studio)
+export function isLocalModel(modelId: string | undefined): boolean {
+  if (!modelId) return false;
+
+  // Check for actual model ID patterns used in the registry:
+  // - Ollama models: "ollama/{model_name}"
+  // - LM Studio models: "lm_studio/{model_id}"
+  // - Generic OpenAI-compatible fallback: "openai-compatible/local-model"
+  return (
+    modelId.startsWith('ollama/') ||
+    modelId.startsWith('lm_studio/') ||
+    modelId.startsWith('openai-compatible/')
+  );
+}
+
+// Helper function to check admin status from Supabase
+export async function checkIsAdmin(): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return false;
+
+    const { data: roleData, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'super_admin'])
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+
+    return !!roleData;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
 export type AgentRun = {
   id: string;
   thread_id: string;
@@ -72,6 +114,14 @@ export const unifiedAgentStart = async (options: {
       throw new Error(
         'Backend URL is not configured. Set NEXT_PUBLIC_BACKEND_URL in your environment.',
       );
+    }
+
+    // Check if using a local model and if user has admin access
+    if (isLocalModel(options.model_name)) {
+      const isAdmin = await checkIsAdmin();
+      if (!isAdmin) {
+        throw new Error('Admin Access Restriction: Local models (Ollama, LM Studio) require admin privileges.');
+      }
     }
 
     const formData = new FormData();
@@ -158,6 +208,13 @@ export const unifiedAgentStart = async (options: {
 
       if (status === 401) {
         throw new Error('Authentication error: Please sign in again');
+      } else if (status === 403) {
+        // Handle admin access restrictions with user-friendly message
+        const errorMessage = response.error.message || 'Access denied';
+        if (errorMessage.includes('Admin Access Restriction')) {
+          throw new Error(errorMessage);
+        }
+        throw new Error(`Access denied: ${errorMessage}`);
       } else if (status >= 500) {
         throw new Error('Server error: Please try again later');
       }

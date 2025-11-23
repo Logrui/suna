@@ -24,48 +24,49 @@ class ModelRegistry:
     
     def _initialize_models(self):
         # --- Anthropic Models ---
-        self.register(Model(
-            id="anthropic/claude-opus-4-1",
-            name="Claude Opus 4.1",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-opus-4.1", "opus-4.1"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=15.00,
-                output_cost_per_million_tokens=75.00
-            ),
-            tier_availability=["paid"],
-            priority=110,
-            enabled=SHOULD_USE_ANTHROPIC,
-            fallback_models=["anthropic/claude-sonnet-4-5-20250929"]
-        ))
-        
-        self.register(Model(
-            id="anthropic/claude-opus-4",
-            name="Claude Opus 4",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-opus-4", "opus-4"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=15.00,
-                output_cost_per_million_tokens=75.00
-            ),
-            tier_availability=["paid"],
-            priority=109,
-            enabled=SHOULD_USE_ANTHROPIC,
-            fallback_models=["anthropic/claude-sonnet-4-5-20250929"]
-        ))
+        # DISABLED: Claude Opus models - too expensive
+        # self.register(Model(
+        #     id="anthropic/claude-opus-4-1",
+        #     name="Claude Opus 4.1",
+        #     provider=ModelProvider.ANTHROPIC,
+        #     aliases=["claude-opus-4.1", "opus-4.1"],
+        #     context_window=200_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #         ModelCapability.THINKING,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=15.00,
+        #         output_cost_per_million_tokens=75.00
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=110,
+        #     enabled=SHOULD_USE_ANTHROPIC,
+        #     fallback_models=["anthropic/claude-sonnet-4-5-20250929"]
+        # ))
+
+        # self.register(Model(
+        #     id="anthropic/claude-opus-4",
+        #     name="Claude Opus 4",
+        #     provider=ModelProvider.ANTHROPIC,
+        #     aliases=["claude-opus-4", "opus-4"],
+        #     context_window=200_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=15.00,
+        #         output_cost_per_million_tokens=75.00
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=109,
+        #     enabled=SHOULD_USE_ANTHROPIC,
+        #     fallback_models=["anthropic/claude-sonnet-4-5-20250929"]
+        # ))
 
         self.register(Model(
             id="anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
@@ -85,11 +86,10 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=108,
-            recommended=True,
             enabled=True,
             config=ModelConfig(
                 extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07" 
+                    "anthropic-beta": "context-1m-2025-08-07"
                 },
             ),
             fallback_models=[
@@ -143,6 +143,7 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=106,
+            recommended=True,
             enabled=True,
         ))
 
@@ -650,15 +651,15 @@ class ModelRegistry:
                             pass
                     
                     priority = base_priority + priority_boost
-                    
-                    # Register the model
-                    model_id = f"openai-compatible/{model_name}"
-                    
+
+                    # Register the model with ollama prefix
+                    model_id = f"ollama/{model_name}"
+
                     self.register(Model(
                         id=model_id,
                         name=display_name,
-                        provider=ModelProvider.OPENAI,
-                        aliases=[model_name],
+                        provider=ModelProvider.OPENAI,  # Ollama is OpenAI-compatible
+                        aliases=[model_name, f"ollama:{model_name}"],
                         context_window=context_window,
                         capabilities=[
                             ModelCapability.CHAT,

@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Optional, List, Tuple, Dict
 from fastapi import APIRouter, HTTPException, Depends, Request, Body, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
-from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_user_id_from_stream_auth, verify_and_authorize_thread_access
+from core.utils.auth_utils import verify_and_get_user_id_from_jwt, get_user_id_from_stream_auth, verify_and_authorize_thread_access, verify_model_access
 from core.utils.logger import logger, structlog
 from core.billing.billing_integration import billing_integration
 from core.utils.config import config, EnvMode
@@ -474,6 +474,9 @@ async def unified_agent_start(
     else:
         model_name = model_manager.resolve_model_id(model_name)
         logger.debug(f"Resolved model name: {model_name}")
+
+    # Verify user has access to the requested model (local models require admin)
+    await verify_model_access(client, user_id, model_name)
     
     try:
         # ====================================================================

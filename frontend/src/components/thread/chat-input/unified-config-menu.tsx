@@ -33,6 +33,9 @@ import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { AgentModelSelector } from '@/components/agents/config/model-selector';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
+import { isLocalModel } from '@/lib/api/agents';
+import { useAdminRole } from '@/hooks/admin';
+import { toast } from 'sonner';
 
 type UnifiedConfigMenuProps = {
     isLoggedIn?: boolean;
@@ -70,6 +73,10 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
+
+    // Check if user is admin for local model access
+    const { data: adminData, isLoading: isLoadingAdminRole } = useAdminRole();
+    const isAdmin = adminData?.isAdmin || false;
 
     // Debounce search query
     useEffect(() => {
@@ -364,14 +371,36 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                                         <div
                                                             className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 relative"
                                                             onClick={() => {
+                                                                // Check if it's a local model (Ollama/LM Studio) and if user is admin
+                                                                if (isLocalModel(model.id)) {
+                                                                    // If still loading admin role, show a loading toast
+                                                                    if (isLoadingAdminRole) {
+                                                                        toast.info('Checking permissions...', {
+                                                                            description: 'Please wait while we verify your access.',
+                                                                            duration: 2000,
+                                                                        });
+                                                                        return;
+                                                                    }
+
+                                                                    // If not admin, block with clear error message
+                                                                    if (!isAdmin) {
+                                                                        toast.error('Admin Access Restriction', {
+                                                                            description: 'Local models (Ollama, LM Studio) require admin privileges.',
+                                                                            duration: 5000,
+                                                                        });
+                                                                        setIsOpen(false);
+                                                                        return;
+                                                                    }
+                                                                }
+
                                                                 if (canAccess) {
                                                                     onModelChange(model.id);
                                                                     setIsOpen(false);
                                                                 } else {
                                                                     setIsOpen(false);
-                                                                    usePricingModalStore.getState().openPricingModal({ 
-                                                                        isAlert: true, 
-                                                                        alertTitle: 'Upgrade to access this AI model' 
+                                                                    usePricingModalStore.getState().openPricingModal({
+                                                                        isAlert: true,
+                                                                        alertTitle: 'Upgrade to access this AI model'
                                                                     });
                                                                 }
                                                             }}

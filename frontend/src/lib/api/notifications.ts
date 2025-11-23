@@ -196,3 +196,43 @@ export const cancelGlobalNotificationBatch = async (batchId: string): Promise<vo
     throw error;
   }
 };
+
+// ============================================================================
+// SYSTEM NOTIFICATIONS - Admin Restriction
+// ============================================================================
+
+export type AdminRestrictionNotificationResult = {
+  success: boolean;
+  notification_id?: string;
+  channels_used: string[];
+  email_sent: boolean;
+  push_sent: boolean;
+  error?: string;
+};
+
+export const triggerAdminRestrictionNotification = async (
+  modelId: string
+): Promise<AdminRestrictionNotificationResult> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new NoAccessTokenAvailableError();
+    }
+
+    const response = await backendApi.post('/notifications/trigger/admin-restriction', {
+      model_id: modelId,
+    });
+
+    if (response.error) {
+      throw new Error(`Failed to trigger admin restriction notification: ${response.error.message}`);
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('Failed to trigger admin restriction notification:', error);
+    handleApiError(error, { operation: 'trigger admin restriction notification', resource: 'notifications' });
+    throw error;
+  }
+};

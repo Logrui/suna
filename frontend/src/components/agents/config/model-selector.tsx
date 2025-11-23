@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Check, Search, AlertTriangle, Crown, Cpu, Plus, Edit, Trash, KeyRound } from 'lucide-react';
+import { Check, Search, AlertTriangle, Crown, Cpu, Plus, Edit, Trash, KeyRound, ShieldAlert } from 'lucide-react';
 import { ModelProviderIcon } from '@/lib/model-provider-icons';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,9 @@ import { isLocalMode } from '@/lib/config';
 import { CustomModelDialog, CustomModelFormData } from '@/components/thread/chat-input/custom-model-dialog';
 import { PlanSelectionModal } from '@/components/billing/pricing';
 import Link from 'next/link';
+import { useAdminRole } from '@/hooks/admin';
+import { toast } from 'sonner';
+import { isLocalModel } from '@/lib/api/agents';
 
 interface CustomModel {
   id: string;
@@ -44,9 +47,9 @@ export function AgentModelSelector({
   variant = 'default',
   className,
 }: AgentModelSelectorProps) {
-  const { 
-    allModels, 
-    canAccessModel, 
+  const {
+    allModels,
+    canAccessModel,
     subscriptionStatus,
     selectedModel: storeSelectedModel,
     handleModelChange: storeHandleModelChange,
@@ -56,6 +59,11 @@ export function AgentModelSelector({
     removeCustomModel: storeRemoveCustomModel,
     modelsData // Now available directly from the hook
   } = useModelSelection();
+
+  // Check if user is admin for local model access
+  const { data: adminData, isLoading: isLoadingAdminRole } = useAdminRole();
+  const isAdmin = adminData?.isAdmin || false;
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
@@ -167,13 +175,35 @@ export function AgentModelSelector({
 
   const handleSelect = (modelId: string) => {
     const isCustomModel = customModels.some(model => model.id === modelId);
-    
+
+    // Check if it's a local model (Ollama/LM Studio) and if user is admin
+    if (isLocalModel(modelId)) {
+      // If still loading admin role, show a loading toast
+      if (isLoadingAdminRole) {
+        toast.info('Checking permissions...', {
+          description: 'Please wait while we verify your access.',
+          duration: 2000,
+        });
+        return;
+      }
+
+      // If not admin, block with clear error message
+      if (!isAdmin) {
+        toast.error('Admin Access Restriction', {
+          description: 'Local models (Ollama, LM Studio) require admin privileges.',
+          duration: 5000,
+        });
+        setIsOpen(false);
+        return;
+      }
+    }
+
     if (isCustomModel && isLocalMode()) {
       onChange(modelId);
       setIsOpen(false);
       return;
     }
-    
+
     const hasAccess = isLocalMode() || canAccessModel(modelId);
     if (hasAccess) {
       onChange(modelId);
@@ -276,8 +306,10 @@ export function AgentModelSelector({
   };
 
   const renderModelOption = (model: any, index: number) => {
-    const isCustom = Boolean(model.isCustom) || 
+    const isCustom = Boolean(model.isCustom) ||
       (isLocalMode() && customModels.some(m => m.id === model.id));
+    const isLocalModelFlag = isLocalModel(model.id);
+    const requiresAdminAccess = isLocalModelFlag && !isAdmin;
     const accessible = isCustom ? true : (isLocalMode() || canAccessModel(model.id));
     const isHighlighted = index === highlightedIndex;
     const isPremium = model.requiresSubscription;
@@ -321,10 +353,13 @@ export function AgentModelSelector({
                   {isLowQuality && (
                     <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                   )}
-                  {isPremium && !accessible && !isLocalMode() && (
+                  {requiresAdminAccess && (
+                    <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
+                  )}
+                  {isPremium && !accessible && !isLocalMode() && !requiresAdminAccess && (
                     <Crown className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
-                  {isLocalMode() && isCustom && (
+                  {isLocalMode() && isCustom && !requiresAdminAccess && (
                     <div className="flex items-center gap-1">
                       <button
                         onClick={(e) => {
@@ -350,7 +385,11 @@ export function AgentModelSelector({
               </DropdownMenuItem>
             </div>
           </TooltipTrigger>
-          {!accessible && !isLocalMode() ? (
+          {requiresAdminAccess ? (
+            <TooltipContent side="left" className="text-xs max-w-xs">
+              <p>⚠️ Admin Access Required: Local models require admin privileges</p>
+            </TooltipContent>
+          ) : !accessible && !isLocalMode() ? (
             <TooltipContent side="left" className="text-xs max-w-xs">
               <p>Requires subscription to access premium model</p>
             </TooltipContent>

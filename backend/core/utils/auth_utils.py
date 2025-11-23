@@ -241,25 +241,111 @@ async def get_user_id_from_stream_auth(
 
 async def get_optional_user_id(request: Request) -> Optional[str]:
     auth_header = request.headers.get('Authorization')
-    
+
     if not auth_header or not auth_header.startswith('Bearer '):
         return None
-    
+
     token = auth_header.split(' ')[1]
-    
+
     try:
         payload = _decode_jwt_safely(token)
-        
+
         user_id = payload.get('sub')
         if user_id:
             sentry.sentry.set_user({ "id": user_id })
             structlog.contextvars.bind_contextvars(
                 user_id=user_id
             )
-        
+
         return user_id
     except PyJWTError:
         return None
+
+async def is_user_admin(client, user_id: str) -> bool:
+    """
+    Check if a user has admin or super_admin role.
+
+    Args:
+        client: Supabase client
+        user_id: The user ID to check
+
+    Returns:
+        bool: True if user is admin or super_admin, False otherwise
+    """
+    try:
+        admin_result = await client.table('user_roles').select('role').eq('user_id', user_id).execute()
+        if admin_result.data and len(admin_result.data) > 0:
+            role = admin_result.data[0].get('role')
+            return role in ('admin', 'super_admin')
+        return False
+    except Exception as e:
+        structlog.get_logger().warning(f"Error checking admin status for user {user_id}: {e}")
+        return False
+
+def is_local_model(model_id: str) -> bool:
+    """
+    Check if a model ID refers to a local model (Ollama or LM Studio).
+
+    Args:
+        model_id: The model ID to check
+
+    Returns:
+        bool: True if the model is a local model (Ollama or LM Studio), False otherwise
+    """
+    if not model_id:
+        return False
+
+    # Check for actual model ID patterns used in the registry:
+    # - Ollama models: "ollama/{model_name}"
+    # - LM Studio models: "lm_studio/{model_id}"
+    # - Generic OpenAI-compatible fallback: "openai-compatible/local-model"
+    return (
+        model_id.startswith('ollama/') or
+        model_id.startswith('lm_studio/') or
+        model_id.startswith('openai-compatible/')
+    )
+
+async def verify_model_access(client, user_id: str, model_id: str):
+    """
+    Verify that a user has access to use a specific model.
+    Local models (Ollama, LM Studio) require admin access.
+
+    Args:
+        client: Supabase client
+        user_id: The user ID to check
+        model_id: The model ID being requested
+
+    Raises:
+        HTTPException: If user doesn't have access to the model
+    """
+    if is_local_model(model_id):
+        is_admin = await is_user_admin(client, user_id)
+        if not is_admin:
+            # Trigger system notification for admin restriction
+            try:
+                from core.notifications.triggers import trigger_system_notification
+                from core.notifications.types import TriggerSource
+                from datetime import datetime, timezone
+
+                await trigger_system_notification(
+                    user_id=user_id,
+                    notification_key="admin_local_model_restriction",
+                    context={
+                        "model_id": model_id,
+                        "action": "blocked",
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    },
+                    source=TriggerSource.BACKEND
+                )
+            except Exception as e:
+                # Log notification error but don't block the restriction
+                structlog.warning(f"Failed to send admin restriction notification: {e}")
+
+            # Raise the access restriction exception
+            raise HTTPException(
+                status_code=403,
+                detail="Admin Access Restriction: Local models (Ollama, LM Studio) require admin privileges"
+            )
 
 get_optional_current_user_id_from_jwt = get_optional_user_id
 

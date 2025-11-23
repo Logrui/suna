@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Query
 
-from core.utils.auth_utils import verify_and_get_user_id_from_jwt
+from core.utils.auth_utils import verify_and_get_user_id_from_jwt, verify_model_access
 from core.utils.logger import logger
 from core.utils.config import config, EnvMode
 from core.utils.pagination import PaginationParams
@@ -228,6 +228,10 @@ async def update_agent(
         
         current_system_prompt = agent_data.system_prompt if agent_data.system_prompt is not None else current_version_data.get('system_prompt', '')
         current_model = agent_data.model if agent_data.model is not None else current_version_data.get('model')
+
+        # Verify user has access to the model if it's being changed
+        if agent_data.model is not None:
+            await verify_model_access(client, user_id, agent_data.model)
 
         if agent_data.configured_mcps is not None:
             if agent_data.replace_mcps:

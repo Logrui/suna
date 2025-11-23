@@ -290,3 +290,53 @@ async def create_notification(
     except Exception as e:
         logger.error(f"Error creating notification: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create notification")
+
+@router.post("/trigger/admin-restriction")
+async def trigger_admin_restriction_notification(
+    request: Dict[str, str] = Body(...),
+    user_id: str = Depends(verify_and_get_user_id_from_jwt),
+):
+    """
+    Trigger admin restriction notification when non-admin user selects a local model.
+
+    This endpoint is called from the frontend when a user selects a local model.
+    The notification system handles deduplication (5-minute window) automatically.
+
+    Request body:
+        model_id: The local model ID that was selected
+    """
+    try:
+        from core.notifications.triggers import trigger_system_notification
+        from core.notifications.types import TriggerSource
+
+        model_id = request.get("model_id")
+        if not model_id:
+            raise HTTPException(status_code=400, detail="model_id is required")
+
+        logger.info(f"Frontend triggering admin restriction notification for user {user_id} selecting model {model_id}")
+
+        # Trigger the notification - deduplication is handled inside trigger_system_notification
+        result = await trigger_system_notification(
+            user_id=user_id,
+            notification_key="admin_local_model_restriction",
+            context={
+                "model_id": model_id,
+                "action": "blocked",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            },
+            source=TriggerSource.FRONTEND
+        )
+
+        return {
+            "success": result.success,
+            "notification_id": result.notification_id,
+            "channels_used": [channel.value for channel in result.channels_used],
+            "email_sent": result.email_sent,
+            "push_sent": result.push_sent,
+            "error": result.error
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error triggering admin restriction notification: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to trigger notification")

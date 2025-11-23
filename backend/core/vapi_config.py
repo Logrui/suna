@@ -67,7 +67,7 @@ class VapiConfig:
             "gpt-3.5-turbo-16k"
         ],
         "anthropic": [
-            "claude-3-opus",
+            # "claude-3-opus",  # DISABLED: Too expensive
             "claude-3-sonnet",
             "claude-3-haiku"
         ]

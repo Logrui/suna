@@ -10,12 +10,28 @@ export type ModelProvider =
   | 'xai'
   | 'moonshotai'
   | 'bedrock'
-  | 'openrouter';
+  | 'openrouter'
+  | 'ollama'
+  | 'lmstudio';
 
 /**
  * Get the provider from a model ID
  */
 export function getModelProvider(modelId: string): ModelProvider {
+  // Check local models FIRST (before checking for 'openai' substring)
+  // Ollama models use "ollama/" prefix
+  if (modelId.startsWith('ollama/')) {
+    return 'ollama';
+  }
+  // LM Studio models use "lm_studio/" prefix
+  if (modelId.startsWith('lm_studio/')) {
+    return 'lmstudio';
+  }
+  // Generic OpenAI-compatible fallback (rare, used when Ollama/LM Studio discovery fails)
+  if (modelId.startsWith('openai-compatible/')) {
+    return 'ollama'; // Treat as Ollama icon for visual consistency
+  }
+
   if (modelId.includes('anthropic') || modelId.includes('claude')) {
     return 'anthropic';
   }
@@ -42,7 +58,10 @@ export function getModelProvider(modelId: string): ModelProvider {
   const parts = modelId.split('/');
   if (parts.length > 1) {
     const provider = parts[0].toLowerCase();
-    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter'].includes(provider)) {
+    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter', 'lm_studio', 'ollama', 'openai-compatible'].includes(provider)) {
+      if (provider === 'lm_studio') return 'lmstudio';
+      if (provider === 'ollama') return 'ollama';
+      if (provider === 'openai-compatible') return 'ollama';
       return provider as ModelProvider;
     }
   }
@@ -76,6 +95,8 @@ export function ModelProviderIcon({
     moonshotai: '/images/models/Moonshot.svg',
     bedrock: '/images/models/Anthropic.svg', // Bedrock uses Anthropic models primarily
     openrouter: '/images/models/OAI.svg', // Default to OpenAI icon for OpenRouter
+    ollama: '/images/models/ollama.svg',
+    lmstudio: '/images/models/lmstudio.svg',
   };
 
   const iconSrc = iconMap[provider];
@@ -133,6 +154,8 @@ export function getModelProviderName(modelId: string): string {
     moonshotai: 'Moonshot AI',
     bedrock: 'AWS Bedrock',
     openrouter: 'OpenRouter',
+    ollama: 'Ollama',
+    lmstudio: 'LM Studio',
   };
 
   return nameMap[provider] || 'Unknown';
