@@ -35,7 +35,31 @@ class ModelRegistry:
         # Gemini 3 Pro Preview
         self.register(Model(
             id="vertex_ai/gemini-3-pro-preview",
-            name="Gemini 3 Pro Preview",
+            name="Gemini 3 Pro Preview ",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["gemini-3-pro-preview", "vertex-gemini-3-pro"],
+            context_window=200_000,
+            max_output_tokens=64_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING, # "thinking_level" support
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=2.00, #$2.00, prompts <= 200k tokens
+                output_cost_per_million_tokens=12.00 #$12.00, responses <= 200k tokens
+            ),
+            tier_availability=["free", "paid"],
+            priority=121,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-2.5-pro"]
+        ))
+
+        # Gemini 3 Pro Preview (MAX TOKENS)
+        self.register(Model(
+            id="vertex_ai/gemini-3-pro-preview",
+            name="Gemini 3 Pro Preview (MAX)",
             provider=ModelProvider.VERTEX_AI,
             aliases=["gemini-3-pro-preview", "vertex-gemini-3-pro"],
             context_window=1_000_000,
@@ -47,22 +71,22 @@ class ModelRegistry:
                 ModelCapability.THINKING, # "thinking_level" support
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=2.00, # Estimated based on previous Pro pricing
-                output_cost_per_million_tokens=12.00
+                input_cost_per_million_tokens=4.00, #$4.00, prompts > 200k tokens
+                output_cost_per_million_tokens=18.00 #$18.00, responses > 200k tokens
             ),
             tier_availability=["paid"],
-            priority=110,
+            priority=120,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-2.5-pro"]
         ))
 
-        # Gemini 2.5 Pro
+        # Gemini 2.5 Pro (MAX TOKENS)
         self.register(Model(
-            id="vertex_ai/gemini-2.5-pro",
-            name="Gemini 2.5 Pro",
+            id="vertex_ai/gemini-2.5-pro-max",
+            name="Gemini 2.5 Pro (MAX)",
             provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-2.5-pro", "vertex-gemini-2.5-pro"],
-            context_window=1_048_576,
+            aliases=["gemini-2.5-pro-max", "vertex-gemini-2.5-pro-max"],
+            context_window=200_000,
             max_output_tokens=65_536,
             capabilities=[
                 ModelCapability.CHAT,
@@ -74,8 +98,35 @@ class ModelRegistry:
                 ModelCapability.CODE_INTERPRETER, # "Code Execution"
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25,
-                output_cost_per_million_tokens=10.00
+                input_cost_per_million_tokens=2.50, #$2.50, prompts > 200k tokens
+                output_cost_per_million_tokens=15.00 #$15.00, responses > 200k tokens
+            ),
+            tier_availability=["paid"],
+            priority=109,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-2.5-flash"]
+        ))
+
+        # Gemini 2.5 Pro
+        self.register(Model(
+            id="vertex_ai/gemini-2.5-pro",
+            name="Gemini 2.5 Pro",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["gemini-2.5-pro", "vertex-gemini-2.5-pro"],
+            context_window=200_000,
+            max_output_tokens=65_536,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING, # "thinking_budget" support
+                ModelCapability.STRUCTURED_OUTPUT,
+                ModelCapability.WEB_SEARCH, # "Grounding"
+                ModelCapability.CODE_INTERPRETER, # "Code Execution"
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.25, #$1.25, prompts > 200k tokens
+                output_cost_per_million_tokens=10.00 #$10.00, responses > 200k tokens
             ),
             tier_availability=["paid"],
             priority=109,
@@ -98,8 +149,8 @@ class ModelRegistry:
                 ModelCapability.THINKING, # "thinking_budget" support
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.15,
-                output_cost_per_million_tokens=0.60
+                input_cost_per_million_tokens=0.30, #	$0.30 (text / image / video)
+                output_cost_per_million_tokens=2.50 #	$2.50 #no tiered pricing up to 1M context window
             ),
             tier_availability=["free", "paid"],
             priority=108,
@@ -107,12 +158,12 @@ class ModelRegistry:
             fallback_models=["google/gemini-2.5-flash"]
         ))
 
-        # Gemini 2.0 Flash-Lite
+        # Gemini 2.5 Flash-Lite
         self.register(Model(
-            id="vertex_ai/gemini-2.0-flash-lite-001",
-            name="Gemini 2.0 Flash-Lite",
+            id="vertex_ai/gemini-2.5-flash-lite",
+            name="Gemini 2.5 Flash-Lite",
             provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-2.0-flash-lite", "vertex-gemini-2.0-flash-lite"],
+            aliases=["gemini-2.5-flash-lite", "vertex-gemini-2.5-flash-lite"],
             context_window=1_048_576,
             max_output_tokens=8_192,
             capabilities=[
@@ -122,19 +173,19 @@ class ModelRegistry:
                 ModelCapability.STRUCTURED_OUTPUT,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.075, # Estimated lower than Flash
-                output_cost_per_million_tokens=0.30
+                input_cost_per_million_tokens=0.10, # 	$0.10 (text / image / video)
+                output_cost_per_million_tokens=0.40 # 	$0.40 
             ),
             tier_availability=["free", "paid"],
             priority=90,
             enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["google/gemini-2.0-flash-lite-001"]
+            fallback_models=["google/gemini-2.5-flash-lite"]
         ))
 
         # Gemini Computer Use Preview
         self.register(Model(
             id="vertex_ai/gemini-2.5-computer-use-preview-10-2025",
-            name="Gemini Computer Use Preview",
+            name="Gemini Computer Use",
             provider=ModelProvider.VERTEX_AI,
             aliases=["gemini-computer-use", "vertex-gemini-computer-use"],
             context_window=128_000,
@@ -144,8 +195,8 @@ class ModelRegistry:
                 ModelCapability.VISION,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25, # Using Pro pricing as placeholder
-                output_cost_per_million_tokens=10.00
+                input_cost_per_million_tokens=1.25, # 	$1.25, prompts <= 200k tokens
+                output_cost_per_million_tokens=10.00 # 	$10.00, responses <= 200k tokens
             ),
             tier_availability=["paid"],
             priority=90,
