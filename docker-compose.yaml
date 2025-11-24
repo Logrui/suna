@@ -50,8 +50,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - ./backend:/app
       - /app/.venv
       - ./backend/.env:/app/.env:ro
+      - ${APPDATA}/gcloud/application_default_credentials.json:/app/gcloud-credentials.json:ro
+    env_file:
+      - ./backend/.env
     environment:
       - ENV_MODE=local
       - REDIS_HOST=redis
@@ -61,6 +65,8 @@ services:
       # Local AI Model APIs (accessible from Docker containers)
       - OLLAMA_API_BASE=http://host.docker.internal:11434
       - LM_STUDIO_API_BASE=http://host.docker.internal:1234
+      # Vertex AI Configuration
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcloud-credentials.json
     depends_on:
       redis:
         condition: service_healthy
@@ -82,6 +88,7 @@ services:
       - ./backend:/app
       - /app/.venv
       - ./backend/.env:/app/.env:ro
+      - ${APPDATA}/gcloud/application_default_credentials.json:/app/gcloud-credentials.json:ro
     environment:
       - ENV_MODE=local
       - REDIS_HOST=redis
@@ -91,6 +98,8 @@ services:
       # Local AI Model APIs (accessible from Docker containers)
       - OLLAMA_API_BASE=http://host.docker.internal:11434
       - LM_STUDIO_API_BASE=http://host.docker.internal:1234
+      # Vertex AI Configuration
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcloud-credentials.json
     depends_on:
       redis:
         condition: service_healthy

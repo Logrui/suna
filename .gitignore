@@ -237,3 +237,4 @@ apps/mobile/app-example
 .vscode/
 .windsurf/
 .agent/
+.backend.credentials/

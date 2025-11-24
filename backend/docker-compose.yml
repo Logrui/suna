@@ -13,6 +13,7 @@ services:
       - .:/app
       - /app/.venv
       - ./logs:/app/logs
+      - ${APPDATA}/gcloud/application_default_credentials.json:/app/gcloud-credentials.json:ro
     restart: unless-stopped
     depends_on:
       redis:
@@ -24,6 +25,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - LOG_LEVEL=INFO
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcloud-credentials.json
     logging:
       driver: "json-file"
       options:
@@ -49,6 +51,7 @@ services:
       - .:/app
       - /app/.venv
       - ./worker-logs:/app/logs
+      - ${APPDATA}/gcloud/application_default_credentials.json:/app/gcloud-credentials.json:ro
     restart: unless-stopped
     depends_on:
       redis:
@@ -60,6 +63,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - LOG_LEVEL=INFO
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcloud-credentials.json
     logging:
       driver: "json-file"
       options:

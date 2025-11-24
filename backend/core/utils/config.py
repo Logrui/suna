@@ -302,6 +302,10 @@ class Configuration:
     XAI_API_KEY: Optional[str] = None
     MORPH_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
+    
+    # Google Vertex AI configuration
+    VERTEX_AI_PROJECT: Optional[str] = None
+    VERTEX_AI_LOCATION: Optional[str] = "us-central1"
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OPENAI_COMPATIBLE_API_KEY: Optional[str] = None
     OPENAI_COMPATIBLE_API_BASE: Optional[str] = None

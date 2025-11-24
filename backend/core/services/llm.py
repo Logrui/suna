@@ -102,7 +102,27 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         },
     ]
     
-    fallbacks = [
+    # Build fallbacks from registry
+    from core.ai_models import model_manager
+    fallbacks = []
+    
+    # 1. Add registry-defined fallbacks
+    try:
+        available_models = model_manager.list_available_models(include_disabled=True)
+        for model_info in available_models:
+            model_id = model_info['id']
+            model = model_manager.get_model(model_id)
+            if model and model.fallback_models:
+                # LiteLLM expects fallbacks as a list of dicts: [{"model_name": ["fallback_1", "fallback_2"]}]
+                fallbacks.append({
+                    model_id: model.fallback_models
+                })
+                # logger.debug(f"Added fallback for {model_id}: {model.fallback_models}")
+    except Exception as e:
+        logger.warning(f"Failed to load fallbacks from registry: {e}")
+
+    # 2. Add legacy Bedrock fallbacks (keep for backward compatibility if needed)
+    fallbacks.extend([
         # MAP-tagged Haiku 4.5 (default) -> Sonnet 4 -> Sonnet 4.5
         {
             "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48": [
@@ -123,7 +143,7 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
                 "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
             ]
         }
-    ]
+    ])
     
     provider_router = Router(
         model_list=model_list,
@@ -131,7 +151,7 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         fallbacks=fallbacks,
     )
     
-    logger.info(f"Configured LiteLLM Router with {len(fallbacks)} Bedrock-only fallback rules")
+    logger.info(f"Configured LiteLLM Router with {len(fallbacks)} fallback rules")
 
 def _configure_openai_compatible(params: Dict[str, Any], model_name: str, api_key: Optional[str], api_base: Optional[str]) -> None:
     """Configure OpenAI-compatible provider setup."""

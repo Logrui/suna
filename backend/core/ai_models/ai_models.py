@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Union
 from enum import Enum
+from core.utils.config import config
 
 
 class ModelProvider(Enum):
@@ -9,10 +10,12 @@ class ModelProvider(Enum):
     BEDROCK = "bedrock"
     OPENROUTER = "openrouter"
     GOOGLE = "google"
+    VERTEX_AI = "vertex_ai"
     XAI = "xai"
     MOONSHOTAI = "moonshotai"
     ALIBABA = "alibaba"
     DEEPSEEK = "deepseek"
+
 
 class ModelCapability(Enum):
     CHAT = "chat"
@@ -54,10 +57,12 @@ class ModelConfig:
     headers: Optional[Dict[str, str]] = None
     extra_headers: Optional[Dict[str, str]] = None
     
+    # === Body Parameters (Provider-Specific) ===
+    extra_body: Optional[Dict[str, Any]] = None
+    
     # === Bedrock-Specific Configuration ===
     performanceConfig: Optional[Dict[str, str]] = None  # e.g., {"latency": "optimized"}
     
-
 
 @dataclass
 class Model:
@@ -144,8 +149,17 @@ class Model:
                 params["headers"] = self.config.headers.copy()
             if self.config.extra_headers:
                 params["extra_headers"] = self.config.extra_headers.copy()
+            if self.config.extra_body:
+                params["extra_body"] = self.config.extra_body.copy()
             if self.config.performanceConfig:
                 params["performanceConfig"] = self.config.performanceConfig.copy()
+        
+        # Inject Vertex AI specific parameters
+        if self.provider == ModelProvider.VERTEX_AI:
+            if config.VERTEX_AI_PROJECT:
+                params["vertex_project"] = config.VERTEX_AI_PROJECT
+            if config.VERTEX_AI_LOCATION:
+                params["vertex_location"] = config.VERTEX_AI_LOCATION
         
         
         # Apply any runtime overrides

@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional, Set
-from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
+from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig, FallbackModelRegistry
 from core.utils.config import config, EnvMode
 
 # SHOULD_USE_ANTHROPIC = False
@@ -8,13 +8,11 @@ SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPI
 
 # Set premium model ID based on environment - using MAP-tagged application inference profiles with global routing
 if SHOULD_USE_ANTHROPIC:
-    FREE_MODEL_ID = "anthropic/claude-haiku-4-5"
-    PREMIUM_MODEL_ID = "anthropic/claude-haiku-4-5"
+    FREE_MODEL_ID = "vertex_ai/claude-haiku-4-5@20250929"
+    PREMIUM_MODEL_ID = "vertex_ai/claude-haiku-4-5@20250929"
 else:  
-    FREE_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
-    PREMIUM_MODEL_ID = "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"
-
-is_local = config.ENV_MODE == EnvMode.LOCAL
+    FREE_MODEL_ID = "anthropic/claude-haiku-4-5@20250929"
+    PREMIUM_MODEL_ID = "anthropic/claude-haiku-4-5@20250929"
 
 class ModelRegistry:
     def __init__(self):
@@ -23,212 +21,231 @@ class ModelRegistry:
         self._initialize_models()
     
     def _initialize_models(self):
-        # --- Anthropic Models ---
-        # DISABLED: Claude Opus models - too expensive
-        # self.register(Model(
-        #     id="anthropic/claude-opus-4-1",
-        #     name="Claude Opus 4.1",
-        #     provider=ModelProvider.ANTHROPIC,
-        #     aliases=["claude-opus-4.1", "opus-4.1"],
-        #     context_window=200_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #         ModelCapability.VISION,
-        #         ModelCapability.THINKING,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=15.00,
-        #         output_cost_per_million_tokens=75.00
-        #     ),
-        #     tier_availability=["paid"],
-        #     priority=110,
-        #     enabled=SHOULD_USE_ANTHROPIC,
-        #     fallback_models=["anthropic/claude-sonnet-4-5-20250929"]
-        # ))
 
-        # self.register(Model(
-        #     id="anthropic/claude-opus-4",
-        #     name="Claude Opus 4",
-        #     provider=ModelProvider.ANTHROPIC,
-        #     aliases=["claude-opus-4", "opus-4"],
-        #     context_window=200_000,
-        #     capabilities=[
-        #         ModelCapability.CHAT,
-        #         ModelCapability.FUNCTION_CALLING,
-        #         ModelCapability.VISION,
-        #     ],
-        #     pricing=ModelPricing(
-        #         input_cost_per_million_tokens=15.00,
-        #         output_cost_per_million_tokens=75.00
-        #     ),
-        #     tier_availability=["paid"],
-        #     priority=109,
-        #     enabled=SHOULD_USE_ANTHROPIC,
-        #     fallback_models=["anthropic/claude-sonnet-4-5-20250929"]
-        # ))
-
+        # --- Vertex AI Models (Google & Anthropic) ---
+        # Note: All models below use Vertex AI as the provider
+        
+        # Gemini 3 Pro Preview
         self.register(Model(
-            id="anthropic/claude-sonnet-4-5-20250929" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
-            name="Claude Sonnet 4.5",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-sonnet-4.5", "sonnet-4.5", "anthropic/claude-sonnet-4.5", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"],
-            context_window=1_000_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["paid"],
-            priority=108,
-            enabled=True,
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07"
-                },
-            ),
-            fallback_models=[
-                "anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-            ]
-        ))
-
-        self.register(Model(
-            id="anthropic/claude-sonnet-4-20250514" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-            name="Claude Sonnet 4",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-sonnet-4", "sonnet-4", "anthropic/claude-sonnet-4-20250514", "Claude Sonnet 4", "claude-sonnet-4-20250514", "global.anthropic.claude-sonnet-4-20250514-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"],
-            context_window=1_000_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["paid"],
-            priority=107,
-            enabled=True,
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07" 
-                },
-            ),
-            fallback_models=[
-                "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-            ]
-        ))
-
-        self.register(Model(
-            id="anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-            name="Claude Haiku 4.5",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=["claude-haiku-4.5", "haiku-4.5", "anthropic/claude-haiku-4.5", "Claude Haiku 4.5", "global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
-                output_cost_per_million_tokens=5.00
-            ),
-            tier_availability=["paid"],
-            priority=106,
-            recommended=True,
-            enabled=True,
-        ))
-
-        # --- Google Models ---
-        self.register(Model(
-            id="gemini/gemini-3-pro-preview",
+            id="vertex_ai/gemini-3-pro-preview",
             name="Gemini 3 Pro Preview",
-            provider=ModelProvider.GOOGLE,
-            aliases=["gemini-3-pro", "gemini-3-pro-preview", "Gemini 3 Pro Preview"],
-            context_window=200_000,
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["gemini-3-pro-preview", "vertex-gemini-3-pro"],
+            context_window=1_000_000,
+            max_output_tokens=64_000,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
+                ModelCapability.THINKING, # "thinking_level" support
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=2.00,
+                input_cost_per_million_tokens=2.00, # Estimated based on previous Pro pricing
                 output_cost_per_million_tokens=12.00
             ),
             tier_availability=["paid"],
-            priority=105,
-            enabled=config.GEMINI_API_KEY is not None,
-            fallback_models=["gemini/gemini-2.5-pro"]
+            priority=110,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-2.5-pro"]
         ))
 
+        # Gemini 2.5 Pro
         self.register(Model(
-            id="gemini/gemini-2.5-pro",
+            id="vertex_ai/gemini-2.5-pro",
             name="Gemini 2.5 Pro",
-            provider=ModelProvider.GOOGLE,
-            aliases=["gemini-2.5-pro", "Gemini 2.5 Pro"],
-            context_window=200_000,
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["gemini-2.5-pro", "vertex-gemini-2.5-pro"],
+            context_window=1_048_576,
+            max_output_tokens=65_536,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
+                ModelCapability.THINKING, # "thinking_budget" support
+                ModelCapability.STRUCTURED_OUTPUT,
+                ModelCapability.WEB_SEARCH, # "Grounding"
+                ModelCapability.CODE_INTERPRETER, # "Code Execution"
             ],
             pricing=ModelPricing(
                 input_cost_per_million_tokens=1.25,
                 output_cost_per_million_tokens=10.00
             ),
             tier_availability=["paid"],
-            priority=104,
-            enabled=config.GEMINI_API_KEY is not None,
-            fallback_models=["gemini/gemini-2.5-flash"]
+            priority=109,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-2.5-flash"]
         ))
 
+        # Gemini 2.5 Flash
         self.register(Model(
-            id="gemini/gemini-2.5-flash",
+            id="vertex_ai/gemini-2.5-flash",
             name="Gemini 2.5 Flash",
-            provider=ModelProvider.GOOGLE,
-            aliases=["gemini-2.5-flash", "gemini-flash-latest", "Gemini 2.5 Flash"],
-            context_window=1_000_000,
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["gemini-2.5-flash", "vertex-gemini-2.5-flash"],
+            context_window=1_048_576,
+            max_output_tokens=64_000,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
+                ModelCapability.THINKING, # "thinking_budget" support
             ],
             pricing=ModelPricing(
                 input_cost_per_million_tokens=0.15,
                 output_cost_per_million_tokens=0.60
             ),
             tier_availability=["free", "paid"],
-            priority=103,
-            enabled=config.GEMINI_API_KEY is not None,
-            fallback_models=["gemini/gemini-2.0-flash"]
+            priority=108,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/claude-haiku-4-5@20251001"]
         ))
 
+        # Gemini 2.0 Flash-Lite
         self.register(Model(
-            id="gemini/gemini-2.0-flash",
-            name="Gemini 2.0 Flash",
-            provider=ModelProvider.GOOGLE,
-            aliases=["gemini-2.0-flash", "Gemini 2.0 Flash"],
-            context_window=1_000_000,
+            id="vertex_ai/gemini-2.0-flash-lite-001",
+            name="Gemini 2.0 Flash-Lite",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["gemini-2.0-flash-lite", "vertex-gemini-2.0-flash-lite"],
+            context_window=1_048_576,
+            max_output_tokens=8_192,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
+                ModelCapability.STRUCTURED_OUTPUT,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.00,
+                input_cost_per_million_tokens=0.075, # Estimated lower than Flash
+                output_cost_per_million_tokens=0.30
+            ),
+            tier_availability=["free", "paid"],
+            priority=90,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/claude-haiku-4-5@20251001"]
+        ))
+
+        # Gemini Computer Use Preview
+        self.register(Model(
+            id="vertex_ai/gemini-2.5-computer-use-preview-10-2025",
+            name="Gemini Computer Use Preview",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["gemini-computer-use", "vertex-gemini-computer-use"],
+            context_window=128_000,
+            max_output_tokens=64_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.25, # Using Pro pricing as placeholder
+                output_cost_per_million_tokens=10.00
+            ),
+            tier_availability=["paid"],
+            priority=90,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/claude-sonnet-4-5@20250929"]
+        ))
+
+        # Claude Sonnet 4.5 (via Vertex AI)
+        self.register(Model(
+            id="vertex_ai/claude-sonnet-4-5@20250929",
+            name="Claude Sonnet 4.5",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
+            context_window=1_000_000, # 1M in Beta
+            max_output_tokens=64_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING, # "Extended Thinking" implied?
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=3.00,
+                output_cost_per_million_tokens=15.00
+            ),
+            tier_availability=["paid"],
+            priority=106,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-3-pro-preview-10-2025"],
+            config=ModelConfig(
+                extra_headers={
+                    "anthropic-beta": "context-1m-2025-08-07"
+                },
+            ),
+        ))
+
+        # Claude Haiku 4.5 (via Vertex AI)
+        self.register(Model(
+            id="vertex_ai/claude-haiku-4-5@20251001",
+            name="Claude Haiku 4.5",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["claude-haiku-4.5", "vertex-claude-haiku-4.5"],
+            context_window=200_000,
+            max_output_tokens=64_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING, # "Extended Thinking"
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.00,
+                output_cost_per_million_tokens=5.00
+            ),
+            tier_availability=["paid"],
+            priority=110,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-2.5-flash"],
+            config=ModelConfig(
+                extra_body={
+                    "anthropic_version": "vertex-2023-10-16"
+                }
+            ),
+        ))
+
+        # Llama 4 Scout
+        self.register(Model(
+            id="vertex_ai/meta/llama-4-scout-17b-16e-instruct-maas",
+            name="Llama 4 Scout",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["llama-4-scout", "vertex-llama-4-scout"],
+            context_window=10_000_000,
+            max_output_tokens=8192, # Defaulting as N/A in table usually means standard or unknown
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.10, # Placeholder
                 output_cost_per_million_tokens=0.40
             ),
             tier_availability=["free", "paid"],
-            priority=102,
-            enabled=config.GEMINI_API_KEY is not None,
+            priority=104,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-2.5-flash"]
+        ))
+
+        # Llama 4 Maverick
+        self.register(Model(
+            id="vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas",
+            name="Llama 4 Maverick",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["llama-4-maverick", "vertex-llama-4-maverick"],
+            context_window=1_000_000,
+            max_output_tokens=8192,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.VISION,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.20, # Placeholder
+                output_cost_per_million_tokens=0.80
+            ),
+            tier_availability=["paid"],
+            priority=103,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-2.5-pro"]
         ))
 
         # --- OpenAI Models ---
@@ -339,89 +356,6 @@ class ModelRegistry:
             enabled=config.OPENAI_API_KEY is not None,
         ))
 
-        # --- Other Models ---
-        self.register(Model(
-            id="xai/grok-4-fast",
-            name="Grok 4 Fast",
-            provider=ModelProvider.XAI,
-            aliases=["grok-4-fast", "Grok 4 Fast"],
-            context_window=2_000_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.20,
-                output_cost_per_million_tokens=0.50
-            ),
-            tier_availability=["paid"],
-            priority=96,
-            enabled=True,
-        ))
-
-        self.register(Model(
-            id="moonshotai/kimi-k2",
-            name="Kimi K2",
-            provider=ModelProvider.MOONSHOTAI,
-            aliases=["kimi-k2", "Kimi K2", "moonshotai/kimi-k2"],
-            context_window=200_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
-                output_cost_per_million_tokens=3.00
-            ),
-            tier_availability=["paid"],
-            priority=95,
-            enabled=True,
-            config=ModelConfig(
-                extra_headers={
-                    "HTTP-Referer": config.OR_SITE_URL if hasattr(config, 'OR_SITE_URL') and config.OR_SITE_URL else "",
-                    "X-Title": config.OR_APP_NAME if hasattr(config, 'OR_APP_NAME') and config.OR_APP_NAME else ""
-                }
-            )
-        ))
-
-        self.register(Model(
-            id="deepseek/deepseek-chat",
-            name="DeepSeek Chat",
-            provider=ModelProvider.DEEPSEEK,
-            aliases=["deepseek", "deepseek-chat", "DeepSeek Chat"],
-            context_window=64_000,
-            capabilities=[
-                ModelCapability.CHAT, 
-                ModelCapability.FUNCTION_CALLING
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.38,
-                output_cost_per_million_tokens=0.89
-            ),
-            tier_availability=["free", "paid"],
-            priority=94,
-            enabled=True
-        ))
-
-        self.register(Model(
-            id="alibaba/qwen3-235b",
-            name="Qwen3 235B",
-            provider=ModelProvider.ALIBABA,
-            aliases=["qwen3", "qwen-3", "Qwen3 235B", "alibaba/qwen3-235b"],
-            context_window=32_000,
-            capabilities=[
-                ModelCapability.CHAT, 
-                ModelCapability.FUNCTION_CALLING
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.13,
-                output_cost_per_million_tokens=0.60
-            ),
-            tier_availability=["free", "paid"],
-            priority=93,
-            enabled=True
-        ))
-        
     
     def register(self, model: Model) -> None:
         self._models[model.id] = model
@@ -548,7 +482,7 @@ class ModelRegistry:
             name="Local LLM (OpenAI-Compatible)",
             provider=ModelProvider.OPENAI,
             aliases=["local-llm", "ollama", "lm-studio", "local"],
-            context_window=4_000,  # Default, can be overridden
+            context_window=50_000,  # Default, can be overridden
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
@@ -564,8 +498,8 @@ class ModelRegistry:
                 api_base=config.OPENAI_COMPATIBLE_API_BASE,
             ),
             fallback_models=[
-                "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-                "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
+                "anthropic/claude-haiku-4-5",
+                "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash" if config.GEMINI_API_KEY else "vertex_ai/claude-sonnet-4-5@20250929",
             ]
         ))
     
@@ -676,8 +610,7 @@ class ModelRegistry:
                             api_base=config.OLLAMA_API_BASE,
                         ),
                         fallback_models=[
-                            "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-                            "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
+                            "vertex_ai/claude-haiku-4-5@20251001" if SHOULD_USE_ANTHROPIC else "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash",
                         ]
                     ))
                     
@@ -767,22 +700,17 @@ class ModelRegistry:
                             api_base=config.LM_STUDIO_API_BASE or "http://localhost:1234",
                         ),
                         fallback_models=[
-                            "anthropic/claude-haiku-4-5" if SHOULD_USE_ANTHROPIC else "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-                            "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "gemini/gemini-2.5-flash" if config.GEMINI_API_KEY else "anthropic/claude-sonnet-4-20250514",
+                            "anthropic/claude-haiku-4-5",
+                            "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash" if config.GEMINI_API_KEY else "vertex_ai/claude-sonnet-4-5@20250929",
                         ]
                     ))
                     
                     registered_count += 1
-                    logger.debug(f"Registered LM Studio model: {display_name} (context: {context_window}, priority: {priority})")
+                    #logger.debug(f"Registered LM Studio model: {display_name} (context: {context_window}, priority: {priority})")
                     
                 except Exception as e:
                     logger.warning(f"Failed to register LM Studio model {model_id}: {e}")
                     continue
-            
-            if registered_count > 0:
-                logger.info(f"Successfully registered {registered_count} LM Studio models")
-            else:
-                logger.warning("No LM Studio models were registered")
                 
         except Exception as e:
             logger.error(f"LM Studio model discovery failed: {e}")
