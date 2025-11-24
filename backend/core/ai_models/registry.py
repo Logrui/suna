@@ -193,6 +193,7 @@ class ModelRegistry:
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.VISION,
+                ModelCapability.COMPUTER_USE,
             ],
             pricing=ModelPricing(
                 input_cost_per_million_tokens=1.25, # 	$1.25, prompts <= 200k tokens
@@ -207,10 +208,39 @@ class ModelRegistry:
         # Claude Sonnet 4.5 (via Vertex AI)
         self.register(Model(
             id="vertex_ai/claude-sonnet-4-5@20250929",
-            name="Claude Sonnet 4.5",
+            name="Claude Sonnet 4.5 Max",
             provider=ModelProvider.VERTEX_AI,
             aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
             context_window=1_000_000, # 1M in Beta
+            max_output_tokens=64_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING, # "Extended Thinking" implied?
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=3.00,
+                output_cost_per_million_tokens=15.00
+            ),
+            tier_availability=["paid"],
+            priority=106,
+            enabled=config.VERTEX_AI_PROJECT is not None,
+            fallback_models=["vertex_ai/gemini-3-pro-preview"],
+            config=ModelConfig(
+                extra_headers={
+                    "anthropic-beta": "context-1m-2025-08-07"
+                },
+            ),
+        ))
+
+                # Claude Sonnet 4.5 (via Vertex AI)
+        self.register(Model(
+            id="vertex_ai/claude-sonnet-4-5@20250929",
+            name="Claude Sonnet 4.5",
+            provider=ModelProvider.VERTEX_AI,
+            aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
+            context_window=200_000, # 200k
             max_output_tokens=64_000,
             capabilities=[
                 ModelCapability.CHAT,

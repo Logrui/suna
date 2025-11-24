@@ -68,16 +68,16 @@ export function AgentModelSelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [planModalOpen, setPlanSelectionModalOpen] = useState(false);
-  
+
   const [isCustomModelDialogOpen, setIsCustomModelDialogOpen] = useState(false);
   const [dialogInitialData, setDialogInitialData] = useState<CustomModelFormData>({ id: '', label: '' });
   const [dialogMode, setDialogMode] = useState<'add' | 'edit'>('add');
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
 
   const customModels = storeCustomModels;
-  
+
   // Use the prop value if provided, otherwise fall back to store value
   const selectedModel = value || storeSelectedModel;
 
@@ -87,7 +87,7 @@ export function AgentModelSelector({
     if (modelsData?.models) {
       modelsData.models.forEach(model => {
         const displayName = model.display_name || model.short_name || model.id;
-        
+
         modelMap.set(model.id, {
           id: model.id, // Use the actual model ID
           label: displayName,
@@ -135,7 +135,7 @@ export function AgentModelSelector({
 
     return Array.from(modelMap.values());
   }, [modelsData?.models, allModels, customModels]);
-  
+
   const selectedModelDisplay = useMemo(() => {
     const model = enhancedModelOptions.find(m => m.id === selectedModel);
     return model?.label || selectedModel;
@@ -261,7 +261,7 @@ export function AgentModelSelector({
     const modelLabel = formData.label.trim() || formatModelName(modelId);
 
     if (!modelId) return;
-    
+
     if (customModels.some(model =>
       model.id === modelId && (dialogMode === 'add' || model.id !== editingModelId))) {
       console.error('A model with this ID already exists');
@@ -280,7 +280,7 @@ export function AgentModelSelector({
         onChange(modelId);
       }
     }
-    
+
     setIsOpen(false);
   };
 
@@ -295,7 +295,7 @@ export function AgentModelSelector({
     e?.preventDefault();
 
     storeRemoveCustomModel(modelId);
-    
+
     if (selectedModel === modelId) {
       // When deleting the currently selected custom model, let the hook determine the new default
       const firstAvailableModel = allModels.find(m => canAccessModel(m.id));
@@ -328,81 +328,81 @@ export function AgentModelSelector({
     return (
       <Tooltip key={`model-${model.id}-${index}`}>
         <TooltipTrigger asChild>
-            <div className='w-full'>
-              <DropdownMenuItem
-                className={cn(
-                  "text-sm px-2 py-2 mx-2 my-0.5 flex items-center gap-0 cursor-pointer rounded-lg transition-all duration-200",
-                  isHighlighted && "bg-accent",
-                  selectedModel === model.id && "bg-muted border border-border",
-                  !accessible && !disabled && "opacity-70"
+          <div className='w-full'>
+            <DropdownMenuItem
+              className={cn(
+                "text-sm px-2 py-2 mx-2 my-0.5 flex items-center gap-0 cursor-pointer rounded-lg transition-all duration-200",
+                isHighlighted && "bg-accent",
+                selectedModel === model.id && "bg-muted border border-border",
+                !accessible && !disabled && "opacity-70"
+              )}
+              onClick={() => !disabled && handleSelect(model.id)}
+              onMouseEnter={() => setHighlightedIndex(index)}
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <ModelProviderIcon modelId={model.id} size={24} />
+                <span className="font-medium">{model.label}</span>
+              </div>
+              <div className="w-16 text-right text-xs text-muted-foreground">
+                {inputCost || '—'}
+              </div>
+              <div className="w-16 text-right text-xs text-muted-foreground">
+                {outputCost || '—'}
+              </div>
+              <div className="w-8 flex items-center justify-center">
+                {isLowQuality && (
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                 )}
-                onClick={() => !disabled && handleSelect(model.id)}
-                onMouseEnter={() => setHighlightedIndex(index)}
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <ModelProviderIcon modelId={model.id} size={24} />
-                  <span className="font-medium">{model.label}</span>
-                </div>
-                <div className="w-16 text-right text-xs text-muted-foreground">
-                  {inputCost || '—'}
-                </div>
-                <div className="w-16 text-right text-xs text-muted-foreground">
-                  {outputCost || '—'}
-                </div>
-                <div className="w-8 flex items-center justify-center">
-                  {isLowQuality && (
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                  )}
-                  {requiresAdminAccess && (
-                    <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
-                  )}
-                  {isPremium && !accessible && !isLocalMode() && !requiresAdminAccess && (
-                    <Crown className="h-3.5 w-3.5 text-muted-foreground" />
-                  )}
-                  {isLocalMode() && isCustom && !requiresAdminAccess && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditCustomModelDialog(model, e);
-                        }}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteCustomModel(model.id, e);
-                        }}
-                        className="text-muted-foreground hover:text-red-500"
-                      >
-                        <Trash className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </DropdownMenuItem>
-            </div>
-          </TooltipTrigger>
-          {requiresAdminAccess ? (
-            <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>⚠️ Admin Access Required: Local models require admin privileges</p>
-            </TooltipContent>
-          ) : !accessible && !isLocalMode() ? (
-            <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>Requires subscription to access premium model</p>
-            </TooltipContent>
-          ) : isLowQuality ? (
-            <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>Not recommended for complex tasks</p>
-            </TooltipContent>
-          ) : isCustom ? (
-            <TooltipContent side="left" className="text-xs max-w-xs">
-              <p>Custom model</p>
-            </TooltipContent>
-          ) : null}
-        </Tooltip>
+                {requiresAdminAccess && (
+                  <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
+                )}
+                {isPremium && !accessible && !isLocalMode() && !requiresAdminAccess && (
+                  <Crown className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+                {isLocalMode() && isCustom && !requiresAdminAccess && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditCustomModelDialog(model, e);
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCustomModel(model.id, e);
+                      }}
+                      className="text-muted-foreground hover:text-red-500"
+                    >
+                      <Trash className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </DropdownMenuItem>
+          </div>
+        </TooltipTrigger>
+        {requiresAdminAccess ? (
+          <TooltipContent side="left" className="text-xs max-w-xs">
+            <p>⚠️ Admin Access Required: Local models require admin privileges</p>
+          </TooltipContent>
+        ) : !accessible && !isLocalMode() ? (
+          <TooltipContent side="left" className="text-xs max-w-xs">
+            <p>Requires subscription to access premium model</p>
+          </TooltipContent>
+        ) : isLowQuality ? (
+          <TooltipContent side="left" className="text-xs max-w-xs">
+            <p>Not recommended for complex tasks</p>
+          </TooltipContent>
+        ) : isCustom ? (
+          <TooltipContent side="left" className="text-xs max-w-xs">
+            <p>Custom model</p>
+          </TooltipContent>
+        ) : null}
+      </Tooltip>
     );
   };
 
@@ -411,42 +411,42 @@ export function AgentModelSelector({
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <Tooltip>
           <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild disabled={disabled}>
-                {variant === 'menu-item' ? (
-                  <div
-                    className={cn(
-                      "flex items-center justify-between cursor-pointer rounded-lg px-3 py-2 mx-0 my-0.5 text-sm hover:bg-accent",
-                      disabled && "opacity-50 cursor-not-allowed",
-                      className
-                    )}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <ModelProviderIcon 
-                        modelId={selectedModel} 
-                        size={24}
-                      />
-                      <span className="truncate">{selectedModelDisplay}</span>
-                    </div>
+            <DropdownMenuTrigger asChild disabled={disabled}>
+              {variant === 'menu-item' ? (
+                <div
+                  className={cn(
+                    "flex items-center justify-between cursor-pointer rounded-lg px-3 py-2 mx-0 my-0.5 text-sm hover:bg-accent",
+                    disabled && "opacity-50 cursor-not-allowed",
+                    className
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ModelProviderIcon
+                      modelId={selectedModel}
+                      size={24}
+                    />
+                    <span className="truncate">{selectedModelDisplay}</span>
                   </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "h-8 px-4 py-2",
-                      disabled && "opacity-50 cursor-not-allowed",
-                      className
-                    )}
-                  >
-                    <ModelProviderIcon modelId={selectedModel} size={24} />
-                    <span className="text-sm">{selectedModelDisplay}</span>
-                  </Button>
-                )}
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent side={variant === 'menu-item' ? 'left' : 'top'} className="text-xs">
-              <p>Choose a model for this agent</p>
-            </TooltipContent>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-8 px-4 py-2",
+                    disabled && "opacity-50 cursor-not-allowed",
+                    className
+                  )}
+                >
+                  <ModelProviderIcon modelId={selectedModel} size={24} />
+                  <span className="text-sm">{selectedModelDisplay}</span>
+                </Button>
+              )}
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side={variant === 'menu-item' ? 'left' : 'top'} className="text-xs">
+            <p>Choose a model for this agent</p>
+          </TooltipContent>
         </Tooltip>
         <DropdownMenuContent
           align={variant === 'menu-item' ? 'end' : 'start'}
@@ -461,34 +461,34 @@ export function AgentModelSelector({
                   <div className="flex items-center gap-1 p-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                          <Link
-                            href="/settings/env-manager"
-                            className="h-6 w-6 p-0 flex items-center justify-center"
-                          >
-                            <KeyRound className="h-3.5 w-3.5" />
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">
-                          Local .Env Manager
-                        </TooltipContent>
+                        <Link
+                          href="/settings/env-manager"
+                          className="h-6 w-6 p-0 flex items-center justify-center"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        Local .Env Manager
+                      </TooltipContent>
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openAddCustomModelDialog(e);
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">
-                          Add a custom model
-                        </TooltipContent>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAddCustomModelDialog(e);
+                          }}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        Add a custom model
+                      </TooltipContent>
                     </Tooltip>
                   </div>
                 )}
@@ -507,7 +507,7 @@ export function AgentModelSelector({
                   />
                 </div>
               </div>
-              
+
               {/* Pricing Header */}
               <div className="px-2 py-2">
                 <div className="flex items-center gap-0 text-xs text-muted-foreground">
@@ -517,14 +517,14 @@ export function AgentModelSelector({
                   <div className="w-8"></div>
                 </div>
               </div>
-              
+
               {shouldDisplayAll ? (
                 <div>
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
                     Available Models
                   </div>
                   {freeModels.map((model, index) => renderModelOption(model, index))}
-                  
+
                   {premiumModels.length > 0 && (
                     <>
                       <div className="mt-4 border-t border-border pt-2">
@@ -545,7 +545,7 @@ export function AgentModelSelector({
                           {(subscriptionStatus === 'active' ? premiumModels : premiumModels.slice(0, 3)).map((model, index) => {
                             const canAccess = isLocalMode() || canAccessModel(model.id);
                             const isRecommended = false; // Remove recommended badges
-                            
+
                             // Format cost display
                             const formatCost = (cost: number | null | undefined) => {
                               if (cost === null || cost === undefined) return null;
@@ -554,44 +554,44 @@ export function AgentModelSelector({
 
                             const inputCost = formatCost(model.inputCostPerMillionTokens);
                             const outputCost = formatCost(model.outputCostPerMillionTokens);
-                            
+
                             return (
                               <Tooltip key={`premium-${model.id}-${index}`}>
                                 <TooltipTrigger asChild>
-                                    <div className='w-full'>
-                                      <DropdownMenuItem
-                                        className={cn(
-                                          "text-sm px-2 py-2 mx-2 my-0.5 flex items-center gap-0 cursor-pointer rounded-lg transition-all duration-200",
-                                          selectedModel === model.id && "bg-muted border border-border",
-                                          !canAccess && "opacity-70"
-                                        )}
-                                        onClick={() => handleSelect(model.id)}
-                                      >
-                                        <div className="flex items-center gap-3 min-w-0 flex-1 pl-2">
-                                          <ModelProviderIcon modelId={model.id} size={24} />
-                                          <span className="font-medium">{model.label}</span>
-                                        </div>
-                                        <div className="w-16 text-right text-xs text-muted-foreground pr-2">
-                                          {inputCost || '—'}
-                                        </div>
-                                        <div className="w-16 text-right text-xs text-muted-foreground pr-2">
-                                          {outputCost || '—'}
-                                        </div>
-                                        <div className="w-8 flex items-center justify-center">
-                                          {!canAccess && <Crown className="h-3.5 w-3.5 text-muted-foreground" />}
-                                        </div>
-                                      </DropdownMenuItem>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="left" className="text-xs max-w-xs">
-                                    <p>
-                                      {canAccess 
-                                        ? 'Premium model' 
-                                        : 'Requires subscription to access premium model'
-                                      }
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
+                                  <div className='w-full'>
+                                    <DropdownMenuItem
+                                      className={cn(
+                                        "text-sm px-2 py-2 mx-2 my-0.5 flex items-center gap-0 cursor-pointer rounded-lg transition-all duration-200",
+                                        selectedModel === model.id && "bg-muted border border-border",
+                                        !canAccess && "opacity-70"
+                                      )}
+                                      onClick={() => handleSelect(model.id)}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0 flex-1 pl-2">
+                                        <ModelProviderIcon modelId={model.id} size={24} />
+                                        <span className="font-medium">{model.label}</span>
+                                      </div>
+                                      <div className="w-16 text-right text-xs text-muted-foreground pr-2">
+                                        {inputCost || '—'}
+                                      </div>
+                                      <div className="w-16 text-right text-xs text-muted-foreground pr-2">
+                                        {outputCost || '—'}
+                                      </div>
+                                      <div className="w-8 flex items-center justify-center">
+                                        {!canAccess && <Crown className="h-3.5 w-3.5 text-muted-foreground" />}
+                                      </div>
+                                    </DropdownMenuItem>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="text-xs max-w-xs">
+                                  <p>
+                                    {canAccess
+                                      ? 'Premium model'
+                                      : 'Requires subscription to access premium model'
+                                    }
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
                             );
                           })}
                           {subscriptionStatus !== 'active' && (
@@ -634,7 +634,7 @@ export function AgentModelSelector({
                 </div>
               )}
             </div>
-            
+
             {/* Pricing Info Footer */}
             <div className="px-4 py-2 border-t border-border bg-muted/30">
               <div className="text-[10px] text-muted-foreground text-center">

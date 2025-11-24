@@ -15,6 +15,7 @@ class ModelProvider(Enum):
     MOONSHOTAI = "moonshotai"
     ALIBABA = "alibaba"
     DEEPSEEK = "deepseek"
+    AWS = "aws"
 
 
 class ModelCapability(Enum):
