@@ -1,9 +1,14 @@
 from typing import Dict, List, Optional, Set
-from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig, FallbackModelRegistry
+from .ai_models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 
+# Import TYPE_CHECKING to avoid circular imports
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .fallback_registry import FallbackModelRegistry
+
 # SHOULD_USE_ANTHROPIC = False
-# CRITICAL: Production and Staging must ALWAYS use Bedrock, never Anthropic API directly
+# CRITICAL: Production and Staging must ALWAYS use Vertex AI, never Anthropic API directly, with fallbacks to dev Vertex Studio and AI Studio
 SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
 
 # Set premium model ID based on environment - using MAP-tagged application inference profiles with global routing
@@ -18,7 +23,9 @@ class ModelRegistry:
     def __init__(self):
         self._models: Dict[str, Model] = {}
         self._aliases: Dict[str, str] = {}
+        self._fallback_registry: Optional[FallbackModelRegistry] = None
         self._initialize_models()
+        self._initialize_fallback_registry()
     
     def _initialize_models(self):
 
@@ -97,7 +104,7 @@ class ModelRegistry:
             tier_availability=["free", "paid"],
             priority=108,
             enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/claude-haiku-4-5@20251001"]
+            fallback_models=["google/gemini-2.5-flash"]
         ))
 
         # Gemini 2.0 Flash-Lite
@@ -121,7 +128,7 @@ class ModelRegistry:
             tier_availability=["free", "paid"],
             priority=90,
             enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/claude-haiku-4-5@20251001"]
+            fallback_models=["google/gemini-2.0-flash-lite-001"]
         ))
 
         # Gemini Computer Use Preview
@@ -143,7 +150,7 @@ class ModelRegistry:
             tier_availability=["paid"],
             priority=90,
             enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/claude-sonnet-4-5@20250929"]
+            fallback_models=["vertex_ai/gemini-3-pro-preview"]
         ))
 
         # Claude Sonnet 4.5 (via Vertex AI)
@@ -167,7 +174,7 @@ class ModelRegistry:
             tier_availability=["paid"],
             priority=106,
             enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-3-pro-preview-10-2025"],
+            fallback_models=["vertex_ai/gemini-3-pro-preview"],
             config=ModelConfig(
                 extra_headers={
                     "anthropic-beta": "context-1m-2025-08-07"
@@ -204,7 +211,7 @@ class ModelRegistry:
             ),
         ))
 
-        # Llama 4 Scout
+        # Llama 4 Scout via Google Vertex API
         self.register(Model(
             id="vertex_ai/meta/llama-4-scout-17b-16e-instruct-maas",
             name="Llama 4 Scout",
@@ -226,7 +233,7 @@ class ModelRegistry:
             fallback_models=["vertex_ai/gemini-2.5-flash"]
         ))
 
-        # Llama 4 Maverick
+        # Llama 4 Maverick via Google Vertex API
         self.register(Model(
             id="vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas",
             name="Llama 4 Maverick",
@@ -248,7 +255,7 @@ class ModelRegistry:
             fallback_models=["vertex_ai/gemini-2.5-pro"]
         ))
 
-        # --- OpenAI Models ---
+        # --- OpenAI Models via OpenAI API ---
         self.register(Model(
             id="openai/gpt-5",
             name="GPT-5",
@@ -266,7 +273,7 @@ class ModelRegistry:
                 output_cost_per_million_tokens=10.00
             ),
             tier_availability=["paid"],
-            priority=101,
+            priority=106,
             enabled=config.OPENAI_API_KEY is not None,
             fallback_models=["openai/gpt-4o"]
         ))
@@ -349,13 +356,104 @@ class ModelRegistry:
             ],
             pricing=ModelPricing(
                 input_cost_per_million_tokens=0.15,
-                output_cost_per_million_tokens=0.60
+            output_cost_per_million_tokens=0.60
             ),
             tier_availability=["free", "paid"],
             priority=97,
             enabled=config.OPENAI_API_KEY is not None,
         ))
+    
+    def _initialize_fallback_registry(self):
+        """Initialize the fallback registry for API-based models."""
+        from .fallback_registry import fallback_registry
+        self._fallback_registry = fallback_registry
+    
+    def get_with_fallback(self, model_id: str) -> Optional[Model]:
+        """
+        Get a model from either the main registry or fallback registry.
+        This is used internally for fallback resolution but NOT exposed to frontend.
+        
+        Args:
+            model_id: The model ID to look up
+            
+        Returns:
+            Model from main registry if found, otherwise from fallback registry
+        """
+        # First try main registry
+        model = self.get(model_id)
+        if model:
+            return model
+        
+        # Then try fallback registry
+        if self._fallback_registry:
+            return self._fallback_registry.get(model_id)
+        
+        return None
 
+    def resolve_fallback_chain(self, model_id: str, max_depth: int = 5) -> List[Model]:
+        """
+        Resolve the complete fallback chain for a model.
+        Returns a list of models in fallback order: [primary, fallback1, fallback2, ...]
+        
+        Args:
+            model_id: The primary model ID
+            max_depth: Maximum depth to prevent infinite loops (default: 5)
+            
+        Returns:
+            List of Model objects in fallback order
+        """
+        chain: List[Model] = []
+        seen_ids: Set[str] = set()
+        current_id = model_id
+        
+        for _ in range(max_depth):
+            if current_id in seen_ids:
+                # Circular dependency detected
+                from core.utils.logger import logger
+                logger.warning(f"Circular fallback dependency detected for model: {current_id}")
+                break
+            
+            # Try to get model from either registry
+            model = self.get_with_fallback(current_id)
+            if not model:
+                break
+            
+            # Only add enabled models to the chain
+            if model.enabled:
+                chain.append(model)
+                seen_ids.add(current_id)
+            
+            # Get next fallback model
+            if model.fallback_models:
+                current_id = model.fallback_models[0]  # Use first fallback
+            else:
+                break
+        
+        return chain
+    
+    def validate_fallback_models(self) -> Dict[str, List[str]]:
+        """
+        Validate that all fallback models referenced in the registry exist.
+        
+        Returns:
+            Dictionary mapping model IDs to lists of missing fallback model IDs
+        """
+        issues: Dict[str, List[str]] = {}
+        
+        for model in self._models.values():
+            if not model.fallback_models:
+                continue
+            
+            missing = []
+            for fallback_id in model.fallback_models:
+                fallback_model = self.get_with_fallback(fallback_id)
+                if not fallback_model:
+                    missing.append(fallback_id)
+            
+            if missing:
+                issues[model.id] = missing
+        
+        return issues
     
     def register(self, model: Model) -> None:
         self._models[model.id] = model

@@ -131,6 +131,20 @@ class ModelManager:
     def get_context_window(self, model_id: str, default: int = 31_000) -> int:
         return self.registry.get_context_window(model_id, default)
     
+    def resolve_fallback_chain(self, model_id: str, max_depth: int = 5) -> List[Model]:
+        """
+        Resolve the complete fallback chain for a model.
+        This is used internally for retry logic and NOT exposed to frontend.
+        
+        Args:
+            model_id: The primary model ID
+            max_depth: Maximum depth to prevent infinite loops
+            
+        Returns:
+            List of Model objects in fallback order: [primary, fallback1, fallback2, ...]
+        """
+        return self.registry.resolve_fallback_chain(model_id, max_depth)
+    
     def check_token_limit(
         self,
         model_id: str,
