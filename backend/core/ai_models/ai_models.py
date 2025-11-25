@@ -26,6 +26,7 @@ class ModelCapability(Enum):
     WEB_SEARCH = "web_search"
     THINKING = "thinking"
     STRUCTURED_OUTPUT = "structured_output"
+    COMPUTER_USE = "computer_use"
 
 
 @dataclass

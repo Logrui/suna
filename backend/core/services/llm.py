@@ -59,9 +59,11 @@ def setup_api_keys() -> None:
                 # logger.debug(f"API key set for provider: {provider}")
                 pass
             else:
-                logger.debug(f"No API key found for provider: {provider} (this is normal if not using this provider)")
+                #logger.debug(f"No API key found for provider: {provider} (this is normal if not using this provider)")
+                continue
         except AttributeError as e:
-            logger.debug(f"Could not access {provider}_API_KEY: {e}")
+            #logger.debug(f"Could not access {provider}_API_KEY: {e}")
+            continue
 
     # Set up OpenRouter API base if not already set
     if hasattr(config, 'OPENROUTER_API_KEY') and hasattr(config, 'OPENROUTER_API_BASE'):

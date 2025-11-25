@@ -36,6 +36,7 @@ import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { isLocalModel } from '@/lib/api/agents';
 import { useAdminRole } from '@/hooks/admin';
 import { toast } from 'sonner';
+import { ModelItemWithTooltip } from './model-item-with-tooltip';
 
 type UnifiedConfigMenuProps = {
     isLoggedIn?: boolean;
@@ -73,6 +74,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
+    const [hoveredModelId, setHoveredModelId] = useState<string | null>(null);
 
     // Check if user is admin for local model access
     const { data: adminData, isLoading: isLoadingAdminRole } = useAdminRole();
@@ -352,7 +354,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                     </span>
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuPortal>
-                                    <DropdownMenuSubContent className="w-[320px] p-3 border-[1.5px] border-border rounded-2xl max-h-[500px] overflow-y-auto" sideOffset={8}>
+                                    <DropdownMenuSubContent className="w-[320px] p-3 border-[1.5px] border-border rounded-2xl max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent" sideOffset={8}>
                                         <div className="mb-3">
                                             <span className="text-xs font-medium text-muted-foreground pl-1">Available Models</span>
                                         </div>
@@ -360,83 +362,49 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                             {modelOptions.map((model) => {
                                                 const isActive = selectedModel === model.id;
                                                 const canAccess = canAccessModel(model.id);
-                                                const modelItem = (
-                                                    <SpotlightCard
+
+                                                return (
+                                                    <ModelItemWithTooltip
                                                         key={model.id}
-                                                        className={cn(
-                                                            "transition-colors cursor-pointer bg-transparent",
-                                                            !canAccess && "opacity-60"
-                                                        )}
-                                                    >
-                                                        <div
-                                                            className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 relative"
-                                                            onClick={() => {
-                                                                // Check if it's a local model (Ollama/LM Studio) and if user is admin
-                                                                if (isLocalModel(model.id)) {
-                                                                    // If still loading admin role, show a loading toast
-                                                                    if (isLoadingAdminRole) {
-                                                                        toast.info('Checking permissions...', {
-                                                                            description: 'Please wait while we verify your access.',
-                                                                            duration: 2000,
-                                                                        });
-                                                                        return;
-                                                                    }
-
-                                                                    // If not admin, block with clear error message
-                                                                    if (!isAdmin) {
-                                                                        toast.error('Admin Access Restriction', {
-                                                                            description: 'Local models (Ollama, LM Studio) require admin privileges.',
-                                                                            duration: 5000,
-                                                                        });
-                                                                        setIsOpen(false);
-                                                                        return;
-                                                                    }
-                                                                }
-
-                                                                if (canAccess) {
-                                                                    onModelChange(model.id);
-                                                                    setIsOpen(false);
-                                                                } else {
-                                                                    setIsOpen(false);
-                                                                    usePricingModalStore.getState().openPricingModal({
-                                                                        isAlert: true,
-                                                                        alertTitle: 'Upgrade to access this AI model'
+                                                        model={model}
+                                                        isActive={isActive}
+                                                        canAccess={canAccess}
+                                                        onSelect={() => {
+                                                            // Check if it's a local model (Ollama/LM Studio) and if user is admin
+                                                            if (isLocalModel(model.id)) {
+                                                                // If still loading admin role, show a loading toast
+                                                                if (isLoadingAdminRole) {
+                                                                    toast.info('Checking permissions...', {
+                                                                        description: 'Please wait while we verify your access.',
+                                                                        duration: 2000,
                                                                     });
+                                                                    return;
                                                                 }
-                                                            }}
-                                                        >
-                                                            <ModelProviderIcon
-                                                                modelId={model.id}
-                                                                size={32}
-                                                                className={cn("flex-shrink-0", !canAccess && "opacity-50")}
-                                                            />
-                                                            <span className={cn("flex-1 truncate font-medium", !canAccess && "text-muted-foreground")}>{model.label}</span>
-                                                            {!canAccess && (
-                                                                <Lock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                                                            )}
-                                                            {isActive && canAccess && (
-                                                                <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                                            )}
-                                                        </div>
-                                                    </SpotlightCard>
+
+                                                                // If not admin, block with clear error message
+                                                                if (!isAdmin) {
+                                                                    toast.error('Admin Access Restriction', {
+                                                                        description: 'Local models (Ollama, LM Studio) require admin privileges.',
+                                                                        duration: 5000,
+                                                                    });
+                                                                    setIsOpen(false);
+                                                                    return;
+                                                                }
+                                                            }
+
+                                                            if (canAccess) {
+                                                                onModelChange(model.id);
+                                                                setIsOpen(false);
+                                                            } else {
+                                                                setIsOpen(false);
+                                                                usePricingModalStore.getState().openPricingModal({
+                                                                    isAlert: true,
+                                                                    alertTitle: 'Upgrade to access this AI model'
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
                                                 );
-
-                                                if (!canAccess) {
-                                                    return (
-                                                        <TooltipProvider key={model.id}>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    {modelItem}
-                                                                </TooltipTrigger>
-                                                                <TooltipContent side="left" className="text-xs">
-                                                                    <p>Upgrade to access this model</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    );
-                                                }
-
-                                                return modelItem;
                                             })}
                                         </div>
                                     </DropdownMenuSubContent>

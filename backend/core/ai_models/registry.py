@@ -35,7 +35,7 @@ class ModelRegistry:
         # Gemini 3 Pro Preview
         self.register(Model(
             id="vertex_ai/gemini-3-pro-preview",
-            name="Gemini 3 Pro Preview ",
+            name="Gemini 3 Pro Preview",
             provider=ModelProvider.VERTEX_AI,
             aliases=["gemini-3-pro-preview", "vertex-gemini-3-pro"],
             context_window=200_000,
@@ -45,6 +45,7 @@ class ModelRegistry:
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
                 ModelCapability.THINKING, # "thinking_level" support
+                ModelCapability.COMPUTER_USE,
             ],
             pricing=ModelPricing(
                 input_cost_per_million_tokens=2.00, #$2.00, prompts <= 200k tokens
@@ -52,6 +53,7 @@ class ModelRegistry:
             ),
             tier_availability=["free", "paid"],
             priority=121,
+            recommended=True,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-2.5-pro"]
         ))
@@ -59,9 +61,9 @@ class ModelRegistry:
         # Gemini 3 Pro Preview (MAX TOKENS)
         self.register(Model(
             id="vertex_ai/gemini-3-pro-preview",
-            name="Gemini 3 Pro Preview (MAX)",
+            name="Gemini 3 Pro Preview - Max",
             provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-3-pro-preview", "vertex-gemini-3-pro"],
+            aliases=["gemini-3-pro-preview-max", "vertex-gemini-3-pro-max"],
             context_window=1_000_000,
             max_output_tokens=64_000,
             capabilities=[
@@ -76,6 +78,7 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=120,
+            recommended=False,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-2.5-pro"]
         ))
@@ -83,10 +86,10 @@ class ModelRegistry:
         # Gemini 2.5 Pro (MAX TOKENS)
         self.register(Model(
             id="vertex_ai/gemini-2.5-pro-max",
-            name="Gemini 2.5 Pro (MAX)",
+            name="Gemini 2.5 Pro - Max",
             provider=ModelProvider.VERTEX_AI,
             aliases=["gemini-2.5-pro-max", "vertex-gemini-2.5-pro-max"],
-            context_window=200_000,
+            context_window=1_000_000,
             max_output_tokens=65_536,
             capabilities=[
                 ModelCapability.CHAT,
@@ -102,7 +105,8 @@ class ModelRegistry:
                 output_cost_per_million_tokens=15.00 #$15.00, responses > 200k tokens
             ),
             tier_availability=["paid"],
-            priority=109,
+            priority=110,
+            recommended=False,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-2.5-flash"]
         ))
@@ -129,7 +133,7 @@ class ModelRegistry:
                 output_cost_per_million_tokens=10.00 #$10.00, responses > 200k tokens
             ),
             tier_availability=["paid"],
-            priority=109,
+            priority=111,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-2.5-flash"]
         ))
@@ -154,6 +158,7 @@ class ModelRegistry:
             ),
             tier_availability=["free", "paid"],
             priority=108,
+            recommended=True,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["google/gemini-2.5-flash"]
         ))
@@ -178,6 +183,7 @@ class ModelRegistry:
             ),
             tier_availability=["free", "paid"],
             priority=90,
+            recommended=True,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["google/gemini-2.5-flash-lite"]
         ))
@@ -199,13 +205,14 @@ class ModelRegistry:
                 input_cost_per_million_tokens=1.25, # 	$1.25, prompts <= 200k tokens
                 output_cost_per_million_tokens=10.00 # 	$10.00, responses <= 200k tokens
             ),
+            recommended=False,
             tier_availability=["paid"],
             priority=90,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-3-pro-preview"]
         ))
 
-        # Claude Sonnet 4.5 (via Vertex AI)
+        # Claude Sonnet 4.5 Max Context (via Vertex AI)
         self.register(Model(
             id="vertex_ai/claude-sonnet-4-5@20250929",
             name="Claude Sonnet 4.5 Max",
@@ -234,7 +241,7 @@ class ModelRegistry:
             ),
         ))
 
-                # Claude Sonnet 4.5 (via Vertex AI)
+        # Claude Sonnet 4.5 (via Vertex AI)
         self.register(Model(
             id="vertex_ai/claude-sonnet-4-5@20250929",
             name="Claude Sonnet 4.5",
@@ -252,7 +259,7 @@ class ModelRegistry:
                 input_cost_per_million_tokens=3.00,
                 output_cost_per_million_tokens=15.00
             ),
-            tier_availability=["paid"],
+            tier_availability=["free","paid"],
             priority=106,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-3-pro-preview"],
@@ -283,6 +290,7 @@ class ModelRegistry:
             ),
             tier_availability=["paid"],
             priority=110,
+            recommended=True,
             enabled=config.VERTEX_AI_PROJECT is not None,
             fallback_models=["vertex_ai/gemini-2.5-flash"],
             config=ModelConfig(

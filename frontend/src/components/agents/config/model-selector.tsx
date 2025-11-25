@@ -453,7 +453,7 @@ export function AgentModelSelector({
           className="w-80 p-0 overflow-hidden"
           sideOffset={variant === 'menu-item' ? 8 : 4}
         >
-          <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full">
+          <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent w-full">
             <div>
               <div className="flex justify-between items-center">
                 <span className="text-xs font-medium text-muted-foreground p-2 px-4">All Models</span>
