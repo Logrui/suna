@@ -238,3 +238,18 @@ apps/mobile/app-example
 .windsurf/
 .agent/
 .backend.credentials/
+
+# --- Shadow Repo Links ---
+.docs
+.github
+.specify
+.vscode
+.windsurf
+.agent
+.claude
+.cloudflared
+.env.local
+
+# --- Shadow Repo Links ---
+
+# --- Shadow Repo Links ---
