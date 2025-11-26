@@ -33,8 +33,10 @@ def get_proxy_preview_url(sandbox_id: str, port: int, path: str = "") -> str:
     """
     base_url = config.WEBHOOK_BASE_URL or "http://localhost:8000"
     
-    # Ensure path starts with / if not empty
-    if path and not path.startswith('/'):
+    # Ensure path starts with / if not empty, or is / if empty
+    if not path:
+        path = "/"
+    elif not path.startswith('/'):
         path = f"/{path}"
     
     return f"{base_url}/api/sandboxes/{sandbox_id}/proxy/{port}{path}"

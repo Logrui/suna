@@ -160,15 +160,21 @@ async def verify_and_get_user_id_from_jwt(request: Request) -> str:
             )
 
     auth_header = request.headers.get('Authorization')
+    token = None
     
-    if not auth_header or not auth_header.startswith('Bearer '):
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    elif request.query_params.get('token'):
+        token = request.query_params.get('token')
+    elif request.cookies.get('suna-auth-token'):
+        token = request.cookies.get('suna-auth-token')
+    
+    if not token:
         raise HTTPException(
             status_code=401,
             detail="No valid authentication credentials found",
             headers={"WWW-Authenticate": "Bearer"}
         )
-    
-    token = auth_header.split(' ')[1]
     
     try:
         payload = _decode_jwt_safely(token)
@@ -241,11 +247,17 @@ async def get_user_id_from_stream_auth(
 
 async def get_optional_user_id(request: Request) -> Optional[str]:
     auth_header = request.headers.get('Authorization')
+    token = None
 
-    if not auth_header or not auth_header.startswith('Bearer '):
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    elif request.query_params.get('token'):
+        token = request.query_params.get('token')
+    elif request.cookies.get('suna-auth-token'):
+        token = request.cookies.get('suna-auth-token')
+
+    if not token:
         return None
-
-    token = auth_header.split(' ')[1]
 
     try:
         payload = _decode_jwt_safely(token)

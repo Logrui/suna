@@ -512,6 +512,16 @@ async def create_file_in_project(
         logger.error(f"Error uploading file to project {project_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/sandboxes/{sandbox_id}/proxy/{port}")
+async def proxy_daytona_preview_root(
+    sandbox_id: str,
+    port: int,
+    request: Request,
+    user_id: Optional[str] = Depends(get_optional_user_id)
+):
+    """Handle proxy requests without a trailing slash/path"""
+    return await proxy_daytona_preview(sandbox_id, port, "", request, user_id)
+
 @router.get("/sandboxes/{sandbox_id}/proxy/{port}/{path:path}")
 async def proxy_daytona_preview(
     sandbox_id: str,
@@ -523,63 +533,103 @@ async def proxy_daytona_preview(
     """
     Proxy a request to the Daytona preview URL, injecting the header to skip the warning.
     """
-    # Construct the Daytona preview URL
-    # Format: https://{port}-{sandbox_id}.proxy.daytona.work/{path}
-    # Note: We might need to check if the sandbox ID needs to be the full ID or if there's a specific format.
-    # Based on docs: https://3000-sandbox-123456.proxy.daytona.work
-    # We'll assume sandbox_id is the full ID.
+    logger.debug(f"Proxy request: sandbox={sandbox_id} port={port} path={path}")
     
-    # Check if we have a custom Daytona server URL that implies a different proxy structure
-    # But for now, we'll stick to the standard daytona.work structure or try to derive it.
-    # Actually, the docs say: https://{port}-{sandbox_id}.proxy.daytona.work
-    
-    target_url = f"https://{port}-{sandbox_id}.proxy.daytona.work/{path}"
-    if request.query_params:
-        target_url += f"?{request.query_params}"
-        
-    logger.debug(f"Proxying request for sandbox {sandbox_id} port {port} to {target_url}")
-    
-    # Verify access (optional, but good practice if we want to restrict who can view)
-    # For now, we'll allow it if the project is public or if the user has access, 
-    # but since this is often for sharing, we might want to be lenient or check the project's public status.
-    # However, the original Daytona link is public if the sandbox is public.
-    # Let's do a quick check if we can, but maybe skip strict auth for now to match Daytona's "public" behavior if enabled.
-    # If we want to enforce Suna auth, we should uncomment the verification.
-    # await verify_sandbox_access_optional(await db.client, sandbox_id, user_id)
+    client = await db.client
+    # Verify access (optional but recommended)
+    await verify_sandbox_access_optional(client, sandbox_id, user_id)
 
-    import httpx
-    from fastapi.responses import StreamingResponse
-    
-    client = httpx.AsyncClient(follow_redirects=True)
-    
-    async def stream_generator():
-        try:
-            async with client.stream('GET', target_url, headers={'X-Daytona-Skip-Preview-Warning': 'true'}) as response:
-                # Stream the response content
-                async for chunk in response.aiter_bytes():
-                    yield chunk
-        except Exception as e:
-            logger.error(f"Error streaming from Daytona: {e}")
-            yield b"Error proxying content"
-        finally:
-            await client.aclose()
-
-    # We need to get the headers from the initial request to pass back content-type, etc.
-    # But we can't await the stream context manager here easily with StreamingResponse in this structure.
-    # Better approach:
-    
     try:
-        req = client.build_request('GET', target_url, headers={'X-Daytona-Skip-Preview-Warning': 'true'})
-        r = await client.send(req, stream=True)
+        # Get the sandbox to retrieve the correct preview URL dynamically
+        sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
+        
+        # Get the authoritative preview URL from Daytona
+        # This handles different domains (daytona.app, daytona.work, etc.) automatically
+        preview_link_obj = await sandbox.get_preview_link(port)
+        base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
+        
+        # Strip trailing slash from base if present to avoid double slashes
+        base_target_url = base_target_url.rstrip('/')
+        
+        # Construct full target URL
+        # Ensure path starts with / if it's not empty
+        if path and not path.startswith('/'):
+            path = f"/{path}"
+            
+        target_url = f"{base_target_url}{path}"
+        
+        if request.query_params:
+            target_url += f"?{request.query_params}"
+            
+        logger.debug(f"Proxying to upstream Daytona URL: {target_url}")
+
+        import httpx
+        from fastapi.responses import StreamingResponse
+        
+        # Create client without follow_redirects=True initially to debug, 
+        # but we likely need it. However, we must ensure headers persist.
+        # httpx strips Authorization headers on redirect, but custom headers should persist 
+        # unless it's a cross-origin redirect which might be tricky.
+        # For now, keep follow_redirects=True.
+        async_client = httpx.AsyncClient(follow_redirects=True, verify=False) # Disable SSL verify for upstream if needed
+        
+        # Disable compression to ensure we can sniff the content type correctly
+        # and to avoid double-compression issues
+        headers = {
+            'X-Daytona-Skip-Preview-Warning': 'true',
+            'Accept-Encoding': 'identity'
+        }
+        
+        req = async_client.build_request('GET', target_url, headers=headers)
+        
+        logger.debug(f"Sending proxy request to: {target_url} with headers: {headers}")
+        
+        r = await async_client.send(req, stream=True)
+        
+        logger.debug(f"Upstream response: {r.status_code} Content-Type: {r.headers.get('content-type')}")
+        
+        # Determine content type
+        content_type = r.headers.get("content-type")
+        
+        # Create an iterator for the response bytes
+        iterator = r.aiter_bytes()
+        first_chunk = b""
+        
+        # If content type is generic or missing, try to sniff the content
+        # This is more robust than checking file extensions
+        if not content_type or 'text/plain' in content_type or 'application/octet-stream' in content_type:
+            try:
+                # Peek at the first chunk
+                first_chunk = await iterator.__anext__()
+                
+                # Simple sniffing for HTML
+                # Check for common HTML tags at the start (ignoring whitespace)
+                sample = first_chunk[:1024].strip().lower()
+                logger.debug(f"Sniffing sample (len={len(sample)}): {sample[:50]}...")
+                
+                if sample.startswith(b'<!doctype html') or sample.startswith(b'<html'):
+                    content_type = 'text/html; charset=utf-8'
+                    logger.debug(f"Sniffed HTML content for {path}, forcing Content-Type: {content_type}")
+            except StopAsyncIteration:
+                # Empty body
+                logger.debug("Empty response body from upstream")
+                pass
+            except Exception as e:
+                logger.warning(f"Error sniffing content type: {e}")
+        
+        async def stream_generator():
+            if first_chunk:
+                yield first_chunk
+            async for chunk in iterator:
+                yield chunk
         
         return StreamingResponse(
-            r.aiter_bytes(),
+            stream_generator(),
             status_code=r.status_code,
-            media_type=r.headers.get("content-type"),
-            background=None # We could close client here if we wrapped it differently
+            media_type=content_type,
+            background=None 
         )
     except Exception as e:
-        await client.aclose()
-        logger.error(f"Error setting up proxy: {e}")
-        raise HTTPException(status_code=502, detail="Failed to proxy request to Daytona")
+        logger.error(f"Error proxying to Daytona: {e}")
+        raise HTTPException(status_code=502, detail=f"Failed to proxy request: {str(e)}")
 

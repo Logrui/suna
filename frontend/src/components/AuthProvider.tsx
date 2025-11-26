@@ -60,6 +60,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
+        // Sync auth token to cookie for backend proxy access (e.g. Daytona previews)
+        if (newSession?.access_token) {
+          document.cookie = `suna-auth-token=${newSession.access_token}; path=/; max-age=${newSession.expires_in}; SameSite=Lax; Secure`;
+        } else if (event === 'SIGNED_OUT') {
+          document.cookie = 'suna-auth-token=; path=/; max-age=0; SameSite=Lax; Secure';
+        }
+
         if (isLoading) setIsLoading(false);
         switch (event) {
           case 'SIGNED_IN':

@@ -19,14 +19,11 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
   const [iframeKey, setIframeKey] = useState(0);
 
   // Use the enhanced VNC preloader hook
-  const { status, retryCount, retry, isPreloaded } = useVncPreloader(sandbox, {
+  const { status, retryCount, retry, isPreloaded, accessToken } = useVncPreloader(sandbox, {
     maxRetries: 5,
     initialDelay: 1000,
     timeoutMs: 5000
   });
-
-
-
 
   // VNC URL received but preloading in progress
   if (status === 'loading') {
@@ -88,6 +85,13 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
                 if (typeof window !== 'undefined' && window.location.protocol === 'https:' && vncUrl.startsWith('http:')) {
                   vncUrl = vncUrl.replace('http:', 'https:');
                 }
+
+                // Append auth token if available (for private projects)
+                if (accessToken) {
+                  const separator = vncUrl.includes('?') ? '&' : '?';
+                  vncUrl = `${vncUrl}${separator}token=${accessToken}`;
+                }
+
                 return vncUrl;
               })()}
               title="Browser preview"

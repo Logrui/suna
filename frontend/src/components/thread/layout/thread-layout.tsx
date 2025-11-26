@@ -6,6 +6,13 @@ import { Project } from '@/lib/api/projects';
 import { ApiMessageType } from '@/components/thread/types';
 import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
 import { useIsMobile } from '@/hooks/utils';
+import * as ResizablePrimitive from 'react-resizable-panels';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import { cn } from "@/lib/utils"
 
 interface ThreadLayoutProps {
   children: React.ReactNode;
@@ -39,6 +46,7 @@ interface ThreadLayoutProps {
   disableInitialAnimation?: boolean;
   compact?: boolean;
   variant?: 'default' | 'shared';
+  chatInput?: React.ReactNode;
 }
 
 export function ThreadLayout({
@@ -72,9 +80,35 @@ export function ThreadLayout({
   agentName,
   disableInitialAnimation = false,
   compact = false,
-  variant = 'default'
+  variant = 'default',
+  chatInput
 }: ThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
+
+  // Track when panel should be visible
+  const shouldShowPanel = isSidePanelOpen && initialLoadCompleted;
+
+  // Refs for panel APIs to control sizes programmatically
+  const mainPanelRef = React.useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+  const sidePanelRef = React.useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+
+  // Update sizes when panel visibility changes with smooth animation
+  React.useEffect(() => {
+    if (shouldShowPanel) {
+      // Open panel smoothly
+      requestAnimationFrame(() => {
+        sidePanelRef.current?.resize(40);
+        mainPanelRef.current?.resize(60);
+      });
+    } else {
+      // Close panel - resize smoothly, content disappears immediately
+      const timeout = setTimeout(() => {
+        sidePanelRef.current?.resize(0);
+        mainPanelRef.current?.resize(100);
+      }, 0);
+      return () => clearTimeout(timeout);
+    }
+  }, [shouldShowPanel]);
 
   // Compact mode for embedded use
   if (compact) {
@@ -134,51 +168,80 @@ export function ThreadLayout({
 
   // Full layout mode
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       {debugMode && (
         <div className="fixed top-16 right-4 bg-amber-500 text-black text-xs px-2 py-1 rounded-md shadow-md z-50">
           Debug Mode
         </div>
       )}
 
-      <div
-        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${(!initialLoadCompleted || (isSidePanelOpen && !isActuallyMobile))
-          ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]'
-          : ''
-          }`}
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="h-full w-full"
+        style={{ transition: 'none' }}
       >
-        <SiteHeader
-          threadId={threadId}
-          projectName={projectName}
-          projectId={projectId}
-          onViewFiles={onViewFiles}
-          onToggleSidePanel={onToggleSidePanel}
-          onProjectRenamed={onProjectRenamed}
-          isMobileView={isMobile}
-          debugMode={debugMode}
-          variant={variant}
+        <ResizablePanel
+          ref={mainPanelRef}
+          defaultSize={shouldShowPanel ? 60 : 100}
+          minSize={shouldShowPanel ? 30 : 100}
+          maxSize={shouldShowPanel ? 95 : 100}
+          className="flex flex-col h-full overflow-hidden relative bg-transparent"
+        >
+          <div className="flex flex-col h-full overflow-hidden">
+            <SiteHeader
+              threadId={threadId}
+              projectName={projectName}
+              projectId={projectId}
+              onViewFiles={onViewFiles}
+              onToggleSidePanel={onToggleSidePanel}
+              onProjectRenamed={onProjectRenamed}
+              isMobileView={isMobile}
+              debugMode={debugMode}
+              variant={variant}
+            />
+            {children}
+            {chatInput}
+          </div>
+        </ResizablePanel>
+
+        {/* Resizable handle - always render */}
+        <ResizableHandle
+          withHandle={true}
+          className="z-20 w-0"
         />
 
-        {children}
-      </div>
-
-      <ToolCallSidePanel
-        isOpen={isSidePanelOpen && initialLoadCompleted}
-        onClose={onSidePanelClose}
-        toolCalls={toolCalls}
-        messages={messages}
-        externalNavigateToIndex={externalNavIndex}
-        agentStatus={agentStatus}
-        currentIndex={currentToolIndex}
-        onNavigate={onSidePanelNavigate}
-        project={project || undefined}
-        renderAssistantMessage={renderAssistantMessage}
-        renderToolResult={renderToolResult}
-        isLoading={!initialLoadCompleted || isLoading}
-        onFileClick={onViewFiles}
-        agentName={agentName}
-        disableInitialAnimation={disableInitialAnimation}
-      />
+        {/* Side panel - always render but control size */}
+        <ResizablePanel
+          ref={sidePanelRef}
+          defaultSize={shouldShowPanel ? 30 : 0}
+          minSize={shouldShowPanel ? 20 : 0}
+          maxSize={shouldShowPanel ? 70 : 0}
+          collapsible={true}
+          className={cn(
+            "relative bg-transparent",
+            shouldShowPanel ? "pr-4 pb-5 pt-4" : "px-0",
+            !shouldShowPanel ? "hidden" : ""
+          )}
+        >
+          <ToolCallSidePanel
+            isOpen={isSidePanelOpen && initialLoadCompleted}
+            onClose={onSidePanelClose}
+            toolCalls={toolCalls}
+            messages={messages}
+            externalNavigateToIndex={externalNavIndex}
+            agentStatus={agentStatus}
+            currentIndex={currentToolIndex}
+            onNavigate={onSidePanelNavigate}
+            project={project || undefined}
+            renderAssistantMessage={renderAssistantMessage}
+            renderToolResult={renderToolResult}
+            isLoading={!initialLoadCompleted || isLoading}
+            onFileClick={onViewFiles}
+            agentName={agentName}
+            disableInitialAnimation={disableInitialAnimation}
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {sandboxId && (
         <FileViewerModal

@@ -316,8 +316,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     const { preloadFiles } = useFilePreloader();
 
     const containerClassName = isPreviewMode
-        ? "flex-1 overflow-y-auto scrollbar-thin scrollbar-track-secondary/0 scrollbar-thumb-primary/10 scrollbar-thumb-rounded-full hover:scrollbar-thumb-primary/10 px-6 py-4 pb-0"
-        : "flex-1 overflow-y-auto scrollbar-thin scrollbar-track-secondary/0 scrollbar-thumb-primary/10 scrollbar-thumb-rounded-full hover:scrollbar-thumb-primary/10 px-6 py-4 pb-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60";
+        ? "flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide px-6 py-4 pb-0"
+        : "flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide px-6 py-4 pb-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60";
 
     // In playback mode, we use visibleMessages instead of messages
     const displayMessages = readOnly && visibleMessages ? visibleMessages : messages;
@@ -635,8 +635,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                 <div key={group.key} className="flex justify-end">
                                                     <div className="flex max-w-[85%] rounded-2xl bg-card px-4 py-3 break-words overflow-hidden">
                                                         <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto min-w-0 flex-1">
-                                                            {typeof message.content === 'string' 
-                                                                ? message.content 
+                                                            {typeof message.content === 'string'
+                                                                ? message.content
                                                                 : JSON.stringify(message.content, null, 2)}
                                                         </pre>
                                                     </div>

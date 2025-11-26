@@ -15,14 +15,15 @@ interface VncPreloaderResult {
   retry: () => void;
   isPreloaded: boolean;
   preloadedIframe: HTMLIFrameElement | null;
+  accessToken: string | null;
 }
 
 export function useVncPreloader(
-  sandbox: { vnc_preview?: string; pass?: string } | null, 
+  sandbox: { vnc_preview?: string; pass?: string } | null,
   options: VncPreloaderOptions = {}
 ): VncPreloaderResult {
   const { maxRetries = 5, initialDelay = 1000, timeoutMs = 5000 } = options;
-  
+
   const [status, setStatus] = useState<VncStatus>('idle');
   const [retryCount, setRetryCount] = useState(0);
   const preloadedIframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -54,15 +55,15 @@ export function useVncPreloader(
       if (iframe.parentNode) {
         iframe.parentNode.removeChild(iframe);
       }
-      
+
       // Retry if we haven't exceeded max retries
       if (retryCount < maxRetries) {
         isRetryingRef.current = false;
-        
+
         // Exponential backoff: 2s, 3s, 4.5s, 6.75s, etc. (max 10s)
         const delay = Math.min(2000 * Math.pow(1.5, retryCount), 10000);
         console.log(`🔄 VNC preload failed, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
-        
+
         retryTimeoutRef.current = setTimeout(() => {
           setRetryCount(prev => prev + 1);
           startPreloading(vncUrl);
@@ -87,18 +88,18 @@ export function useVncPreloader(
     // Handle iframe load errors
     iframe.onerror = () => {
       clearTimeout(loadTimeout);
-      
+
       // Clean up current iframe
       if (iframe.parentNode) {
         iframe.parentNode.removeChild(iframe);
       }
-      
+
       // Retry if we haven't exceeded max retries
       if (retryCount < maxRetries) {
         isRetryingRef.current = false;
-        
+
         const delay = Math.min(2000 * Math.pow(1.5, retryCount), 10000);
-        
+
         retryTimeoutRef.current = setTimeout(() => {
           setRetryCount(prev => prev + 1);
           startPreloading(vncUrl);
@@ -149,26 +150,47 @@ export function useVncPreloader(
     // Cleanup function
     return () => {
       clearTimeout(initialDelayTimeout);
-      
+
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
       }
-      
+
       if (preloadedIframeRef.current && preloadedIframeRef.current.parentNode) {
         preloadedIframeRef.current.parentNode.removeChild(preloadedIframeRef.current);
         preloadedIframeRef.current = null;
       }
-      
+
       isRetryingRef.current = false;
     };
   }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading, initialDelay, status]);
+
+  // Fetch auth token for private project access
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchToken = async () => {
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          setAccessToken(session.access_token);
+        }
+      } catch (err) {
+        console.error('[VncPreloader] Failed to fetch auth token:', err);
+      }
+    };
+
+    fetchToken();
+  }, []);
 
   return {
     status,
     retryCount,
     retry,
     isPreloaded: status === 'ready',
-    preloadedIframe: preloadedIframeRef.current
+    preloadedIframe: preloadedIframeRef.current,
+    accessToken
   };
-} 
+}

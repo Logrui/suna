@@ -1085,6 +1085,51 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   }
 
   // Full layout version for dedicated thread pages
+  // Prepare ChatInput component
+  const chatInputElement = !isShared ? (
+    <div className={cn(
+      'mx-auto w-full max-w-3xl px-4 pb-4 pt-2',
+      'bg-gradient-to-t from-background via-background/95 to-transparent'
+    )}>
+      <ChatInput
+        onSubmit={handleSubmitMessage}
+        placeholder={`Describe what you need help with...`}
+        loading={isSending}
+        disabled={
+          isSending ||
+          agentStatus === 'running' ||
+          agentStatus === 'connecting'
+        }
+        isAgentRunning={
+          agentStatus === 'running' || agentStatus === 'connecting'
+        }
+        onStopAgent={handleStopAgent}
+        autoFocus={!isLoading}
+        enableAdvancedConfig={false}
+        onFileBrowse={handleOpenFileViewer}
+        sandboxId={sandboxId || undefined}
+        projectId={projectId}
+        messages={messages}
+        agentName={agent && agent.name}
+        selectedAgentId={selectedAgentId}
+        onAgentSelect={handleAgentSelect}
+        threadId={threadId}
+        hideAgentSelection={!!configuredAgentId}
+        toolCalls={toolCalls}
+        toolCallIndex={currentToolIndex}
+        showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
+        onExpandToolPreview={() => {
+          setIsSidePanelOpen(true);
+          userClosedPanelRef.current = false;
+        }}
+        defaultShowSnackbar="tokens"
+        showScrollToBottomIndicator={showScrollToBottom}
+        onScrollToBottom={scrollToBottom}
+        bgColor="bg-card"
+      />
+    </div>
+  ) : undefined;
+
   return (
     <>
       <ThreadLayout
@@ -1121,6 +1166,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         agentName={agent && agent.name}
         disableInitialAnimation={!initialLoadCompleted && toolCalls.length > 0}
         variant={isShared ? 'shared' : 'default'}
+        chatInput={chatInputElement}
       >
         <ThreadContent
           messages={isShared ? playback.playbackState.visibleMessages : messages}
@@ -1142,62 +1188,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agentAvatar={undefined}
           scrollContainerRef={scrollContainerRef}
         />
-
-        {!isShared && (
-          <div
-            className={cn(
-              'fixed bottom-0 z-10 bg-gradient-to-t from-background via-background/90 to-transparent px-4 pt-8',
-              isSidePanelAnimating
-                ? ''
-                : 'transition-all duration-200 ease-in-out',
-              leftSidebarState === 'expanded'
-                ? 'left-[94px] md:left-[320px]'
-                : 'left-[94px]',
-              isSidePanelOpen && !isMobile
-                ? 'right-[90%] sm:right-[450px] md:right-[500px] lg:right-[550px] xl:right-[650px]'
-                : 'right-0',
-              isMobile ? 'left-0 right-0' : '',
-            )}
-          >
-            <div className={cn('mx-auto', isMobile ? 'w-full' : 'max-w-3xl')}>
-              <ChatInput
-                onSubmit={handleSubmitMessage}
-                placeholder={`Describe what you need help with...`}
-                loading={isSending}
-                disabled={
-                  isSending ||
-                  agentStatus === 'running' ||
-                  agentStatus === 'connecting'
-                }
-                isAgentRunning={
-                  agentStatus === 'running' || agentStatus === 'connecting'
-                }
-                onStopAgent={handleStopAgent}
-                autoFocus={!isLoading}
-                enableAdvancedConfig={false}
-                onFileBrowse={handleOpenFileViewer}
-                sandboxId={sandboxId || undefined}
-                projectId={projectId}
-                messages={messages}
-                agentName={agent && agent.name}
-                selectedAgentId={selectedAgentId}
-                onAgentSelect={handleAgentSelect}
-                threadId={threadId}
-                hideAgentSelection={!!configuredAgentId}
-                toolCalls={toolCalls}
-                toolCallIndex={currentToolIndex}
-                showToolPreview={!isSidePanelOpen && toolCalls.length > 0}
-                onExpandToolPreview={() => {
-                  setIsSidePanelOpen(true);
-                  userClosedPanelRef.current = false;
-                }}
-                defaultShowSnackbar="tokens"
-                showScrollToBottomIndicator={showScrollToBottom}
-                onScrollToBottom={scrollToBottom}
-              />
-            </div>
-          </div>
-        )}
 
         {isShared && (
           <PlaybackFloatingControls
