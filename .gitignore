@@ -240,16 +240,17 @@ apps/mobile/app-example
 .backend.credentials/
 
 # --- Shadow Repo Links ---
-.docs
-.github
-.specify
-.vscode
-.windsurf
-.agent
-.claude
-.cloudflared
+.docs/
+.github/
+.specify/
+.vscode/
+.windsurf/
+.agent/
+.claude/
+.cloudflared/
 .env.local
-
 # --- Shadow Repo Links ---
+.docs
+.cloudflared
 
 # --- Shadow Repo Links ---
