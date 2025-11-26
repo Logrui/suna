@@ -37,6 +37,7 @@ class ContextManager:
         self.keep_recent_assistant_messages = 10  # Number of recent assistant messages to keep uncompressed
         # Initialize Anthropic client for accurate token counting
         self._anthropic_client = None
+        self._bedrock_client = None
 
     def _get_anthropic_client(self):
         """Lazy initialization of Anthropic client."""
@@ -46,10 +47,21 @@ class ContextManager:
                 self._anthropic_client = Anthropic(api_key=api_key)
         return self._anthropic_client
 
+    def _get_bedrock_client(self):
+        """Lazy initialization of Bedrock client."""
+        if self._bedrock_client is None:
+            try:
+                import boto3
+                self._bedrock_client = boto3.client('bedrock-runtime', region_name='us-west-2')
+            except Exception as e:
+                logger.debug(f"Could not initialize Bedrock client: {e}")
+        return self._bedrock_client
+
     async def count_tokens(self, model: str, messages: List[Dict[str, Any]], system_prompt: Optional[Dict[str, Any]] = None, apply_caching: bool = True) -> int:
         """Count tokens using the correct tokenizer for the model.
         
         For Anthropic/Claude models: Uses Anthropic's official tokenizer
+        For Bedrock models: Uses Bedrock's count_tokens API
         For other models: Uses LiteLLM's token_counter
         
         IMPORTANT: By default, applies caching transformation before counting to match
@@ -119,6 +131,79 @@ class ContextManager:
                     return result.input_tokens
             except Exception as e:
                 logger.debug(f"Anthropic token counting failed, falling back to LiteLLM: {e}")
+        
+        # Check if this is a Bedrock model
+        elif 'bedrock' in model.lower():
+            try:
+                bedrock_client = self._get_bedrock_client()
+                if bedrock_client:
+                    # Map profile IDs to model IDs
+                    model_id_mapping = {
+                        "heol2zyy5v48": "anthropic.claude-3-5-haiku-20241022-v1:0",
+                        "few7z4l830xh": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+                        "tyj1ks3nj9qf": "anthropic.claude-sonnet-4-20250514-v1:0",
+                    }
+                    
+                    # Extract profile ID from ARN
+                    bedrock_model_id = None
+                    if "application-inference-profile" in model:
+                        profile_id = model.split("/")[-1]
+                        bedrock_model_id = model_id_mapping.get(profile_id)
+                    
+                    if not bedrock_model_id:
+                        bedrock_model_id = "anthropic.claude-3-5-haiku-20241022-v1:0"
+                    
+                    # Clean content blocks for Bedrock Converse API
+                    def clean_content_for_bedrock(content):
+                        """
+                        Convert Anthropic format to Bedrock Converse API format.
+                        Converts cache_control -> cachePoint to preserve cache overhead in token counts.
+                        """
+                        if isinstance(content, str):
+                            return [{'text': content}]
+                        elif isinstance(content, list):
+                            cleaned = []
+                            for block in content:
+                                if isinstance(block, dict):
+                                    # Extract text
+                                    if 'text' in block:
+                                        cleaned.append({'text': block['text']})
+                                        # Convert cache_control to cachePoint (separate block)
+                                        if 'cache_control' in block:
+                                            cleaned.append({'cachePoint': {'type': 'default'}})
+                            return cleaned if cleaned else [{'text': str(content)}]
+                        return [{'text': str(content)}]
+                    
+                    # Format messages for Bedrock
+                    bedrock_messages = []
+                    system_content = None
+                    
+                    for msg in messages_to_count:
+                        if msg.get('role') == 'system':
+                            system_content = clean_content_for_bedrock(msg.get('content'))
+                            continue
+                        
+                        bedrock_messages.append({
+                            'role': msg.get('role'),
+                            'content': clean_content_for_bedrock(msg.get('content'))
+                        })
+                    
+                    # Build input
+                    input_to_count = {'messages': bedrock_messages}
+                    if system_content:
+                        input_to_count['system'] = system_content
+                    elif system_to_count:
+                        input_to_count['system'] = clean_content_for_bedrock(system_to_count.get('content'))
+                    
+                    # Call Bedrock count_tokens API
+                    response = bedrock_client.count_tokens(
+                        modelId=bedrock_model_id,
+                        input={'converse': input_to_count}
+                    )
+                    
+                    return response['inputTokens']
+            except Exception as e:
+                logger.debug(f"Bedrock token counting failed, falling back to LiteLLM: {e}")
         
         # Fallback to LiteLLM token_counter
         if system_to_count:

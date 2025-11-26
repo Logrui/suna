@@ -10,18 +10,19 @@ import React, {
   useMemo,
   memo,
 } from 'react';
-import { useAgents } from '@/hooks/react-query/agents/use-agents';
+import { useAgents } from '@/hooks/agents/use-agents';
 import { useAgentSelection } from '@/stores/agent-selection-store';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { handleFiles, FileUploadHandler } from './file-upload-handler';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, CornerDownLeft, Plug, ScanSearch } from 'lucide-react';
+import { ArrowUp, X, Image as ImageIcon, Presentation, BarChart3, FileText, Search, Users, Code2, Sparkles, Brain as BrainIcon, MessageSquare, ScanSearch, CornerDownLeft, Plug } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { VoiceRecorder } from './voice-recorder';
-
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTheme } from 'next-themes';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UnifiedConfigMenu } from './unified-config-menu';
 import { AttachmentGroup } from '../attachment-group';
 import { cn } from '@/lib/utils';
@@ -208,10 +209,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
     const [mounted, setMounted] = useState(false);
     const [animatedPlaceholder, setAnimatedPlaceholder] = useState('');
-    const [isModeDismissing, setIsModeDismissing] = useState(false);
-    const ENABLE_SUNA_AGENT_MODES = true; // Suna Agent Modes feature flag
+    const [isModeDismissing, setIsModeDismissing] = useState(false);    // Suna Agent Modes feature flag
+    const ENABLE_SUNA_AGENT_MODES = false;
     const [sunaAgentModes, setSunaAgentModes] = useState<'adaptive' | 'autonomous' | 'chat'>('adaptive');
-
 
     const {
       selectedModel,
@@ -226,6 +226,12 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     const { data: subscriptionData } = useSubscriptionData();
     const deleteFileMutation = useFileDelete();
     const queryClient = useQueryClient();
+
+    // Chat input button has inverted background from theme
+    // Dark theme → light button → needs black loader
+    // Light theme → dark button → needs white loader
+    const { resolvedTheme } = useTheme();
+    const buttonLoaderVariant = (resolvedTheme === 'dark' ? 'black' : 'white') as 'black' | 'white';
 
     // Define quick integrations
     const quickIntegrations = useMemo(() => [
@@ -244,10 +250,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       'googledrive': googleDriveIcon?.icon_url,
       'slack': slackIcon?.icon_url,
       'notion': notionIcon?.icon_url,
-    }), [googleDriveIcon, slackIcon, notionIcon]);
-
-
-    // Show usage preview logic:
+    }), [googleDriveIcon, slackIcon, notionIcon]);    // Show usage preview logic:
     // - Always show to free users when showToLowCreditUsers is true
     // - For paid users, only show when they're at 70% or more of their cost limit (30% or below remaining)
     const shouldShowUsage = useMemo(() => {
@@ -287,12 +290,16 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       setLocalValue,
     });
 
-    const { data: agentsResponse } = useAgents({}, { enabled: isLoggedIn });
+    const { data: agentsResponse, isLoading: isLoadingAgents } = useAgents({}, { enabled: isLoggedIn });
     const agents = agentsResponse?.agents || [];
 
     // Check if selected agent is Suna based on agent data
+    // While loading, default to Suna (assume Suna is the default agent)
     const selectedAgent = agents.find(agent => agent.agent_id === selectedAgentId);
-    const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
+    const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default === true);
+    const isSunaAgent = isLoadingAgents
+      ? true // Show Suna modes while loading
+      : (selectedAgent?.metadata?.is_suna_default || (!selectedAgentId && sunaAgent !== undefined) || false);
 
     const { initializeFromAgents } = useAgentSelection();
     useImperativeHandle(ref, () => ({
@@ -420,8 +427,6 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       return () => window.removeEventListener('resize', adjustHeight);
     }, [value]);
 
-
-
     useEffect(() => {
       if (autoFocus && textareaRef.current) {
         textareaRef.current.focus();
@@ -505,7 +510,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
       // For now, keep the text visible until stream starts
 
       setUploadedFiles([]);
-    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, generateWideResearchMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange]);
+    }, [value, uploadedFiles, loading, disabled, isAgentRunning, isUploading, onStopAgent, generateDataOptionsMarkdown, generateSlidesTemplateMarkdown, getActualModelId, selectedModel, onSubmit, selectedAgentId, isControlled, controlledOnChange]);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
@@ -680,16 +685,16 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             onPaste={handlePaste}
             placeholder={animatedPlaceholder}
             className={cn(
-              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none relative z-10',
+              'w-full bg-transparent dark:bg-transparent border-none shadow-none focus-visible:ring-0 px-0.5 pb-6 pt-4 !text-[15px] min-h-[72px] max-h-[200px] overflow-y-auto resize-none',
               isDraggingOver ? 'opacity-40' : '',
               slashCommandsLogic.getCaretClass(value),
             )}
-            disabled={loading || (disabled && !isAgentRunning) || hasSubmitted}
+            disabled={disabled && !isAgentRunning}
             rows={1}
           />
         </div>
       </div>
-    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, loading, disabled, isAgentRunning, hasSubmitted, slashCommandsLogic, handleSlashCommandSelect, handleSlashCommandClose]);
+    ), [value, handleChange, handleKeyDown, handlePaste, animatedPlaceholder, isDraggingOver, disabled, isAgentRunning, slashCommandsLogic, handleSlashCommandSelect, handleSlashCommandClose]);
 
     const renderControls = useMemo(() => (
       <div className="flex items-center justify-between mt-0 mb-1 px-2">
@@ -798,8 +803,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <div className="space-y-1">
-                      <p className="font-medium">Adaptive</p>
-                      <p className="text-xs opacity-80">Quick responses with smart context switching</p>
+                      <p className="font-medium text-white">Adaptive</p>
+                      <p className="text-xs text-gray-200">Quick responses with smart context switching</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -820,8 +825,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <div className="space-y-1">
-                      <p className="font-medium">Autonomous</p>
-                      <p className="text-xs opacity-80">Deep work mode for multi-step problem solving</p>
+                      <p className="font-medium text-white">Autonomous</p>
+                      <p className="text-xs text-gray-200">Deep work mode for multi-step problem solving</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -842,8 +847,8 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <div className="space-y-1">
-                      <p className="font-medium">Chat</p>
-                      <p className="text-xs opacity-80">Simple back-and-forth conversation</p>
+                      <p className="font-medium text-white">Chat</p>
+                      <p className="text-xs text-gray-200">Simple back-and-forth conversation</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -869,7 +874,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
               )}
             >
               {selectedMode && getModeIcon(selectedMode)}
-              <span className="text-sm">{selectedMode === 'wide-research' ? 'Wide Research' : selectedMode?.charAt(0).toUpperCase()}{selectedMode !== 'wide-research' && selectedMode?.slice(1)}</span>
+              <span className="text-sm">{selectedMode?.charAt(0).toUpperCase()}{selectedMode?.slice(1)}</span>
               <X className="w-4 h-4" />
             </Button>
           )}
@@ -912,7 +917,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
                     }
                   >
                     {((loading || isUploading) && !isAgentRunning) ? (
-                      <KortixLoader size="small" customSize={20} forceTheme="dark" />
+                      <KortixLoader size="small" customSize={20} variant={buttonLoaderVariant} />
                     ) : isAgentRunning ? (
                       <div className="min-h-[14px] min-w-[14px] w-[14px] h-[14px] rounded-sm bg-current" />
                     ) : (
@@ -930,7 +935,9 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           </div>
         </div>
       </div>
-    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, planModalOpen, setPlanSelectionModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon]);
+    ), [hideAttachments, loading, disabled, isAgentRunning, isUploading, sandboxId, projectId, messages, isLoggedIn, renderConfigDropdown, planModalOpen, setPlanSelectionModalOpen, handleTranscription, onStopAgent, handleSubmit, value, uploadedFiles, selectedMode, onModeDeselect, handleModeDeselect, isModeDismissing, isSunaAgent, sunaAgentModes, pendingFiles, threadId, selectedModel, googleDriveIcon, slackIcon, notionIcon, buttonLoaderVariant]);
+
+    const isSnackVisible = showToolPreview || !!showSnackbar;
 
     return (
       <div className="mx-auto w-full max-w-4xl relative">
@@ -945,14 +952,14 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             subscriptionData={subscriptionData}
             onCloseUsage={() => { setShowSnackbar(false); setUserDismissedUsage(true); }}
             onOpenUpgrade={() => setPlanSelectionModalOpen(true)}
-            isVisible={showToolPreview || !!showSnackbar}
+            isVisible={isSnackVisible}
           />
 
           {/* Scroll to bottom button */}
           {showScrollToBottomIndicator && onScrollToBottom && (
             <button
               onClick={onScrollToBottom}
-              className={`absolute cursor-pointer right-3 z-50 w-8 h-8 rounded-full bg-card border border-border transition-all duration-200 hover:scale-105 flex items-center justify-center ${showToolPreview || !!showSnackbar ? '-top-12' : '-top-5'
+              className={`absolute cursor-pointer right-3 z-50 w-8 h-8 rounded-full bg-card border border-border transition-all duration-200 hover:scale-105 flex items-center justify-center -top-12
                 }`}
               title="Scroll to bottom"
             >
@@ -960,7 +967,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
             </button>
           )}
           <Card
-            className={`-mb-2 shadow-none w-full max-w-4xl mx-auto bg-transparent border-none overflow-visible ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative z-10`}
+            className={`shadow-none w-full max-w-4xl mx-auto bg-transparent border-none overflow-visible py-0 pb-5 ${isSnackVisible ? 'mt-6' : ''} ${enableAdvancedConfig && selectedAgentId ? '' : 'rounded-3xl'} relative z-10`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={(e) => {

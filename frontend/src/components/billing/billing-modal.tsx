@@ -29,14 +29,14 @@ import { useSubscriptionCommitment } from '@/hooks/react-query/subscriptions/use
 import { useQueryClient } from '@tanstack/react-query';
 import { subscriptionKeys } from '@/hooks/react-query/subscriptions/keys';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-    X, 
-    Zap, 
-    AlertTriangle, 
-    Shield, 
-    CheckCircle, 
-    RotateCcw, 
-    Clock 
+import {
+    X,
+    Zap,
+    AlertTriangle,
+    Shield,
+    CheckCircle,
+    RotateCcw,
+    Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -133,7 +133,7 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
     const handleCancel = async () => {
         setIsCancelling(true);
         const originalState = subscriptionData;
-        
+
         try {
             console.log('Cancelling subscription...');
             setShowCancelDialog(false);
@@ -175,7 +175,7 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
     const handleReactivate = async () => {
         setIsCancelling(true);
         const originalState = subscriptionData;
-        
+
         try {
             console.log('Reactivating subscription...');
 
@@ -221,7 +221,7 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
                     </DialogHeader>
                     <div className="p-4 bg-muted/30 border border-border rounded-lg text-center">
                         <p className="text-sm text-muted-foreground">
-                            SYHC Private Suna Kortix mode - billing features are disabled
+                            Private Server/Development mode - billing features are disabled
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
                             All premium features are available in this environment
@@ -240,8 +240,8 @@ export function BillingModal({ open, onOpenChange, returnUrl = typeof window !==
                 </DialogHeader>
 
                 <>
-                    <PricingSection 
-                        returnUrl={returnUrl} 
+                    <PricingSection
+                        returnUrl={returnUrl}
                         showTitleAndTabs={false}
                         onSubscriptionUpdate={() => {
                             setTimeout(() => {

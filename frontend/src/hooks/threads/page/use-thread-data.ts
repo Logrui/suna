@@ -35,33 +35,33 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const initialLoadCompleted = useRef<boolean>(false);
   const messagesLoadedRef = useRef(false);
   const agentRunsCheckedRef = useRef(false);
   const hasInitiallyScrolled = useRef<boolean>(false);
-  
+
 
   const threadQuery = useThreadQuery(threadId);
   const messagesQuery = useMessagesQuery(threadId);
-  
+
   // For shared pages, projectId might be empty - get it from thread data
   const effectiveProjectId = projectId || threadQuery.data?.project_id || '';
   const projectQuery = useProjectQuery(effectiveProjectId);
-  
+
   // Only fetch agent runs if not in shared mode (requires authentication)
   const agentRunsQuery = useAgentRunsQuery(threadId, { enabled: !isShared });
-  
+
   // (debug logs removed)
 
   useEffect(() => {
     let isMounted = true;
-    
+
     // Reset refs when thread changes
     agentRunsCheckedRef.current = false;
     messagesLoadedRef.current = false;
     initialLoadCompleted.current = false;
-    
+
     // Clear messages on thread change; fresh data will set messages
     setMessages([]);
 
@@ -131,28 +131,34 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
         }
 
         // For shared pages, skip agent runs check (anon users don't have access)
-        if (!isShared && agentRunsQuery.data && !agentRunsCheckedRef.current && isMounted) {
+        if (!isShared && (agentRunsQuery.data || agentRunsQuery.isError) && !agentRunsCheckedRef.current && isMounted) {
           // (debug logs removed)
-          
+
           agentRunsCheckedRef.current = true;
-          
-          // Check for any running agents - no time restrictions!
-          const runningRuns = agentRunsQuery.data.filter(r => r.status === 'running');
-          if (runningRuns.length > 0) {
-            const latestRunning = runningRuns[0]; // Use first running agent
-            setAgentRunId(latestRunning.id);
-            setAgentStatus('running');
-          } else {
+
+          if (agentRunsQuery.data) {
+            // Check for any running agents - no time restrictions!
+            const runningRuns = agentRunsQuery.data.filter(r => r.status === 'running');
+            if (runningRuns.length > 0) {
+              const latestRunning = runningRuns[0]; // Use first running agent
+              setAgentRunId(latestRunning.id);
+              setAgentStatus('running');
+            } else {
+              setAgentStatus('idle');
+              setAgentRunId(null);
+            }
+          } else if (agentRunsQuery.isError) {
+            console.warn('Failed to fetch agent runs, defaulting to idle status');
             setAgentStatus('idle');
             setAgentRunId(null);
           }
         }
 
         // For shared pages, only wait for thread and messages data
-        const requiredDataLoaded = isShared 
+        const requiredDataLoaded = isShared
           ? (threadQuery.data && messagesQuery.data)
-          : (threadQuery.data && messagesQuery.data && agentRunsQuery.data);
-          
+          : (threadQuery.data && messagesQuery.data && (agentRunsQuery.data || agentRunsQuery.isError));
+
         if (requiredDataLoaded) {
           initialLoadCompleted.current = true;
           setIsLoading(false);
@@ -192,13 +198,13 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
   useEffect(() => {
     if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
       // (debug logs removed)
-      
+
       // Always reload messages when thread data changes or we have more raw messages than processed
       const shouldReload = messages.length === 0 || messagesQuery.data.length > messages.length + 50; // Allow for status messages
-      
+
       if (shouldReload) {
         // (debug logs removed)
-        
+
         const unifiedMessages = (messagesQuery.data || [])
           .filter((msg) => msg.type !== 'status')
           .map((msg: ApiMessageType) => ({
@@ -230,7 +236,7 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
             const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
             return aTime - bTime;
           });
-          
+
           // Messages set only from server merge; no cross-thread cache
           return merged;
         });

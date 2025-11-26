@@ -114,8 +114,8 @@ class BillingIntegration:
         """
         # Skip all checks in local development mode
         if config.ENV_MODE == EnvMode.LOCAL:
-            logger.debug("SYHC Private Suna Kortix mode - skipping all billing and model access checks")
-            return True, "Local development mode", {"local_mode": True}
+            logger.debug("Private Server/Development mode - skipping all billing and model access checks")
+            return True, "Private Server/Development mode", {"local_mode": True}
         
         try:
             from core.billing.subscription_service import subscription_service

@@ -27,7 +27,7 @@ export default function PersonalAccountBillingPage() {
   const { data: accounts, isLoading, error } = useAccounts();
   const [showBillingModal, setShowBillingModal] = useState(false);
   const triggerTestRenewal = useTriggerTestRenewal();
-  
+
   const { data: transactionData } = useTransactions(1, 0);
 
   const {
@@ -36,7 +36,7 @@ export default function PersonalAccountBillingPage() {
     error: subscriptionError,
     refetch: refetchSubscription,
   } = useSharedSubscription();
-  
+
   const {
     data: commitmentInfo,
     isLoading: commitmentLoading,
@@ -92,8 +92,8 @@ export default function PersonalAccountBillingPage() {
 
   return (
     <div className="space-y-6">
-      <BillingModal 
-        open={showBillingModal} 
+      <BillingModal
+        open={showBillingModal}
         onOpenChange={(open) => {
           setShowBillingModal(open);
           if (!open) {
@@ -123,14 +123,14 @@ export default function PersonalAccountBillingPage() {
           }}
         />
       )}
-      
+
       <div className="rounded-xl border shadow-sm bg-card p-6">
         <h2 className="text-xl font-semibold mb-4">Billing Status</h2>
 
         {isLocalMode() ? (
           <div className="p-4 mb-4 bg-muted/30 border border-border rounded-lg text-center">
             <p className="text-sm text-muted-foreground">
-              SYHC Private Suna Kortix mode - billing features are disabled
+              Private Server/Development mode - billing features are disabled
             </p>
             <p className="text-xs text-muted-foreground mt-2">
               Agent usage limits are not enforced in this environment
@@ -150,9 +150,9 @@ export default function PersonalAccountBillingPage() {
         ) : (
           <>
             <div className="mb-6">
-              <CreditBalanceCard 
+              <CreditBalanceCard
                 showPurchaseButton={
-                  (subscriptionData?.credits?.can_purchase_credits || false) && 
+                  (subscriptionData?.credits?.can_purchase_credits || false) &&
                   subscriptionData?.tier?.name === 'tier_25_200'
                 }
                 tierCredits={subscriptionData?.credits?.tier_credits || subscriptionData?.tier?.credits}
@@ -203,23 +203,23 @@ export default function PersonalAccountBillingPage() {
                   Manage Subscription
                 </Button>
               </div>
-              {cancellationStatus?.has_subscription && 
-               !cancellationStatus?.is_cancelled && 
-               subscriptionData?.subscription?.id && 
-               subscriptionData?.subscription?.status !== 'trialing' && (
-                <CancelSubscriptionButton
-                  subscriptionId={subscriptionData.subscription.id}
-                  hasCommitment={commitmentInfo?.has_commitment}
-                  commitmentEndDate={commitmentInfo?.commitment_end_date}
-                  monthsRemaining={commitmentInfo?.months_remaining}
-                  onCancel={() => {
-                    refetchSubscription();
-                    refetchCancellation();
-                  }}
-                  variant="destructive"
-                  size="default"
-                />
-              )}
+              {cancellationStatus?.has_subscription &&
+                !cancellationStatus?.is_cancelled &&
+                subscriptionData?.subscription?.id &&
+                subscriptionData?.subscription?.status !== 'trialing' && (
+                  <CancelSubscriptionButton
+                    subscriptionId={subscriptionData.subscription.id}
+                    hasCommitment={commitmentInfo?.has_commitment}
+                    commitmentEndDate={commitmentInfo?.commitment_end_date}
+                    monthsRemaining={commitmentInfo?.months_remaining}
+                    onCancel={() => {
+                      refetchSubscription();
+                      refetchCancellation();
+                    }}
+                    variant="destructive"
+                    size="default"
+                  />
+                )}
             </div>
           </>
         )}
