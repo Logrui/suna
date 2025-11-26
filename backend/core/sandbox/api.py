@@ -288,8 +288,10 @@ async def read_file(
         # Re-raise HTTP exceptions without wrapping
         raise
     except Exception as e:
-        logger.error(f"Error reading file in sandbox {sandbox_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Error reading file in sandbox {sandbox_id}: {str(e)}\nTraceback: {error_trace}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.delete("/sandboxes/{sandbox_id}/files")
 async def delete_file(
@@ -393,6 +395,25 @@ async def ensure_project_sandbox_active(
         # Get or start the sandbox
         logger.debug(f"Ensuring sandbox is active for project {project_id}")
         sandbox = await get_or_start_sandbox(sandbox_id)
+        
+        # Refresh preview URLs to ensure they match current configuration
+        from core.utils.preview_urls import get_vnc_preview_url, get_website_preview_url
+        vnc_url = get_vnc_preview_url(sandbox_id)
+        website_url = get_website_preview_url(sandbox_id)
+        
+        # Update project with fresh URLs if they differ
+        current_sandbox_info = project_data.get('sandbox', {})
+        if current_sandbox_info.get('vnc_preview') != vnc_url or current_sandbox_info.get('sandbox_url') != website_url:
+            logger.info(f"Updating stale preview URLs for project {project_id}")
+            logger.debug(f"Old VNC: {current_sandbox_info.get('vnc_preview')} -> New VNC: {vnc_url}")
+            logger.debug(f"Old Web: {current_sandbox_info.get('sandbox_url')} -> New Web: {website_url}")
+            
+            current_sandbox_info['vnc_preview'] = vnc_url
+            current_sandbox_info['sandbox_url'] = website_url
+            
+            await client.table('projects').update({
+                'sandbox': current_sandbox_info
+            }).eq('project_id', project_id).execute()
         
         logger.debug(f"Successfully ensured sandbox {sandbox_id} is active for project {project_id}")
         

@@ -13,6 +13,17 @@ interface ModelItemWithTooltipProps {
     onSelect: () => void;
 }
 
+// Helper to format context window size
+const formatContextWindow = (tokens: number): string => {
+    if (tokens >= 1_000_000) {
+        return `${(tokens / 1_000_000).toFixed(1)}M`;
+    }
+    if (tokens >= 1_000) {
+        return `${(tokens / 1_000).toFixed(0)}k`;
+    }
+    return `${tokens}`;
+};
+
 export function ModelItemWithTooltip({
     model,
     isActive,
@@ -27,8 +38,8 @@ export function ModelItemWithTooltip({
         if (isHovered && itemRef.current) {
             const rect = itemRef.current.getBoundingClientRect();
             setTooltipPos({
-                top: rect.bottom,
-                left: rect.right + 8
+                top: rect.top + -128,
+                left: rect.right + 32
             });
         }
     }, [isHovered]);
@@ -66,7 +77,7 @@ export function ModelItemWithTooltip({
                             <Cpu className="h-3 w-3" /> Context
                         </span>
                         <span className="font-medium">
-                            {model.contextWindow ? `${(model.contextWindow / 1000).toFixed(0)}k` : 'Unknown'}
+                            {model.contextWindow ? formatContextWindow(model.contextWindow) : 'Unknown'}
                         </span>
                     </div>
                     <div className="flex flex-col gap-1 p-2 bg-muted/50 rounded-lg">
@@ -115,11 +126,9 @@ export function ModelItemWithTooltip({
                     ref={itemRef}
                     className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 relative"
                     onMouseEnter={() => {
-                        console.log('[Tooltip] Mouse ENTER on model:', model.id, model.label);
                         setIsHovered(true);
                     }}
                     onMouseLeave={() => {
-                        console.log('[Tooltip] Mouse LEAVE on model:', model.id, model.label);
                         setIsHovered(false);
                     }}
                     onClick={onSelect}

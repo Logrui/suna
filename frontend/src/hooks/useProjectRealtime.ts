@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { createRealtimeClient } from '@/lib/supabase/client';
+import { getRealtimeClient } from '@/lib/supabase/realtime-client';
 import { threadKeys } from '@/hooks/react-query/threads/keys';
 import { isLocalMode } from '@/lib/config';
 import { Project } from '../app/(dashboard)/projects/[projectId]/thread/_types';
@@ -17,7 +17,7 @@ export function useProjectRealtime(projectId?: string) {
   useEffect(() => {
     if (!projectId) return;
 
-    const supabase = createRealtimeClient();
+    const supabase = getRealtimeClient();
 
     // Subscribe to project changes
     const channel = supabase
@@ -31,18 +31,18 @@ export function useProjectRealtime(projectId?: string) {
           filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
-          
+
           // Check if sandbox data was updated
           const newData = payload.new as Project;
           const oldData = payload.old as Project;
-          if (newData?.sandbox && (!oldData?.sandbox || 
-              JSON.stringify(newData.sandbox) !== JSON.stringify(oldData.sandbox))) {
-            
+          if (newData?.sandbox && (!oldData?.sandbox ||
+            JSON.stringify(newData.sandbox) !== JSON.stringify(oldData.sandbox))) {
+
             // Invalidate specific project query
             queryClient.invalidateQueries({
               queryKey: threadKeys.project(projectId)
             });
-            
+
           }
         }
       )

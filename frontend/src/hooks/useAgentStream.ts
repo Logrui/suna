@@ -499,6 +499,9 @@ export function useAgentStream(
             });
           }
           break;
+        case 'llm_response_start':
+          // Ignore start message
+          break;
         case 'user':
         case 'system':
           // Handle other message types if necessary, e.g., if backend sends historical context

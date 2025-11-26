@@ -66,9 +66,13 @@ export function createRealtimeClient() {
   // Option 1: NEXT_PUBLIC_REALTIME_URL (direct Kong URL accessible from browser)
   // Option 2: NEXT_PUBLIC_SUPABASE_URL (fallback, works for Docker internal)
   // Option 3: localhost:8888 (local dev default)
-  const realtimeUrl = 
+  // For realtime, we need a URL that supports WebSocket upgrades from the browser
+  // Option 1: NEXT_PUBLIC_REALTIME_URL (direct Kong URL accessible from browser)
+  // Option 2: NEXT_PUBLIC_SUPABASE_URL (fallback, works for Docker internal)
+  // Option 3: localhost:8888 (local dev default)
+  const realtimeUrl =
     process.env.NEXT_PUBLIC_REALTIME_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
     'http://localhost:8888'
 
   console.log('[createRealtimeClient] Configuration:', {
@@ -102,7 +106,7 @@ export function createRealtimeClient() {
     const wsUrl = realtimeUrl.replace(/^http/, 'ws') + '/realtime/v1/websocket'
     const wsProtocol = realtimeUrl.startsWith('https') ? 'wss://' : 'ws://'
     const expectedWsUrl = wsUrl.replace(/^ws:\/\//, wsProtocol).replace(/^wss:\/\//, wsProtocol)
-    
+
     // console.log('[createRealtimeClient] WebSocket configuration:', {
     //   realtimeUrl,
     //   constructedWsUrl: wsUrl,
@@ -128,7 +132,7 @@ export function createRealtimeClient() {
     // Monitor for connection attempts by checking the internal connection object
     try {
       const realtime = client.realtime as any;
-      
+
       // Try to access the underlying WebSocket connection for debugging
       if (realtime.conn) {
         // console.log('[createRealtimeClient] WebSocket connection object detected:', {
@@ -142,20 +146,20 @@ export function createRealtimeClient() {
       client.channel = (name: string, opts?: any) => {
         // console.log('[createRealtimeClient]  Creating channel:', name, opts);
         const channel = originalChannel(name, opts);
-        
+
         // Override subscribe to log connection attempts
         const originalSubscribe = channel.subscribe.bind(channel);
         channel.subscribe = (callback?: any, timeout?: number) => {
           // console.log('[createRealtimeClient]  Subscribing to channel:', name);
           // console.log('[createRealtimeClient] WebSocket state before subscribe:', checkConnection());
-          
+
           const result = originalSubscribe(callback, timeout);
-          
+
           // Log state after subscribe attempt
           setTimeout(() => {
             // console.log('[createRealtimeClient] WebSocket state after subscribe:', checkConnection());
           }, 500);
-          
+
           return result;
         };
 

@@ -17,7 +17,7 @@ interface HealthCheckedVncIframeProps {
 
 export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncIframeProps) {
   const [iframeKey, setIframeKey] = useState(0);
-  
+
   // Use the enhanced VNC preloader hook
   const { status, retryCount, retry, isPreloaded } = useVncPreloader(sandbox, {
     maxRetries: 5,
@@ -82,7 +82,14 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
           <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-gray-100 dark:bg-gray-800'>
             <iframe
               key={iframeKey}
-              src={`${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`}
+              src={(() => {
+                let vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+                // Fix mixed content issues: if page is HTTPS but VNC URL is HTTP, upgrade it
+                if (typeof window !== 'undefined' && window.location.protocol === 'https:' && vncUrl.startsWith('http:')) {
+                  vncUrl = vncUrl.replace('http:', 'https:');
+                }
+                return vncUrl;
+              })()}
               title="Browser preview"
               className="absolute inset-0 w-full h-full border-0 md:w-[102%] md:h-[130%] md:-translate-y-[4.4rem] lg:-translate-y-[4.7rem] xl:-translate-y-[5.4rem] md:left-0 md:-translate-x-2"
             />
