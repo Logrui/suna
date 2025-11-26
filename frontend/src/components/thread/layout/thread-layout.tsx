@@ -1,18 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import * as ResizablePrimitive from 'react-resizable-panels';
 import { SiteHeader } from '@/components/thread/thread-site-header';
 import { FileViewerModal } from '@/components/thread/file-viewer-modal';
 import { ToolCallSidePanel } from '@/components/thread/tool-call-side-panel';
-import { Project } from '@/lib/api/projects';
+import { Project } from '@/lib/api/threads';
 import { ApiMessageType } from '@/components/thread/types';
 import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
 import { useIsMobile } from '@/hooks/utils';
-import * as ResizablePrimitive from 'react-resizable-panels';
+import { cn } from '@/lib/utils';
 import {
-  ResizableHandle,
-  ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable"
-import { cn } from "@/lib/utils"
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
 
 interface ThreadLayoutProps {
   children: React.ReactNode;
@@ -47,6 +47,7 @@ interface ThreadLayoutProps {
   compact?: boolean;
   variant?: 'default' | 'shared';
   chatInput?: React.ReactNode;
+  leftSidebarState?: 'collapsed' | 'expanded';
 }
 
 export function ThreadLayout({
@@ -81,7 +82,8 @@ export function ThreadLayout({
   disableInitialAnimation = false,
   compact = false,
   variant = 'default',
-  chatInput
+  chatInput,
+  leftSidebarState = 'collapsed',
 }: ThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
 
@@ -89,11 +91,11 @@ export function ThreadLayout({
   const shouldShowPanel = isSidePanelOpen && initialLoadCompleted;
 
   // Refs for panel APIs to control sizes programmatically
-  const mainPanelRef = React.useRef<ResizablePrimitive.ImperativePanelHandle>(null);
-  const sidePanelRef = React.useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+  const mainPanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
+  const sidePanelRef = useRef<ResizablePrimitive.ImperativePanelHandle>(null);
 
   // Update sizes when panel visibility changes with smooth animation
-  React.useEffect(() => {
+  useEffect(() => {
     if (shouldShowPanel) {
       // Open panel smoothly
       requestAnimationFrame(() => {
@@ -157,7 +159,7 @@ export function ThreadLayout({
               onOpenChange={setFileViewerOpen}
               sandboxId={sandboxId}
               initialFilePath={fileToView}
-              project={project || undefined}
+              projectId={projectId}
               filePathList={filePathList}
             />
           )}
@@ -167,41 +169,104 @@ export function ThreadLayout({
   }
 
   // Full layout mode
-  return (
-    <div className="flex h-screen overflow-hidden">
-      {debugMode && (
-        <div className="fixed top-16 right-4 bg-amber-500 text-black text-xs px-2 py-1 rounded-md shadow-md z-50">
-          Debug Mode
-        </div>
-      )}
+  // Use ResizablePanelGroup for desktop, regular flex for mobile
+  if (isActuallyMobile) {
+    return (
+      <div className="flex h-screen">
+        <div className="flex flex-col flex-1 overflow-hidden relative">
+          <SiteHeader
+            threadId={threadId}
+            projectName={projectName}
+            projectId={projectId}
+            onViewFiles={onViewFiles}
+            onToggleSidePanel={onToggleSidePanel}
+            onProjectRenamed={onProjectRenamed}
+            isMobileView={isMobile}
+            variant={variant}
+          />
 
+          <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+            {children}
+          </div>
+
+          {/* ChatInput - positioned at bottom for mobile */}
+          {chatInput && (
+            <div className="flex-shrink-0 relative z-10 bg-gradient-to-b from-background via-background/90 to-transparent px-4">
+              {chatInput}
+            </div>
+          )}
+        </div>
+
+        <ToolCallSidePanel
+          isOpen={isSidePanelOpen && initialLoadCompleted}
+          onClose={onSidePanelClose}
+          toolCalls={toolCalls}
+          messages={messages}
+          externalNavigateToIndex={externalNavIndex}
+          agentStatus={agentStatus}
+          currentIndex={currentToolIndex}
+          onNavigate={onSidePanelNavigate}
+          project={project || undefined}
+          renderAssistantMessage={renderAssistantMessage}
+          renderToolResult={renderToolResult}
+          isLoading={!initialLoadCompleted || isLoading}
+          onFileClick={onViewFiles}
+          agentName={agentName}
+          disableInitialAnimation={disableInitialAnimation}
+        />
+
+        {sandboxId && (
+          <FileViewerModal
+            open={fileViewerOpen}
+            onOpenChange={setFileViewerOpen}
+            sandboxId={sandboxId}
+            initialFilePath={fileToView}
+            projectId={projectId}
+            filePathList={filePathList}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Desktop layout with resizable panels
+  return (
+    <div className="flex h-screen">
       <ResizablePanelGroup
         direction="horizontal"
-        className="h-full w-full"
+        className="h-screen"
         style={{ transition: 'none' }}
       >
+        {/* Main content panel */}
         <ResizablePanel
           ref={mainPanelRef}
           defaultSize={shouldShowPanel ? 60 : 100}
           minSize={shouldShowPanel ? 30 : 100}
           maxSize={shouldShowPanel ? 95 : 100}
-          className="flex flex-col h-full overflow-hidden relative bg-transparent"
+          className="flex flex-col overflow-hidden relative bg-transparent"
         >
-          <div className="flex flex-col h-full overflow-hidden">
-            <SiteHeader
-              threadId={threadId}
-              projectName={projectName}
-              projectId={projectId}
-              onViewFiles={onViewFiles}
-              onToggleSidePanel={onToggleSidePanel}
-              onProjectRenamed={onProjectRenamed}
-              isMobileView={isMobile}
-              debugMode={debugMode}
-              variant={variant}
-            />
+          <SiteHeader
+            threadId={threadId}
+            projectName={projectName}
+            projectId={projectId}
+            onViewFiles={onViewFiles}
+            onToggleSidePanel={onToggleSidePanel}
+            onProjectRenamed={onProjectRenamed}
+            isMobileView={isMobile}
+            debugMode={debugMode}
+            variant={variant}
+          />
+
+          <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
             {children}
-            {chatInput}
           </div>
+
+          {/* ChatInput - positioned at bottom of main content panel */}
+          {chatInput && (
+            <div className="flex-shrink-0 relative z-10 bg-gradient-to-b from-background via-background/90 to-transparent px-4">
+              {chatInput}
+            </div>
+          )}
         </ResizablePanel>
 
         {/* Resizable handle - always render */}
@@ -213,12 +278,13 @@ export function ThreadLayout({
         {/* Side panel - always render but control size */}
         <ResizablePanel
           ref={sidePanelRef}
-          defaultSize={shouldShowPanel ? 30 : 0}
+          defaultSize={shouldShowPanel ? 40 : 0}
           minSize={shouldShowPanel ? 20 : 0}
           maxSize={shouldShowPanel ? 70 : 0}
           collapsible={true}
           className={cn(
             "relative bg-transparent",
+            // Match ChatInput horizontal spacing: px-4
             shouldShowPanel ? "pr-4 pb-5 pt-4" : "px-0",
             !shouldShowPanel ? "hidden" : ""
           )}
@@ -243,16 +309,14 @@ export function ThreadLayout({
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      {sandboxId && (
-        <FileViewerModal
-          open={fileViewerOpen}
-          onOpenChange={setFileViewerOpen}
-          sandboxId={sandboxId}
-          initialFilePath={fileToView}
-          project={project || undefined}
-          filePathList={filePathList}
-        />
-      )}
+      <FileViewerModal
+        open={fileViewerOpen}
+        onOpenChange={setFileViewerOpen}
+        sandboxId={sandboxId || ''}
+        initialFilePath={fileToView}
+        projectId={projectId}
+        filePathList={filePathList}
+      />
     </div>
   );
 }

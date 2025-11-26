@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { billingKeys } from '@/hooks/billing/use-subscription';
@@ -21,28 +21,41 @@ import {
 import { useIsMobile } from '@/hooks/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { config, isLocalMode, isStagingMode } from '@/lib/config';
-import { cn } from '@/lib/utils';
-import { useInitiateAgentWithInvalidation, useThreadLimit } from '@/hooks/dashboard/use-initiate-agent';
-
+import { useInitiateAgentWithInvalidation } from '@/hooks/dashboard/use-initiate-agent';
+import { useCreditBalance } from '@/hooks/billing';
 import { useAgents } from '@/hooks/agents/use-agents';
-import { PlanSelectionModal } from '@/components/billing/pricing';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
 import { useAgentSelection } from '@/stores/agent-selection-store';
-import { SunaModesPanel } from './suna-modes-panel';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
-import { CustomAgentsSection } from './custom-agents-section';
 import { toast } from 'sonner';
-import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { useSunaModePersistence } from '@/stores/suna-modes-store';
-import { CreditsDisplay } from '@/components/billing/credits-display';
 import { Button } from '../ui/button';
 import { Info, X } from 'lucide-react';
 import { useLimits } from '@/hooks/dashboard/use-limits';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Progress } from '../ui/progress';
-import { NotificationBell } from '@/components/notifications/notification-bell';
+import { NotificationBell } from '../notifications/notification-bell';
+
+// Lazy load heavy components that aren't immediately visible
+const PlanSelectionModal = lazy(() =>
+  import('@/components/billing/pricing').then(mod => ({ default: mod.PlanSelectionModal }))
+);
+const SunaModesPanel = lazy(() =>
+  import('./suna-modes-panel').then(mod => ({ default: mod.SunaModesPanel }))
+);
+const AgentRunLimitDialog = lazy(() =>
+  import('@/components/thread/agent-run-limit-dialog').then(mod => ({ default: mod.AgentRunLimitDialog }))
+);
+const CustomAgentsSection = lazy(() =>
+  import('./custom-agents-section').then(mod => ({ default: mod.CustomAgentsSection }))
+);
+const AgentConfigurationDialog = lazy(() =>
+  import('@/components/agents/agent-configuration-dialog').then(mod => ({ default: mod.AgentConfigurationDialog }))
+);
+const CreditsDisplay = lazy(() =>
+  import('@/components/billing/credits-display').then(mod => ({ default: mod.CreditsDisplay }))
+);
 
 const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
@@ -90,8 +103,8 @@ export function DashboardContent() {
   const initiateAgentMutation = useInitiateAgentWithInvalidation();
   const pricingModalStore = usePricingModalStore();
 
-  const { data: agentsResponse } = useAgents({
-    limit: 100,
+  const { data: agentsResponse, isLoading: isLoadingAgents } = useAgents({
+    limit: 50, // Changed from 100 to 50 to match other components
     sort_by: 'name',
     sort_order: 'asc'
   });
@@ -100,23 +113,21 @@ export function DashboardContent() {
   const selectedAgent = selectedAgentId
     ? agents.find(agent => agent.agent_id === selectedAgentId)
     : null;
+  const sunaAgent = agents.find(agent => agent.metadata?.is_suna_default === true);
   const displayName = selectedAgent?.name || 'Suna';
   const agentAvatar = undefined;
-  const isSunaAgent = selectedAgent?.metadata?.is_suna_default || false;
+  // Show Suna modes while loading (assume Suna is default) or when Suna agent is selected
+  const isSunaAgent = isLoadingAgents
+    ? true // Show Suna modes while loading
+    : (selectedAgent?.metadata?.is_suna_default || (!selectedAgentId && sunaAgent !== undefined) || false);
 
   const threadQuery = useThreadQuery(initiatedThreadId || '');
-  const { data: threadLimit } = useThreadLimit();
-  const { data: limits } = useLimits();
-  const canCreateThread = true; // Hardcoded to allow thread creation
+  const { data: limits, isLoading: isLimitsLoading } = useLimits();
+  const { data: balance } = useCreditBalance(!!user);
+  const canCreateThread = limits?.thread_count?.can_create || false;
 
-  const isDismissed = true; // Hardcoded to disable limits alert
-  const showAlert = !canCreateThread && !isDismissed;
-
-  React.useEffect(() => {
-    if (agents.length > 0) {
-      initializeFromAgents(agents, undefined, setSelectedAgent);
-    }
-  }, [agents, initializeFromAgents, setSelectedAgent]);
+  const isDismissed = typeof window !== 'undefined' && sessionStorage.getItem('threadLimitAlertDismissed') === 'true';
+  const threadLimitExceeded = !isLimitsLoading && !canCreateThread && !isDismissed;
 
   React.useEffect(() => {
     const tab = searchParams.get('tab');
@@ -304,12 +315,16 @@ export function DashboardContent() {
 
   return (
     <>
-      <PlanSelectionModal />
+      <Suspense fallback={null}>
+        <PlanSelectionModal />
+      </Suspense>
 
       <div className="flex flex-col h-screen w-full overflow-hidden relative">
         {/* Credits Display - Top right corner */}
         <div className="absolute flex items-center gap-2 top-4 right-4 z-10">
-          <CreditsDisplay />
+          <Suspense fallback={<div className="h-8 w-20 bg-muted/30 rounded animate-pulse" />}>
+            <CreditsDisplay />
+          </Suspense>
           <NotificationBell />
           <Popover>
             <PopoverTrigger asChild>
@@ -455,18 +470,20 @@ export function DashboardContent() {
                   {isSunaAgent && (
                     <div className="px-4 pb-8">
                       <div className="max-w-3xl mx-auto">
-                        <SunaModesPanel
-                          selectedMode={selectedMode}
-                          onModeSelect={setSelectedMode}
-                          onSelectPrompt={setInputValue}
-                          isMobile={isMobile}
-                          selectedCharts={selectedCharts}
-                          onChartsChange={setSelectedCharts}
-                          selectedOutputFormat={selectedOutputFormat}
-                          onOutputFormatChange={setSelectedOutputFormat}
-                          selectedTemplate={selectedTemplate}
-                          onTemplateChange={setSelectedTemplate}
-                        />
+                        <Suspense fallback={<div className="h-24 bg-muted/10 rounded-lg animate-pulse" />}>
+                          <SunaModesPanel
+                            selectedMode={selectedMode}
+                            onModeSelect={setSelectedMode}
+                            onSelectPrompt={setInputValue}
+                            isMobile={isMobile}
+                            selectedCharts={selectedCharts}
+                            onChartsChange={setSelectedCharts}
+                            selectedOutputFormat={selectedOutputFormat}
+                            onOutputFormatChange={setSelectedOutputFormat}
+                            selectedTemplate={selectedTemplate}
+                            onTemplateChange={setSelectedTemplate}
+                          />
+                        </Suspense>
                       </div>
                     </div>
                   )}
@@ -477,9 +494,11 @@ export function DashboardContent() {
                   {(isStagingMode() || isLocalMode()) && (
                     <div className="w-full px-4 pb-8">
                       <div className="max-w-5xl mx-auto">
-                        <CustomAgentsSection
-                          onAgentSelect={setSelectedAgent}
-                        />
+                        <Suspense fallback={<div className="h-64 bg-muted/10 rounded-lg animate-pulse" />}>
+                          <CustomAgentsSection
+                            onAgentSelect={setSelectedAgent}
+                          />
+                        </Suspense>
                       </div>
                     </div>
                   )}

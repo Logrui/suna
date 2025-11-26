@@ -35,7 +35,7 @@ import {
   listSandboxFiles,
   type FileInfo,
 } from '@/lib/api/sandbox';
-import { Project } from '@/lib/api/projects';
+import { Project } from '@/lib/api/threads';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -52,7 +52,11 @@ import {
 } from '@/hooks/files';
 import JSZip from 'jszip';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
+import { cn } from '@/lib/utils';
 import { TipTapDocumentModal } from './tiptap-document-modal';
+import { useProjectQuery } from '@/hooks/threads';
+import { useQueryClient } from '@tanstack/react-query';
+import { threadKeys } from '@/hooks/threads/keys';
 import { getApiUrl } from '@/lib/get-api-url';
 import { FileCard } from '@/components/library/file-card';
 import { getFileType, FILE_ICONS } from '@/lib/utils/fileTypeDetector';
@@ -65,7 +69,7 @@ interface FileViewerModalProps {
   onOpenChange: (open: boolean) => void;
   sandboxId: string;
   initialFilePath?: string | null;
-  project?: Project;
+  projectId?: string;
   filePathList?: string[];
 }
 
@@ -74,7 +78,7 @@ export function FileViewerModal({
   onOpenChange,
   sandboxId,
   initialFilePath,
-  project,
+  projectId,
   filePathList,
 }: FileViewerModalProps) {
   // Safely handle initialFilePath to ensure it's a string or null
@@ -82,6 +86,16 @@ export function FileViewerModal({
 
   // Auth for session token
   const { session } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Use React Query directly for project data
+  // Refetch when modal opens, then rely on realtime updates
+  const projectQuery = useProjectQuery(projectId, {
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // We'll manually refetch when modal opens
+    staleTime: 0, // Always consider stale - refetch every time modal opens
+  });
+  const project = projectQuery.data;
 
   // File navigation state
   const [currentPath, setCurrentPath] = useState('/workspace');
@@ -94,18 +108,29 @@ export function FileViewerModal({
 
 
   // Use React Query for directory listing
+  // Query key includes currentPath, so React Query will automatically refetch when path changes
   const {
     data: files = [],
     isLoading: isLoadingFiles,
     error: filesError,
     refetch: refetchFiles
-  } = useDirectoryQuery(sandboxId, currentPath, {
-    enabled: open && !!sandboxId,
-    staleTime: 30 * 1000, // 30 seconds
+  } = useDirectoryQuery(sandboxId || '', currentPath, {
+    enabled: open && !!sandboxId && sandboxId.trim() !== '' && !!currentPath,
+    staleTime: 0, // Always refetch when path changes
   });
 
-  // Add a navigation lock to prevent race conditions
-  const currentNavigationRef = useRef<string | null>(null);
+  // Debug: log when query data changes
+  useEffect(() => {
+    if (open && currentPath) {
+      console.log('[FileViewerModal] Directory query state:', {
+        currentPath,
+        sandboxId,
+        filesCount: files.length,
+        isLoading: isLoadingFiles,
+        files: files.map(f => ({ name: f.name, path: f.path, is_dir: f.is_dir })),
+      });
+    }
+  }, [open, currentPath, sandboxId, files.length, isLoadingFiles, files]);
 
   // File content state
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
@@ -141,11 +166,6 @@ export function FileViewerModal({
   // State to track if initial path has been processed
   const [initialPathProcessed, setInitialPathProcessed] = useState(false);
 
-  // Project state
-  const [projectWithSandbox, setProjectWithSandbox] = useState<
-    Project | undefined
-  >(project);
-
   // Add state for PDF export
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const markdownRef = useRef<HTMLDivElement>(null);
@@ -169,22 +189,24 @@ export function FileViewerModal({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editorDocumentData, setEditorDocumentData] = useState<any>(null);
 
-  // Setup project with sandbox URL if not provided directly
+  // Explicitly refetch project data when modal opens to ensure fresh data
   useEffect(() => {
-    if (project) {
-      setProjectWithSandbox(project);
+    if (open && projectId) {
+      // Invalidate and refetch immediately when modal opens
+      queryClient.invalidateQueries({
+        queryKey: threadKeys.project(projectId),
+        refetchType: 'active',
+      });
+      // Also explicitly refetch to ensure we get latest data
+      projectQuery.refetch().catch(err => {
+        console.error('Error refetching project:', err);
+      });
     }
-  }, [project, sandboxId]);
+  }, [open, projectId, queryClient]);
 
-  // Helper to format bytes
-  const formatBytes = (bytes: number, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-  };
+  // Check computer status - derive from query data
+  const hasSandbox = !!(project?.sandbox?.id || sandboxId);
+  const isComputerStarted = project?.sandbox?.sandbox_url ? true : false;
 
   // Function to ensure a path starts with /workspace - Defined early
   const normalizePath = useCallback((path: unknown): string => {
@@ -273,6 +295,9 @@ export function FileViewerModal({
 
           if (!content) {
             // Load from server if not cached
+            if (!sandboxId || sandboxId.trim() === '') {
+              continue; // Skip files if no sandbox
+            }
             const response = await fetch(
               `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
               {
@@ -308,6 +333,9 @@ export function FileViewerModal({
                 zip.file(relativePath, blobContent);
               } catch (blobError) {
                 // Fallback: try to fetch from server directly
+                if (!sandboxId || sandboxId.trim() === '') {
+                  continue; // Skip files if no sandbox
+                }
                 const fallbackResponse = await fetch(
                   `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(file.path)}`,
                   { headers: { 'Authorization': `Bearer ${session.access_token}` } }
@@ -386,7 +414,7 @@ export function FileViewerModal({
 
   // Core file opening function
   const openFile = useCallback(
-    async (file: FileInfo) => {
+    (file: FileInfo) => {
       if (file.is_dir) {
         // For directories, just navigate to that folder
         const normalizedPath = normalizePath(file.path);
@@ -425,45 +453,49 @@ export function FileViewerModal({
     ],
   );
 
-  // Load files when modal opens or path changes - Refined
+  // Mark initial load as complete after first successful load
   useEffect(() => {
-    if (!open || !sandboxId) {
-      return; // Don't load if modal is closed or no sandbox ID
-    }
-
-    // Skip repeated loads for the same path
-    if (isLoadingFiles && currentNavigationRef.current === currentPath) {
-      return;
-    }
-
-    // Track current navigation
-    currentNavigationRef.current = currentPath;
-
-    // React Query handles the loading state automatically
-
-    // After the first load, set isInitialLoad to false
-    if (isInitialLoad) {
+    if (!isLoadingFiles && files.length >= 0 && isInitialLoad) {
       setIsInitialLoad(false);
     }
+  }, [isLoadingFiles, files.length, isInitialLoad]);
 
-    // Handle any loading errors
-    if (filesError) {
+  // Handle loading errors
+  useEffect(() => {
+    if (filesError && open) {
       toast.error('Failed to load files');
     }
-  }, [open, sandboxId, currentPath, isInitialLoad, isLoadingFiles, filesError]);
+  }, [filesError, open]);
 
   // Helper function to navigate to a folder
   const navigateToFolder = useCallback(
     (folder: FileInfo) => {
       if (!folder.is_dir) return;
 
-      // Ensure the path is properly normalized
-      const normalizedPath = normalizePath(folder.path);
+      // For directories, use the folder's path directly
+      // The API returns the full path like "/workspace/folder_name"
+      const targetPath = folder.path;
+
+      if (!targetPath) {
+        console.error('[FileViewerModal] Folder has no path:', folder);
+        return;
+      }
+
+      const normalizedPath = normalizePath(targetPath);
+
+      console.log('[FileViewerModal] Navigating to folder:', {
+        folderName: folder.name,
+        folderPath: folder.path,
+        targetPath,
+        normalizedPath,
+        currentPathBefore: currentPath,
+      });
 
       // Clear selected file when navigating
       clearSelectedFile();
 
-      // Update path state - must happen after clearing selection
+      // Update path state - React Query will automatically refetch when query key changes
+      console.log('[FileViewerModal] Setting currentPath to:', normalizedPath);
       setCurrentPath(normalizedPath);
     },
     [normalizePath, clearSelectedFile, currentPath],
@@ -576,6 +608,22 @@ export function FileViewerModal({
       navigateToFileByIndex(currentFileIndex + 1);
     }
   }, [currentFileIndex, isFileListMode, filePathList, navigateToFileByIndex]);
+
+  // Track previous open state to detect when modal is first opened
+  const prevOpenRef = useRef(open);
+
+  // Ensure modal always opens to /workspace when opened without a specific file path
+  // Only reset on initial open, not when navigating folders
+  useEffect(() => {
+    const wasJustOpened = open && !prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    // Only reset path when modal is first opened, not when navigating
+    if (wasJustOpened && !safeInitialFilePath) {
+      setCurrentPath('/workspace');
+      clearSelectedFile();
+    }
+  }, [open, safeInitialFilePath, clearSelectedFile]); // Removed currentPath from deps to prevent reset on navigation!
 
   // Handle initial file path - Runs ONLY ONCE on open if initialFilePath is provided
   useEffect(() => {
@@ -1034,6 +1082,10 @@ export function FileViewerModal({
         if (typeof rawContent === 'string') {
           if (rawContent.startsWith('blob:')) {
             // If it's a blob URL, get directly from server to avoid CORS issues
+            if (!sandboxId || sandboxId.trim() === '') {
+              toast.error('Computer is not started yet.');
+              return;
+            }
             const response = await fetch(
               `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
               { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
@@ -1063,6 +1115,10 @@ export function FileViewerModal({
       }
 
       // Get from server if no raw content
+      if (!sandboxId || sandboxId.trim() === '') {
+        toast.error('Computer is not started yet.');
+        return;
+      }
       const response = await fetch(
         `${getApiUrl()}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(selectedFilePath)}`,
         { headers: { 'Authorization': `Bearer ${session?.access_token}` } }
@@ -1139,8 +1195,14 @@ export function FileViewerModal({
           throw new Error('No access token available');
         }
 
+        if (!sandboxId || sandboxId.trim() === '') {
+          toast.error('Computer is not started yet. Please wait for it to be ready.');
+          setIsUploading(false);
+          return;
+        }
+
         const response = await fetch(
-          `${API_URL}/sandboxes/${sandboxId}/files`,
+          `${getApiUrl()}/sandboxes/${sandboxId}/files`,
           {
             method: 'POST',
             headers: {
@@ -1560,7 +1622,7 @@ export function FileViewerModal({
                           fileName={selectedFilePath?.split('/').pop() || selectedFilePath}
                           filePath={selectedFilePath}
                           className="h-full w-full"
-                          project={projectWithSandbox}
+                          project={project}
                           markdownRef={
                             isMarkdownFile(selectedFilePath) ? markdownRef : undefined
                           }
@@ -1580,11 +1642,31 @@ export function FileViewerModal({
                     <Loader className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : files.length === 0 ? (
-                  <div className="h-full w-full flex flex-col items-center justify-center">
+                  <div className="h-full w-full flex flex-col items-center justify-center gap-2">
                     <Folder className="h-12 w-12 mb-2 text-muted-foreground opacity-30" />
-                    <p className="text-sm text-muted-foreground">
-                      Directory is empty
-                    </p>
+                    {!hasSandbox ? (
+                      <>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Computer is not available yet
+                        </p>
+                        <p className="text-xs text-muted-foreground/70">
+                          A computer will be created when you start working on this task
+                        </p>
+                      </>
+                    ) : !isComputerStarted ? (
+                      <>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Computer is not started yet
+                        </p>
+                        <p className="text-xs text-muted-foreground/70">
+                          Files will appear once the computer is ready
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Directory is empty
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <ScrollArea className="h-full w-full p-2">
@@ -1660,21 +1742,15 @@ export function FileViewerModal({
                                   }
                                 }}
                               >
-                                <div className="w-6 flex justify-center">
+                                <div className="w-12 h-12 flex items-center justify-center mb-1">
                                   {file.is_dir ? (
-                                    <Folder className="h-5 w-5 text-blue-500" />
+                                    <Folder className="h-9 w-9 text-blue-500" />
                                   ) : (
-                                    <IconComponent className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                    <File className="h-8 w-8 text-muted-foreground" />
                                   )}
                                 </div>
-                                <span className="text-sm font-medium truncate">
+                                <span className="text-xs text-center font-medium truncate max-w-full">
                                   {file.name}
-                                </span>
-                                <span className="text-xs text-muted-foreground text-right w-24 font-mono">
-                                  {file.is_dir ? '-' : formatBytes(file.size || 0)}
-                                </span>
-                                <span className="text-xs text-muted-foreground text-right w-32 truncate">
-                                  {new Date(file.mod_time).toLocaleDateString()}
                                 </span>
                               </button>
                             );
