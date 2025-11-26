@@ -220,7 +220,8 @@ async def _unload_model(model_id: str, provider: str) -> None:
         
         elif provider == "ollama":
             # Ollama doesn't have a direct unload API
-            # Models unload automatically based on timeout
+            # Models unload automatically based on timeout (keep_alive)
+            # This is a no-op for API compatibility
             logger.info(f"Ollama unload requested for {model_id} (will auto-unload)")
     
     except Exception as e:
@@ -245,59 +246,9 @@ class LocalModelsResponse(BaseModel):
 
 
 # Ollama model context window mapping (since Ollama API doesn't provide this)
-OLLAMA_CONTEXT_WINDOWS = {
-    "qwen3-coder:30b": 131_072,
-    "qwen3-coder": 131_072,
-    "devstral": 4_096,
-    "devstral:latest": 4_096,
-    "mistral-small3.2": 32_768,
-    "mistral-small3.2:latest": 32_768,
-    "phi4-mini": 4_096,
-    "phi4-mini:latest": 4_096,
-    "codellama:13b-instruct": 100_000,
-    "codellama": 100_000,
-    "mistral:7b-instruct": 32_768,
-    "mistral": 32_768,
-    "gpt-oss": 131_072,
-    "gpt-oss:latest": 131_072,
-    "deepseek-coder:33b": 4_096,
-    "deepseek-coder": 4_096,
-    "embeddinggemma": 512,
-    "embeddinggemma:latest": 512,
-    "qwen2.5-coder:14b": 131_072,
-    "qwen2.5-coder": 131_072,
-    "qwen2.5-coder:7b-instruct": 131_072,
-    "llama3.1:8b-instruct-q8_0": 128_000,
-    "llama3.1": 128_000,
-    "codegemma:7b": 8_192,
-    "codegemma": 8_192,
-    "llama3.2": 128_000,
-    "llama3.2:latest": 128_000,
-    "qwen3:8b": 131_072,
-    "qwen3": 131_072,
-    "gemma3:4b": 8_192,
-    "gemma3": 8_192,
-    "deepseek-r1": 64_000,
-    "deepseek-r1:latest": 64_000,
-}
-
-
-def get_ollama_context_window(model_name: str) -> int:
-    """
-    Get context window for Ollama model by name.
-    Tries exact match first, then matches by prefix.
-    """
-    # Try exact match first
-    if model_name in OLLAMA_CONTEXT_WINDOWS:
-        return OLLAMA_CONTEXT_WINDOWS[model_name]
-    
-    # Try prefix match (for versioned models)
-    for key, value in OLLAMA_CONTEXT_WINDOWS.items():
-        if model_name.startswith(key):
-            return value
-    
-    # Default to 4k if not found
-    return 4_096
+# Ollama model context window mapping (since Ollama API doesn't provide this)
+# DEPRECATED: We now use dynamic extraction via OllamaClient.extract_context_window
+# This dictionary is removed to prevent maintenance burden and inconsistency.
 
 
 @router.get("/local", response_model=LocalModelsResponse)
@@ -357,9 +308,17 @@ async def list_local_models():
             # Prefix with provider for easy detection in frontend
             prefixed_id = f"ollama:{model_id}"
             
-            # Skip excluded models
-            if is_model_excluded(prefixed_id, "ollama"):
-                logger.debug(f"Skipping excluded Ollama model: {prefixed_id}")
+            # Get detailed model info for context window extraction
+            try:
+                model_info = await ollama_client.get_model_info(model_id)
+                context_window = ollama_client.extract_context_window(model_info)
+            except Exception as e:
+                logger.warning(f"Failed to get details for Ollama model {model_id}: {e}")
+                context_window = 131_072  # Fallback to 128k default
+            
+            # Skip excluded models (checking both ID and context window)
+            if is_model_excluded(prefixed_id, "ollama", context_window=context_window):
+                logger.debug(f"Small Context Window Ollama model Detected - Excluding: {prefixed_id} (context: {context_window}) - excluded by context size (<64k) or manual override")
                 continue
             
             ollama_models.append(
@@ -368,7 +327,7 @@ async def list_local_models():
                     name=model_id,
                     provider="ollama",
                     loaded=model.get("loaded", False),
-                    context_window=get_ollama_context_window(model_id),
+                    context_window=context_window,
                     quantization=model.get("quantization")
                 )
             )

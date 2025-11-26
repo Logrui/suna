@@ -132,8 +132,12 @@ class OllamaClient:
         Returns:
             Context window size in tokens (default: 131072 = 128K)
         """
+        # Debug: Log available keys in model_info to help diagnose missing context
+        logger.debug(f"Extracting context for model. Available keys: {list(model_info.keys())}")
+        
         # Try to get architecture (in case Ollama API changes in future)
         architecture = model_info.get("general.architecture", "")
+        logger.debug(f"Model architecture detected: '{architecture}'")
         
         # Try architecture-specific field first
         if architecture:
@@ -142,14 +146,21 @@ class OllamaClient:
             if context_window:
                 logger.debug(f"Found context window via {context_field}: {context_window}")
                 return int(context_window)
+            else:
+                logger.debug(f"Field '{context_field}' not found in model_info")
         
         # Fallback: try known architectures
-        for arch in ["llama", "qwen2", "qwen3", "gemma2", "gemma", "phi", "deepseek"]:
+        known_archs = ["llama", "qwen2", "qwen3", "gemma2", "gemma", "phi", "deepseek"]
+        for arch in known_archs:
             context_field = f"{arch}.context_length"
             context_window = model_info.get(context_field)
             if context_window:
-                logger.debug(f"Found context window via {context_field}: {context_window}")
+                logger.debug(f"Found context window via fallback check {context_field}: {context_window}")
                 return int(context_window)
+        
+        # Log that we are hitting the default
+        logger.debug("No context window found in metadata. Checked fields: " + 
+                     ", ".join([f"{a}.context_length" for a in [architecture] + known_archs if a]))
         
         # Default to 128K for modern models
         # This is reasonable because:

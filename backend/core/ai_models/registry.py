@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .fallback_registry import FallbackModelRegistry
 
+from .excluded_models import is_model_excluded
+
 # SHOULD_USE_ANTHROPIC = False
 # CRITICAL: Production and Staging must ALWAYS use Vertex AI, never Anthropic API directly, with fallbacks to dev Vertex Studio and AI Studio
 SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
@@ -747,6 +749,11 @@ class ModelRegistry:
                     
                     # Extract context window
                     context_window = client.extract_context_window(model_info)
+                    
+                    # Check if model should be excluded (based on ID or context window)
+                    if is_model_excluded(model_name, "ollama", context_window=context_window):
+                        logger.debug(f"Skipping excluded Ollama model: {model_name} (context: {context_window}) - excluded by context size (<64k) or manual override")
+                        continue
                     
                     # Construct display name
                     display_name = client.construct_display_name(model_info, details, model_name)

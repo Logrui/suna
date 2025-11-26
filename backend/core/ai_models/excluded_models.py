@@ -8,6 +8,10 @@ Models are excluded based on context window size (<100K) or other criteria.
 # Models excluded due to small context window (<100K)
 # Format: "provider:model-name" or just "model-name" for automatic matching
 EXCLUDED_MODELS_SMALL_CONTEXT = {
+    # CRITICAL WARNING: This list is manually maintained and may be out of sync with actual model capabilities.
+    # Ideally, models should be excluded dynamically based on their reported context window (see is_model_excluded).
+    # This list serves as a fallback for models where context window cannot be determined.
+
     # LM Studio
     "lm_studio:hermes-2-pro-mistral-7b",  # 32K context
     "lm_studio:qwen2.5-coder-32b-instruct",  # 32K context
@@ -45,29 +49,46 @@ EXCLUDED_MODELS_MANUAL = set()
 EXCLUDED_MODELS = EXCLUDED_MODELS_SMALL_CONTEXT | EXCLUDED_MODELS_MANUAL
 
 
-def is_model_excluded(model_id: str, provider: str = None) -> bool:
+# Minimum context window size for models to be included (64K)
+MIN_CONTEXT_WINDOW = 64_000
+
+def is_model_excluded(model_id: str, provider: str = None, context_window: int = None) -> bool:
     """
     Check if a model should be excluded.
     
     Args:
         model_id: The model ID (can be prefixed or not)
         provider: Optional provider name (e.g., "ollama", "lm_studio")
+        context_window: Optional context window size to check against MIN_CONTEXT_WINDOW
         
     Returns:
         True if model should be excluded, False otherwise
     """
-    # Check exact match first
-    if model_id in EXCLUDED_MODELS:
+    # Check manual exclusion first (user override)
+    if model_id in EXCLUDED_MODELS_MANUAL:
         return True
     
-    # Check with provider prefix if not already present
+    # Check context window if provided
+    if context_window is not None:
+        if context_window < MIN_CONTEXT_WINDOW:
+            return True
+        # If context window is large enough, we IGNORE the legacy small context list
+        # This allows models like deepseek-r1 (which might be in the list but have 128k context) to pass
+        return False
+
+    # Fallback: Check legacy small context list if context window is unknown
+    # Check exact match
+    if model_id in EXCLUDED_MODELS_SMALL_CONTEXT:
+        return True
+    
+    # Check with provider prefix
     if provider and not model_id.startswith(f"{provider}:"):
         prefixed_id = f"{provider}:{model_id}"
-        if prefixed_id in EXCLUDED_MODELS:
+        if prefixed_id in EXCLUDED_MODELS_SMALL_CONTEXT:
             return True
     
-    # Check by partial match (model name without version)
-    for excluded in EXCLUDED_MODELS:
+    # Check by partial match
+    for excluded in EXCLUDED_MODELS_SMALL_CONTEXT:
         if excluded in model_id or model_id in excluded:
             return True
     
