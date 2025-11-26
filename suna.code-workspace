@@ -4,16 +4,7 @@
 			"path": "."
 		},
 		{
-			"path": "../suna-supabase"
-		},
-		{
-			"path": "../daytona"
-		},
-		{
-			"path": "../suna-main"
-		},
-		{
-			"path": "../n8n-nodes-suna-kortix"
+			"path": "../suna-private"
 		}
 	],
 	"settings": {}

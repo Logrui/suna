@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../suna-main"
+		},
+		{
+			"path": "../suna-private"
 		}
 	],
 	"settings": {}
