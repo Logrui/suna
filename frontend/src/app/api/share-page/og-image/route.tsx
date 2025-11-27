@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // Add route segment config for caching
-export const runtime = 'edge'; // Use edge runtime for better performance
+// export const runtime = 'edge'; // Removed for OpenNext compatibility
 export const revalidate = 3600; // Cache for 1 hour
 
 export async function GET(request) {
