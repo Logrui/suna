@@ -1,0 +1,18 @@
+#:schema node_modules/@opennextjs/cloudflare/wrangler.jsonschema
+name = "suna-production"
+compatibility_date = "2024-11-27"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".open-next/cloudflare"
+
+# Bind environment variables
+# These will be available at runtime
+[vars]
+# Add runtime env vars here if needed
+
+# Production environment
+[env.production]
+name = "suna-production"
+
+# Preview environment  
+[env.preview]
+name = "suna-preview"

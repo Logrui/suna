@@ -47,3 +47,20 @@ supabase/**/*.env
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# supabase for testing
+supabase/.branches
+supabase/.temp
+supabase/**/*.env
+**/.prompts/
+**/__pycache__/
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+# OpenNext build output
+/.open-next/

@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "pages:build": "npx @opennextjs/cloudflare build",
+    "pages:deploy": "npm run pages:build && wrangler pages deploy .open-next/cloudflare",
+    "preview": "npm run pages:build && wrangler pages dev .open-next/cloudflare --compatibility-flag=nodejs_compat",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
@@ -175,6 +178,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@opennextjs/cloudflare": "^1.13.1",
     "@tailwindcss/postcss": "^4.1.4",
     "@types/color": "^4.2.0",
     "@types/colorthief": "^2.6.0",
@@ -192,6 +196,7 @@
     "shiki": "^3.12.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.51.0"
   }
 }

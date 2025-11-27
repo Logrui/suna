@@ -4,8 +4,12 @@ const nextConfig: NextConfig = {
   output: (process.env.NEXT_OUTPUT as 'standalone' | 'export') || undefined,
 
   // Enable source maps for easier debugging in browser console
-  // Enable source maps for easier debugging in browser console
   productionBrowserSourceMaps: true,
+
+  // Cloudflare doesn't support Next.js Image Optimization
+  images: {
+    unoptimized: true,
+  },
 
   eslint: {
     // Warning: This allows production builds to successfully complete even if

@@ -256,3 +256,7 @@ apps/mobile/app-example
 .cloudflared
 .scripts/
 .credentials/
+
+# OpenNext build output
+frontend/.open-next/
+frontend/.next/
