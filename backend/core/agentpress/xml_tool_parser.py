@@ -52,6 +52,11 @@ class XMLToolParser:
         re.DOTALL | re.IGNORECASE
     )
     
+    PARAMETER_START_PATTERN = re.compile(
+        r'<parameter\s+name=["\']([^"\']+)["\']>',
+        re.IGNORECASE
+    )
+    
     def __init__(self):
         """Initialize the XML tool parser."""
         pass
@@ -102,18 +107,63 @@ class XMLToolParser:
             "raw_parameters": {}
         }
         
-        # Extract all parameters
-        param_matches = self.PARAMETER_PATTERN.findall(invoke_content)
+        # Use a stack-based approach to extract parameters to handle nesting correctly
+        # Regex fails on nested <parameter> tags because it stops at the first </parameter>
         
-        for param_name, param_value in param_matches:
-            # Clean up the parameter value
-            param_value = param_value.strip()
+        current_pos = 0
+        while current_pos < len(invoke_content):
+            # Find the next parameter start
+            param_start_match = self.PARAMETER_START_PATTERN.search(invoke_content, current_pos)
+            if not param_start_match:
+                break
             
-            # Try to parse as JSON if it looks like JSON
-            parsed_value = self._parse_parameter_value(param_value)
+            param_name = param_start_match.group(1)
+            start_tag_end = param_start_match.end()
             
-            parameters[param_name] = parsed_value
-            parsing_details["raw_parameters"][param_name] = param_value
+            # Find the matching closing tag using a stack
+            # We start with depth 1 (the parameter we just found)
+            depth = 1
+            search_pos = start_tag_end
+            content_end = -1
+            
+            # Scan for tags to balance the nesting
+            while depth > 0 and search_pos < len(invoke_content):
+                # Find next tag (open or close)
+                # We look for <parameter...> or </parameter>
+                next_tag_match = re.search(r'</?parameter\b[^>]*>', invoke_content[search_pos:], re.IGNORECASE)
+                if not next_tag_match:
+                    break
+                
+                tag = next_tag_match.group(0)
+                if tag.lower().startswith('</parameter'):
+                    depth -= 1
+                    if depth == 0:
+                        content_end = search_pos + next_tag_match.start()
+                        # Update current_pos to continue searching after this parameter
+                        current_pos = search_pos + next_tag_match.end()
+                else:
+                    # Check if it's a self-closing tag (unlikely for parameter but good to handle)
+                    if not tag.endswith('/>'):
+                        depth += 1
+                
+                search_pos += next_tag_match.end()
+            
+            if content_end != -1:
+                param_value = invoke_content[start_tag_end:content_end]
+                
+                # Clean up the parameter value
+                param_value = param_value.strip()
+                
+                # Try to parse as JSON if it looks like JSON
+                parsed_value = self._parse_parameter_value(param_value)
+                
+                parameters[param_name] = parsed_value
+                parsing_details["raw_parameters"][param_name] = param_value
+            else:
+                # Malformed or truncated XML, stop parsing or skip this parameter
+                # If we can't find the closing tag, we can't safely extract the value
+                logger.warning(f"Could not find closing tag for parameter '{param_name}' in tool call '{function_name}'")
+                break
         
         # Extract the raw XML for this specific invoke
         invoke_pattern = re.compile(

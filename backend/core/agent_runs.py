@@ -12,6 +12,7 @@ from core.utils.logger import logger, structlog
 from core.billing.billing_integration import billing_integration
 from core.utils.config import config, EnvMode
 from core.services import redis
+from redis.exceptions import ConnectionError as RedisConnectionError
 from core.sandbox.sandbox import create_sandbox, delete_sandbox, get_or_start_sandbox
 from core.utils.sandbox_utils import generate_unique_filename, get_uploads_directory
 from run_agent_background import run_agent_background
@@ -996,7 +997,16 @@ async def stream_agent_run(
                             logger.warning(f"Listener stopped for {agent_run_id}.")
                             await message_queue.put({"type": "error", "data": "Listener stopped unexpectedly"})
                             return
+                        except RedisConnectionError:
+                            # Connection closed is expected during shutdown/cancellation
+                            if not terminate_stream:
+                                logger.warning(f"Redis connection lost for {agent_run_id}")
+                                await message_queue.put({"type": "error", "data": "Redis connection lost"})
+                            return
                         except Exception as e:
+                            if terminate_stream:
+                                logger.debug(f"Listener error during shutdown for {agent_run_id}: {e}")
+                                return
                             logger.error(f"Error in listener for {agent_run_id}: {e}")
                             await message_queue.put({"type": "error", "data": "Listener failed"})
                             return
