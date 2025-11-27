@@ -2,6 +2,79 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 PowerShell Command Requirements (Windows)
+
+**CRITICAL**: This repository runs on Windows with PowerShell. NEVER use Unix/bash commands.
+
+### ❌ Commands That Don't Exist in PowerShell
+- `head` - Use `Select-Object -First N` instead
+- `tail` - Use `Select-Object -Last N` or `Get-Content -Tail N` instead  
+- `grep` (standalone) - Use `Select-String` or `Where-Object` instead
+- `cat` - Use `Get-Content` instead
+- `ls` - Use `Get-ChildItem` or just `dir` instead
+
+### ✅ Correct PowerShell Patterns
+
+**Limiting output:**
+```powershell
+# ❌ WRONG: git log | head -50
+# ✅ CORRECT:
+git log | Select-Object -First 50
+
+# ❌ WRONG: docker logs container | tail -100
+# ✅ CORRECT:
+docker logs container --tail=100  # Use tool's native flags when available
+Get-Content file.log -Tail 100    # Or PS cmdlet
+```
+
+**Filtering:**
+```powershell
+# ❌ WRONG: git log | grep "notifications"
+# ✅ CORRECT:
+git log | Select-String "notifications"
+
+# For git specifically, use git's native filtering:
+git log --all --grep="notifications"
+```
+
+**Reading files:**
+```powershell
+# ❌ WRONG: cat file.txt
+# ✅ CORRECT:
+Get-Content file.txt
+```
+
+### Git Log Best Practices
+
+```powershell
+# ✅ Get recent commits with PowerShell filtering
+git log --all --pretty=format:"%h | %an | %ad | %s" --date=short | Select-Object -First 20
+
+# ✅ Filter commits by path (use git's native options)
+git log --all --pretty=format:"%h | %an | %ad | %s" --date=short -- path/to/files/
+
+# ✅ Search commit messages (use git's grep)
+git log --all --grep="search term" --pretty=format:"%h | %an | %ad | %s"
+
+# ✅ Count commits by author
+git shortlog -sn --all -- path/to/files/
+```
+
+### Common Replacements
+
+| ❌ Bash/Unix | ✅ PowerShell |
+|--------------|---------------|
+| `ls -la` | `Get-ChildItem` or `dir` |
+| `head -n 10` | `Select-Object -First 10` |
+| `tail -n 20` | `Select-Object -Last 20` |
+| `grep pattern` | `Select-String pattern` |
+| `cat file` | `Get-Content file` |
+| `wc -l` | `Measure-Object -Line` |
+| `sort` | `Sort-Object` |
+| `uniq` | `Select-Object -Unique` |
+
+**REMEMBER**: When using `git`, `docker`, or other cross-platform tools, prefer their **native flags** (like `--tail`, `--grep`) over PowerShell piping when possible.
+
 ## 🚨 Critical Constraint: Documentation Hard Limit
 
 **⚠️ MAXIMUM 3 MARKDOWN FILES PER REQUEST - Non-negotiable**

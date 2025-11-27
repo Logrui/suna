@@ -270,6 +270,12 @@ export default function WorkflowPage() {
     if (isEditing && workflows.length > 0) {
       const workflow = workflows.find(w => w.id === workflowId);
       if (workflow) {
+        // Redirect to advanced editor if mode is advanced
+        if (workflow.mode === 'advanced') {
+          router.replace(`/agents/config/${agentId}/workflow/${workflowId}/advanced`);
+          return;
+        }
+
         setWorkflowName(workflow.name);
         setWorkflowDescription(workflow.description || '');
         setTriggerPhrase(workflow.trigger_phrase || '');
@@ -360,6 +366,27 @@ export default function WorkflowPage() {
     setCurrentWorkflow(null);
   }, []);
 
+  const handleSwitchToAdvanced = useCallback(async () => {
+    if (!confirm("Switching to Advanced Mode will use the new visual graph editor. Continue?")) {
+      return;
+    }
+    
+    try {
+      if (isEditing) {
+         await updateWorkflowMutation.mutateAsync({ 
+          agentId, 
+          workflowId, 
+          workflow: { mode: 'advanced' } 
+        });
+        router.push(`/agents/config/${agentId}/workflow/${workflowId}/advanced`);
+      } else {
+        toast.error("Please save the workflow first before switching modes.");
+      }
+    } catch (err) {
+      toast.error("Failed to switch mode");
+    }
+  }, [agentId, workflowId, isEditing, updateWorkflowMutation, router]);
+
   if (isLoading || isLoadingWorkflows) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -372,25 +399,38 @@ export default function WorkflowPage() {
   }
 
   return (
-    <>
-      <WorkflowBuilder
-        steps={steps}
-        onStepsChange={setStepsWithDebug}
-        agentTools={agentTools}
-        isLoadingTools={isLoadingTools}
-        agentId={agentId}
-        workflowId={workflowId}
-        versionData={versionData}
-        onToolsUpdate={handleToolsUpdate}
-        workflowName={workflowName}
-        workflowDescription={workflowDescription}
-        onSave={handleSave}
-        isSaving={createWorkflowMutation.isPending || updateWorkflowMutation.isPending}
-        onExecute={isEditing ? handleExecute : undefined}
-        isExecuting={false}
-        onNameChange={setWorkflowName}
-        onDescriptionChange={setWorkflowDescription}
-      />
+    <div className="flex flex-col h-screen">
+      {isEditing && (
+        <div className="bg-muted/30 border-b px-4 py-2 flex justify-end">
+          <button
+            onClick={handleSwitchToAdvanced}
+            className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            <ToggleRight className="w-4 h-4 mr-2" />
+            Switch to Advanced Mode
+          </button>
+        </div>
+      )}
+      <div className="flex-1 overflow-hidden">
+        <WorkflowBuilder
+          steps={steps}
+          onStepsChange={setStepsWithDebug}
+          agentTools={agentTools}
+          isLoadingTools={isLoadingTools}
+          agentId={agentId}
+          workflowId={workflowId}
+          versionData={versionData}
+          onToolsUpdate={handleToolsUpdate}
+          workflowName={workflowName}
+          workflowDescription={workflowDescription}
+          onSave={handleSave}
+          isSaving={createWorkflowMutation.isPending || updateWorkflowMutation.isPending}
+          onExecute={isEditing ? handleExecute : undefined}
+          isExecuting={false}
+          onNameChange={setWorkflowName}
+          onDescriptionChange={setWorkflowDescription}
+        />
+      </div>
       
       <WorkflowExecutionDialog
         open={isExecuteDialogOpen}
@@ -399,6 +439,6 @@ export default function WorkflowPage() {
         agentId={agentId}
         onSuccess={handleExecutionSuccess}
       />
-    </>
+    </div>
   );
 } 

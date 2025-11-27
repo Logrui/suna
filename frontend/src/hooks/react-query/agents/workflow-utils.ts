@@ -24,6 +24,9 @@ export interface AgentWorkflow {
   trigger_phrase?: string;
   is_default: boolean;
   steps: WorkflowStep[];
+  mode?: 'simple' | 'advanced';
+  graph_definition?: any;
+  compiled_logic?: any;
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +60,9 @@ export interface CreateWorkflowRequest {
     conditions?: Record<string, any>;
     order: number;
   }>;
+  mode?: 'simple' | 'advanced';
+  graph_definition?: any;
+  compiled_logic?: any;
 }
 
 export interface UpdateWorkflowRequest {
@@ -73,6 +79,9 @@ export interface UpdateWorkflowRequest {
     conditions?: Record<string, any>;
     order: number;
   }>;
+  mode?: 'simple' | 'advanced';
+  graph_definition?: any;
+  compiled_logic?: any;
 }
 
 export interface ExecuteWorkflowRequest {

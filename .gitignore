@@ -236,7 +236,6 @@ apps/mobile/app-example
 .specify/
 .vscode/
 .windsurf/
-.agent/
 .backend.credentials/
 
 # --- Shadow Repo Links ---
@@ -245,17 +244,13 @@ apps/mobile/app-example
 .specify/
 .vscode/
 .windsurf/
-.agent/
-.claude/
 .cloudflared/
 .env.local
-
-
-
-.docs
-.cloudflared
 .scripts/
+.scripts/core/*
 .credentials/
+.cloudflared/
+.docs/
 
 # OpenNext build output
 frontend/.open-next/
