@@ -4,14 +4,15 @@ import React from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  CreditCard, 
-  Bell, 
+import {
+  CreditCard,
+  Bell,
   Shield,
   Users,
   MessageSquare,
   Settings
 } from 'lucide-react';
+import { MaintenanceToggle } from '@/components/admin/maintenance-toggle';
 
 export default function AdminDashboardPage() {
   const adminSections = [
@@ -48,6 +49,9 @@ export default function AdminDashboardPage() {
             Manage users, billing, and system-wide notifications
           </p>
         </div>
+
+        {/* System Maintenance */}
+        <MaintenanceToggle />
 
         {/* Admin Sections Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

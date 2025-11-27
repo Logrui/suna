@@ -132,7 +132,7 @@ export function usePlaybackController({
         if (enabled && messages.length > 0 && state.visibleMessages.length === 0) {
             dispatch({ type: 'SET_VISIBLE_MESSAGES', messages: [messages[0]] });
         }
-    }, [enabled, messages.length, state.visibleMessages.length]);
+    }, [enabled, messages, messages.length, state.visibleMessages.length]);
 
     // Stream text character by character with realistic typing animation
     const streamText = useCallback((text: string, onComplete: () => void) => {
@@ -262,7 +262,7 @@ export function usePlaybackController({
                 // Stream assistant messages
                 if (currentMessage.type === 'assistant') {
                     try {
-                        let content = currentMessage.content;
+                        const content = currentMessage.content;
                         console.log('[Playback] Raw message.content:', typeof content, content);
 
                         let textToStream = '';

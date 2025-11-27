@@ -1,7 +1,7 @@
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Query
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Query, Request
 
-from core.utils.auth_utils import verify_and_get_user_id_from_jwt, verify_model_access
+from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
 from core.utils.config import config, EnvMode
 from core.utils.pagination import PaginationParams
@@ -229,10 +229,6 @@ async def update_agent(
         current_system_prompt = agent_data.system_prompt if agent_data.system_prompt is not None else current_version_data.get('system_prompt', '')
         current_model = agent_data.model if agent_data.model is not None else current_version_data.get('model')
 
-        # Verify user has access to the model if it's being changed
-        if agent_data.model is not None:
-            await verify_model_access(client, user_id, agent_data.model)
-
         if agent_data.configured_mcps is not None:
             if agent_data.replace_mcps:
                 current_configured_mcps = agent_data.configured_mcps
@@ -448,6 +444,7 @@ async def delete_agent(agent_id: str, user_id: str = Depends(verify_and_get_user
 
 @router.get("/agents", response_model=AgentsResponse, summary="List Agents", operation_id="list_agents")
 async def get_agents(
+    request: Request,
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     page: Optional[int] = Query(1, ge=1, description="Page number (1-based)"),
     limit: Optional[int] = Query(20, ge=1, le=100, description="Number of items per page"),
@@ -511,8 +508,11 @@ async def get_agents(
             )
         )
         
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 401, 429) as-is without wrapping
+        raise
     except Exception as e:
-        logger.error(f"Error fetching agents for user {user_id}: {str(e)}", exc_info=True)
+        logger.error("Error fetching agents for user", user_id=user_id, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to fetch agents: {str(e)}")
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse, summary="Get Agent", operation_id="get_agent")

@@ -1,68 +1,68 @@
-import { flag } from 'flags/next';
-import { getAll } from '@vercel/edge-config';
+import { createClient } from '@/lib/supabase/client';
 
 export type IMaintenanceNotice =
   | {
-      enabled: true;
-      startTime: string; // Date
-      endTime: string; // Date
-    }
+    enabled: true;
+    startTime: string; // Date
+    endTime: string; // Date
+  }
   | {
-      enabled: false;
-      startTime?: undefined;
-      endTime?: undefined;
-    };
+    enabled: false;
+    startTime?: undefined;
+    endTime?: undefined;
+  };
 
-export const maintenanceNoticeFlag = flag({
-  key: 'maintenance-notice',
-  async decide() {
-    try {
-      if (!process.env.EDGE_CONFIG) {
-        return { enabled: false } as const;
-      }
+export const maintenanceNoticeFlag = async (): Promise<IMaintenanceNotice> => {
+  try {
+    const supabase = createClient();
 
-      const flags = await getAll([
-        'maintenance-notice_start-time',
-        'maintenance-notice_end-time',
-        'maintenance-notice_enabled',
-      ]);
+    // Fetch maintenance settings from Supabase
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'maintenance_mode')
+      .single();
 
-      if (!flags || Object.keys(flags).length === 0) {
-        return { enabled: false } as const;
-      }
+    if (error || !data?.value) {
+      // If table doesn't exist or no setting found, default to disabled
+      return { enabled: false } as const;
+    }
 
-      const enabled = flags['maintenance-notice_enabled'];
+    const settings = data.value as any;
+    const enabled = settings.enabled === true;
 
-      if (!enabled) {
-        return { enabled: false } as const;
-      }
+    if (!enabled) {
+      return { enabled: false } as const;
+    }
 
-      const startTimeRaw = flags['maintenance-notice_start-time'];
-      const endTimeRaw = flags['maintenance-notice_end-time'];
+    // Optional: Support scheduled maintenance windows if present in JSON
+    const startTimeRaw = settings.start_time;
+    const endTimeRaw = settings.end_time;
 
-      if (!startTimeRaw || !endTimeRaw) {
-        return { enabled: false } as const;
-      }
-
+    if (startTimeRaw && endTimeRaw) {
       const startTime = new Date(startTimeRaw);
       const endTime = new Date(endTimeRaw);
 
-      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-        throw new Error(
-          `Invalid maintenance notice start or end time: ${startTimeRaw} or ${endTimeRaw}`,
-        );
+      if (!isNaN(startTime.getTime()) && !isNaN(endTime.getTime())) {
+        return {
+          enabled: true,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+        } as const;
       }
-
-      return {
-        enabled: true,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-      } as const;
-    } catch (cause) {
-      console.error(
-        new Error('Failed to get maintenance notice flag', { cause }),
-      );
-      return { enabled: false } as const;
     }
-  },
-});
+
+    // If enabled but no specific time window, treat as active now
+    return {
+      enabled: true,
+      startTime: new Date().toISOString(),
+      endTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Default 24h
+    } as const;
+
+  } catch (cause) {
+    console.error(
+      new Error('Failed to get maintenance notice setting', { cause }),
+    );
+    return { enabled: false } as const;
+  }
+};

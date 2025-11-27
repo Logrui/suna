@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
-import { 
-  AgentRunLimitError, 
-  ProjectLimitError, 
+import {
+  AgentRunLimitError,
+  ProjectLimitError,
   BillingError,
   TriggerLimitError,
   ModelAccessDeniedError,
@@ -10,6 +10,7 @@ import {
   AgentCountLimitError
 } from './api/errors';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
+import { useMaintenanceStore } from '@/stores/maintenance-store';
 
 export interface ApiError extends Error {
   status?: number;
@@ -137,17 +138,17 @@ const formatErrorMessage = (message: string, context?: ErrorContext): string => 
   }
 
   const parts = [];
-  
+
   if (context.operation) {
     parts.push(`Failed to ${context.operation}`);
   }
-  
+
   if (context.resource) {
     parts.push(context.resource);
   }
 
   const prefix = parts.join(' ');
-  
+
   if (message.toLowerCase().includes(context.operation?.toLowerCase() || '')) {
     return message;
   }
@@ -210,6 +211,9 @@ export const handleApiError = (error: any, context?: ErrorContext): void => {
   }
 
   if (error?.status >= 500) {
+    // Trigger global maintenance mode for server errors
+    useMaintenanceStore.getState().setMaintenanceMode(true);
+
     toast.error(formattedMessage, {
       description: 'Our team has been notified and is working on a fix.',
       duration: 6000,
@@ -232,7 +236,7 @@ export const handleApiError = (error: any, context?: ErrorContext): void => {
 };
 
 export const handleNetworkError = (error: any, context?: ErrorContext): void => {
-  const isNetworkError = 
+  const isNetworkError =
     error?.message?.includes('fetch') ||
     error?.message?.includes('network') ||
     error?.message?.includes('connection') ||

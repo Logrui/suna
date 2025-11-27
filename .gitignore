@@ -249,8 +249,10 @@ apps/mobile/app-example
 .claude/
 .cloudflared/
 .env.local
-# --- Shadow Repo Links ---
+
+
+
 .docs
 .cloudflared
-
-# --- Shadow Repo Links ---
+.scripts/
+.credentials/

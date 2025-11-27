@@ -77,7 +77,7 @@ export function SidebarSearch() {
       const project = projectsById.get(projectId);
       if (!project) continue;
 
-      let displayName = project.name || 'Unnamed Project';
+      const displayName = project.name || 'Unnamed Project';
 
       // Add to our list
       threadsWithProjects.push({

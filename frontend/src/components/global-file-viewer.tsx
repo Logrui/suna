@@ -29,7 +29,7 @@ export function GlobalFileViewer() {
             onOpenChange={closeFileViewer}
             sandboxId={sandboxId}
             initialFilePath={filePath}
-            project={project}
+            projectId={project?.id}
             filePathList={filePathList}
         />
     );

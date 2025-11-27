@@ -54,16 +54,16 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
 
   // (debug logs removed)
 
+  // Reset refs when thread changes
   useEffect(() => {
-    let isMounted = true;
-
-    // Reset refs when thread changes
     agentRunsCheckedRef.current = false;
     messagesLoadedRef.current = false;
     initialLoadCompleted.current = false;
-
-    // Clear messages on thread change; fresh data will set messages
     setMessages([]);
+  }, [threadId]);
+
+  useEffect(() => {
+    let isMounted = true;
 
     async function initializeData() {
       if (!initialLoadCompleted.current) setIsLoading(true);
@@ -106,22 +106,24 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
             }));
 
           // Merge with any local messages that are not present in server data yet
-          const serverIds = new Set(
-            unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
-          );
-          const localExtras = (messages || []).filter(
-            (m) =>
-              !m.message_id ||
-              (typeof m.message_id === 'string' && m.message_id.startsWith('temp-')) ||
-              !serverIds.has(m.message_id as string),
-          );
-          const mergedMessages = [...unifiedMessages, ...localExtras].sort((a, b) => {
-            const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return aTime - bTime;
+          setMessages((prevMessages) => {
+            const serverIds = new Set(
+              unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
+            );
+            const localExtras = (prevMessages || []).filter(
+              (m) =>
+                !m.message_id ||
+                (typeof m.message_id === 'string' && m.message_id.startsWith('temp-')) ||
+                !serverIds.has(m.message_id as string),
+            );
+            const mergedMessages = [...unifiedMessages, ...localExtras].sort((a, b) => {
+              const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return aTime - bTime;
+            });
+            return mergedMessages;
           });
 
-          setMessages(mergedMessages);
           // Messages set only from server merge; no cross-thread cache
           messagesLoadedRef.current = true;
 
@@ -191,7 +193,9 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
     threadQuery.error,
     projectQuery.data,
     messagesQuery.data,
-    agentRunsQuery.data
+    agentRunsQuery.data,
+    agentRunsQuery.isError,
+    isShared
   ]);
 
   // Force message reload when thread changes or new data arrives

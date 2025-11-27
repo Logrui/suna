@@ -27,10 +27,10 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
   const [showAllFiles, setShowAllFiles] = useState(false);
   const [fileViewerOpen, setFileViewerOpen] = useState(false);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  
+
   // Get thread name from projectName
   const threadName = thread.projectName;
-  
+
   // Fetch project details to get sandboxId
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
@@ -47,7 +47,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
     sandboxId,
     sandboxObject: project?.sandbox,
   });
-  
+
   // Fetch files for this thread's project sandbox - fetch immediately for visible threads
   const { data: files = [], isLoading: filesLoading, error: filesError } = useQuery({
     queryKey: ['sandbox-files', sandboxId],
@@ -93,7 +93,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
       if (!sandboxId || !firstImageFile?.path) return '';
       try {
         const content = await getSandboxFileContent(sandboxId, firstImageFile.path);
-        
+
         // Convert to blob URL
         let blob: Blob;
         if (content instanceof Blob) {
@@ -103,7 +103,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
         } else {
           return '';
         }
-        
+
         // Create object URL for the blob
         const url = URL.createObjectURL(blob);
         return url;
@@ -124,7 +124,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
       if (!sandboxId || !firstMarkdownFile?.path) return '';
       try {
         const content = await getSandboxFileContent(sandboxId, firstMarkdownFile.path);
-        
+
         // Handle both string and Blob responses
         let contentStr = '';
         if (typeof content === 'string') {
@@ -132,7 +132,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
         } else if (content instanceof Blob) {
           contentStr = await content.text();
         }
-        
+
         return contentStr;
       } catch (error) {
         console.error('Failed to fetch markdown preview:', error);
@@ -153,15 +153,15 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
     markdownError,
     willShowPreview: !!(firstMarkdownFile && markdownContent),
   });
-  
+
   // Format date
   const getRelativeDate = () => {
     if (!thread.updatedAt) return '';
-    
+
     const date = new Date(thread.updatedAt);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return date.toLocaleDateString('en-US', { weekday: 'long' });
@@ -201,14 +201,14 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
           {/* Header Row: Title + Date + Favorite */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <h3 
+              <h3
                 className="font-medium text-base md:text-lg truncate cursor-pointer hover:underline"
                 onClick={handleCardClick}
               >
                 {threadName}
               </h3>
             </div>
-            
+
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-sm text-muted-foreground whitespace-nowrap">
                 {getRelativeDate()}
@@ -242,7 +242,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
                   const fileType = getFileType(file.name || '');
                   const IconComponent = FILE_ICONS[fileType];
                   const isMarkdown = file.name?.endsWith('.md');
-                  
+
                   return (
                     <FileCard
                       key={file.path}
@@ -264,11 +264,11 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
                   onClick={handleExpandFiles}
                   className="self-start text-sm h-auto py-1 px-2"
                 >
-                  <ChevronDown 
+                  <ChevronDown
                     className={cn(
                       "w-3 h-3 mr-1 transition-transform",
                       showAllFiles && "rotate-180"
-                    )} 
+                    )}
                   />
                   {showAllFiles ? 'Show less' : `+${files.length - 6} more file${files.length - 6 > 1 ? 's' : ''}`}
                 </Button>
@@ -299,7 +299,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
           </Button>
 
           {/* Clickable Thumbnail Area */}
-          <div 
+          <div
             className="aspect-square md:aspect-[3/2] overflow-hidden bg-muted cursor-pointer group relative"
             onClick={handleCardClick}
           >
@@ -310,8 +310,8 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
               </div>
             ) : imagePreviewUrl ? (
               // Image Preview
-              <img 
-                src={imagePreviewUrl} 
+              <img
+                src={imagePreviewUrl}
                 alt={threadName}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
               />
@@ -323,7 +323,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
                     const fileType = getFileType(file.name || '');
                     const IconComponent = FILE_ICONS[fileType];
                     return (
-                      <div 
+                      <div
                         key={index}
                         className="flex items-center justify-center"
                       >
@@ -344,7 +344,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
           {/* Content */}
           <div className="p-3 flex flex-col gap-2">
             {/* Title */}
-            <h3 
+            <h3
               className="font-medium text-base truncate cursor-pointer hover:underline group"
               onClick={handleCardClick}
             >
@@ -363,13 +363,13 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
         <div className="flex flex-col gap-2">
           {/* Header Row: Title + Date */}
           <div className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-muted/30 transition-colors rounded-lg">
-            <h3 
+            <h3
               className="font-medium text-base cursor-pointer hover:underline flex-1 min-w-0 truncate"
               onClick={handleCardClick}
             >
               {threadName}
             </h3>
-            
+
             <span className="text-sm text-muted-foreground flex-shrink-0 whitespace-nowrap">
               {getRelativeDate()}
             </span>
@@ -401,7 +401,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
                 const fileType = getFileType(file.name || '');
                 const IconComponent = FILE_ICONS[fileType];
                 const isMarkdown = file.name?.endsWith('.md');
-                
+
                 return (
                   <div
                     key={file.path}
@@ -424,11 +424,11 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
                   onClick={handleExpandFiles}
                   className="self-start text-xs h-auto py-1 px-2 mt-1"
                 >
-                  <ChevronDown 
+                  <ChevronDown
                     className={cn(
                       "w-3 h-3 mr-1 transition-transform",
                       showAllFiles && "rotate-180"
-                    )} 
+                    )}
                   />
                   {showAllFiles ? 'Show less' : `+${files.length - 6} more file${files.length - 6 > 1 ? 's' : ''}`}
                 </Button>
@@ -449,7 +449,7 @@ export function ThreadCard({ thread, isFavorite, onToggleFavorite, viewMode }: T
           onOpenChange={setFileViewerOpen}
           sandboxId={sandboxId}
           initialFilePath={selectedFilePath}
-          project={project}
+          projectId={project?.id}
         />
       )}
     </>

@@ -14,6 +14,7 @@ import { AppProviders } from '@/components/layout/app-providers';
 import { useThreads } from '@/hooks/threads/use-threads';
 import { useAgents } from '@/hooks/agents/use-agents';
 import { useDeleteOperationEffects } from '@/stores/delete-operation-store';
+import { useMaintenanceStore } from '@/stores/maintenance-store';
 
 // Lazy load heavy components that aren't needed for initial render
 const FloatingMobileMenuButton = lazy(() =>
@@ -101,6 +102,7 @@ export default function DashboardLayoutContent({
 
   const { data: adminRoleData, isLoading: isCheckingAdminRole } = useAdminRole();
   const isAdmin = adminRoleData?.isAdmin ?? false;
+  const isGlobalMaintenance = useMaintenanceStore((state) => state.isMaintenanceMode);
 
   // Log data prefetching for debugging
   useEffect(() => {
@@ -148,6 +150,18 @@ export default function DashboardLayoutContent({
 
   // Show maintenance page if API is not healthy
   if (!isCheckingHealth && !isCheckingAdminRole && (!isApiHealthy || healthError) && !isAdmin) {
+    return (
+      <Suspense fallback={<DashboardSkeleton />}>
+        <MaintenancePage />
+      </Suspense>
+    );
+  }
+
+  // Show maintenance page if global maintenance mode is triggered (e.g. by 500 errors)
+  // We check this last to allow other checks to take precedence if needed, 
+  // but it should override normal content.
+  // We use a store so it can be triggered from anywhere (like the error handler).
+  if (isGlobalMaintenance && !isAdmin) {
     return (
       <Suspense fallback={<DashboardSkeleton />}>
         <MaintenancePage />

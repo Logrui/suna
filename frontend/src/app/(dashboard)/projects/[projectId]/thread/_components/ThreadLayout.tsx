@@ -128,7 +128,7 @@ export function ThreadLayout({
               onOpenChange={setFileViewerOpen}
               sandboxId={sandboxId}
               initialFilePath={fileToView}
-              project={project || undefined}
+              projectId={projectId}
               filePathList={filePathList}
             />
           )}
@@ -199,7 +199,7 @@ export function ThreadLayout({
           onOpenChange={setFileViewerOpen}
           sandboxId={sandboxId}
           initialFilePath={fileToView}
-          project={project || undefined}
+          projectId={projectId}
           filePathList={filePathList}
         />
       )}

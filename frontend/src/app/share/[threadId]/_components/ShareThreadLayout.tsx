@@ -55,15 +55,14 @@ export function ShareThreadLayout({
   initialLoadCompleted,
 }: ShareThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
-  
+
   return (
     <div className="flex h-screen">
       <div
-        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${
-          isSidePanelOpen && !isActuallyMobile
-            ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]'
-            : ''
-        }`}
+        className={`flex flex-col flex-1 overflow-hidden transition-all duration-200 ease-in-out ${isSidePanelOpen && !isActuallyMobile
+          ? 'mr-[90%] sm:mr-[450px] md:mr-[500px] lg:mr-[550px] xl:mr-[650px]'
+          : ''
+          }`}
       >
         <SiteHeader
           projectName={projectName}
@@ -96,7 +95,7 @@ export function ShareThreadLayout({
           onOpenChange={setFileViewerOpen}
           sandboxId={sandboxId}
           initialFilePath={fileToView}
-          project={project || undefined}
+          projectId={projectId}
         />
       )}
     </div>

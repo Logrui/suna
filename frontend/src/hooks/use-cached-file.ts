@@ -22,12 +22,12 @@ const inProgressPreloads = new Map<string, Promise<any>>();
  */
 function normalizePath(path: string): string {
   if (!path) return '/workspace';
-  
+
   // Ensure path starts with /workspace
   if (!path.startsWith('/workspace')) {
     path = `/workspace/${path.startsWith('/') ? path.substring(1) : path}`;
   }
-  
+
   // Handle Unicode escape sequences like \u0308
   try {
     path = path.replace(/\\u([0-9a-fA-F]{4})/g, (_, hexCode) => {
@@ -36,7 +36,7 @@ function normalizePath(path: string): string {
   } catch (e) {
     console.error('Error processing Unicode escapes in path:', e);
   }
-  
+
   return path;
 }
 
@@ -84,7 +84,7 @@ export function useCachedFile<T = string>(
     const cached = fileCache.get(key);
     const now = Date.now();
     const expiration = options.expiration || CACHE_EXPIRATION;
-    
+
     if (!force && cached && now - cached.timestamp < expiration) {
       return cached.content;
     }
@@ -94,59 +94,59 @@ export function useCachedFile<T = string>(
     try {
       // Use normalized path consistently
       const normalizedPath = normalizePath(filePath || '');
-      
+
       const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
-      
+
       // Properly encode the path parameter for UTF-8 support
       url.searchParams.append('path', normalizedPath);
-      
+
       // Fetch with authentication
       const attemptFetch = async (isRetry: boolean = false): Promise<Response> => {
         const headers: Record<string, string> = {};
         if (session?.access_token) {
           headers['Authorization'] = `Bearer ${session.access_token}`;
         }
-        
+
         const response = await fetch(url.toString(), {
           headers
         });
-        
+
         if (!response.ok) {
           const responseText = await response.text();
           const errorMessage = `Failed to load file: ${response.status} ${response.statusText}`;
-          
+
           // Check if this is a workspace initialization error and we haven't retried yet
           const isWorkspaceNotRunning = responseText.includes('Workspace is not running');
           if (isWorkspaceNotRunning && !isRetry) {
             await new Promise(resolve => setTimeout(resolve, 2000));
             return attemptFetch(true);
           }
-          
+
           console.error(`[FILE CACHE] Failed response for ${normalizedPath}: Status ${response.status}`);
           throw new Error(errorMessage);
         }
-        
+
         return response;
       };
-      
+
       const response = await attemptFetch();
-      
+
       // Process content based on contentType
       let content;
       let cacheType: 'content' | 'url' | 'error' = 'content';
-      
+
       // Important: Check if this is a binary file that needs special handling
       const isOfficeFile = filePath?.toLowerCase().match(/\.(xlsx|xls|docx|doc|pptx|ppt)$/);
       const isImageFile = filePath ? FileCache.isImageFile(filePath) : false;
       const isPdfFile = filePath ? FileCache.isPdfFile(filePath) : false;
       const isBinaryFile = isOfficeFile || isImageFile || isPdfFile;
-      
+
       // Create a mutable copy of contentType if needed for binary files
       let effectiveContentType = options.contentType || 'text';
       if (isBinaryFile && effectiveContentType !== 'blob') {
         effectiveContentType = 'blob';
       }
-      
+
       switch (effectiveContentType) {
         case 'json':
           content = await response.json();
@@ -154,25 +154,25 @@ export function useCachedFile<T = string>(
         case 'blob':
           // Get the blob
           const blob = await response.blob();
-          
+
           if (isImageFile || isPdfFile) {
             // For images and PDFs, store the raw blob in cache
-            
+
             // Verify the blob is the correct type for PDFs
             if (isPdfFile && !blob.type.includes('pdf') && blob.size > 0) {
               console.warn(`[FILE CACHE] PDF blob has generic MIME type: ${blob.type} - will correct it automatically`);
-              
+
               const firstBytes = await blob.slice(0, 10).text();
               if (firstBytes.startsWith('%PDF')) {
-                
+
                 const correctedBlob = new Blob([await blob.arrayBuffer()], { type: 'application/pdf' });
-                
+
                 // Store the corrected blob in cache and return it
                 fileCache.set(key, { content: correctedBlob, timestamp: Date.now(), type: 'content' });
                 return correctedBlob;
               }
             }
-            
+
             // Store the raw blob in cache and return it
             fileCache.set(key, { content: blob, timestamp: Date.now(), type: 'content' });
             return blob;
@@ -196,14 +196,14 @@ export function useCachedFile<T = string>(
           content = await response.text();
           break;
       }
-      
+
       // After the switch, the caching logic should be simplified to handle all cases that fall through
       fileCache.set(key, {
         content,
         timestamp: now,
         type: cacheType
       });
-      
+
       return content;
     } catch (err: any) {
       // Cache the error to prevent repeated failing requests
@@ -212,7 +212,7 @@ export function useCachedFile<T = string>(
         timestamp: Date.now(),
         type: 'error'
       });
-      
+
       throw err;
     } finally {
       setIsLoading(false);
@@ -237,14 +237,14 @@ export function useCachedFile<T = string>(
         setData(content);
       }
     };
-    
+
     try {
       // First check if we have cached data
       const cachedItem = fileCache.get(cacheKey);
       if (cachedItem) {
         // Set data from cache immediately
         processContent(cachedItem.content);
-        
+
         // If cache is expired, refresh in background
         if (Date.now() - cachedItem.timestamp > (options.expiration || CACHE_EXPIRATION)) {
           getCachedFile(cacheKey, true)
@@ -273,7 +273,7 @@ export function useCachedFile<T = string>(
       setIsLoading(false);
       setError(null);
     }
-    
+
     // Clean up the local blob URL when component unmounts
     return () => {
       if (localBlobUrl) {
@@ -281,6 +281,7 @@ export function useCachedFile<T = string>(
         setLocalBlobUrl(null);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sandboxId, filePath, options.contentType]);
 
   // Expose the cache manipulation functions
@@ -301,66 +302,66 @@ export function useCachedFile<T = string>(
 // Static functions for direct cache manipulation without hooks
 export const FileCache = {
   get: (key: string) => fileCache.get(key)?.content || null,
-  
+
   set: (key: string, content: any) => {
     if (!key || content === null || content === undefined) return;
-    
+
     fileCache.set(key, {
       content,
       timestamp: Date.now(),
       type: typeof content === 'string' && content.startsWith('blob:') ? 'url' : 'content'
     });
   },
-  
+
   has: (key: string) => fileCache.has(key),
-  
+
   clear: () => fileCache.clear(),
-  
+
   delete: (key: string) => fileCache.delete(key),
-  
+
   // Helper function to determine content type from file extension
   getContentTypeFromPath: (path: string): 'text' | 'blob' | 'json' => {
     if (!path) return 'text';
-    
+
     const ext = path.toLowerCase().split('.').pop() || '';
-    
+
     // Binary file extensions
     if (/^(xlsx|xls|docx|pptx|ppt|pdf|png|jpg|jpeg|gif|bmp|webp|svg|ico|zip|exe|dll|bin|dat|obj|o|so|dylib|mp3|mp4|avi|mov|wmv|flv|wav|ogg)$/.test(ext)) {
       return 'blob';
     }
-    
+
     // JSON files
     if (ext === 'json') return 'json';
-    
+
     // Default to text
     return 'text';
   },
-  
+
   // Helper function to check if a file is an image
   isImageFile: (path: string): boolean => {
     const ext = path.split('.').pop()?.toLowerCase() || '';
     return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico'].includes(ext);
   },
-  
+
   // Helper function to check if a file is a PDF
   isPdfFile: (path: string): boolean => {
     return path.toLowerCase().endsWith('.pdf');
   },
-  
+
   // Helper function to check if a value is a Blob
   isBlob: (value: any): boolean => {
     return value instanceof Blob;
   },
-  
+
   // Helper function to get the correct content type for a file
   getContentType: (path: string, contentType?: 'text' | 'blob' | 'json'): 'text' | 'blob' | 'json' => {
     return contentType || FileCache.getContentTypeFromPath(path);
   },
-  
+
   // Fix: Rename to avoid duplicate property name error
   getMimeTypeFromPath: (path: string): string => {
     const ext = path.split('.').pop()?.toLowerCase() || '';
-    
+
     // Office documents
     switch (ext) {
       case 'xlsx': return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -369,23 +370,23 @@ export const FileCache = {
       case 'doc': return 'application/json'; // TipTap document format
       case 'pptx': return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
       case 'ppt': return 'application/vnd.ms-powerpoint';
-      
+
       // PDF and images
       case 'pdf': return 'application/pdf';
       case 'png': return 'image/png';
-      case 'jpg': 
+      case 'jpg':
       case 'jpeg': return 'image/jpeg';
       case 'gif': return 'image/gif';
       case 'svg': return 'image/svg+xml';
-      
+
       // Archives
       case 'zip': return 'application/zip';
-      
+
       // Default
       default: return 'application/octet-stream';
     }
   },
-  
+
   // Preload files into cache for future use
   preload: async (sandboxId: string, filePaths: string[], token?: string | null) => {
     if (!token) {
@@ -400,13 +401,13 @@ export const FileCache = {
         console.error('Failed to get auth token from localStorage:', err);
       }
     }
-    
+
     // Skip preloading if no authentication token available
     if (!token) {
       console.warn('Cannot preload files: No authentication token available');
       return [];
     }
-    
+
     // Deduplicate the file paths
     const uniqueFilePaths = [...new Set(filePaths)];
 
@@ -416,68 +417,68 @@ export const FileCache = {
       path = path.replace(/\\u([0-9a-fA-F]{4})/g, (_, hexCode) => {
         return String.fromCharCode(parseInt(hexCode, 16));
       });
-      
+
       const normalizedPath = normalizePath(path);
       const key = getCacheKey(sandboxId, normalizedPath);
-      
+
       // Skip if already cached
       if (fileCache.has(key)) {
         return fileCache.get(key)?.content;
       }
-      
+
       // Check if this file is already being preloaded
       const preloadKey = `${sandboxId}:${normalizedPath}`;
       if (inProgressPreloads.has(preloadKey)) {
         return inProgressPreloads.get(preloadKey);
       }
-      
+
       // Create a promise for this preload and store it
       const preloadPromise = (async () => {
-        try {        
+        try {
           const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
-          
+
           // Properly encode the path parameter for UTF-8 support
           url.searchParams.append('path', normalizedPath);
-          
+
           const attemptFetch = async (isRetry: boolean = false): Promise<Response> => {
             const response = await fetch(url.toString(), {
               headers: {
                 'Authorization': `Bearer ${token}`
               },
             });
-            
+
             if (!response.ok) {
               const responseText = await response.text();
               const errorMessage = `Failed to preload file: ${response.status}`;
-              
+
               // Check if this is a workspace initialization error and we haven't retried yet
               const isWorkspaceNotRunning = responseText.includes('Workspace is not running');
               if (isWorkspaceNotRunning && !isRetry) {
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 return attemptFetch(true);
               }
-              
+
               throw new Error(errorMessage);
             }
-            
+
             return response;
           };
-          
+
           const response = await attemptFetch();
-          
+
           // Determine how to process the content based on file type
           const extension = path.split('.').pop()?.toLowerCase();
           let content;
           let type: 'content' | 'url' = 'content';
-          
+
           // Check if this is a binary file (includes Office documents, PDFs, images)
-          const isBinaryFile = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'mp3', 'mp4', 
-                               'xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt', 
-                               'zip', 'exe', 'bin'].includes(extension || '');
-          
+          const isBinaryFile = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'mp3', 'mp4',
+            'xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt',
+            'zip', 'exe', 'bin'].includes(extension || '');
+
           if (isBinaryFile) {
             const blob = await response.blob();
-            
+
             if (FileCache.isImageFile(path)) {
               // For images, store the raw blob
               content = blob;
@@ -493,22 +494,22 @@ export const FileCache = {
               content = URL.createObjectURL(blob);
               type = 'url';
             }
-          } 
+          }
           // Json files
           else if (extension === 'json') {
             content = await response.json();
-          } 
+          }
           // Default to text
           else {
             content = await response.text();
           }
-          
+
           fileCache.set(key, {
             content,
             timestamp: Date.now(),
             type
           });
-          
+
           return content;
         } catch (err) {
           fileCache.set(key, {
@@ -522,16 +523,16 @@ export const FileCache = {
           inProgressPreloads.delete(preloadKey);
         }
       })();
-      
+
       // Store the promise in the in-progress map
       inProgressPreloads.set(preloadKey, preloadPromise);
-      
+
       return preloadPromise;
     });
-    
+
     return Promise.all(preloadPromises);
   },
-  
+
   // Helper function to get the correct MIME type for a file
   getMimeType: (path: string): string => {
     // Call our renamed function to avoid duplication
@@ -550,61 +551,61 @@ export async function getCachedFile(
   } = {}
 ): Promise<any> {
   if (!filePath || !sandboxId) return null;
-  
+
   // Normalize path and create cache key
   const normalizedPath = normalizePath(filePath);
   const key = getCacheKey(sandboxId, normalizedPath);
-  
+
   // Determine appropriate content type
   const isBinaryFile = FileCache.getContentTypeFromPath(filePath) === 'blob';
   const effectiveType = isBinaryFile ? 'blob' : (options.contentType || 'text');
-  
+
   // Check cache first unless force refresh requested
   if (!options.force && fileCache.has(key)) {
     const cached = fileCache.get(key);
     if (cached && cached.type !== 'error') return cached.content;
   }
-  
+
   // Fetch fresh content
   try {
     const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
     url.searchParams.append('path', normalizedPath);
-    
+
     const attemptFetch = async (isRetry: boolean = false): Promise<Response> => {
       const response = await fetch(url.toString(), {
         headers: {
           'Authorization': `Bearer ${options.token}`
         }
       });
-      
+
       if (!response.ok) {
         const responseText = await response.text();
         const errorMessage = `Failed to load file: ${response.status} ${response.statusText}`;
-        
+
         // Check if this is a workspace initialization error and we haven't retried yet
         const isWorkspaceNotRunning = responseText.includes('Workspace is not running');
         if (isWorkspaceNotRunning && !isRetry) {
           await new Promise(resolve => setTimeout(resolve, 2000));
           return attemptFetch(true);
         }
-        
+
         console.error(`[FILE CACHE] Failed response for ${normalizedPath}: Status ${response.status}`);
         throw new Error(errorMessage);
       }
-      
+
       return response;
     };
-    
+
     const response = await attemptFetch();
-    
+
     // Process content based on type
     let content;
-    
+
     if (effectiveType === 'json') {
       content = await response.json();
     } else if (effectiveType === 'blob') {
       const blob = await response.blob();
-      
+
       // For binary files, ensure correct MIME type
       const mimeType = FileCache.getMimeType(filePath);
       if (mimeType && mimeType !== blob.type) {
@@ -612,23 +613,23 @@ export async function getCachedFile(
       } else {
         content = blob;
       }
-      
+
       // For images and PDFs, return a blob URL for immediate use
       if (FileCache.isImageFile(filePath) || FileCache.isPdfFile(filePath)) {
         // Store the blob in cache
         FileCache.set(key, content);
-        
+
         // Return URL for immediate use
         return URL.createObjectURL(content);
       }
     } else {
       content = await response.text();
     }
-    
+
     // Cache the result
     FileCache.set(key, content);
     return content;
-    
+
   } catch (err) {
     // Cache the error
     FileCache.set(key, null);
@@ -646,17 +647,17 @@ export async function fetchFileContent(
   }
 ): Promise<string | Blob | any> {
   const { contentType = 'text', token } = options;
-  
+
   // For internal tracking
   const requestId = Math.random().toString(36).substring(2, 9);
-  
+
   const attemptFetch = async (isRetry: boolean = false): Promise<string | Blob | any> => {
     try {
       // Prepare the API URL
       const apiUrl = `${getApiUrl()}/sandboxes/${sandboxId}/files/content`;
       const url = new URL(apiUrl);
       url.searchParams.append('path', filePath);
-      
+
       // Set up fetch options
       const fetchOptions: RequestInit = {
         method: 'GET',
@@ -664,23 +665,23 @@ export async function fetchFileContent(
           Authorization: `Bearer ${token}`,
         },
       };
-      
+
       // Execute fetch
       const response = await fetch(url.toString(), fetchOptions);
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch file content: ${response.status} ${errorText}`);
       }
-      
+
       // CRITICAL: Detect correct response handling based on file type
       // Excel files, PDFs and other binary documents should be handled as blobs
       const extension = filePath.split('.').pop()?.toLowerCase();
       const isBinaryFile = ['xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip'].includes(extension || '');
-      
+
       // Handle response based on content type
       if (contentType === 'blob' || isBinaryFile) {
         const blob = await response.blob();
-        
+
         // Set correct MIME type for known file types
         if (extension) {
           const mimeType = FileCache.getMimeType(filePath);
@@ -689,7 +690,7 @@ export async function fetchFileContent(
             return new Blob([blob], { type: mimeType });
           }
         }
-        
+
         return blob;
       } else if (contentType === 'json') {
         return await response.json();
@@ -706,7 +707,7 @@ export async function fetchFileContent(
       throw error;
     }
   };
-  
+
   try {
     return await attemptFetch();
   } catch (error) {

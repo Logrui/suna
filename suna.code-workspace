@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../suna-private"
+		},
+		{
+			"path": "../suna-PRODUCTION"
 		}
 	],
 	"settings": {}
