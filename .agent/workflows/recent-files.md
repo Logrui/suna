@@ -1,0 +1,30 @@
+---
+description: List recently edited files in the repository.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Goal
+
+Execute the `list-recent-edits.ps1` script to see recently modified files.
+
+## Arguments
+
+- **Count** (optional, positional): Number of files to list (default: 10).
+
+## Examples
+
+- `/recent`: List top 10 recently edited files.
+- `/recent 20`: List top 20.
+
+## Execution Steps
+
+### 1. Run Script
+
+```powershell
+.\.scripts\core\list-recent-edits.ps1 $ARGUMENTS
+```

@@ -13,6 +13,8 @@ from core.utils.logger import logger
 from core.utils.auth_utils import get_optional_user_id, verify_and_get_user_id_from_jwt, verify_sandbox_access, verify_sandbox_access_optional
 from core.services.supabase import DBConnection
 from core.utils.sandbox_utils import generate_unique_filename, get_uploads_directory
+import mimetypes
+import html
 
 # Initialize shared resources
 router = APIRouter(tags=["sandbox"])
@@ -247,6 +249,7 @@ async def read_file(
     path = normalize_path(path)
     
     logger.debug(f"Received file read request for sandbox {sandbox_id}, path: {path}, user_id: {user_id}")
+    logger.debug(f"Request URL: {request.url}")
     if original_path != path:
         logger.debug(f"Normalized path from '{original_path}' to '{path}'")
     
@@ -277,11 +280,45 @@ async def read_file(
         # This applies RFC 5987 encoding for the filename to support non-ASCII characters
         import urllib.parse
         encoded_filename = urllib.parse.quote(filename, safe='')
-        content_disposition = f"attachment; filename*=UTF-8''{encoded_filename}"
+        
+        # Guess mime type
+        media_type, _ = mimetypes.guess_type(filename)
+        if not media_type:
+            media_type = "application/octet-stream"
+            
+        # Heuristic to fix escaped HTML content
+        if path.lower().endswith('.html') or path.lower().endswith('.htm'):
+            if isinstance(content, bytes):
+                try:
+                    decoded = content.decode('utf-8')
+                    # Check for common escaped HTML tags
+                    if '&lt;html' in decoded or '&lt;!DOCTYPE' in decoded or '&lt;body' in decoded:
+                        logger.warning(f"Detected escaped HTML in {path}, unescaping...")
+                        content = html.unescape(decoded).encode('utf-8')
+                except Exception as e:
+                    logger.warning(f"Failed to check/unescape bytes content: {e}")
+            elif isinstance(content, str):
+                 if '&lt;html' in content or '&lt;!DOCTYPE' in content or '&lt;body' in content:
+                    logger.warning(f"Detected escaped HTML in {path}, unescaping...")
+                    content = html.unescape(content)
+
+        # Determine disposition type (inline for viewable content, attachment for others)
+        # We want HTML, images, PDFs, text to be viewable inline
+        viewable_types = ['text/', 'image/', 'application/pdf', 'application/json', 'application/javascript']
+        disposition_type = "attachment"
+        
+        for v_type in viewable_types:
+            if media_type.startswith(v_type):
+                disposition_type = "inline"
+                break
+        
+        content_disposition = f"{disposition_type}; filename*=UTF-8''{encoded_filename}"
+        
+        logger.debug(f"Serving file {path} with media_type='{media_type}' and Content-Disposition='{content_disposition}'")
         
         return Response(
             content=content,
-            media_type="application/octet-stream",
+            media_type=media_type,
             headers={"Content-Disposition": content_disposition}
         )
     except HTTPException:
@@ -534,6 +571,7 @@ async def proxy_daytona_preview(
     Proxy a request to the Daytona preview URL, injecting the header to skip the warning.
     """
     logger.debug(f"Proxy request: sandbox={sandbox_id} port={port} path={path}")
+    logger.debug(f"Incoming Request URL: {request.url}")
     
     client = await db.client
     # Verify access (optional but recommended)
@@ -587,17 +625,26 @@ async def proxy_daytona_preview(
         r = await async_client.send(req, stream=True)
         
         logger.debug(f"Upstream response: {r.status_code} Content-Type: {r.headers.get('content-type')}")
+        logger.debug(f"Upstream headers: {dict(r.headers)}")
         
         # Determine content type
         content_type = r.headers.get("content-type")
+        
+        # Force text/html for .html files regardless of upstream header
+        if path.lower().endswith('.html') or path.lower().endswith('.htm'):
+            content_type = 'text/html; charset=utf-8'
+            logger.debug(f"Forcing Content-Type: {content_type} based on file extension")
         
         # Create an iterator for the response bytes
         iterator = r.aiter_bytes()
         first_chunk = b""
         
+        # Also check for escaped HTML if it's an HTML file
+        is_html_file = path.lower().endswith('.html') or path.lower().endswith('.htm')
+        
         # If content type is generic or missing, try to sniff the content
         # This is more robust than checking file extensions
-        if not content_type or 'text/plain' in content_type or 'application/octet-stream' in content_type:
+        if not content_type or 'text/plain' in content_type or 'application/octet-stream' in content_type or is_html_file:
             try:
                 # Peek at the first chunk
                 first_chunk = await iterator.__anext__()
@@ -607,9 +654,19 @@ async def proxy_daytona_preview(
                 sample = first_chunk[:1024].strip().lower()
                 logger.debug(f"Sniffing sample (len={len(sample)}): {sample[:50]}...")
                 
-                if sample.startswith(b'<!doctype html') or sample.startswith(b'<html'):
+                is_escaped_html = False
+                if sample.startswith(b'&lt;html') or sample.startswith(b'&lt;!doctype') or b'&lt;html' in sample[:100]:
+                    is_escaped_html = True
+                    logger.warning(f"Detected escaped HTML in proxy stream for {path}")
+                
+                if sample.startswith(b'<!doctype html') or sample.startswith(b'<html') or b'<html' in sample[:100] or is_escaped_html:
                     content_type = 'text/html; charset=utf-8'
                     logger.debug(f"Sniffed HTML content for {path}, forcing Content-Type: {content_type}")
+                    
+                    # If we force content type, we must ensure nosniff doesn't block us if it was set upstream
+                    if 'x-content-type-options' in r.headers:
+                        logger.debug("Removing X-Content-Type-Options header to allow sniffing override")
+                        pass
             except StopAsyncIteration:
                 # Empty body
                 logger.debug("Empty response body from upstream")
@@ -617,16 +674,60 @@ async def proxy_daytona_preview(
             except Exception as e:
                 logger.warning(f"Error sniffing content type: {e}")
         
-        async def stream_generator():
-            if first_chunk:
-                yield first_chunk
+        async def unescape_stream(iterator):
+            """
+            Generator that unescapes HTML content from the stream.
+            This buffers the content to unescape it.
+            """
+            buffer = b""
             async for chunk in iterator:
-                yield chunk
+                buffer += chunk
+            
+            # Decode, unescape, and re-encode
+            try:
+                decoded = buffer.decode('utf-8')
+                unescaped = html.unescape(decoded)
+                yield unescaped.encode('utf-8')
+            except Exception as e:
+                logger.error(f"Failed to unescape stream: {e}")
+                yield buffer
+
+        async def stream_generator():
+            # Reconstruct the full stream
+            async def chain_iterator():
+                if first_chunk:
+                    yield first_chunk
+                async for chunk in iterator:
+                    yield chunk
+            
+            final_iterator = chain_iterator()
+            
+            # If we detected escaped HTML, wrap the iterator in the unescaper
+            if 'is_escaped_html' in locals() and is_escaped_html:
+                logger.info(f"Enabling HTML unescaping for {path}")
+                async for chunk in unescape_stream(final_iterator):
+                    yield chunk
+            else:
+                async for chunk in final_iterator:
+                    yield chunk
+        
+        logger.debug(f"Final Response - Status: {r.status_code}, Content-Type: {content_type}")
+        
+        # We should probably forward some headers, but for now let's just ensure Content-Type is correct.
+        # If we want to be a transparent proxy, we should forward safe headers.
+        # But for this specific fix, just setting media_type is key.
+        
+        # Construct response headers
+        response_headers = {}
+        # Forward some safe headers if needed, but definitely NOT Content-Disposition if we want inline
+        # Actually, let's explicitly set Content-Disposition to inline to be safe
+        response_headers["Content-Disposition"] = "inline"
         
         return StreamingResponse(
             stream_generator(),
             status_code=r.status_code,
             media_type=content_type,
+            headers=response_headers,
             background=None 
         )
     except Exception as e:

@@ -629,6 +629,20 @@ The repository includes a React Native mobile app in `apps/mobile/` (Expo-based)
    cd ../../suna && docker compose down && docker compose up -d
    ```
 
+4. **Code Changes (Backend)**:
+   - **Source Code (`.py`)**: Restart is sufficient (volume mounted)
+     ```bash
+     docker compose restart backend
+     ```
+   - **Dependencies (`pyproject.toml`, `uv.lock`)**: Requires rebuild
+     ```bash
+     docker compose up -d --build backend
+     ```
+   - **System Deps (`Dockerfile`)**: Requires rebuild
+     ```bash
+     docker compose up -d --build backend
+     ```
+
 ### Checking Service Health
 
 ```bash
