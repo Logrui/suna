@@ -11,6 +11,7 @@ description: Perform a docker compose build verification and continue in fix loo
 description: Perform a verification and fix loop until quality and issues with docker compose build are resolves for the most recent task and/or changes. Prompt user
 ---
 
+//turbo-all
 ## User Input
 
 ```text
