@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import type { GraphDefinition } from '@/types/workflows';
+import type { GraphDefinition } from '@/types/workflows/graph-definition';
 
 interface ValidationResult {
   is_valid: boolean;

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { GraphDefinition, CompiledLogic } from '@/types/workflows';
+import type { GraphDefinition, CompiledLogic } from '@/types/workflows/graph-definition';
 
 interface Workflow {
   id: string;

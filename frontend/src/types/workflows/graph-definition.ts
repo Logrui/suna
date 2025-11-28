@@ -39,22 +39,23 @@ export type NodeType =
  */
 export interface NodeConfig {
   // AI Step configuration
-  modelId?: string;                    // e.g., "gpt-4o", "claude-3-5-sonnet"
-  systemPrompt?: string;               // Agent persona/instructions
-  userPrompt?: LexicalEditorState;     // Serialized Lexical JSON with variable mentions
-  temperature?: number;                // 0.0 - 2.0
-  maxTokens?: number;
-  tools?: string[];                    // Tool names from tool registry
-  grounding?: boolean;                 // Enable web search/grounding
+  model?: string;                    // e.g., "gpt-4o", "claude-3-5-sonnet"
+  system_prompt?: string;            // Agent persona/instructions
+  prompt?: string;                   // Serialized Lexical JSON or plain text
+  userPrompt?: LexicalEditorState;   // Keeping this for backward compatibility if needed, or remove?
+  temperature?: number;              // 0.0 - 2.0
+  max_tokens?: number;
+  tools?: string[];                  // Tool names from tool registry
+  grounding?: boolean;               // Enable web search/grounding
 
   // Rule-based condition configuration
   rules?: ConditionRule[];
 
   // LLM-based condition configuration
-  naturalLanguageCondition?: string;   // e.g., "if the response seems urgent"
+  natural_language_condition?: string;   // e.g., "if the response seems urgent"
 
   // Variable output configuration
-  outputVariable?: string;             // Variable name to store step output
+  output_variable?: string;             // Variable name to store step output
 
   // Trigger configuration
   triggerType?: 'manual' | 'webhook' | 'schedule' | 'email';
@@ -130,4 +131,33 @@ export interface VariableMentionNode {
   variable: string;      // Variable path, e.g., "trigger.email_subject"
   label: string;         // Display label, e.g., "Email Subject"
   version: number;
+}
+
+/**
+ * Compiled logic for execution (from backend)
+ */
+export interface CompiledLogic {
+  version: string;
+  start_node_id: string;
+  nodes: Record<string, LogicNode>;
+  variables: VariableDeclaration[];
+}
+
+export interface LogicNode {
+  id: string;
+  type: string;
+  config: Record<string, any>;
+  transitions: Transition[];
+}
+
+export interface Transition {
+  target_id: string;
+  condition: string | null;
+}
+
+export interface VariableDeclaration {
+  name: string;
+  source: string;
+  source_id?: string;
+  type?: string;
 }

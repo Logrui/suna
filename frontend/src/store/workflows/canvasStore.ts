@@ -18,11 +18,12 @@ import type {
   NodeType,
   NodeConfig,
   GraphDefinition,
+  EdgeData,
 } from '@/types/workflows/graph-definition';
 
 interface CanvasState {
   nodes: Node<NodeData>[];
-  edges: Edge[];
+  edges: Edge<EdgeData>[];
   viewport: Viewport;
   selectedNodeIds: string[];
 
