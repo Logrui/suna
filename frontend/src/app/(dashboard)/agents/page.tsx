@@ -21,6 +21,8 @@ import { MarketplaceTab } from '@/components/agents/custom-agents-page/marketpla
 import { PublishDialog } from '@/components/agents/custom-agents-page/publish-dialog';
 import { LoadingSkeleton } from '@/components/agents/custom-agents-page/loading-skeleton';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
+import { NewTeamDialog } from '@/components/agents/new-team-dialog';
+import { TeamDetailsDialog } from '@/components/agents/team-details-dialog';
 import { MarketplaceAgentPreviewDialog } from '@/components/agents/marketplace-agent-preview-dialog';
 import { AgentCountLimitError } from '@/lib/api/errors';
 
@@ -89,6 +91,9 @@ export default function AgentsPage() {
 
   const [publishingAgentId, setPublishingAgentId] = useState<string | null>(null);
   const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
+  const [showNewTeamDialog, setShowNewTeamDialog] = useState(false);
+  const [showTeamDetailsDialog, setShowTeamDetailsDialog] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
 
   const activeTab = useMemo(() => {
     const tab = searchParams.get('tab');
@@ -647,9 +652,13 @@ export default function AgentsPage() {
                 has_previous: false
               }}
               viewMode={viewMode}
-              onCreateTeam={() => toast.info("Create Team feature coming soon!")}
+              onCreateTeam={() => setShowNewTeamDialog(true)}
               onEditTeam={(id) => toast.info(`Edit Team ${id} feature coming soon!`)}
               onDeleteTeam={(id) => toast.info(`Delete Team ${id} feature coming soon!`)}
+              onTeamClick={(team) => {
+                setSelectedTeam(team);
+                setShowTeamDetailsDialog(true);
+              }}
               onToggleDefault={() => { }}
               onClearFilters={() => setTeamsSearchQuery('')}
               setTeamsPage={setTeamsPage}
@@ -663,11 +672,6 @@ export default function AgentsPage() {
               setTemplatesPage={() => { }}
               templatesPageSize={20}
               onTemplatesPageSizeChange={() => { }}
-              templatesSearchQuery=""
-              setTemplatesSearchQuery={() => { }}
-              onPublish={() => { }}
-              onUnpublish={() => { }}
-              getTemplateStyling={() => ({ color: '#000' })}
             />
           )}
 
@@ -714,6 +718,25 @@ export default function AgentsPage() {
         <NewAgentDialog
           open={showNewAgentDialog}
           onOpenChange={setShowNewAgentDialog}
+        />
+
+        <NewTeamDialog
+          open={showNewTeamDialog}
+          onOpenChange={setShowNewTeamDialog}
+        />
+
+        <TeamDetailsDialog
+          open={showTeamDetailsDialog}
+          onOpenChange={setShowTeamDetailsDialog}
+          team={selectedTeam}
+          onEdit={(id) => {
+            setShowTeamDetailsDialog(false);
+            toast.info(`Edit Team ${id} feature coming soon!`);
+          }}
+          onDelete={(id) => {
+            setShowTeamDetailsDialog(false);
+            toast.info(`Delete Team ${id} feature coming soon!`);
+          }}
         />
 
         <MarketplaceAgentPreviewDialog

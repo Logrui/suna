@@ -1,13 +1,13 @@
 'use client';
 
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { NodeData } from '@/types/workflows/graph-definition';
 import { Square } from 'lucide-react';
 import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 import { useExecutionStore } from '@/store/workflows/executionStore';
 
-export const EndNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
+export const EndNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
   const nodeStatus = useExecutionStore((state) => state.nodeStatus[id]);
   const executionStatus = useExecutionStore((state) => state.status);
 
@@ -31,7 +31,7 @@ export const EndNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
   };
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] bg-white ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-200'}`}>
+    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
       <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
@@ -49,7 +49,7 @@ export const EndNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
         </div>
       </div>
 
-      <div className="text-xs text-gray-600">
+      <div className="text-xs text-muted-foreground">
         Format: {data.config?.outputFormat || 'default'}
       </div>
 

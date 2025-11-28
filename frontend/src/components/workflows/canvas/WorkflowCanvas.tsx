@@ -101,10 +101,26 @@ const WorkflowCanvasInner = () => {
         nodeTypes={nodeTypes}
         defaultViewport={viewport}
         fitView
+        proOptions={{ hideAttribution: true }}
       >
-        <Controls />
-        <Background gap={12} size={1} />
-        <MiniMap />
+        <Controls
+          className="!bg-card !border-border shadow-sm [&>button]:!bg-card [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-accent [&>button:hover]:!text-accent-foreground [&>button>svg]:!fill-foreground"
+        />
+        <Background gap={12} size={1} className="bg-background" color="#555" />
+        <MiniMap
+          className="!bg-card !border-border shadow-sm"
+          maskColor="rgba(0, 0, 0, 0.1)"
+          nodeColor={(node) => {
+            switch (node.type) {
+              case 'TRIGGER': return '#16a34a'; // green-600
+              case 'AI_STEP': return '#2563eb'; // blue-600
+              case 'RULE_CONDITION': return '#ca8a04'; // yellow-600
+              case 'LLM_CONDITION': return '#9333ea'; // purple-600
+              case 'STOP': return '#dc2626'; // red-600
+              default: return '#888';
+            }
+          }}
+        />
       </ReactFlow>
     </div>
   );

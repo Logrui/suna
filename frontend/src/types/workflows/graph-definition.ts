@@ -60,6 +60,7 @@ export interface NodeConfig {
   // Trigger configuration
   triggerType?: 'manual' | 'webhook' | 'schedule' | 'email';
   triggerConfig?: Record<string, any>;  // Trigger-specific settings
+  outputFormat?: string;                // End node output format
 }
 
 /**

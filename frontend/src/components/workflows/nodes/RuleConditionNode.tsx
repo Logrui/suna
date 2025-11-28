@@ -1,13 +1,13 @@
 'use client';
 
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { NodeData } from '@/types/workflows/graph-definition';
 import { Scale } from 'lucide-react';
 import { useExecutionStore } from '@/store/workflows/executionStore';
 import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 
-export const RuleConditionNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
+export const RuleConditionNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
   const nodeStatus = useExecutionStore((state) => state.nodeStatus[id]);
   const executionStatus = useExecutionStore((state) => state.status);
 
@@ -31,7 +31,7 @@ export const RuleConditionNode = memo(({ id, data, selected }: NodeProps<NodeDat
   };
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[200px] bg-white ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-200'}`}>
+    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[200px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
       <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
@@ -49,7 +49,7 @@ export const RuleConditionNode = memo(({ id, data, selected }: NodeProps<NodeDat
         </div>
       </div>
 
-      <div className="text-xs text-gray-600 mb-2">
+      <div className="text-xs text-muted-foreground mb-2">
         {data.config?.rules?.length || 0} rule{data.config?.rules?.length !== 1 ? 's' : ''} defined
       </div>
 

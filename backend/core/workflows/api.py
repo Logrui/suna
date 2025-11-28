@@ -402,4 +402,224 @@ async def get_workflow_variables(
 
     variables = compiled_logic.get('variables', [])
 
+
+# ============================================================================
+# Root-Level Workflow Endpoints (Frontend Compatibility)
+# ============================================================================
+
+@router.get("/{workflow_id}", response_model=Workflow)
+async def get_workflow_by_id(
+    workflow_id: UUID,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific workflow by ID"""
+    supabase = get_supabase_client()
+    
+    response = supabase.table("agent_workflows") \
+        .select("*") \
+        .eq("id", str(workflow_id)) \
+        .single() \
+        .execute()
+        
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+        
+    return response.data
+
+@router.put("/{workflow_id}", response_model=Workflow)
+async def update_workflow_by_id(
+    workflow_id: UUID,
+    workflow_data: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an existing workflow by ID"""
+    supabase = get_supabase_client()
+    
+    data = workflow_data.copy()
+    data["updated_at"] = datetime.now().isoformat()
+    
+    response = supabase.table("agent_workflows") \
+        .update(data) \
+        .eq("id", str(workflow_id)) \
+        .execute()
+        
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Workflow not found or update failed")
+        
+    return response.data[0]
+
+@router.patch("/{workflow_id}", response_model=Workflow)
+async def patch_workflow_by_id(
+    workflow_id: UUID,
+    workflow_data: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Partial update of an existing workflow by ID"""
+    supabase = get_supabase_client()
+    
+    data = workflow_data.copy()
+    data["updated_at"] = datetime.now().isoformat()
+    
+    response = supabase.table("agent_workflows") \
+        .update(data) \
+        .eq("id", str(workflow_id)) \
+        .execute()
+        
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Workflow not found or update failed")
+        
+    return response.data[0]
+
+@router.post("/{workflow_id}/validate")
+async def validate_workflow_by_id(
+    workflow_id: UUID,
+    graph_definition: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Validate graph definition without saving"""
+    validator = GraphValidator()
+    result = validator.validate(graph_definition)
+    return result
+
+@router.post("/{workflow_id}/compile")
+async def compile_workflow_by_id(
+    workflow_id: UUID,
+    graph_definition: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Compile graph_definition to compiled_logic without saving"""
+    # First validate
+    validator = GraphValidator()
+    validation = validator.validate(graph_definition)
+
+    if not validation['valid']:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                'error': 'VALIDATION_ERROR',
+                'message': 'Graph validation failed before compilation',
+                'validation_errors': validation['errors']
+            }
+        )
+
+    # Compile
+    compiler = GraphCompiler()
+    try:
+        compiled_logic = compiler.compile(graph_definition)
+        return {
+            'compiled_logic': compiled_logic,
+            'compilation_warnings': validation['warnings']
+        }
+    except Exception as e:
+        logger.error(f"Compilation failed: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                'error': 'COMPILATION_ERROR',
+                'message': str(e)
+            }
+        )
+
+@router.post("/{workflow_id}/execute")
+async def execute_workflow_by_id(
+    workflow_id: UUID,
+    trigger_context: Dict[str, Any] = Body(..., alias='trigger_context'),
+    thread_id: Optional[str] = Body(None),
+    current_user: dict = Depends(get_current_user)
+):
+    """Execute workflow with trigger context"""
+    supabase = get_supabase_client()
+
+    # Get workflow
+    workflow_response = supabase.table("agent_workflows") \
+        .select("*") \
+        .eq("id", str(workflow_id)) \
+        .single() \
+        .execute()
+
+    if not workflow_response.data:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    workflow = workflow_response.data
+    mode = workflow.get('mode', 'simple')
+
+    # Mode detection router
+    if mode == 'simple':
+        raise HTTPException(
+            status_code=501,
+            detail="Simple mode execution not yet integrated"
+        )
+
+    elif mode == 'advanced':
+        compiled_logic = workflow.get('compiled_logic')
+        if not compiled_logic:
+            raise HTTPException(
+                status_code=422,
+                detail="Advanced workflow missing compiled_logic"
+            )
+
+        if not thread_id:
+            import uuid
+            thread_id = str(uuid.uuid4())
+
+        thread_manager = ThreadManager()
+        redis_client = await redis.get_client()
+        executor = GraphExecutor(thread_manager=thread_manager, redis_client=redis_client)
+        try:
+            result = await executor.execute(
+                workflow_id=str(workflow_id),
+                thread_id=thread_id,
+                compiled_logic=compiled_logic,
+                trigger_context=trigger_context
+            )
+
+            return {
+                'execution_id': result['execution_id'],
+                'thread_id': result['thread_id'],
+                'status': result['status'],
+                'started_at': result['started_at'],
+                'monitor_url': f"/api/workflows/executions/{result['execution_id']}/stream"
+            }
+
+        except Exception as e:
+            logger.error(f"Execution failed: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    'error': 'EXECUTION_ERROR',
+                    'message': str(e)
+                }
+            )
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown workflow mode: {mode}"
+        )
+
+@router.get("/{workflow_id}/variables")
+async def get_workflow_variables_by_id(
+    workflow_id: UUID,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all variables available in workflow"""
+    supabase = get_supabase_client()
+
+    workflow_response = supabase.table("agent_workflows") \
+        .select("*") \
+        .eq("id", str(workflow_id)) \
+        .single() \
+        .execute()
+
+    if not workflow_response.data:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    workflow = workflow_response.data
+    compiled_logic = workflow.get('compiled_logic')
+
+    if not compiled_logic:
+        return {'variables': []}
+
+    variables = compiled_logic.get('variables', [])
+
     return {'variables': variables}

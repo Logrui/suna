@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Settings, Trash2, Shield, Crown, ArrowRight, Bot, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -58,41 +58,29 @@ export interface TeamCardActions {
 // Card state
 export interface TeamCardState {
     isSelected?: boolean;
-    isActioning?: boolean;
     isDeleting?: boolean;
 }
 
-// Main props interface
 export interface UnifiedTeamCardProps {
-    variant?: TeamCardVariant;
     data: BaseTeamData;
     actions?: TeamCardActions;
     state?: TeamCardState;
-
-    // Styling
     className?: string;
+    variant?: TeamCardVariant;
+    onClick?: (data: BaseTeamData) => void;
 }
 
-// Main unified team card component
 export const UnifiedTeamCard: React.FC<UnifiedTeamCardProps> = ({
-    variant = 'grid',
     data,
     actions = {},
     state = {},
     className,
+    variant = 'grid',
+    onClick
 }) => {
-    const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-
-    const {
-        onEdit,
-        onDelete,
-        onClick,
-    } = actions;
-
-    const {
-        isActioning = false,
-        isDeleting = false
-    } = state;
+    const { onEdit, onDelete, onClick: actionOnClick } = actions;
+    const { isSelected = false, isDeleting = false } = state;
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     // Handle delete confirmation
     const handleDeleteClick = (e: React.MouseEvent) => {
@@ -105,6 +93,14 @@ export const UnifiedTeamCard: React.FC<UnifiedTeamCardProps> = ({
         onDelete?.(data);
     };
 
+    const handleCardClick = () => {
+        if (onClick) {
+            onClick(data);
+        } else if (actionOnClick) {
+            actionOnClick(data);
+        }
+    };
+
     const renderGridCard = () => {
         return (
             <Card
@@ -112,7 +108,7 @@ export const UnifiedTeamCard: React.FC<UnifiedTeamCardProps> = ({
                     'group relative bg-card rounded-2xl overflow-hidden transition-all duration-300 border cursor-pointer flex flex-col border-border/50 hover:border-primary/20 h-full',
                     className
                 )}
-                onClick={() => onClick?.(data)}
+                onClick={handleCardClick}
             >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 

@@ -88,20 +88,6 @@ This feature extends an existing Next.js + FastAPI monorepo:
 - [x] T023 [P] [US1] Create WorkflowCanvas component in `frontend/src/components/workflows/canvas/WorkflowCanvas.tsx`
 - [x] T024 [P] [US1] Create NodePalette component with draggable node templates in `frontend/src/components/workflows/canvas/NodePalette.tsx`
 - [x] T025 [P] [US1] Create StartNode component in `frontend/src/components/workflows/nodes/StartNode.tsx`
-- [x] T026 [P] [US1] Create EndNode component in `frontend/src/components/workflows/nodes/EndNode.tsx`
-- [x] T027 [P] [US1] Create AIStepNode component in `frontend/src/components/workflows/nodes/AIStepNode.tsx`
-- [x] T028 [US1] Integrate React Flow with Zustand store for node/edge state management in WorkflowCanvas.tsx
-- [x] T029 [US1] Implement drag-and-drop from NodePalette to Canvas with position calculation
-- [x] T030 [US1] Implement edge creation via handle connections in WorkflowCanvas.tsx
-- [x] T031 [US1] Add canvas controls (pan, zoom, viewport persistence) in WorkflowCanvas.tsx
-- [x] T032 [US1] Implement workflow save API endpoint `PUT /workflows/:id` in `backend/core/workflows/api.py`
-- [x] T033 [US1] Connect canvas save button to compile graph_definition and call save endpoint
-- [x] T034 [US1] Implement workflow load from database with graph_definition deserialization
-- [x] T035 [US1] Create Advanced Mode page route in `frontend/src/app/(dashboard)/workflows/[id]/advanced/page.tsx`
-- [x] T036 [US1] Add real-time node label updates when editing node data in canvas
-
-**Checkpoint**: ✅ User Story 1 is fully functional - users can create, save, load basic visual workflows with drag-and-drop
-
 ---
 
 ## Phase 4: User Story 2 - Configure AI Agent Steps Visually (Priority: P1) 🎯 MVP ✅ COMPLETE (12/12)
@@ -152,19 +138,6 @@ This feature extends an existing Next.js + FastAPI monorepo:
 - [x] T052 [US5] Add Redis pub/sub for execution events in `backend/core/workflows/executor.py`
 - [x] T053 [US5] Create execution context initialization with trigger variables
 - [x] T054 [US5] Implement `POST /workflows/:id/execute` endpoint in `backend/core/workflows/api.py`
-- [x] T055 [US5] Implement `GET /workflows/executions/:id/stream` SSE endpoint for real-time updates
-
-### Frontend Monitoring
-
-- [x] T056 [P] [US5] Create ExecutionTimeline component in `frontend/src/components/workflows/monitoring/ExecutionTimeline.tsx`
-- [x] T057 [P] [US5] Create LiveNodeStatus component in `frontend/src/components/workflows/monitoring/LiveNodeStatus.tsx`
-- [x] T058 [US5] Implement SSE connection in useWorkflowExecution hook for real-time events
-- [x] T059 [US5] Add visual node status indicators (running/completed/failed) on canvas
-- [x] T060 [US5] Implement execution log display in ExecutionTimeline
-- [x] T061 [US5] Add "Execute Workflow" button with trigger context input dialog
-- [x] T062 [US5] Add execution status badge (running/completed/failed) to workflow header
-- [x] T063 [US5] Implement pause/resume execution buttons calling `POST /workflows/executions/:id/pause|resume`
-- [x] T064 [US5] Add final execution results display (variables, thread link)
 
 **Checkpoint**: MVP is now COMPLETE - Users can create, configure, save, execute, and monitor basic visual workflows (US1 + US2 + US5)
 
@@ -179,20 +152,6 @@ This feature extends an existing Next.js + FastAPI monorepo:
 ### Implementation for User Story 3
 
 - [ ] T065 [P] [US3] Create RuleConditionNode component in `frontend/src/components/workflows/nodes/RuleConditionNode.tsx`
-- [ ] T066 [P] [US3] Create LLMConditionNode component in `frontend/src/components/workflows/nodes/LLMConditionNode.tsx`
-- [ ] T067 [P] [US3] Create RuleConditionConfig panel in `frontend/src/components/workflows/config/RuleConditionConfig.tsx`
-- [ ] T068 [P] [US3] Create LLMConditionConfig panel in `frontend/src/components/workflows/config/LLMConditionConfig.tsx`
-- [ ] T069 [US3] Add multiple output handles to condition nodes (true/false for rule, N branches for LLM)
-- [ ] T070 [US3] Implement rule editor UI with operator dropdown (equals, contains, greater_than, less_than, matches_regex)
-- [ ] T071 [US3] Implement LLM condition branch editor with branch label, description, target inputs
-- [ ] T072 [US3] Add default branch selection for rule conditions
-- [ ] T073 [US3] Implement edge labeling for conditional branches
-- [ ] T074 [US3] Update GraphCompiler to handle condition node next_nodes lists
-- [ ] T075 [US3] Implement `_execute_rule_condition` in `backend/core/workflows/executor.py` (evaluate rules sequentially)
-- [ ] T076 [US3] Implement `_execute_llm_condition` in `backend/core/workflows/executor.py` (call GPT-4o-mini with structured output)
-- [ ] T077 [US3] Add condition evaluation to execution log events
-- [ ] T078 [US3] Add branch highlighting in canvas during execution (show which path taken)
-
 **Checkpoint**: At this point, User Stories 1, 2, 3, AND 5 should work - users can create workflows with conditional branching
 
 ---
@@ -287,20 +246,6 @@ This feature extends an existing Next.js + FastAPI monorepo:
 
 - [ ] T116 [P] Add React.memo to all node components to prevent unnecessary re-renders
 - [ ] T117 [P] Optimize Zustand store selectors to reduce render frequency
-- [ ] T118 [P] Add debouncing to graph save operations (don't save on every node drag)
-- [ ] T119 Add viewport virtualization for workflows > 50 nodes
-
-### UX Enhancements
-
-- [ ] T120 [P] Add MiniMap component to WorkflowCanvas for large workflow navigation
-- [ ] T121 [P] Add node search/filter functionality in NodePalette
-- [ ] T122 [P] Add canvas keyboard shortcuts (delete node, undo/redo, select all)
-- [ ] T123 Add workflow execution history view (past runs with status)
-- [ ] T124 Add execution time estimates based on node count and model
-
-### Integration & Compatibility
-
-- [ ] T125 [P] Verify backward compatibility - test existing simple workflows still execute correctly
 - [ ] T126 [P] Update `sync_workflows_to_version_config()` to sync graph_definition and compiled_logic
 - [ ] T127 [P] Test trigger integration - verify webhook/schedule triggers work with advanced workflows
 - [ ] T128 Add billing checks for advanced workflow features (model access validation)

@@ -13,20 +13,24 @@
 
 | Category | Feature/Bugfix | Description |
 | :--- | :--- | :--- |
+
+| **Feature** | Custom Notifications System | Customizable notifications for users and admins for use in workflows and more. |
+| **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
+| **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
+| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
+| **Feature** | Extended Model Support | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
 | **Feature** | Dev Mode + New Dev Mode Button Toggle | Fixes and adds a toggle button for the Development Mode. |
 | **Feature** | New getAPI module | Updated all network calls to support localhost and cloudflare tunnel configurations. |
 | **Feature** | Admin + User based Notifications/Inbox System | Centralized system for notifications and user-specific inboxes. |
 | **Feature** | Auto Continue Prompting System (MVP) | Minimal viable product for automatically continuing prompts/conversations. |
 | **Feature** | Library Implementation | Allows access to files and resources across different projects. |
-| **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
-| **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
-| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
-| **Feature** | Extended Model Support | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
 
 ## **Planned Features/WIP:**
 
 | Feature Category | Item | Dependencies/Notes |
 | :--- | :--- | :--- |
+| **Teams of Agents** | Teams of Agents collaborating for | Currently a Work In Progress (WIP). |
+| **Advanced Workflows** | Advanceed Visual Workflow builder with Lexical, ReactFlow, and more | Currently a Work In Progress (WIP). |
 | **Core Workflow** | Restored Workflow/Playbooks System | Currently a Work In Progress (WIP). |
 | **Native Tool** | Subagent System | Depends on the Wide Research System being implemented. |
 | **Native Tool** | Manus like Wide Research System | Depends on the Subagent System being implemented. |

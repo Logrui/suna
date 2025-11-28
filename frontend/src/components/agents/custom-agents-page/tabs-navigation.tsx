@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bot, ShoppingBag, FileText, Plus } from 'lucide-react';
+import { Bot, Users, FileText, Plus } from 'lucide-react';
 import { FancyTabs, TabConfig } from '@/components/ui/fancy-tabs';
 
 interface TabsNavigationProps {
@@ -18,7 +18,7 @@ const agentTabs: TabConfig[] = [
   },
   {
     value: 'teams',
-    icon: ShoppingBag,
+    icon: Users,
     label: 'Teams',
   },
 ];

@@ -78,6 +78,7 @@ interface TeamsTabProps {
   setTeamsPage: (page: number) => void;
   TeamsPageSize: number;
   onTeamsPageSizeChange: (pageSize: number) => void;
+  onTeamClick?: (team: any) => void;
 
   myTemplates: any[];
   templatesLoading: boolean;
@@ -95,26 +96,13 @@ interface TeamsTabProps {
   setTemplatesPage: (page: number) => void;
   templatesPageSize: number;
   onTemplatesPageSizeChange: (pageSize: number) => void;
-  templatesSearchQuery: string;
-  setTemplatesSearchQuery: (value: string) => void;
-  onPublish: (template: any) => void;
-  onUnpublish: (templateId: string, templateName: string) => void;
-  getTemplateStyling: (template: any) => { color: string };
-
-  onPublishTeam?: (Team: any) => void;
-  publishingTeamId?: string | null;
 }
-
-const filterOptions = [
-  { value: 'all', label: 'All Teams' },
-  { value: 'templates', label: 'Templates' },
-];
 
 export const TeamsTab = ({
   TeamsSearchQuery,
   setTeamsSearchQuery,
   TeamsLoading,
-  Teams, // Ignored
+  Teams,
   TeamsPagination,
   viewMode,
   onCreateTeam,
@@ -127,6 +115,8 @@ export const TeamsTab = ({
   setTeamsPage,
   TeamsPageSize,
   onTeamsPageSizeChange,
+  onTeamClick,
+
   myTemplates,
   templatesLoading,
   templatesError,
@@ -135,20 +125,15 @@ export const TeamsTab = ({
   templatesPage,
   setTemplatesPage,
   templatesPageSize,
-  onTemplatesPageSizeChange,
-  templatesSearchQuery,
-  setTemplatesSearchQuery,
-  onPublish,
-  onUnpublish,
-  getTemplateStyling,
-  onPublishTeam,
-  publishingTeamId
 }: TeamsTabProps) => {
   const [TeamFilter, setTeamFilter] = useState<TeamFilter>('all');
 
-  // Filter mock teams based on search query
+  const filterOptions = [
+    { value: 'all', label: 'All Teams' },
+    { value: 'templates', label: 'Templates' },
+  ];
+
   const filteredMockTeams = useMemo(() => {
-    if (!TeamsSearchQuery) return MOCK_TEAMS;
     const query = TeamsSearchQuery.toLowerCase();
     return MOCK_TEAMS.filter(team =>
       team.name.toLowerCase().includes(query) ||
@@ -163,7 +148,6 @@ export const TeamsTab = ({
   };
 
   const handleCreateTeam = () => {
-    toast.info("Create Team feature coming soon!");
     onCreateTeam();
   };
 
@@ -175,7 +159,7 @@ export const TeamsTab = ({
   const handleDeleteTeam = (id: string) => {
     toast.info(`Delete Team ${id} feature coming soon!`);
     onDeleteTeam(id);
-  }
+  };
 
   const renderTemplates = () => {
     return (
@@ -210,7 +194,7 @@ export const TeamsTab = ({
 
   return (
     <div className="space-y-6 mt-8 flex flex-col min-h-full">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+      < div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6" >
         <SearchBar
           placeholder="Search Teams..."
           value={TeamsSearchQuery}
@@ -234,7 +218,7 @@ export const TeamsTab = ({
             Create Team
           </Button>
         </div>
-      </div>
+      </div >
       <div className="flex-1">
         {TeamFilter === 'templates' ? (
           renderTemplates()
@@ -255,11 +239,12 @@ export const TeamsTab = ({
                 onEditTeam={handleEditTeam}
                 onDeleteTeam={handleDeleteTeam}
                 isDeletingTeam={isDeletingTeam}
+                onTeamClick={onTeamClick}
               />
             )}
           </>
         )}
       </div>
-    </div>
+    </div >
   );
 };

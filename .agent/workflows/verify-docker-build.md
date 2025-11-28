@@ -20,12 +20,10 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 1. Review most recent changes and code files and identify any issues with recently implemented code
 
-2. Use docker compose build or docker compose build frontend or docker compose build backend to verify successful build of the frontend or backend changes
+2. Use docker compose compose up -d --build or docker compose up -d --build frontend or docker compose up -d --build backend to verify successful build of the frontend or backend changes
 
-3. Wait for builds to finish and review logs using .\.scripts\core\docker-tail-logs.ps1 100 or .\.scripts\core\docker-tail-logs.ps1 [line number] - by default this line number is 10 when using the powershell script so ensure you specify the 
+3. Wait for builds to finish and review logs using .\.scripts\core\docker-tail-logs.ps1 100 or .\.scripts\core\docker-tail-logs.ps1 [line number] - by default this line number is 10 when using the powershell script so ensure you specify the line number as needed
 
 4. Review logs and then if there are issues review the code files
 
 5. If there is a substantial code change that is required or a refactor that needs to occur to resolve build issues - inform the user
-
-## IMPORTANT CONTRAINTS

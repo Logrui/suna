@@ -1,13 +1,13 @@
 'use client';
 
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { NodeData } from '@/types/workflows/graph-definition';
 import { GitBranch } from 'lucide-react';
 import { useExecutionStore } from '@/store/workflows/executionStore';
 import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 
-export const LLMConditionNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
+export const LLMConditionNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
   const nodeStatus = useExecutionStore((state) => state.nodeStatus[id]);
   const executionStatus = useExecutionStore((state) => state.status);
 
@@ -31,7 +31,7 @@ export const LLMConditionNode = memo(({ id, data, selected }: NodeProps<NodeData
   };
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[220px] bg-white ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-200'}`}>
+    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[220px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
       <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
@@ -49,12 +49,12 @@ export const LLMConditionNode = memo(({ id, data, selected }: NodeProps<NodeData
         </div>
       </div>
 
-      <div className="text-xs text-gray-600 mb-1">
-        {data.config?.modelId || 'No model selected'}
+      <div className="text-xs text-muted-foreground mb-1">
+        {data.config?.model || 'No model selected'}
       </div>
 
-      <div className="text-xs text-gray-500 italic truncate">
-        {data.config?.naturalLanguageCondition || 'Enter condition...'}
+      <div className="text-xs text-muted-foreground/70 italic truncate">
+        {data.config?.natural_language_condition || 'Enter condition...'}
       </div>
 
       {nodeStatus?.error && (

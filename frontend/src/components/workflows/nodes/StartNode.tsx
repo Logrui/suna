@@ -1,16 +1,16 @@
 'use client';
 
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { NodeData } from '@/types/workflows/graph-definition';
 import { Play } from 'lucide-react';
 import { useExecutionStore } from '@/store/workflows/executionStore';
 import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 
-export const StartNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
+export const StartNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] bg-white ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-200'}`}>
+    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
       <LiveNodeStatus nodeId={id} />
       <div className="flex items-center gap-2 mb-2">
         <div className="flex items-center justify-center w-8 h-8 bg-green-600 rounded-full text-white">
@@ -21,8 +21,8 @@ export const StartNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
         </div>
       </div>
 
-      <div className="text-xs text-gray-600">
-        Trigger: {data.config?.trigger || 'Manual'}
+      <div className="text-xs text-muted-foreground mb-1">
+        Trigger: {data.config?.triggerType || 'Manual'}
       </div>
 
       <Handle
