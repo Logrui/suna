@@ -14,9 +14,14 @@ const agentTabs: TabConfig[] = [
   {
     value: 'my-agents',
     icon: Bot,
-    label: 'My Agents',
+    label: 'Agents',
   },
-]; 
+  {
+    value: 'teams',
+    icon: ShoppingBag,
+    label: 'Teams',
+  },
+];
 
 export const TabsNavigation = ({ activeTab, onTabChange, onCreateAgent }: TabsNavigationProps) => {
   const tabs = React.useMemo(() => {
@@ -43,5 +48,5 @@ export const TabsNavigation = ({ activeTab, onTabChange, onCreateAgent }: TabsNa
       activeTab={activeTab}
       onTabChange={handleTabSelection}
     />
-);
+  );
 }

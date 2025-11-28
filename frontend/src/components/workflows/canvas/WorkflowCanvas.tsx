@@ -8,6 +8,8 @@ import {
   MiniMap,
   useReactFlow,
   ReactFlowProvider,
+  OnSelectionChangeParams,
+  NodeTypes,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -19,7 +21,7 @@ import { RuleConditionNode } from '../nodes/RuleConditionNode';
 import { LLMConditionNode } from '../nodes/LLMConditionNode';
 import { NodeType } from '@/types/workflows/graph-definition';
 
-const nodeTypes = {
+const nodeTypes: any = {
   TRIGGER: StartNode,
   STOP: EndNode,
   AI_STEP: AIStepNode,
@@ -41,6 +43,7 @@ const WorkflowCanvasInner = () => {
     onConnect,
     addNode,
     setViewport,
+    setSelectedNodeIds,
   } = useCanvasStore();
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -76,17 +79,25 @@ const WorkflowCanvasInner = () => {
     [setViewport]
   );
 
+  // Handle selection changes
+  const onSelectionChange = useCallback(
+    ({ nodes }: OnSelectionChangeParams) => {
+      setSelectedNodeIds(nodes.map((node) => node.id));
+    },
+    [setSelectedNodeIds]
+  );
+
   return (
     <div className="flex-1 h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onMoveEnd={onMoveEnd}
+        onSelectionChange={onSelectionChange}
         nodeTypes={nodeTypes}
         defaultViewport={viewport}
         fitView

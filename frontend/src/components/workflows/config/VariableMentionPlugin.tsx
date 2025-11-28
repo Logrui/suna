@@ -14,10 +14,12 @@ import {
   $getSelection,
   $isRangeSelection,
   TextNode,
+  LexicalEditor,
 } from 'lexical';
 import {
   LexicalTypeaheadMenuPlugin,
   MenuOption,
+  useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
 import React, { useCallback, useMemo, useState } from 'react';
 import { VariableMentionNode } from './VariableMentionNode';
@@ -117,23 +119,26 @@ export function VariableMentionPlugin({
     [editor, onVariableAdded],
   );
 
+  const checkForTriggerMatch = useBasicTypeaheadTriggerMatch('@', {
+    minLength: 0,
+  });
+
+  const triggerFn = useCallback(
+    (text: string, editor: LexicalEditor) => {
+      const match = checkForTriggerMatch(text, editor);
+      if (match && /^[\w_]*$/.test(match.matchingString)) {
+        return match;
+      }
+      return null;
+    },
+    [checkForTriggerMatch],
+  );
+
   return (
     <LexicalTypeaheadMenuPlugin
       onQueryChange={setQueryString}
       onSelectOption={onSelectOption}
-      triggerFn={(text: string, editor) => {
-        // LexicalTypeaheadMenuPlugin detects @ and passes remaining text
-        // Only show suggestions if text is a valid variable name pattern
-        if (!text) return null;
-
-        // Check if text contains only valid variable name characters
-        // (letters, numbers, underscores)
-        if (/^[\w_]*$/.test(text)) {
-          return { range: null, query: text };
-        }
-
-        return null;
-      }}
+      triggerFn={triggerFn}
       options={options}
       menuRenderFn={(anchorElementRef, { selectedIndex, selectOptionAndCleanUp, setHighlightedIndex }) => {
         if (!matchingVariables.length) {
@@ -143,7 +148,7 @@ export function VariableMentionPlugin({
         return (
           <ul
             className="absolute z-50 mt-1 max-w-xs overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-1"
-            ref={anchorElementRef}
+            ref={anchorElementRef as React.RefObject<HTMLUListElement>}
           >
             {matchingVariables.map((variable, index) => (
               <li key={variable.name}>
@@ -157,11 +162,10 @@ export function VariableMentionPlugin({
                   onMouseEnter={() => {
                     setHighlightedIndex(index);
                   }}
-                  className={`w-full px-3 py-2 text-left text-sm transition-colors ${
-                    index === selectedIndex
-                      ? 'bg-blue-100 dark:bg-blue-900/30'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
+                  className={`w-full px-3 py-2 text-left text-sm transition-colors ${index === selectedIndex
+                    ? 'bg-blue-100 dark:bg-blue-900/30'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1">

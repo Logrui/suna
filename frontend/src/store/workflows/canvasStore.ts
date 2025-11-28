@@ -24,6 +24,7 @@ interface CanvasState {
   nodes: Node<NodeData>[];
   edges: Edge[];
   viewport: Viewport;
+  selectedNodeIds: string[];
 
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
@@ -33,6 +34,7 @@ interface CanvasState {
   updateNodeConfig: (id: string, config: any) => void;
   updateNodeLabel: (id: string, label: string) => void;
   setViewport: (viewport: Viewport) => void;
+  setSelectedNodeIds: (ids: string[]) => void;
 
   // Load initial state
   setGraph: (nodes: Node<NodeData>[], edges: Edge[], viewport: Viewport) => void;
@@ -42,10 +44,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   nodes: [],
   edges: [],
   viewport: { x: 0, y: 0, zoom: 1 },
+  selectedNodeIds: [],
 
   onNodesChange: (changes: NodeChange[]) => {
     set({
-      nodes: applyNodeChanges(changes, get().nodes),
+      nodes: applyNodeChanges(changes, get().nodes) as Node<NodeData>[],
     });
   },
 
@@ -114,6 +117,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   setViewport: (viewport: Viewport) => {
     set({ viewport });
+  },
+
+  setSelectedNodeIds: (ids: string[]) => {
+    set({ selectedNodeIds: ids });
   },
 
   setGraph: (nodes, edges, viewport) => {

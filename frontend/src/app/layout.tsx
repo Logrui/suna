@@ -16,6 +16,7 @@ import { roobert } from './fonts/roobert';
 import { roobertMono } from './fonts/roobert-mono';
 import { PlanSelectionModal } from '@/components/billing/pricing/plan-selection-modal';
 import { Suspense } from 'react';
+import { GlobalMaintenanceHandler } from '@/components/global-maintenance-handler';
 
 
 export const viewport: Viewport = {
@@ -208,6 +209,7 @@ export default function RootLayout({
           {!isLocalMode() && <SpeedInsights />}
           {!isLocalMode() && <PostHogIdentify />}
         </ThemeProvider>
+        <GlobalMaintenanceHandler />
       </body>
     </html>
   );
