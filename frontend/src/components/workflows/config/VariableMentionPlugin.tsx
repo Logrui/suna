@@ -17,7 +17,7 @@ import {
 } from 'lexical';
 import {
   LexicalTypeaheadMenuPlugin,
-  TypeaheadOption,
+  MenuOption,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
 import React, { useCallback, useMemo, useState } from 'react';
 import { VariableMentionNode } from './VariableMentionNode';
@@ -30,11 +30,11 @@ export interface Variable {
   alwaysDefined: boolean;
 }
 
-interface VariableOption extends TypeaheadOption {
+interface VariableOption extends MenuOption {
   variable: Variable;
 }
 
-class VariableTypeaheadOption extends TypeaheadOption {
+class VariableTypeaheadOption extends MenuOption {
   variable: Variable;
 
   constructor(variable: Variable) {

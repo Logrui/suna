@@ -4,36 +4,18 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeData } from '@/types/workflows/graph-definition';
 import { Brain } from 'lucide-react';
-import { useExecutionStore } from '@/store/workflows/executionStore';
 import { useCanvasStore } from '@/store/workflows/canvasStore';
+import { useExecutionStore } from '@/store/workflows/executionStore';
 import { EditableLabel } from './EditableLabel';
+import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 
 export const AIStepNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
   const nodeStatus = useExecutionStore((state) => state.nodeStatus[id]);
-  const executionStatus = useExecutionStore((state) => state.status);
   const updateNodeLabel = useCanvasStore((state) => state.updateNodeLabel);
 
-  // Determine visual status
-  const getStatusColor = () => {
-    if (!nodeStatus || executionStatus === 'idle') return 'bg-blue-50 border-blue-500';
-    if (nodeStatus.status === 'running') return 'bg-blue-200 border-blue-600 animate-pulse';
-    if (nodeStatus.status === 'completed') return 'bg-blue-100 border-blue-500';
-    if (nodeStatus.status === 'failed') return 'bg-red-100 border-red-500';
-    if (nodeStatus.status === 'pending') return 'bg-gray-100 border-gray-400';
-    return 'bg-blue-50 border-blue-500';
-  };
-
-  const getStatusBadge = () => {
-    if (!nodeStatus || executionStatus === 'idle') return null;
-    if (nodeStatus.status === 'running') return <span className="text-xs text-blue-700">Running...</span>;
-    if (nodeStatus.status === 'completed') return <span className="text-xs text-green-700">Completed</span>;
-    if (nodeStatus.status === 'failed') return <span className="text-xs text-red-700">Failed</span>;
-    if (nodeStatus.status === 'pending') return <span className="text-xs text-gray-600">Pending</span>;
-    return null;
-  };
-
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[220px] ${getStatusColor()} ${selected ? 'ring-2 ring-blue-400' : ''}`}>
+    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[220px] bg-white ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-200'}`}>
+      <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
         position={Position.Top}
@@ -50,7 +32,6 @@ export const AIStepNode = memo(({ id, data, selected }: NodeProps<NodeData>) => 
             onChange={(newLabel) => updateNodeLabel(id, newLabel)}
             className="font-semibold text-sm"
           />
-          {getStatusBadge()}
         </div>
       </div>
 

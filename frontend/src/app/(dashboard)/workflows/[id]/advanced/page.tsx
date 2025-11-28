@@ -6,11 +6,26 @@ import { NodePalette } from '@/components/workflows/canvas/NodePalette';
 import { PropertiesPanel } from '@/components/workflows/canvas/PropertiesPanel';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save, Play, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, Play, Loader2, ChevronLeft, ChevronRight, Pause } from 'lucide-react';
 import { useWorkflow } from '@/hooks/react-query/workflows/useWorkflow';
 import { useWorkflowValidation } from '@/hooks/react-query/workflows/useWorkflowValidation';
 import { useCanvasStore } from '@/store/workflows/canvasStore';
 import { toast } from 'sonner';
+import { useWorkflowExecution } from '@/hooks/react-query/workflows/useWorkflowExecution';
+import { ExecutionTimeline } from '@/components/workflows/monitoring/ExecutionTimeline';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdvancedWorkflowEditorPage() {
   const params = useParams();
@@ -20,8 +35,33 @@ export default function AdvancedWorkflowEditorPage() {
   const { workflow, loading, saveWorkflow } = useWorkflow(id);
   const { mutateAsync: validateWorkflow } = useWorkflowValidation(id);
   const { nodes, edges, viewport, setGraph } = useCanvasStore();
+  const { executeWorkflow, isConnected, stopExecution, pauseExecution, resumeExecution, executionState } = useWorkflowExecution(id);
   const [isValidating, setIsValidating] = useState(false);
   const [showProperties, setShowProperties] = useState(true);
+  const [activeTab, setActiveTab] = useState("properties");
+  const [triggerContextOpen, setTriggerContextOpen] = useState(false);
+  const [triggerContextJson, setTriggerContextJson] = useState('{}');
+
+  const handleExecute = async () => {
+    try {
+      let context = {};
+      try {
+        context = JSON.parse(triggerContextJson);
+      } catch (e) {
+        toast.error("Invalid JSON in trigger context");
+        return;
+      }
+
+      setTriggerContextOpen(false);
+      setActiveTab("execution");
+      setShowProperties(true);
+
+      await executeWorkflow.mutateAsync({ triggerContext: context });
+      toast.success("Execution started");
+    } catch (error) {
+      toast.error("Failed to start execution");
+    }
+  };
 
   // Load workflow data into canvas store on mount
   useEffect(() => {
@@ -109,6 +149,89 @@ export default function AdvancedWorkflowEditorPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {executionState.status === 'running' && (
+            <Badge variant="outline" className="border-blue-500 text-blue-500 animate-pulse mr-2">
+              Running
+            </Badge>
+          )}
+          {executionState.status === 'paused' && (
+            <Badge variant="outline" className="border-yellow-500 text-yellow-500 mr-2">
+              Paused
+            </Badge>
+          )}
+          {executionState.status === 'completed' && (
+            <Badge variant="outline" className="border-green-500 text-green-500 mr-2">
+              Completed
+            </Badge>
+          )}
+          {executionState.status === 'failed' && (
+            <Badge variant="outline" className="border-red-500 text-red-500 mr-2">
+              Failed
+            </Badge>
+          )}
+
+          {executionState.status === 'running' && (
+            <>
+              <Button variant="outline" size="sm" onClick={pauseExecution} className="mr-2">
+                <Pause className="w-4 h-4 mr-2" />
+                Pause
+              </Button>
+              <Button variant="destructive" size="sm" onClick={stopExecution}>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Stop
+              </Button>
+            </>
+          )}
+          
+          {executionState.status === 'paused' && (
+            <>
+              <Button variant="outline" size="sm" onClick={resumeExecution} className="mr-2">
+                <Play className="w-4 h-4 mr-2" />
+                Resume
+              </Button>
+              <Button variant="destructive" size="sm" onClick={stopExecution}>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Stop
+              </Button>
+            </>
+          )}
+
+          {executionState.status !== 'running' && executionState.status !== 'paused' && (
+            <Dialog open={triggerContextOpen} onOpenChange={setTriggerContextOpen}>
+              <DialogTrigger asChild>
+                <Button variant="default" size="sm">
+                  <Play className="w-4 h-4 mr-2" />
+                  Execute
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Execute Workflow</DialogTitle>
+                  <DialogDescription>
+                    Provide trigger context JSON to start the workflow.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="context">Trigger Context (JSON)</Label>
+                    <Textarea
+                      id="context"
+                      value={triggerContextJson}
+                      onChange={(e) => setTriggerContextJson(e.target.value)}
+                      className="font-mono text-xs h-[200px]"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleExecute} disabled={executeWorkflow.isPending}>
+                    {executeWorkflow.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Start Execution
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
           <Button
             variant="outline"
             onClick={handleSave}
@@ -119,22 +242,43 @@ export default function AdvancedWorkflowEditorPage() {
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            Save Workflow
+            Save
           </Button>
         </div>
-      </header>
+      </header >
 
       {/* Editor Layout */}
-      <div className="flex flex-1 overflow-hidden">
+      < div className="flex flex-1 overflow-hidden" >
         <NodePalette />
         <WorkflowCanvas />
 
         {/* Right Sidebar - Properties Panel */}
-        {showProperties && (
-          <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-hidden">
-            <PropertiesPanel />
-          </div>
-        )}
+        {
+          showProperties && (
+            <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-hidden flex flex-col">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <div className="border-b px-2">
+                  <TabsList className="w-full justify-start bg-transparent p-0 h-10">
+                    <TabsTrigger value="properties" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4">
+                      Properties
+                    </TabsTrigger>
+                    <TabsTrigger value="execution" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4">
+                      Execution
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <TabsContent value="properties" className="flex-1 overflow-hidden m-0">
+                  <PropertiesPanel />
+                </TabsContent>
+
+                <TabsContent value="execution" className="flex-1 overflow-hidden m-0">
+                  <ExecutionTimeline />
+                </TabsContent>
+              </Tabs>
+            </div>
+          )
+        }
 
         {/* Toggle Properties Panel Button */}
         <button
@@ -144,7 +288,7 @@ export default function AdvancedWorkflowEditorPage() {
         >
           {showProperties ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

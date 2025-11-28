@@ -13,7 +13,8 @@ Created: 2025-11-27
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Body, Query
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
+from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 import logging
@@ -25,6 +26,11 @@ from backend.core.workflows.types import CompiledLogic
 from backend.core.workflows.validator import GraphValidator
 from backend.core.workflows.compiler import GraphCompiler
 from backend.core.workflows.executor import GraphExecutor
+from fastapi.responses import StreamingResponse
+from backend.core.agentpress.thread_manager import ThreadManager
+from core.services import redis
+import json
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -259,7 +265,9 @@ async def execute_workflow(
             thread_id = str(uuid.uuid4())
 
         # Execute workflow
-        executor = GraphExecutor()
+        thread_manager = ThreadManager()
+        redis_client = await redis.get_client()
+        executor = GraphExecutor(thread_manager=thread_manager, redis_client=redis_client)
         try:
             result = await executor.execute(
                 workflow_id=str(workflow_id),
@@ -304,10 +312,65 @@ async def get_execution_status(
     """
     # TODO: Implement execution storage and retrieval
     # For now, return placeholder
-    raise HTTPException(
-        status_code=501,
-        detail="Execution status retrieval not yet implemented"
-    )
+@router.get("/executions/{execution_id}/stream")
+async def stream_execution_events(
+    execution_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Stream execution events via SSE.
+    Maps to: FR-030 (Real-time monitoring)
+    """
+    async def event_generator():
+        redis_client = await redis.get_client()
+        pubsub = redis_client.pubsub()
+        channel = f"workflow:execution:{execution_id}"
+        await pubsub.subscribe(channel)
+
+        try:
+            # Send initial connection message
+            yield f"data: {json.dumps({'event_type': 'connected', 'timestamp': datetime.utcnow().isoformat() + 'Z'})}\n\n"
+
+            async for message in pubsub.listen():
+                if message['type'] == 'message':
+                    data = message['data']
+                    yield f"data: {data}\n\n"
+                    
+                    # Check for completion event to close stream
+                    try:
+                        event_data = json.loads(data)
+                        if event_data.get('event_type') in ['execution_completed', 'execution_failed']:
+                            break
+                    except:
+                        pass
+        except asyncio.CancelledError:
+            logger.info(f"Stream cancelled for execution {execution_id}")
+        finally:
+            await pubsub.unsubscribe(channel)
+            await pubsub.close()
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+class ExecutionControlRequest(BaseModel):
+    action: Literal['pause', 'resume', 'stop']
+
+@router.post("/executions/{execution_id}/control")
+async def control_execution(
+    execution_id: str,
+    control: ExecutionControlRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Control execution state (pause, resume, stop).
+    Maps to: FR-029 (Execution control)
+    """
+    redis_client = await redis.get_client()
+    key = f"workflow:execution:{execution_id}:control"
+    
+    await redis_client.set(key, control.action)
+    
+    return {"status": "success", "action": control.action}
 
 
 @router.get("/workflows/{workflow_id}/variables")

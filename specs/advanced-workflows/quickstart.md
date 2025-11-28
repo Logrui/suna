@@ -3,7 +3,7 @@
 **Feature**: Advanced Visual Workflow Builder
 **Version**: 1.0.0
 **Created**: 2025-11-23
-**Branch**: `feature/workflows-playbooks`
+**Branch**: `advanced-workflows`
 
 ---
 

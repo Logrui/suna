@@ -4,6 +4,7 @@ import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeData } from '@/types/workflows/graph-definition';
 import { Square } from 'lucide-react';
+import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 import { useExecutionStore } from '@/store/workflows/executionStore';
 
 export const EndNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
@@ -30,7 +31,8 @@ export const EndNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
   };
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] ${getStatusColor()} ${selected ? 'ring-2 ring-blue-400' : ''}`}>
+    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] bg-white ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-200'}`}>
+      <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
         position={Position.Top}

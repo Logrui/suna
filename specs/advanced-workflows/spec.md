@@ -1,6 +1,6 @@
 # Feature Specification: Advanced Visual Workflow Builder
 
-**Feature Branch**: `feature/advanced-workflows`
+**Feature Branch**: `advanced-workflows`
 **Created**: 2025-11-23
 **Status**: Draft
 **Input**: User description: "Build a sophisticated visual workflow builder that enables users to create complex, non-linear AI agent workflows with branching logic, conditions, loops, and parallel execution - replicating Motion AI Skill Builder's visual programming capabilities"

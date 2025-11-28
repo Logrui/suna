@@ -1,6 +1,6 @@
 # Implementation Plan: Advanced Visual Workflow Builder
 
-**Branch**: `feature/advanced-workflows` | **Date**: 2025-11-23 | **Spec**: [spec.md](./spec.md)
+**Branch**: `advanced-workflows` | **Date**: 2025-11-23 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `D:\Homelab\suna\specs\003-advanced-workflows\spec.md`
 
 ## Summary
@@ -164,11 +164,13 @@ backend/core/workflows/              📁 NEW MODULE
 ```text
 frontend/src/
 ├── app/(dashboard)/workflows/[id]/
-│   ├── page.tsx                                 ✏️ MODIFY - add mode switcher toggle
-│   └── advanced/                                📁 NEW
-│       └── page.tsx                             🆕 Advanced mode workflow editor page
+│   ├── page.tsx                                 ✏️ MODIFY - Tab-based container for Simple/Advanced editors
+│   └── advanced/                                📁 DEPRECATED - Merged into main page via tabs
 │
 ├── components/workflows/                        📁 EXTENDS EXISTING
+│   ├── workflow-tabs-navigation.tsx            🆕 Tab navigation component
+│   ├── simple-workflow-editor.tsx              🆕 Extracted simple editor
+│   ├── advanced-workflow-editor.tsx            🆕 Extracted advanced editor
 │   ├── canvas/                                  📁 NEW
 │   │   ├── WorkflowCanvas.tsx                  🆕 Main React Flow canvas (pan, zoom, nodes, edges)
 │   │   ├── NodePalette.tsx                     🆕 Draggable node templates
@@ -191,7 +193,7 @@ frontend/src/
 │   ├── monitoring/                              📁 NEW
 │   │   ├── ExecutionTimeline.tsx               🆕 Execution event log timeline
 │   │   └── LiveNodeStatus.tsx                  🆕 Real-time node status indicators
-│   └── ModeConversionDialog.tsx                🆕 Simple ⇄ Advanced conversion UI
+│   └── ModeConversionDialog.tsx                ❌ REMOVED - Replaced by seamless tab switching
 │
 ├── hooks/react-query/workflows/                 📁 NEW
 │   ├── useWorkflow.ts                          🆕 Workflow CRUD operations (fetch, save, validate)
@@ -252,7 +254,8 @@ frontend/src/
 **Structure Decision**:
 
 This feature extends the existing **Option 2: Web application** structure. We are NOT creating new top-level directories, but rather:
-
+1. **Backend**: Adding a new| `GET /workflows/:id/variables` | List available variables |
+| `POST /workflows/:id/variables/validate` | Validate prompt variables |execution logic
 1. **Backend**: Adding a new `core/workflows/` service module for graph execution logic
 2. **Frontend**: Adding new components under `components/workflows/` while preserving existing simple mode components
 3. **Database**: Extending existing `agent_workflows` table via new migration
@@ -605,6 +608,17 @@ class Transition(TypedDict):
   {"event": "node_completed", "node_id": "step_1", "output": "...", "duration_ms": 1234}
   {"event": "node_failed", "node_id": "step_2", "error": "..."}
   ```
+
+#### New Variable Endpoints
+
+**GET /workflows/{workflow_id}/variables**
+- **Purpose**: List all available variables in workflow (from trigger context and step outputs)
+- **Response**: `{ "variables": ["trigger.email", "step_1.output"] }`
+
+**POST /workflows/{workflow_id}/variables/validate**
+- **Purpose**: Validate prompt variables against available variables
+- **Request**: `{ "prompt": "Hello @trigger.name" }`
+- **Response**: `{ "valid": true, "missing_variables": [] }`
 
 ### Component Architecture
 

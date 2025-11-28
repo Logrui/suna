@@ -14,8 +14,11 @@ Created: 2025-11-27
 
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+import json
+import asyncio
 from .variables import VariableResolver, VariableNotFoundError
 from .types import CompiledLogic, LogicNode, ExecutionResult, ExecutionEvent
+from core.services import redis
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,30 +27,27 @@ logger = logging.getLogger(__name__)
 class ExecutionContext:
     """Runtime execution state"""
 
-    def __init__(
-        self,
-        thread_id: str,
-        workflow_id: str,
-        trigger_context: Dict[str, Any],
-    ):
+    def __init__(self, thread_id: str, workflow_id: str, trigger_context: Dict[str, Any], redis_client: Any = None):
         self.thread_id = thread_id
         self.workflow_id = workflow_id
         self.trigger_context = trigger_context
-
-        # Runtime state
-        self.variables: Dict[str, Any] = {'trigger': trigger_context}
+        self.redis_client = redis_client
+        
+        self.variables: Dict[str, Any] = trigger_context.copy()
+        self.execution_log: List[ExecutionEvent] = []
         self.step_outputs: Dict[str, Any] = {}
-        self.execution_log: List[Dict[str, Any]] = []
-        self.current_node_id: Optional[str] = None
-        self.status: str = 'running'
-        self.started_at: datetime = datetime.utcnow()
+        
+        self.started_at = datetime.utcnow()
         self.completed_at: Optional[datetime] = None
+        self.status: str = 'running'
         self.error: Optional[str] = None
+        
+        self.current_node_id: Optional[str] = None
         self.step_count: int = 0
         self.max_steps: int = 100  # Prevent infinite loops
 
-    def log_event(self, event_type: str, node_id: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
-        """Add event to execution log"""
+    async def log_event(self, event_type: str, node_id: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
+        """Add event to execution log and publish to Redis"""
         event = {
             'timestamp': datetime.utcnow().isoformat() + 'Z',
             'event_type': event_type,
@@ -56,6 +56,19 @@ class ExecutionContext:
         }
         self.execution_log.append(event)
         logger.info(f"Execution event: {event_type} | node: {node_id}")
+
+        # Publish to Redis
+        try:
+            channel = f"workflow:execution:{self.thread_id}"
+            event_json = json.dumps(event)
+            
+            if self.redis_client:
+                await self.redis_client.publish(channel, event_json)
+            else:
+                # Fallback to global redis service if no client injected
+                await redis.publish(channel, event_json)
+        except Exception as e:
+            logger.error(f"Failed to publish execution event to Redis: {e}")
 
     def set_variable(self, name: str, value: Any):
         """Set variable value"""
@@ -109,8 +122,8 @@ class GraphExecutor:
         Returns:
             ExecutionResult with final variables and log
         """
-        context = ExecutionContext(thread_id, workflow_id, trigger_context)
-        context.log_event('execution_started')
+        context = ExecutionContext(thread_id, workflow_id, trigger_context, self.redis)
+        await context.log_event('execution_started')
 
         try:
             # Start execution from start node
@@ -120,6 +133,9 @@ class GraphExecutor:
             current_id = start_node_id
 
             while current_id and context.step_count < context.max_steps:
+                # Check for control signals (pause, stop)
+                await self._handle_control_signals(thread_id, context)
+
                 context.step_count += 1
                 context.current_node_id = current_id
 
@@ -138,14 +154,14 @@ class GraphExecutor:
             # Mark as completed
             context.status = 'completed'
             context.completed_at = datetime.utcnow()
-            context.log_event('execution_completed')
+            await context.log_event('execution_completed', details={'final_variables': context.variables})
 
         except Exception as e:
             logger.error(f"Execution failed: {str(e)}", exc_info=True)
             context.status = 'failed'
             context.error = str(e)
             context.completed_at = datetime.utcnow()
-            context.log_event('execution_failed', details={'error': str(e)})
+            await context.log_event('execution_failed', details={'error': str(e)})
 
         # Build result
         duration_ms = int((context.completed_at - context.started_at).total_seconds() * 1000) if context.completed_at else 0
@@ -167,6 +183,34 @@ class GraphExecutor:
 
         return result
 
+    async def _check_control_signal(self, thread_id: str) -> Optional[str]:
+        """Check for control signals (pause, stop) from Redis"""
+        if not self.redis:
+             return None
+        return await self.redis.get(f"workflow:execution:{thread_id}:control")
+
+    async def _handle_control_signals(self, thread_id: str, context: ExecutionContext):
+        """Handle pause/stop signals"""
+        signal = await self._check_control_signal(thread_id)
+        
+        if signal == 'stop':
+            raise Exception("Execution stopped by user")
+            
+        if signal == 'pause':
+            await context.log_event('execution_paused')
+            # Wait for resume
+            while True:
+                signal = await self._check_control_signal(thread_id)
+                if signal == 'resume':
+                    await context.log_event('execution_resumed')
+                    # Reset control signal so we don't pause again immediately
+                    if self.redis:
+                         await self.redis.delete(f"workflow:execution:{thread_id}:control")
+                    break
+                if signal == 'stop':
+                    raise Exception("Execution stopped by user")
+                await asyncio.sleep(1)
+
     async def _execute_node(self, node: Dict[str, Any], context: ExecutionContext) -> Optional[str]:
         """
         Execute single node and return next node ID.
@@ -181,13 +225,11 @@ class GraphExecutor:
         node_id = node['id']
         node_type = node['type']
 
-        context.log_event('node_started', node_id=node_id, details={'label': node['label']})
+        await context.log_event('node_started', node_id=node_id, details={'label': node.get('label', node_type)})
 
         try:
             if node_type == 'start':
-                # Start node: just pass through
-                next_nodes = node['next_nodes']
-                next_id = next_nodes[0] if next_nodes else None
+                next_id = await self._execute_start(node, context)
 
             elif node_type == 'ai_step':
                 next_id = await self._execute_ai_step(node, context)
@@ -199,17 +241,16 @@ class GraphExecutor:
                 next_id = await self._execute_llm_condition(node, context)
 
             elif node_type == 'end':
-                # End node: terminate
-                next_id = None
+                next_id = await self._execute_end(node, context)
 
             else:
                 raise ValueError(f"Unknown node type: {node_type}")
 
-            context.log_event('node_completed', node_id=node_id, details={'next_node_id': next_id})
+            await context.log_event('node_completed', node_id=node_id, details={'next_node_id': next_id})
             return next_id
 
         except Exception as e:
-            context.log_event('node_failed', node_id=node_id, details={'error': str(e)})
+            await context.log_event('node_failed', node_id=node_id, details={'error': str(e)})
             raise
 
     async def _execute_ai_step(self, node: Dict[str, Any], context: ExecutionContext) -> Optional[str]:
@@ -231,28 +272,98 @@ class GraphExecutor:
         """
         config = node['config']
         prompt = config['prompt']
+        model = config['model']
+        tools = config.get('tools', [])
+        temperature = config.get('temperature', 0.7)
+        max_tokens = config.get('max_tokens', 1000)
+        system_prompt = config.get('system_prompt', "You are a helpful AI assistant.")
 
         # Resolve variables in prompt
         resolved_prompt = self.variable_resolver.resolve(prompt, context.variables, strict=False)
+        
+        # Log prompt resolution
+        await context.log_event('node_progress', node_id=node['id'], details={'resolved_prompt': resolved_prompt[:100] + '...'})
 
-        # TODO: Call ThreadManager for actual LLM generation
-        # For now, create a mock response
+        response_text = ""
+
         if self.thread_manager:
-            # Integration with ThreadManager goes here
-            # response = await self.thread_manager.run_thread_stream(...)
-            pass
-
-        mock_response = f"[AI Response to: {resolved_prompt[:50]}...]"
+            # Prepare system prompt object
+            sys_prompt_obj = {"role": "system", "content": system_prompt}
+            
+            # Run thread
+            # We use a temporary message for the current step's prompt
+            # This avoids persisting every step as a user message in the thread history immediately,
+            # but ThreadManager usually expects a message. 
+            # For workflow steps, we might want to treat them as user messages or just transient inputs.
+            # Let's treat them as transient inputs via temporary_message to avoid cluttering the thread 
+            # if we want strict control, OR just add them.
+            # Given the design, we likely want to capture the flow.
+            # But `run_thread` handles `latest_user_message_content`.
+            
+            try:
+                # We'll use run_thread with the resolved prompt
+                # We need to handle streaming response to capture the full output
+                response_gen = await self.thread_manager.run_thread(
+                    thread_id=context.thread_id,
+                    system_prompt=sys_prompt_obj,
+                    stream=False, # For now, we wait for full response for simplicity in this phase
+                    llm_model=model,
+                    llm_temperature=temperature,
+                    llm_max_tokens=max_tokens,
+                    latest_user_message_content=resolved_prompt
+                )
+                
+                if isinstance(response_gen, dict):
+                    # Non-streaming response or error
+                    if response_gen.get('status') == 'error':
+                        raise Exception(f"AI Step failed: {response_gen.get('message')}")
+                    
+                    # Extract content
+                    # The structure depends on ResponseProcessor. 
+                    # Usually it returns a dict with 'content', 'usage', etc.
+                    response_text = response_gen.get('content', '')
+                    if isinstance(response_text, list):
+                        # Handle multi-block content (e.g. text + tool_use)
+                        # For now, just join text blocks
+                        text_parts = [block.get('text', '') for block in response_text if block.get('type') == 'text']
+                        response_text = "\n".join(text_parts)
+                    elif isinstance(response_text, dict):
+                         response_text = json.dumps(response_text)
+                
+                # TODO: Handle streaming if we want real-time token updates on the node
+                
+            except Exception as e:
+                logger.error(f"ThreadManager execution failed: {e}")
+                raise e
+        else:
+            # Mock response for testing without ThreadManager
+            response_text = f"[Mock AI Response to: {resolved_prompt[:50]}...]"
 
         # Store output if output_variable is set
         if 'output_variable' in node:
             output_var = node['output_variable']
-            context.set_variable(output_var, mock_response)
-            context.step_outputs[node['id']] = mock_response
+            context.set_variable(output_var, response_text)
+            context.step_outputs[node['id']] = response_text
 
         # Return next node
         next_nodes = node['next_nodes']
         return next_nodes[0] if next_nodes else None
+
+    async def _execute_start(self, node: Dict[str, Any], context: ExecutionContext) -> Optional[str]:
+        """Execute start node"""
+        # Start node is a pass-through, but we might want to validate trigger context here
+        next_nodes = node['next_nodes']
+        return next_nodes[0] if next_nodes else None
+
+    async def _execute_end(self, node: Dict[str, Any], context: ExecutionContext) -> Optional[str]:
+        """Execute end node"""
+        # End node terminates the workflow
+        # We can log the final status or message if configured
+        config = node.get('config', {})
+        if 'message' in config:
+             await context.log_event('node_progress', node_id=node['id'], details={'message': config['message']})
+        
+        return None
 
     async def _execute_rule_condition(self, node: Dict[str, Any], context: ExecutionContext) -> Optional[str]:
         """

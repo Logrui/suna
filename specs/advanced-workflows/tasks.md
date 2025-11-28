@@ -1,6 +1,6 @@
 # Tasks: Advanced Visual Workflow Builder
 
-**Input**: Design documents from `/specs/003-advanced-workflows/`
+**Input**: Design documents from `/specs/advanced-workflows/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/, quickstart.md
 
 **Tests**: Tests are NOT included in this implementation plan (no TDD requirement in spec)
@@ -136,7 +136,7 @@ This feature extends an existing Next.js + FastAPI monorepo:
 
 ---
 
-## Phase 5: User Story 5 - Execute and Monitor Workflow Runs (Priority: P1) 🎯 MVP
+## Phase 5: User Story 5 - Execute and Monitor Workflow Runs (Priority: P1) 🎯 MVP ✅ COMPLETE
 
 **Goal**: Enable users to trigger workflow execution and see real-time progress through each step
 
@@ -146,25 +146,25 @@ This feature extends an existing Next.js + FastAPI monorepo:
 
 ### Backend Execution
 
-- [ ] T049 [P] [US5] Implement `_execute_ai_step` method in `backend/core/workflows/executor.py` (call ThreadManager, stream response)
-- [ ] T050 [P] [US5] Implement `_execute_start` and `_execute_end` methods in GraphExecutor
-- [ ] T051 [US5] Implement main `execute()` method with iterative DFS traversal in GraphExecutor
-- [ ] T052 [US5] Add Redis pub/sub for execution events in `backend/core/workflows/executor.py`
-- [ ] T053 [US5] Create execution context initialization with trigger variables
-- [ ] T054 [US5] Implement `POST /workflows/:id/execute` endpoint in `backend/core/workflows/api.py`
-- [ ] T055 [US5] Implement `GET /workflows/executions/:id/stream` SSE endpoint for real-time updates
+- [x] T049 [P] [US5] Implement `_execute_ai_step` method in `backend/core/workflows/executor.py` (call ThreadManager, stream response)
+- [x] T050 [P] [US5] Implement `_execute_start` and `_execute_end` methods in GraphExecutor
+- [x] T051 [US5] Implement main `execute()` method with iterative DFS traversal in GraphExecutor
+- [x] T052 [US5] Add Redis pub/sub for execution events in `backend/core/workflows/executor.py`
+- [x] T053 [US5] Create execution context initialization with trigger variables
+- [x] T054 [US5] Implement `POST /workflows/:id/execute` endpoint in `backend/core/workflows/api.py`
+- [x] T055 [US5] Implement `GET /workflows/executions/:id/stream` SSE endpoint for real-time updates
 
 ### Frontend Monitoring
 
-- [ ] T056 [P] [US5] Create ExecutionTimeline component in `frontend/src/components/workflows/monitoring/ExecutionTimeline.tsx`
-- [ ] T057 [P] [US5] Create LiveNodeStatus component in `frontend/src/components/workflows/monitoring/LiveNodeStatus.tsx`
-- [ ] T058 [US5] Implement SSE connection in useWorkflowExecution hook for real-time events
-- [ ] T059 [US5] Add visual node status indicators (running/completed/failed) on canvas
-- [ ] T060 [US5] Implement execution log display in ExecutionTimeline
-- [ ] T061 [US5] Add "Execute Workflow" button with trigger context input dialog
-- [ ] T062 [US5] Add execution status badge (running/completed/failed) to workflow header
-- [ ] T063 [US5] Implement pause/resume execution buttons calling `POST /workflows/executions/:id/pause|resume`
-- [ ] T064 [US5] Add final execution results display (variables, thread link)
+- [x] T056 [P] [US5] Create ExecutionTimeline component in `frontend/src/components/workflows/monitoring/ExecutionTimeline.tsx`
+- [x] T057 [P] [US5] Create LiveNodeStatus component in `frontend/src/components/workflows/monitoring/LiveNodeStatus.tsx`
+- [x] T058 [US5] Implement SSE connection in useWorkflowExecution hook for real-time events
+- [x] T059 [US5] Add visual node status indicators (running/completed/failed) on canvas
+- [x] T060 [US5] Implement execution log display in ExecutionTimeline
+- [x] T061 [US5] Add "Execute Workflow" button with trigger context input dialog
+- [x] T062 [US5] Add execution status badge (running/completed/failed) to workflow header
+- [x] T063 [US5] Implement pause/resume execution buttons calling `POST /workflows/executions/:id/pause|resume`
+- [x] T064 [US5] Add final execution results display (variables, thread link)
 
 **Checkpoint**: MVP is now COMPLETE - Users can create, configure, save, execute, and monitor basic visual workflows (US1 + US2 + US5)
 
@@ -211,13 +211,13 @@ This feature extends an existing Next.js + FastAPI monorepo:
 - [ ] T082 [US4] Implement ExecutionContext.set_variable() and get_variable() methods
 - [ ] T083 [US4] Add trigger context variables initialization (trigger.* prefix)
 - [ ] T084 [US4] Add node output storage as variables when output_variable is set
-- [ ] T085 [US4] Implement `GET /workflows/:id/variables` endpoint to list all available variables
+- [x] T085 [US4] Implement `GET /workflows/:id/variables` endpoint to list all available variables
 - [ ] T086 [US4] Implement `POST /workflows/:id/variables/validate` endpoint for prompt validation
 
 ### Frontend Variable System
 
-- [ ] T087 [P] [US4] Create VariableMentionNode for Lexical editor in `frontend/src/components/workflows/config/VariableMentionNode.tsx`
-- [ ] T088 [P] [US4] Create VariableMentionPlugin for Lexical in `frontend/src/components/workflows/config/VariableMentionPlugin.tsx`
+- [x] T087 [P] [US4] Create VariableMentionNode for Lexical editor in `frontend/src/components/workflows/config/VariableMentionNode.tsx`
+- [x] T088 [P] [US4] Create VariableMentionPlugin for Lexical in `frontend/src/components/workflows/config/VariableMentionPlugin.tsx`
 - [ ] T089 [US4] Implement @ symbol trigger for variable autocomplete dropdown
 - [ ] T090 [US4] Fetch available variables from `GET /workflows/:id/variables` for autocomplete
 - [ ] T091 [US4] Render variable mentions as styled decorators in prompt editor
@@ -238,14 +238,14 @@ This feature extends an existing Next.js + FastAPI monorepo:
 
 ### Implementation for User Story 6
 
-- [ ] T096 [P] [US6] Add mode switcher toggle UI to workflow header in `frontend/src/app/(dashboard)/workflows/[id]/page.tsx`
-- [ ] T097 [P] [US6] Create ModeConversionDialog component in `frontend/src/components/workflows/ModeConversionDialog.tsx`
-- [ ] T098 [US6] Implement `POST /workflows/:id/mode` endpoint in `backend/core/workflows/api.py`
-- [ ] T099 [US6] Implement simple → advanced conversion logic (steps array → sequential graph nodes)
-- [ ] T100 [US6] Add conversion validation (block advanced → simple with error message)
-- [ ] T101 [US6] Add conversion confirmation dialog with warning about one-way conversion
-- [ ] T102 [US6] Route to Advanced Mode page after successful conversion
-- [ ] T103 [US6] Add mode badge to workflow list view showing Simple vs Advanced
+- [x] T096 [P] [US6] Refactor workflow page to use tab-based navigation in `frontend/src/app/(dashboard)/workflows/[id]/page.tsx`
+- [x] T097 [P] [US6] Create WorkflowTabsNavigation component in `frontend/src/components/workflows/workflow-tabs-navigation.tsx`
+- [x] T098 [US6] Extract SimpleWorkflowEditor component in `frontend/src/components/workflows/simple-workflow-editor.tsx`
+- [x] T099 [US6] Extract AdvancedWorkflowEditor component in `frontend/src/components/workflows/advanced-workflow-editor.tsx`
+- [x] T100 [US6] Remove explicit mode switching prompt and dialogs (per user request)
+- [x] T101 [US6] Implement URL-based tab state management (`?tab=simple|advanced`)
+- [x] T102 [US6] Ensure 404 error is resolved by keeping user on same route
+- [x] T103 [US6] Verify visual consistency with Knowledge Base tabs
 
 **Checkpoint**: Users can convert simple workflows to advanced mode to access visual editing
 

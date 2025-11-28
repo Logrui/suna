@@ -28,15 +28,43 @@ export function useWorkflowExecution(workflowId: string) {
     };
   }, [workflowId]);
 
-  // Stop execution (closes SSE connection)
-  const stopExecution = useCallback(() => {
+  // Control execution mutation
+  const controlExecution = useMutation({
+    mutationFn: async (action: 'pause' | 'resume' | 'stop') => {
+      const executionId = executionStore.executionId;
+      if (!executionId) return;
+
+      const res = await fetch(`/api/workflows/executions/${executionId}/control`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to control execution');
+      }
+      
+      return action;
+    },
+  });
+
+  // Stop execution (closes SSE connection and calls API)
+  const stopExecution = useCallback(async () => {
+    // Call API to stop backend
+    if (executionStore.executionId) {
+        controlExecution.mutateAsync('stop').catch(console.error);
+    }
+
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
       setIsConnected(false);
       executionStore.completeExecution('failed', 'Execution stopped by user');
     }
-  }, [executionStore]);
+  }, [executionStore, controlExecution]);
+
+  const pauseExecution = useCallback(() => controlExecution.mutateAsync('pause'), [controlExecution]);
+  const resumeExecution = useCallback(() => controlExecution.mutateAsync('resume'), [controlExecution]);
 
   // Execute workflow mutation
   const executeWorkflow = useMutation({
@@ -133,6 +161,8 @@ export function useWorkflowExecution(workflowId: string) {
     executeWorkflow,
     isConnected,
     stopExecution,
+    pauseExecution,
+    resumeExecution,
     executionState: executionStore,
   };
 }

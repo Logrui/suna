@@ -3,3 +3,10 @@ description: Run git add . and git commit with a custom commit message for the m
 ---
 
 Run git add . and git commit with a custom commit message for the most recent tasks completed in recent context
+
+Then ask the user for permission to push the commit to remote repository summarizing the following:
+-Current branch we are on
+-Commit message of your recent push
+-Commit number of most recent commits
+
+Ensure we are not in a detached head state - if so notify the user IMMEDIATELY and provide some options for remediation

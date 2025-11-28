@@ -5,6 +5,7 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import { NodeData } from '@/types/workflows/graph-definition';
 import { Scale } from 'lucide-react';
 import { useExecutionStore } from '@/store/workflows/executionStore';
+import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 
 export const RuleConditionNode = memo(({ id, data, selected }: NodeProps<NodeData>) => {
   const nodeStatus = useExecutionStore((state) => state.nodeStatus[id]);
@@ -30,7 +31,8 @@ export const RuleConditionNode = memo(({ id, data, selected }: NodeProps<NodeDat
   };
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[200px] ${getStatusColor()} ${selected ? 'ring-2 ring-blue-400' : ''}`}>
+    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[200px] bg-white ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-200'}`}>
+      <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
         position={Position.Top}

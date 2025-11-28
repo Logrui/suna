@@ -217,7 +217,7 @@ function PricingTier({
   // Handle subscription/trial start
   const handleSubscribe = async (planStripePriceId: string) => {
     if (!isAuthenticated) {
-      window.location.href = '/auth?mode=signup';
+      window.location.href = '/auth';
       return;
     }
 

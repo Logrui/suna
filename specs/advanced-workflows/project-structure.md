@@ -44,11 +44,15 @@ D:\Homelab\suna\
 │       │   └── (dashboard)/
 │       │       └── workflows/
 │       │           └── [id]/
-│       │               ├── page.tsx              ✏️ (add mode switcher)
-│       │               └── advanced/             📁
-│       │                   └── page.tsx          🆕
+│       │           └── [id]/
+│       │               ├── page.tsx              ✏️ (tab-based container)
+│       │               └── advanced/             📁 (deprecated)
+│       │                   └── page.tsx          ❌ (merged into main page)
 │       ├── components/
 │       │   └── workflows/                        📁 (extends existing)
+│       │       ├── workflow-tabs-navigation.tsx  🆕
+│       │       ├── simple-workflow-editor.tsx    🆕
+│       │       ├── advanced-workflow-editor.tsx  🆕
 │       │       ├── canvas/                       📁 NEW
 │       │       │   ├── WorkflowCanvas.tsx        🆕
 │       │       │   ├── NodePalette.tsx           🆕
@@ -71,7 +75,7 @@ D:\Homelab\suna\
 │       │       ├── monitoring/                   📁 NEW
 │       │       │   ├── ExecutionTimeline.tsx     🆕
 │       │       │   └── LiveNodeStatus.tsx        🆕
-│       │       └── ModeConversionDialog.tsx      🆕
+│       │       └── ModeConversionDialog.tsx      ❌ (removed)
 │       ├── hooks/
 │       │   └── react-query/
 │       │       └── workflows/                    📁 NEW
@@ -177,7 +181,8 @@ CREATE INDEX idx_agent_workflows_graph_definition ON agent_workflows USING GIN (
 | File | Lines Est. | Purpose |
 |------|------------|---------|
 | `advanced/page.tsx` | 150 | Advanced mode workflow editor page |
-| `page.tsx` (modified) | +50 | Add mode switcher toggle to existing page |
+| `page.tsx` (modified) | +50 | Tab-based container for Simple/Advanced editors |
+| `advanced/page.tsx` | - | Deprecated - logic moved to AdvancedWorkflowEditor |
 
 **New Route**: `/workflows/[id]/advanced` - Visual canvas editor
 
@@ -233,7 +238,7 @@ CREATE INDEX idx_agent_workflows_graph_definition ON agent_workflows USING GIN (
 
 | Component | Lines Est. | Purpose |
 |-----------|------------|---------|
-| `ModeConversionDialog.tsx` | 150 | Simple ↔ Advanced conversion UI |
+| `ModeConversionDialog.tsx` | - | Removed - Replaced by seamless tab switching |
 
 ### Hooks: `frontend/src/hooks/react-query/workflows/`
 

@@ -43,7 +43,8 @@ function LoginContent() {
   const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
   const message = searchParams.get('message');
 
-  const isSignUp = mode === 'signup';
+  // Manual sign-ups are disabled
+  const isSignUp = false; // mode === 'signup';
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [mounted, setMounted] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -419,20 +420,7 @@ function LoginContent() {
                 </button>
               )}
 
-              <div>
-                <Link
-                  href={isSignUp
-                    ? `/auth${returnUrl ? `?returnUrl=${returnUrl}` : ''}`
-                    : `/auth?mode=signup${returnUrl ? `&returnUrl=${returnUrl}` : ''}`
-                  }
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {isSignUp
-                    ? 'Already have an account? Sign in'
-                    : "Don't have an account? Sign up"
-                  }
-                </Link>
-              </div>
+              {/* Sign up disabled */}
             </div>
           </div>
         </div>
