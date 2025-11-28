@@ -31,30 +31,34 @@ export const EndNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) 
   };
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
+    <div className={`relative flex flex-col items-center justify-center ${selected ? 'ring-2 ring-blue-500 rounded-full' : ''}`}>
       <LiveNodeStatus nodeId={id} />
+
+      <div className="flex flex-row items-center gap-1 rounded-full truncate select-none text-sm py-0.5 px-2 h-7 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 border border-transparent">
+        <div className="truncate">
+          <div className="flex flex-row items-center gap-1.5">
+            <Square className="size-3 text-red-600 dark:text-red-400 fill-current" />
+            <span className="font-medium">Stop Running Skill</span>
+          </div>
+        </div>
+      </div>
+
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-red-600"
+        className="w-3 h-3 !bg-red-600 !-top-3"
       />
 
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex items-center justify-center w-8 h-8 bg-red-600 rounded-full text-white">
-          <Square size={16} />
-        </div>
-        <div className="flex-1">
-          <div className="font-semibold text-sm">End</div>
+      {/* Status Badge Overlay */}
+      {nodeStatus?.status && nodeStatus.status !== 'pending' && (
+        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
           {getStatusBadge()}
         </div>
-      </div>
+      )}
 
-      <div className="text-xs text-muted-foreground">
-        Format: {data.config?.outputFormat || 'default'}
-      </div>
-
+      {/* Error Message */}
       {nodeStatus?.error && (
-        <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-48 z-10 text-xs text-red-600 p-2 bg-red-50 dark:bg-red-900/90 rounded border border-red-200 dark:border-red-800 shadow-lg">
           {nodeStatus.error}
         </div>
       )}

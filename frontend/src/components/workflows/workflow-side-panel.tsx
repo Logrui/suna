@@ -89,8 +89,8 @@ export function WorkflowSidePanel({
 
     // Filter step types based on search
     const filteredStepTypes = availableStepTypes.filter(type =>
-        type.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        type.description.toLowerCase().includes(searchQuery.toLowerCase())
+        (type.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (type.description || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     React.useEffect(() => {

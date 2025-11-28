@@ -12,36 +12,42 @@ export const NodePalette = () => {
       <div className="font-semibold text-sm text-muted-foreground mb-2">
         Nodes
       </div>
-      
+
       <div className="flex flex-col gap-3">
-        <DraggableNode 
-          type="TRIGGER" 
-          label="Trigger" 
-          onDragStart={(e) => onDragStart(e, 'TRIGGER')} 
+        <DraggableNode
+          type="TRIGGER"
+          label="Start Trigger"
+          onDragStart={(e) => onDragStart(e, 'TRIGGER')}
           color="border-blue-500"
         />
-        <DraggableNode 
-          type="AI_STEP" 
-          label="AI Agent Step" 
-          onDragStart={(e) => onDragStart(e, 'AI_STEP')} 
+        <DraggableNode
+          type="COMPOSIO_TRIGGER"
+          label="Composio Trigger"
+          onDragStart={(e) => onDragStart(e, 'COMPOSIO_TRIGGER')}
+          color="border-blue-600"
+        />
+        <DraggableNode
+          type="AI_STEP"
+          label="AI Agent Step"
+          onDragStart={(e) => onDragStart(e, 'AI_STEP')}
           color="border-purple-500"
         />
-        <DraggableNode 
-          type="RULE_CONDITION" 
-          label="Condition (Rule)" 
-          onDragStart={(e) => onDragStart(e, 'RULE_CONDITION')} 
+        <DraggableNode
+          type="RULE_CONDITION"
+          label="Condition (Rule)"
+          onDragStart={(e) => onDragStart(e, 'RULE_CONDITION')}
           color="border-orange-500"
         />
-        <DraggableNode 
-          type="LLM_CONDITION" 
-          label="Condition (AI)" 
-          onDragStart={(e) => onDragStart(e, 'LLM_CONDITION')} 
+        <DraggableNode
+          type="LLM_CONDITION"
+          label="Condition (AI)"
+          onDragStart={(e) => onDragStart(e, 'LLM_CONDITION')}
           color="border-yellow-500"
         />
-        <DraggableNode 
-          type="STOP" 
-          label="End" 
-          onDragStart={(e) => onDragStart(e, 'STOP')} 
+        <DraggableNode
+          type="STOP"
+          label="End"
+          onDragStart={(e) => onDragStart(e, 'STOP')}
           color="border-red-500"
         />
       </div>

@@ -110,7 +110,7 @@ class GraphValidator:
     def _check_single_start_node(self, nodes: List[Dict]) -> List[ValidationError]:
         """Check that workflow has exactly one start node"""
         errors = []
-        start_nodes = [n for n in nodes if n.get('type') == 'start']
+        start_nodes = [n for n in nodes if n.get('type') in ['TRIGGER', 'COMPOSIO_TRIGGER']]
 
         if len(start_nodes) == 0:
             errors.append(ValidationError(
@@ -183,7 +183,7 @@ class GraphValidator:
             node_type = node.get('type')
 
             # Start nodes shouldn't have incoming edges
-            if node_type == 'start' and node_id in has_incoming:
+            if node_type in ['TRIGGER', 'COMPOSIO_TRIGGER'] and node_id in has_incoming:
                 errors.append(ValidationError(
                     'START_NODE_HAS_INCOMING',
                     'Start node cannot have incoming edges',
@@ -191,7 +191,7 @@ class GraphValidator:
                 ))
 
             # Non-start nodes should have incoming edges
-            elif node_type != 'start' and node_id not in has_incoming:
+            elif node_type not in ['TRIGGER', 'COMPOSIO_TRIGGER'] and node_id not in has_incoming:
                 errors.append(ValidationError(
                     'ORPHANED_NODE',
                     f'Node "{node.get("data", {}).get("label", node_id)}" has no incoming edges',
@@ -205,7 +205,7 @@ class GraphValidator:
         warnings = []
 
         # Find start node
-        start_nodes = [n for n in nodes if n.get('type') == 'start']
+        start_nodes = [n for n in nodes if n.get('type') in ['TRIGGER', 'COMPOSIO_TRIGGER']]
         if not start_nodes:
             return warnings  # Already reported as error
 
@@ -226,7 +226,7 @@ class GraphValidator:
         # Check for unreachable nodes
         for node in nodes:
             node_id = node['id']
-            if node_id not in reachable and node.get('type') != 'start':
+            if node_id not in reachable and node.get('type') not in ['TRIGGER', 'COMPOSIO_TRIGGER']:
                 warnings.append(ValidationWarning(
                     'UNREACHABLE_NODE',
                     f'Node "{node.get("data", {}).get("label", node_id)}" is not reachable from start node',
@@ -246,7 +246,7 @@ class GraphValidator:
             config = node_data.get('config', {})
 
             # AI Step validation
-            if node_type == 'ai_step':
+            if node_type == 'AI_STEP':
                 if not config.get('prompt'):
                     errors.append(ValidationError(
                         'INVALID_CONFIG',
@@ -261,7 +261,7 @@ class GraphValidator:
                     ))
 
             # Rule Condition validation
-            elif node_type == 'rule_condition':
+            elif node_type == 'RULE_CONDITION':
                 rules = config.get('rules', [])
                 if not rules or len(rules) == 0:
                     errors.append(ValidationError(
@@ -271,7 +271,7 @@ class GraphValidator:
                     ))
 
             # LLM Condition validation
-            elif node_type == 'llm_condition':
+            elif node_type == 'LLM_CONDITION':
                 if not config.get('context_prompt'):
                     errors.append(ValidationError(
                         'INVALID_CONFIG',

@@ -21,8 +21,11 @@ import { RuleConditionNode } from '../nodes/RuleConditionNode';
 import { LLMConditionNode } from '../nodes/LLMConditionNode';
 import { NodeType } from '@/types/workflows/graph-definition';
 
+import { ComposioTriggerNode } from '../nodes/ComposioTriggerNode';
+
 const nodeTypes: any = {
   TRIGGER: StartNode,
+  COMPOSIO_TRIGGER: ComposioTriggerNode,
   STOP: EndNode,
   AI_STEP: AIStepNode,
   RULE_CONDITION: RuleConditionNode,

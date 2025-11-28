@@ -201,6 +201,7 @@ export default function RootLayout({
               <Suspense fallback={null}>
                 <PlanSelectionModal />
               </Suspense>
+              <GlobalMaintenanceHandler />
             </ReactQueryProvider>
           </AuthProvider>
           {/* Disable Vercel analytics in local mode */}
@@ -209,7 +210,6 @@ export default function RootLayout({
           {!isLocalMode() && <SpeedInsights />}
           {!isLocalMode() && <PostHogIdentify />}
         </ThemeProvider>
-        <GlobalMaintenanceHandler />
       </body>
     </html>
   );

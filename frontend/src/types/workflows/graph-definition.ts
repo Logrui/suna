@@ -29,6 +29,7 @@ export interface NodeData extends Record<string, unknown> {
 
 export type NodeType =
   | 'TRIGGER'
+  | 'COMPOSIO_TRIGGER'
   | 'AI_STEP'
   | 'RULE_CONDITION'
   | 'LLM_CONDITION'
@@ -58,8 +59,19 @@ export interface NodeConfig {
   output_variable?: string;             // Variable name to store step output
 
   // Trigger configuration
-  triggerType?: 'manual' | 'webhook' | 'schedule' | 'email';
+  triggerType?: 'manual' | 'webhook' | 'schedule' | 'email' | 'composio';
   triggerConfig?: Record<string, any>;  // Trigger-specific settings
+
+  // Composio Trigger specific config
+  composioTriggerConfig?: {
+    appName: string;
+    appSlug: string;
+    triggerName: string;
+    triggerSlug: string;
+    config?: Record<string, any>;
+    logo?: string;
+  };
+
   outputFormat?: string;                // End node output format
 }
 

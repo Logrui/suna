@@ -4,13 +4,16 @@ from typing import Optional
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
 
-security = HTTPBearer()
+# Set auto_error=False to allow optional auth (e.g. cookies)
+security = HTTPBearer(auto_error=False)
 
-async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+async def get_current_user(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Security(security)) -> dict:
     from core.utils.auth_utils import verify_and_get_user_id_from_jwt
     try:
         user_id = await verify_and_get_user_id_from_jwt(request)
-        return {"user_id": user_id, "token": credentials.credentials}
+        # Handle case where credentials might be None (cookie auth)
+        token = credentials.credentials if credentials else None
+        return {"user_id": user_id, "token": token}
     except Exception as e:
         logger.error(f"Auth failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid authentication")
@@ -36,4 +39,4 @@ def verify_role(required_role: str):
     return role_checker
 
 require_admin = verify_role('admin')
-require_super_admin = verify_role('super_admin') 
+require_super_admin = verify_role('super_admin')

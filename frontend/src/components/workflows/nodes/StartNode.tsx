@@ -10,19 +10,34 @@ import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 export const StartNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 w-[180px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
+    <div className={`flex flex-col text-base p-3 gap-3 rounded-lg border shadow-sm bg-card border-border w-[300px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
       <LiveNodeStatus nodeId={id} />
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex items-center justify-center w-8 h-8 bg-green-600 rounded-full text-white">
-          <Play size={16} />
-        </div>
-        <div className="flex-1">
-          <div className="font-semibold text-sm">Start</div>
+
+      {/* Header */}
+      <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+        <Play className="shrink-0 size-4 text-muted-foreground" />
+        <div className="text-muted-foreground text-xs font-medium truncate">
+          {data.config?.triggerType || 'Manual Trigger'}
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground mb-1">
-        Trigger: {data.config?.triggerType || 'Manual'}
+      {/* Body */}
+      <div className="flex-1 flex flex-col gap-3">
+        <div className="text-foreground text-[15px] leading-5 font-normal line-clamp-2">
+          Starts the workflow execution.
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="-mx-3 -mb-3 px-3 pb-3 pt-3 bg-muted/30 rounded-b-lg border-t border-border/50">
+        <div className="flex flex-row items-center gap-1 text-muted-foreground text-[10px] font-normal">
+          Output:
+          <div className="flex flex-row items-center gap-2">
+            <div className="inline-flex flex-row items-center gap-1 py-0.5 px-1.5 rounded-sm bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+              <p className="text-xs font-normal truncate">@trigger</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Handle

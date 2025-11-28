@@ -19,15 +19,15 @@ from uuid import UUID
 from datetime import datetime
 import logging
 
-from backend.core.services.supabase import get_supabase_client
-from backend.core.auth import get_current_user
-from backend.core.workflows.models import Workflow
-from backend.core.workflows.types import CompiledLogic
-from backend.core.workflows.validator import GraphValidator
-from backend.core.workflows.compiler import GraphCompiler
-from backend.core.workflows.executor import GraphExecutor
+from core.services.supabase import DBConnection
+from core.auth import get_current_user
+from core.workflows.models import Workflow
+from core.workflows.types import CompiledLogic
+from core.workflows.validator import GraphValidator
+from core.workflows.compiler import GraphCompiler
+from core.workflows.executor import GraphExecutor
 from fastapi.responses import StreamingResponse
-from backend.core.agentpress.thread_manager import ThreadManager
+from core.agentpress.thread_manager import ThreadManager
 from core.services import redis
 import json
 import asyncio
@@ -45,7 +45,8 @@ async def list_agent_workflows(
     current_user: dict = Depends(get_current_user)
 ):
     """List all workflows for an agent"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
     
     # RLS policies will handle permission checks based on current_user context
     # In a real implementation, we'd ensure the client is authenticated with the user's token
@@ -53,7 +54,7 @@ async def list_agent_workflows(
     # Assuming get_supabase_client() returns a client with RLS context if configured,
     # or we might need to set the session.
     
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .select("*") \
         .eq("agent_id", str(agent_id)) \
         .order("created_at", desc=True) \
@@ -68,9 +69,10 @@ async def get_workflow(
     current_user: dict = Depends(get_current_user)
 ):
     """Get a specific workflow"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
     
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .select("*") \
         .eq("id", str(workflow_id)) \
         .eq("agent_id", str(agent_id)) \
@@ -89,13 +91,14 @@ async def create_workflow(
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new workflow"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
     
     # Exclude ID and timestamps to let DB handle them
     data = workflow_data.model_dump(exclude={"id", "created_at", "updated_at"}, exclude_unset=True)
     data["agent_id"] = str(agent_id)
     
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .insert(data) \
         .execute()
         
@@ -112,7 +115,8 @@ async def update_workflow(
     current_user: dict = Depends(get_current_user)
 ):
     """Update an existing workflow"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
     
     # Verify existence first
     # (RLS handles auth)
@@ -120,7 +124,7 @@ async def update_workflow(
     data = workflow_data.copy()
     data["updated_at"] = datetime.now().isoformat()
     
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .update(data) \
         .eq("id", str(workflow_id)) \
         .eq("agent_id", str(agent_id)) \
@@ -138,9 +142,10 @@ async def delete_workflow(
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a workflow"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
 
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .delete() \
         .eq("id", str(workflow_id)) \
         .eq("agent_id", str(agent_id)) \
@@ -226,10 +231,11 @@ async def execute_workflow(
     Execute workflow with trigger context.
     Maps to: FR-027 (Start execution), FR-BC-007 (Router)
     """
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
 
     # Get workflow
-    workflow_response = supabase.table("agent_workflows") \
+    workflow_response = await supabase.table("agent_workflows") \
         .select("*") \
         .eq("id", str(workflow_id)) \
         .eq("agent_id", str(agent_id)) \
@@ -382,10 +388,11 @@ async def get_workflow_variables(
     Get all variables available in workflow.
     Maps to: FR-031 (Autocomplete system)
     """
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
 
     # Get workflow
-    workflow_response = supabase.table("agent_workflows") \
+    workflow_response = await supabase.table("agent_workflows") \
         .select("*") \
         .eq("id", str(workflow_id)) \
         .single() \
@@ -413,9 +420,10 @@ async def get_workflow_by_id(
     current_user: dict = Depends(get_current_user)
 ):
     """Get a specific workflow by ID"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
     
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .select("*") \
         .eq("id", str(workflow_id)) \
         .single() \
@@ -433,12 +441,13 @@ async def update_workflow_by_id(
     current_user: dict = Depends(get_current_user)
 ):
     """Update an existing workflow by ID"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
     
     data = workflow_data.copy()
     data["updated_at"] = datetime.now().isoformat()
     
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .update(data) \
         .eq("id", str(workflow_id)) \
         .execute()
@@ -455,12 +464,13 @@ async def patch_workflow_by_id(
     current_user: dict = Depends(get_current_user)
 ):
     """Partial update of an existing workflow by ID"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
     
     data = workflow_data.copy()
     data["updated_at"] = datetime.now().isoformat()
     
-    response = supabase.table("agent_workflows") \
+    response = await supabase.table("agent_workflows") \
         .update(data) \
         .eq("id", str(workflow_id)) \
         .execute()
@@ -528,10 +538,11 @@ async def execute_workflow_by_id(
     current_user: dict = Depends(get_current_user)
 ):
     """Execute workflow with trigger context"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
 
     # Get workflow
-    workflow_response = supabase.table("agent_workflows") \
+    workflow_response = await supabase.table("agent_workflows") \
         .select("*") \
         .eq("id", str(workflow_id)) \
         .single() \
@@ -603,9 +614,10 @@ async def get_workflow_variables_by_id(
     current_user: dict = Depends(get_current_user)
 ):
     """Get all variables available in workflow"""
-    supabase = get_supabase_client()
+    db = DBConnection()
+    supabase = await db.client
 
-    workflow_response = supabase.table("agent_workflows") \
+    workflow_response = await supabase.table("agent_workflows") \
         .select("*") \
         .eq("id", str(workflow_id)) \
         .single() \
