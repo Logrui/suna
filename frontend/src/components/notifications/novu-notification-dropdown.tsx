@@ -257,7 +257,7 @@ export function NotificationDropdown() {
             missingUser: !user?.id,
             missingAppId: !applicationIdentifier
         });
-        return null;
+        // return null; // Removed check as requested
     }
 
     const appearance = {

@@ -17,7 +17,8 @@ export function NotificationCenter({ applicationIdentifier }: NotificationCenter
 
     // Removed isStagingMode check for visual testing as requested
     if (!user?.id || !applicationIdentifier) {
-        return null;
+        // return null;
+        console.warn('[Novu] Missing requirements in NotificationCenter');
     }
 
     return (
@@ -63,7 +64,8 @@ export function SimpleNotificationBell() {
     const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APPLICATION_IDENTIFIER;
 
     if (!user?.id || !applicationIdentifier) {
-        return null;
+        // return null;
+        console.warn('[Novu] Missing requirements in SimpleNotificationBell');
     }
 
     return (
