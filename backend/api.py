@@ -31,6 +31,9 @@ from core.admin.master_password_api import router as master_password_router
 
 #Import New Notification Routers
 from core.admin.notification_admin_api import router as notification_admin_router
+from core.notifications.api import router as notifications_router
+
+
 
 
 from core.services import transcription as transcription_api
@@ -208,6 +211,7 @@ api_router.include_router(master_password_router)
 
 # New Notifications Routers
 api_router.include_router(notification_admin_router)
+api_router.include_router(notifications_router)
 
 
 from core.mcp_module import api as mcp_api
