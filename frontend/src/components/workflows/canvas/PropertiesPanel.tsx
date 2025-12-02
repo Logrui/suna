@@ -84,17 +84,17 @@ export const PropertiesPanel = memo<PropertiesPanelProps>(
     }
 
     return (
-      <div className={`h-full flex flex-col bg-white dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800 ${className}`}>
+      <div className={`h-full flex flex-col bg-card border-l border-border ${className}`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex-1">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+            <h2 className="text-sm font-semibold text-foreground truncate">
               {selectedNode.data.label || 'Node Properties'}
             </h2>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {selectedNode.type === 'ai_step' && 'Configure AI agent step'}
               {selectedNode.type === 'rule_condition' && 'Configure rule-based condition'}
-              {selectedNode.type === 'llm_condition' && 'Configure semantic condition'}
+              {selectedNode.type === 'llm_condition' && 'Configure conditional split'}
               {selectedNode.type === 'start' && 'Configure trigger'}
               {selectedNode.type === 'end' && 'Configure end point'}
             </p>
@@ -113,7 +113,7 @@ export const PropertiesPanel = memo<PropertiesPanelProps>(
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 bg-muted/30">
           {selectedNode.type === 'ai_step' && (
             <AIStepConfig
               nodeData={selectedNode.data as AIStepNodeData}
@@ -129,7 +129,7 @@ export const PropertiesPanel = memo<PropertiesPanelProps>(
                 <CardTitle className="text-base">Rule Condition Configuration</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Rule condition configuration coming in Phase 6
                 </p>
               </CardContent>
@@ -139,10 +139,10 @@ export const PropertiesPanel = memo<PropertiesPanelProps>(
           {selectedNode.type === 'llm_condition' && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">LLM Condition Configuration</CardTitle>
+                <CardTitle className="text-base">Conditional Split Configuration</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   LLM condition configuration coming in Phase 6
                 </p>
               </CardContent>
@@ -155,7 +155,7 @@ export const PropertiesPanel = memo<PropertiesPanelProps>(
                 <CardTitle className="text-base">Trigger Configuration</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   Trigger context configuration coming in Phase 7
                 </p>
               </CardContent>
@@ -168,7 +168,7 @@ export const PropertiesPanel = memo<PropertiesPanelProps>(
                 <CardTitle className="text-base">End Point Configuration</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   End point configuration coming in Phase 5
                 </p>
               </CardContent>
@@ -178,14 +178,14 @@ export const PropertiesPanel = memo<PropertiesPanelProps>(
 
         {/* Footer: Validation Status */}
         {selectedNode.type === 'ai_step' && (
-          <div className="border-t border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900/50">
+          <div className="border-t border-border p-4 bg-muted/50">
             <div className={`text-xs font-medium ${validation.isValid ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
               {validation.isValid ? '✓ Configuration valid' : '⚠ Configuration incomplete'}
             </div>
             {Object.entries(validation.warnings).length > 0 && (
               <div className="mt-2 space-y-1">
                 {Object.entries(validation.warnings).map(([key, message]) => (
-                  <div key={key} className="text-xs text-gray-600 dark:text-gray-400">
+                  <div key={key} className="text-xs text-muted-foreground">
                     ⚠ {message}
                   </div>
                 ))}

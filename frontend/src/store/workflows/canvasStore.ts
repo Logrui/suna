@@ -12,6 +12,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   Viewport,
+  MarkerType,
 } from '@xyflow/react';
 import type {
   NodeData,
@@ -20,6 +21,7 @@ import type {
   GraphDefinition,
   EdgeData,
 } from '@/types/workflows/graph-definition';
+import { getLayoutedElements } from '@/lib/workflows/autoLayout';
 
 interface CanvasState {
   nodes: Node<NodeData>[];
@@ -39,6 +41,7 @@ interface CanvasState {
 
   // Load initial state
   setGraph: (nodes: Node<NodeData>[], edges: Edge[], viewport: Viewport) => void;
+  layoutNodes: (direction?: 'TB' | 'LR') => void;
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
@@ -60,8 +63,15 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   onConnect: (connection: Connection) => {
+    const edge = {
+      ...connection,
+      type: 'smoothstep',
+      animated: true,
+      style: { stroke: 'var(--workflow-edge-border)', strokeWidth: 1 },
+      markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--workflow-edge-border)' },
+    };
     set({
-      edges: addEdge(connection, get().edges),
+      edges: addEdge(edge, get().edges),
     });
   },
 
@@ -126,6 +136,12 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   setGraph: (nodes, edges, viewport) => {
     set({ nodes, edges, viewport });
+  },
+
+  layoutNodes: (direction = 'TB') => {
+    const { nodes, edges } = get();
+    const layouted = getLayoutedElements(nodes, edges, direction);
+    set({ nodes: layouted.nodes as Node<NodeData>[], edges: layouted.edges });
   },
 }));
 

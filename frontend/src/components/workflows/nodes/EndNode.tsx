@@ -31,23 +31,24 @@ export const EndNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) 
   };
 
   return (
-    <div className={`relative flex flex-col items-center justify-center ${selected ? 'ring-2 ring-blue-500 rounded-full' : ''}`}>
+    <div className={`relative flex flex-col text-base p-3 gap-3 rounded-lg border shadow-sm bg-card border-border w-[200px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
       <LiveNodeStatus nodeId={id} />
-
-      <div className="flex flex-row items-center gap-1 rounded-full truncate select-none text-sm py-0.5 px-2 h-7 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 border border-transparent">
-        <div className="truncate">
-          <div className="flex flex-row items-center gap-1.5">
-            <Square className="size-3 text-red-600 dark:text-red-400 fill-current" />
-            <span className="font-medium">Stop Running Skill</span>
-          </div>
-        </div>
-      </div>
-
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-red-600 !-top-3"
+        className="w-3 h-3 !bg-red-600 !z-50"
       />
+
+      {/* Header */}
+      <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+        <div className="p-2 rounded-md bg-muted text-foreground">
+          <Square className="shrink-0 size-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm truncate">Stop</div>
+          <div className="text-xs text-muted-foreground truncate">End Workflow</div>
+        </div>
+      </div>
 
       {/* Status Badge Overlay */}
       {nodeStatus?.status && nodeStatus.status !== 'pending' && (
@@ -58,7 +59,7 @@ export const EndNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) 
 
       {/* Error Message */}
       {nodeStatus?.error && (
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-48 z-10 text-xs text-red-600 p-2 bg-red-50 dark:bg-red-900/90 rounded border border-red-200 dark:border-red-800 shadow-lg">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 w-48 z-10 text-xs text-red-600 p-2 bg-red-50 dark:bg-red-900/90 rounded border border-red-200 dark:border-red-800 shadow-lg mt-2">
           {nodeStatus.error}
         </div>
       )}

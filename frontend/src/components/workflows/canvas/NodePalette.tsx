@@ -40,7 +40,7 @@ export const NodePalette = () => {
         />
         <DraggableNode
           type="LLM_CONDITION"
-          label="Condition (AI)"
+          label="Conditional Split"
           onDragStart={(e) => onDragStart(e, 'LLM_CONDITION')}
           color="border-yellow-500"
         />
@@ -62,16 +62,34 @@ interface DraggableNodeProps {
   color: string;
 }
 
+import { Play, Zap, Bot, GitBranch, BrainCircuit, Square } from 'lucide-react';
+
+const NODE_ICONS: Record<string, any> = {
+  'TRIGGER': Play,
+  'COMPOSIO_TRIGGER': Zap,
+  'AI_STEP': Bot,
+  'RULE_CONDITION': GitBranch,
+  'LLM_CONDITION': BrainCircuit,
+  'STOP': Square,
+};
+
 const DraggableNode = ({ type, label, onDragStart, color }: DraggableNodeProps) => {
+  const IconComponent = NODE_ICONS[type] || Square;
+
   return (
     <div
-      className={`p-3 border-2 rounded-md cursor-grab bg-card hover:bg-accent/50 transition-colors ${color}`}
+      className="flex items-center gap-3 p-3 border rounded-lg cursor-grab bg-card shadow-sm hover:bg-accent/50 transition-colors"
       onDragStart={onDragStart}
       draggable
     >
-      <div className="text-sm font-medium">{label}</div>
-      <div className="text-xs text-muted-foreground mt-1 lowercase opacity-70">
-        {type.replace('_', ' ')}
+      <div className="p-2 rounded-md bg-muted text-foreground">
+        <IconComponent className="w-4 h-4" />
+      </div>
+      <div>
+        <div className="text-sm font-medium leading-none">{label}</div>
+        <div className="text-xs text-muted-foreground mt-1 lowercase opacity-70">
+          {type.replace('_', ' ')}
+        </div>
       </div>
     </div>
   );

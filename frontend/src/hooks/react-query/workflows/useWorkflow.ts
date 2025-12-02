@@ -4,6 +4,7 @@ import type { GraphDefinition, CompiledLogic } from '@/types/workflows/graph-def
 interface Workflow {
   id: string;
   account_id: string;
+  agent_id: string;
   name: string;
   description: string | null;
   graph_definition: GraphDefinition;

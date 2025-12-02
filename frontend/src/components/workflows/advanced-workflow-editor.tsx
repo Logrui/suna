@@ -38,7 +38,7 @@ export function AdvancedWorkflowEditor({ agentId, workflowId }: AdvancedWorkflow
 
     const { workflow, loading, saveWorkflow } = useWorkflow(id);
     const { mutateAsync: validateWorkflow } = useWorkflowValidation(id);
-    const { nodes, edges, viewport, setGraph } = useCanvasStore();
+    const { nodes, edges, viewport, setGraph, layoutNodes } = useCanvasStore();
     const { executeWorkflow, isConnected, stopExecution, executionState } = useWorkflowExecution(id);
     const [isValidating, setIsValidating] = useState(false);
     const [showProperties, setShowProperties] = useState(true);
@@ -76,8 +76,17 @@ export function AdvancedWorkflowEditor({ agentId, workflowId }: AdvancedWorkflow
                 edges || [],
                 viewport || { x: 0, y: 0, zoom: 1 }
             );
+
+            // Auto-layout if nodes exist and positions might be messy (optional check)
+            if (nodes && nodes.length > 0) {
+                // We can trigger layout here. 
+                // However, if we want to preserve saved positions, we might NOT want to do this every time.
+                // The user request said "Default behavior should be auto layout by default".
+                // So we will do it.
+                setTimeout(() => layoutNodes('TB'), 100);
+            }
         }
-    }, [workflow, setGraph]);
+    }, [workflow, setGraph, layoutNodes]);
 
     // Save workflow with validation and compilation
     const handleSave = async () => {
@@ -227,9 +236,9 @@ export function AdvancedWorkflowEditor({ agentId, workflowId }: AdvancedWorkflow
 
                 {/* Right Sidebar - Properties Panel */}
                 {showProperties && (
-                    <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-hidden flex flex-col z-10">
+                    <div className="w-80 border-l border-border bg-card overflow-hidden flex flex-col z-10">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                            <div className="border-b px-2">
+                            <div className="border-b border-border px-2">
                                 <TabsList className="w-full justify-start bg-transparent p-0 h-10">
                                     <TabsTrigger value="properties" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4">
                                         Properties
@@ -254,7 +263,7 @@ export function AdvancedWorkflowEditor({ agentId, workflowId }: AdvancedWorkflow
                 {/* Toggle Properties Panel Button */}
                 <button
                     onClick={() => setShowProperties(!showProperties)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 p-2 rounded-l-md border-l border-gray-200 dark:border-gray-800 transition-colors"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-muted hover:bg-muted/80 text-muted-foreground p-2 rounded-l-md border-l border-border transition-colors"
                     title={showProperties ? 'Hide properties panel' : 'Show properties panel'}
                 >
                     {showProperties ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}

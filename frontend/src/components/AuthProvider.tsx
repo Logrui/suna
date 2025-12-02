@@ -39,6 +39,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
+        // Sync auth token to cookie for backend proxy access
+        if (currentSession?.access_token) {
+          document.cookie = `suna-auth-token=${currentSession.access_token}; path=/; max-age=${currentSession.expires_in}; SameSite=Lax; Secure`;
+        }
+
         // Initialize realtime client with auth syncing
         try {
           await initializeRealtimeClient(supabase);

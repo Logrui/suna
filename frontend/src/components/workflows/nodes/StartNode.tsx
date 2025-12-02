@@ -10,12 +10,14 @@ import { LiveNodeStatus } from '../monitoring/LiveNodeStatus';
 export const StartNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>) => {
 
   return (
-    <div className={`flex flex-col text-base p-3 gap-3 rounded-lg border shadow-sm bg-card border-border w-[300px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
+    <div className={`relative flex flex-col text-base p-3 gap-3 rounded-lg border shadow-sm bg-card border-border w-[300px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
       <LiveNodeStatus nodeId={id} />
 
       {/* Header */}
       <div className="grid grid-cols-[auto_1fr] items-center gap-2">
-        <Play className="shrink-0 size-4 text-muted-foreground" />
+        <div className="p-2 rounded-md bg-muted text-foreground">
+          <Play className="shrink-0 size-4" />
+        </div>
         <div className="text-muted-foreground text-xs font-medium truncate">
           {data.config?.triggerType || 'Manual Trigger'}
         </div>
@@ -43,7 +45,7 @@ export const StartNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>>
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !bg-green-600"
+        className="w-3 h-3 !bg-green-600 !z-50"
       />
     </div>
   );

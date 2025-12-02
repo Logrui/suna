@@ -31,56 +31,51 @@ export const LLMConditionNode = memo(({ id, data, selected }: NodeProps<Node<Nod
   };
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[220px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
+    <div className={`relative flex items-center gap-2 px-2 py-1.5 rounded-md border shadow-sm bg-card border-border min-w-[140px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
       <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-purple-600"
+        className="w-3 h-3 !bg-purple-600 !z-50"
       />
 
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex items-center justify-center w-8 h-8 bg-purple-600 rounded-full text-white">
-          <GitBranch size={16} />
-        </div>
-        <div className="flex-1">
-          <div className="font-semibold text-sm">{data.label || 'LLM Condition'}</div>
-          {getStatusBadge()}
-        </div>
+      <GitBranch className="shrink-0 size-4 text-muted-foreground" />
+
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm truncate">{data.label || 'Conditional Split'}</div>
       </div>
 
-      <div className="text-xs text-muted-foreground mb-1">
-        {data.config?.model || 'No model selected'}
-      </div>
-
-      <div className="text-xs text-muted-foreground/70 italic truncate">
-        {data.config?.natural_language_condition || 'Enter condition...'}
-      </div>
-
-      {nodeStatus?.error && (
-        <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
-          {nodeStatus.error}
-        </div>
+      {/* Status Badge (Compact) */}
+      {nodeStatus?.status === 'running' && (
+        <div className="absolute -top-1 right-0 w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
       )}
 
-      <div className="flex justify-between items-center mt-3">
-        <div className="text-xs font-semibold text-green-600 relative">
-          Yes
+      {/* Error Indicator */}
+      {nodeStatus?.error && (
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white" title={nodeStatus.error} />
+      )}
+
+      {/* Output Handles - Distributed at the bottom */}
+      <div className="absolute bottom-0 left-0 w-full flex justify-evenly px-2">
+        {/* True Handle */}
+        <div className="relative">
           <Handle
             type="source"
             position={Position.Bottom}
             id="true"
-            className="w-2 h-2 !bg-green-600 !left-1/2 !-bottom-3"
+            className="w-2 h-2 !bg-green-600 !-bottom-[5px] !z-50"
+            style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
           />
         </div>
 
-        <div className="text-xs font-semibold text-red-600 relative">
-          No
+        {/* False Handle */}
+        <div className="relative">
           <Handle
             type="source"
             position={Position.Bottom}
             id="false"
-            className="w-2 h-2 !bg-red-600 !left-1/2 !-bottom-3"
+            className="w-2 h-2 !bg-red-600 !-bottom-[5px] !z-50"
+            style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
           />
         </div>
       </div>

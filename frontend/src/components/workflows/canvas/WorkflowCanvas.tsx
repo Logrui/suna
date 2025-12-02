@@ -4,12 +4,13 @@ import React, { useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Controls,
-  Background,
+
   MiniMap,
   useReactFlow,
   ReactFlowProvider,
   OnSelectionChangeParams,
   NodeTypes,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -22,6 +23,7 @@ import { LLMConditionNode } from '../nodes/LLMConditionNode';
 import { NodeType } from '@/types/workflows/graph-definition';
 
 import { ComposioTriggerNode } from '../nodes/ComposioTriggerNode';
+import { AutoLayoutButton } from './AutoLayoutButton';
 
 const nodeTypes: any = {
   TRIGGER: StartNode,
@@ -94,6 +96,7 @@ const WorkflowCanvasInner = () => {
     <div className="flex-1 h-full w-full" ref={reactFlowWrapper}>
       <ReactFlow
         nodes={nodes}
+        edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
@@ -104,12 +107,20 @@ const WorkflowCanvasInner = () => {
         nodeTypes={nodeTypes}
         defaultViewport={viewport}
         fitView
+        defaultEdgeOptions={{
+          type: 'smoothstep',
+          animated: true,
+          style: { stroke: 'var(--workflow-edge-border)', strokeWidth: 1 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--workflow-edge-border)' },
+        }}
         proOptions={{ hideAttribution: true }}
       >
         <Controls
           className="!bg-card !border-border shadow-sm [&>button]:!bg-card [&>button]:!border-border [&>button]:!text-foreground [&>button:hover]:!bg-accent [&>button:hover]:!text-accent-foreground [&>button>svg]:!fill-foreground"
-        />
-        <Background gap={12} size={1} className="bg-background" color="#555" />
+        >
+          <AutoLayoutButton />
+        </Controls>
+
         <MiniMap
           className="!bg-card !border-border shadow-sm"
           maskColor="rgba(0, 0, 0, 0.1)"

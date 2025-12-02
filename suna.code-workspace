@@ -8,6 +8,15 @@
 		},
 		{
 			"path": "../suna-PRODUCTION"
+		},
+		{
+			"path": "../suna-supabase"
+		},
+		{
+			"path": "../pipeshub-ai"
+		},
+		{
+			"path": "../novu"
 		}
 	],
 	"settings": {}

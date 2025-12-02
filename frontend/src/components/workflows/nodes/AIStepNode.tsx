@@ -14,37 +14,40 @@ export const AIStepNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>
   const updateNodeLabel = useCanvasStore((state) => state.updateNodeLabel);
 
   return (
-    <div className={`px-4 py-3 shadow-md rounded-md border-2 min-w-[220px] bg-card text-card-foreground ${selected ? 'ring-2 ring-blue-400 border-blue-400' : 'border-border'}`}>
+    <div className={`relative flex flex-col text-base p-3 gap-3 rounded-lg border shadow-sm bg-card border-border w-[300px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
       <LiveNodeStatus nodeId={id} />
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 !bg-blue-600"
+        className="w-3 h-3 !bg-blue-600 !z-50"
       />
 
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-full text-white">
-          <Brain size={16} />
+      {/* Header */}
+      <div className="grid grid-cols-[auto_1fr] items-center gap-2">
+        <div className="p-2 rounded-md bg-muted text-foreground">
+          <Brain className="shrink-0 size-4" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <EditableLabel
             value={data.label || 'AI Step'}
             onChange={(newLabel) => updateNodeLabel(id, newLabel)}
-            className="font-semibold text-sm"
+            className="font-medium text-sm truncate"
           />
+          <div className="text-xs text-muted-foreground truncate">
+            {data.config?.model || 'No model selected'}
+          </div>
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground mb-1">
-        {data.config?.model || 'No model selected'}
-      </div>
-
-      <div className="text-xs text-muted-foreground/70 truncate">
-        {data.config?.prompt ? data.config.prompt.slice(0, 60) + '...' : 'No prompt set'}
+      {/* Body */}
+      <div className="flex-1 flex flex-col gap-3">
+        <div className="text-foreground text-[15px] leading-5 font-normal line-clamp-2">
+          {data.config?.prompt || 'No prompt set'}
+        </div>
       </div>
 
       {nodeStatus?.error && (
-        <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border border-red-200">
+        <div className="text-xs text-red-600 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
           {nodeStatus.error}
         </div>
       )}
@@ -52,7 +55,7 @@ export const AIStepNode = memo(({ id, data, selected }: NodeProps<Node<NodeData>
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 !bg-blue-600"
+        className="w-3 h-3 !bg-blue-600 !z-50"
       />
     </div>
   );

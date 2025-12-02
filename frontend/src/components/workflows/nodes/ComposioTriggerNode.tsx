@@ -17,7 +17,7 @@ export const ComposioTriggerNode = memo(({ id, data, selected }: NodeProps<Node<
     const agentId = workflow?.agent_id;
 
     const [showSelector, setShowSelector] = useState(false);
-    const { updateNodeData } = useCanvasStore();
+    const { updateNodeConfig } = useCanvasStore();
 
     const handleSave = (triggerData: {
         appName: string;
@@ -28,21 +28,18 @@ export const ComposioTriggerNode = memo(({ id, data, selected }: NodeProps<Node<
         config: Record<string, any>;
         profileId: string;
     }) => {
-        updateNodeData(id, {
-            config: {
-                ...data.config,
-                triggerType: 'composio',
-                composioTriggerConfig: {
-                    appName: triggerData.appName,
-                    appSlug: triggerData.appSlug,
-                    triggerName: triggerData.triggerName,
-                    triggerSlug: triggerData.triggerSlug,
-                    config: {
-                        ...triggerData.config,
-                        profileId: triggerData.profileId
-                    },
-                    logo: triggerData.appLogo
-                }
+        updateNodeConfig(id, {
+            triggerType: 'composio',
+            composioTriggerConfig: {
+                appName: triggerData.appName,
+                appSlug: triggerData.appSlug,
+                triggerName: triggerData.triggerName,
+                triggerSlug: triggerData.triggerSlug,
+                config: {
+                    ...triggerData.config,
+                    profileId: triggerData.profileId
+                },
+                logo: triggerData.appLogo
             }
         });
         setShowSelector(false);
@@ -51,22 +48,23 @@ export const ComposioTriggerNode = memo(({ id, data, selected }: NodeProps<Node<
     const triggerConfig = data.config?.composioTriggerConfig;
 
     return (
-        <div className={`flex flex-col text-base p-3 gap-3 rounded-lg border shadow-sm bg-card border-border w-[300px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
+        <div className={`relative flex flex-col text-base p-3 gap-3 rounded-lg border shadow-sm bg-card border-border w-[300px] ${selected ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}>
             <LiveNodeStatus nodeId={id} />
 
             {/* Header */}
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
-                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-md flex items-center justify-center overflow-hidden w-8 h-8">
+                <div className="p-2 bg-muted text-foreground rounded-md flex items-center justify-center overflow-hidden">
                     {triggerConfig?.logo ? (
-                        <img src={triggerConfig.logo} alt={triggerConfig.appName} className="w-5 h-5 object-contain" />
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={triggerConfig.logo} alt={triggerConfig.appName} className="w-4 h-4 object-contain" />
                     ) : (
-                        <Zap className="shrink-0 size-4 text-blue-600 dark:text-blue-400" />
+                        <Zap className="shrink-0 size-4" />
                     )}
                 </div>
                 <div className="text-sm font-medium truncate">
                     {triggerConfig?.appName || 'Composio Trigger'}
                 </div>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowSelector(true)}>
+                <Button variant="ghost" size="icon" className="h-6 w-6 nodrag" onClick={() => setShowSelector(true)}>
                     <Settings className="h-3 w-3" />
                 </Button>
             </div>
@@ -82,7 +80,7 @@ export const ComposioTriggerNode = memo(({ id, data, selected }: NodeProps<Node<
                 </div>
 
                 {!triggerConfig && (
-                    <Button variant="outline" size="sm" onClick={() => setShowSelector(true)} className="w-full">
+                    <Button variant="outline" size="sm" onClick={() => setShowSelector(true)} className="w-full nodrag">
                         Select Trigger
                     </Button>
                 )}
@@ -103,7 +101,7 @@ export const ComposioTriggerNode = memo(({ id, data, selected }: NodeProps<Node<
             <Handle
                 type="source"
                 position={Position.Bottom}
-                className="w-3 h-3 !bg-blue-600"
+                className="w-3 h-3 !bg-blue-600 !z-50"
             />
 
             {agentId && (

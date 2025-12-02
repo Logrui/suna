@@ -384,9 +384,12 @@ class Configuration:
     API_KEY_SECRET: Optional[str] = "default-secret-key-change-in-production"
     API_KEY_LAST_USED_THROTTLE_SECONDS: Optional[int] = 900
     
-    # MCP (Master Credential Provider) configuration
-    MCP_CREDENTIAL_ENCRYPTION_KEY: Optional[str] = None
-    
+    # MCP (Master Credential Provider)    # Novu Notifications
+    NOVU_SECRET_KEY: Optional[str] = os.getenv("NOVU_SECRET_KEY")
+    NOVU_BACKEND_URL: str = os.getenv("NOVU_BACKEND_URL", "https://api.novu.co")
+
+    # Security
+    MCP_CREDENTIAL_ENCRYPTION_KEY: str = os.getenv("MCP_CREDENTIAL_ENCRYPTION_KEY", "")   
     # Composio integration
     COMPOSIO_API_KEY: Optional[str] = None
     COMPOSIO_WEBHOOK_SECRET: Optional[str] = None
