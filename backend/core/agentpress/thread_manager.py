@@ -620,8 +620,7 @@ class ThreadManager:
                     max_tokens=llm_max_tokens,
                     tools=openapi_tool_schemas,
                     tool_choice=tool_choice if config.native_tool_calling else "none",
-                    stream=stream,
-                    stop=stop_sequences if stop_sequences else None
+                    stream=stream
                 )
                 
                 # For streaming, the call returns immediately with a generator

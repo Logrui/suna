@@ -102,5 +102,7 @@ package = false
 
 [dependency-groups]
 dev = [
+    "mypy>=1.19.0",
     "orjson>=3.11.1",
+    "pylint>=4.0.4",
 ]
