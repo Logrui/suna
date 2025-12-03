@@ -4,6 +4,7 @@ Simplified conversation thread management system for AgentPress.
 
 import asyncio
 import json
+import time
 from typing import List, Dict, Any, Optional, Type, Union, AsyncGenerator, Literal, cast
 from core.services.llm import make_llm_api_call, LLMError
 from core.agentpress.prompt_caching import apply_anthropic_caching_strategy, validate_cache_blocks
@@ -471,7 +472,6 @@ class ThreadManager:
             
             # Always fetch messages (needed for LLM call)
             # Fast path just skips compression, not fetching!
-            import time
             fetch_start = time.time()
             messages = await self.get_llm_messages(thread_id)
             logger.info(f"⏱️ [TIMING] get_llm_messages(): {(time.time() - fetch_start) * 1000:.1f}ms ({len(messages)} messages)")
@@ -576,7 +576,6 @@ class ThreadManager:
 
             # Note: We don't log token count here because cached blocks give inaccurate counts
             # The LLM's usage.prompt_tokens (reported after the call) is the accurate source of truth
-            import time
             
             # CRITICAL: Validate tool call pairing before sending to LLM
             # This catches any orphaned tool results that would cause Bedrock errors
@@ -759,8 +758,10 @@ class ThreadManager:
                 
                 # Check for non-retryable errors (400 Bad Request, validation errors, etc.)
                 # These should NEVER be retried as they indicate request issues, not transient failures
+                # Use getattr for safe access to litellm.BadRequestError which may not exist in all versions
+                bad_request_error_class = getattr(litellm, 'BadRequestError', type(None))
                 is_non_retryable = (
-                    isinstance(e, litellm.BadRequestError) or
+                    isinstance(e, bad_request_error_class) or
                     "BadRequestError" in error_str or
                     "is blank" in error_str or  # Bedrock "text field is blank" error
                     "400" in error_str or
