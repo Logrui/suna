@@ -4,9 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { Globe, Plus, Search, BarChart, PenTool, Lightbulb, Type, Server, Eye, GitBranch, Shield, Rocket } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { SearchBar } from './search-bar';
+import { SearchBar } from '../custom-agents-page/search-bar';
 import { EmptyState } from '../empty-state';
-import { TeamsGrid } from '../agent-teams/agent-teams-grid';
+import { TeamsGrid } from './agent-teams-grid';
 import { LoadingState } from '../loading-state';
 import { Pagination } from '../pagination';
 import { UnifiedTeamCard } from '@/components/ui/agent-team-card';
@@ -31,11 +31,11 @@ const MOCK_TEAMS = [
   },
   {
     id: 'team-2',
-    name: 'SunaWide Research',
-    description: 'Agent team for parallel processing and deploying hundreds of independent, full-context AI agents simultaneously to tackle large-scale tasks (like analyzing 250 companies or generating 50 assets) in minutes rather than hours',
+    name: 'Wide Research',
+    description: 'Collaborative agents for generating blog posts, social media content, and marketing copy.',
     agents: [
-      { id: 'a4', name: 'Suna Mapper', role: 'Mapping', icon_name: 'Lightbulb', icon_color: '#f59e0b', icon_background: '#fffbeb' },
-      { id: 'a5', name: 'Suna Worker', role: 'Execution', icon_name: 'Type', icon_color: '#ec4899', icon_background: '#fdf2f8' },
+      { id: 'a4', name: 'IdeaGen', role: 'Idea Generation', icon_name: 'Lightbulb', icon_color: '#f59e0b', icon_background: '#fffbeb' },
+      { id: 'a5', name: 'CopyMaster', role: 'Copywriting', icon_name: 'Type', icon_color: '#ec4899', icon_background: '#fdf2f8' },
     ],
     created_at: '2025-12-03T14:30:00Z',
     is_public: true,
@@ -45,14 +45,14 @@ const MOCK_TEAMS = [
   },
   {
     id: 'team-3',
-    name: 'Suna Code',
-    description: 'Automated feature implementation, code reviews, and deployment management for Github.',
+    name: 'DevOps Assistants',
+    description: 'Automated pipeline monitoring, log analysis, and deployment management.',
     agents: [
-      { id: 'a6', name: 'Suna Planner', role: 'Planning', icon_name: 'Server', icon_color: '#6366f1', icon_background: '#eef2ff' },
-      { id: 'a7', name: 'Suna Executor', role: 'Execution', icon_name: 'Eye', icon_color: '#ef4444', icon_background: '#fef2f2' },
-      { id: 'a8', name: 'Suna Reviewer', role: 'Quality Control', icon_name: 'GitBranch', icon_color: '#f97316', icon_background: '#fff7ed' },
-      { id: 'a9', name: 'Suna Deployer', role: 'Deployment Reviewer', icon_name: 'Shield', icon_color: '#14b8a6', icon_background: '#f0fdfa' },
-      { id: 'a10', name: 'Suna DeployBot', role: 'Release Manager', icon_name: 'Rocket', icon_color: '#8b5cf6', icon_background: '#f5f3ff' },
+      { id: 'a6', name: 'KubeMaster', role: 'DevOps Engineer', icon_name: 'Server', icon_color: '#6366f1', icon_background: '#eef2ff' },
+      { id: 'a7', name: 'LogWatch', role: 'Monitoring', icon_name: 'Eye', icon_color: '#ef4444', icon_background: '#fef2f2' },
+      { id: 'a8', name: 'GitBot', role: 'Version Control', icon_name: 'GitBranch', icon_color: '#f97316', icon_background: '#fff7ed' },
+      { id: 'a9', name: 'SecGuard', role: 'Security', icon_name: 'Shield', icon_color: '#14b8a6', icon_background: '#f0fdfa' },
+      { id: 'a10', name: 'DeployBot', role: 'Release Manager', icon_name: 'Rocket', icon_color: '#8b5cf6', icon_background: '#f5f3ff' },
     ],
     created_at: '2025-12-03T09:15:00Z',
     is_public: true,

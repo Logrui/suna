@@ -38,7 +38,9 @@ interface TeamData {
     description: string;
     agents: TeamAgent[];
     created_at: string;
+    structure: string;
     is_public: boolean;
+    is_default: boolean;
     tags: string[];
     slug?: string;
     icon_name?: string;
@@ -67,7 +69,7 @@ export function TeamDetailsDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+            <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" hideCloseButton>
                 <div className="p-6 pb-4">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-4">
@@ -87,10 +89,10 @@ export function TeamDetailsDialog({
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Calendar className="h-3.5 w-3.5" />
                                     <span>Created {formatDistanceToNow(new Date(team.created_at), { addSuffix: true })}</span>
-                                    {team.is_public && (
+                                    {team.is_default && (
                                         <>
                                             <span>•</span>
-                                            <Badge variant="secondary" className="text-xs font-normal h-5">Public</Badge>
+                                            <Badge variant="secondary" className="text-xs font-normal h-5">Default</Badge>
                                         </>
                                     )}
                                 </div>
@@ -143,7 +145,7 @@ export function TeamDetailsDialog({
                     <div className="px-6 py-3 border-b bg-background/50 backdrop-blur-sm sticky top-0 z-10">
                         <h3 className="font-semibold flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            Team Members
+                            Agents
                             <Badge variant="secondary" className="ml-1 h-5 min-w-5 justify-center px-1">
                                 {team.agents.length}
                             </Badge>

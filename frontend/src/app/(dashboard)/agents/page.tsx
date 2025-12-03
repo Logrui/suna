@@ -16,13 +16,13 @@ import { AgentsParams } from '@/hooks/agents/utils';
 import { AgentsPageHeader } from '@/components/agents/custom-agents-page/header';
 import { TabsNavigation } from '@/components/agents/custom-agents-page/tabs-navigation';
 import { MyAgentsTab } from '@/components/agents/custom-agents-page/my-agents-tab';
-import { TeamsTab } from '@/components/agents/custom-agents-page/teams-tab';
+import { TeamsTab } from '@/components/agents/agent-teams/teams-tab';
 import { MarketplaceTab } from '@/components/agents/custom-agents-page/marketplace-tab';
 import { PublishDialog } from '@/components/agents/custom-agents-page/publish-dialog';
 import { LoadingSkeleton } from '@/components/agents/custom-agents-page/loading-skeleton';
 import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
-import { NewTeamDialog } from '@/components/agents/new-team-dialog';
-import { TeamDetailsDialog } from '@/components/agents/team-details-dialog';
+import { NewTeamDialog } from '@/components/agents/agent-teams/new-team-dialog';
+import { TeamDetailsDialog } from '@/components/agents/agent-teams/team-details-dialog';
 import { MarketplaceAgentPreviewDialog } from '@/components/agents/marketplace-agent-preview-dialog';
 import { AgentCountLimitError } from '@/lib/api/errors';
 
