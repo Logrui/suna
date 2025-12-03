@@ -28,7 +28,7 @@ export default function AgentConfigPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const agentId = params.agentId as string;
-  const [activeView, setActiveView] = useState<ConfigView>('triggers');
+  const [activeView, setActiveView] = useState<ConfigView>('instructions');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const { data: agent, isLoading } = useAgent(agentId);
@@ -78,9 +78,9 @@ export default function AgentConfigPage() {
     { id: 'tools' as const, label: 'Tools', icon: Wrench },
     { id: 'integrations' as const, label: 'Integrations', icon: Server },
     { id: 'knowledge' as const, label: 'Knowledge', icon: BookOpen },
-    { id: 'workflows' as const, label: 'Workflows', icon: Workflow },
-    { id: 'playbooks' as const, label: 'Playbooks', icon: FileText },
     { id: 'triggers' as const, label: 'Triggers', icon: Zap },
+    { id: 'playbooks' as const, label: 'Playbooks', icon: FileText },
+    { id: 'workflows' as const, label: 'Workflows', icon: Workflow },
   ];
 
   return (
