@@ -23,7 +23,7 @@ export interface ToolViewProps {
   // Structured data from metadata - NO CONTENT PARSING
   toolCall: ToolCallData;
   toolResult?: ToolResultData;
-
+  
   // Metadata
   assistantTimestamp?: string;
   toolTimestamp?: string;
@@ -37,10 +37,6 @@ export interface ToolViewProps {
   onFileClick?: (filePath: string) => void;
   viewToggle?: React.ReactNode;
   streamingText?: string; // Live streaming content from assistant message
-
-  // Legacy props (Polyfilled for backward compatibility)
-  assistantContent?: string;
-  toolContent?: string;
 }
 
 export interface BrowserToolViewProps extends ToolViewProps {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   CheckCircle,
@@ -10,6 +10,9 @@ import {
   Clock,
   BookOpen,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { cleanUrl, formatTimestamp, getToolTitle } from '../utils';
@@ -22,15 +25,15 @@ import { LoadingState } from '../shared/LoadingState';
 import { extractWebSearchData } from './_utils';
 
 export function WebSearchToolView({
-  name = 'web-search',
-  assistantContent,
-  toolContent,
+  toolCall,
+  toolResult,
   assistantTimestamp,
   toolTimestamp,
   isSuccess = true,
   isStreaming = false,
 }: ToolViewProps) {
   const [expandedResults, setExpandedResults] = useState<Record<number, boolean>>({});
+  const [currentQueryIndex, setCurrentQueryIndex] = useState(0);
 
   const {
     query,
@@ -39,18 +42,31 @@ export function WebSearchToolView({
     images,
     actualIsSuccess,
     actualToolTimestamp,
-    actualAssistantTimestamp
+    actualAssistantTimestamp,
+    isBatch,
+    batchResults
   } = extractWebSearchData(
-    assistantContent,
-    toolContent,
+    toolCall,
+    toolResult,
     isSuccess,
     toolTimestamp,
     assistantTimestamp
   );
 
+  // Reset to first query when batch results change
+  useEffect(() => {
+    if (isBatch && batchResults && batchResults.length > 0) {
+      setCurrentQueryIndex(0);
+    }
+  }, [isBatch, batchResults?.length]);
+
+  const name = toolCall.function_name.replace(/_/g, '-').toLowerCase();
   const toolTitle = getToolTitle(name);
 
-  const getFavicon = (url: string) => {
+  const getFavicon = (url: string | undefined) => {
+    if (!url) {
+      return null;
+    }
     try {
       const domain = new URL(url).hostname;
       return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
@@ -61,12 +77,20 @@ export function WebSearchToolView({
 
   const getResultType = (result: any) => {
     const { url, title } = result;
+    
+    // Guard against undefined/null values
+    if (!url || !title) {
+      return { icon: Globe, label: 'Website' };
+    }
 
-    if (url.includes('news') || url.includes('article') || title.includes('News')) {
+    const urlLower = url.toLowerCase();
+    const titleLower = title.toLowerCase();
+
+    if (urlLower.includes('news') || urlLower.includes('article') || titleLower.includes('news')) {
       return { icon: FileText, label: 'Article' };
-    } else if (url.includes('wiki')) {
+    } else if (urlLower.includes('wiki')) {
       return { icon: BookOpen, label: 'Wiki' };
-    } else if (url.includes('blog')) {
+    } else if (urlLower.includes('blog')) {
       return { icon: CalendarDays, label: 'Blog' };
     } else {
       return { icon: Globe, label: 'Website' };
@@ -105,30 +129,103 @@ export function WebSearchToolView({
               {actualIsSuccess ? 'Search completed successfully' : 'Search failed'}
             </Badge>
           )}
+
+          {isStreaming && (
+            <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              Searching
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
       <CardContent className="p-0 h-full flex-1 overflow-hidden relative">
-        {isStreaming && searchResults.length === 0 && !answer ? (
+        {isStreaming && searchResults.length === 0 && !answer && images.length === 0 ? (
           <LoadingState
             icon={Search}
             iconColor="text-blue-500 dark:text-blue-400"
             bgColor="bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20"
-            title="Searching the web"
+            title={name === 'image-search' ? "Searching for images" : "Searching the web"}
             filePath={query}
             showProgress={true}
           />
-        ) : searchResults.length > 0 || answer ? (
+        ) : searchResults.length > 0 || answer || images.length > 0 ? (
           <ScrollArea className="h-full w-full">
             <div className="p-4 py-0 my-4">
+              {/* Navigation Header - At the absolute top */}
+              {isBatch && batchResults && (
+                <div className="flex items-center justify-between pb-4 mb-4 border-b border-border">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Query {currentQueryIndex + 1} of {batchResults.length}
+                      </span>
+                      {batchResults[currentQueryIndex].success ? (
+                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <AlertTriangle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+                      )}
+                      {name === 'image-search' && batchResults[currentQueryIndex].images.length > 0 && (
+                        <Badge variant="outline" className="text-xs font-normal h-4 px-1.5">
+                          {batchResults[currentQueryIndex].images.length} images
+                        </Badge>
+                      )}
+                      {name !== 'image-search' && batchResults[currentQueryIndex].results.length > 0 && (
+                        <Badge variant="outline" className="text-xs font-normal h-4 px-1.5">
+                          {batchResults[currentQueryIndex].results.length}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {batchResults[currentQueryIndex].query}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 ml-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setCurrentQueryIndex(Math.max(0, currentQueryIndex - 1))}
+                      disabled={currentQueryIndex === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setCurrentQueryIndex(Math.min(batchResults.length - 1, currentQueryIndex + 1))}
+                      disabled={currentQueryIndex === batchResults.length - 1}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {images.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3 flex items-center">
                     <ImageIcon className="h-4 w-4 mr-2 opacity-70" />
-                    Images {name === 'image-search' && `(${images.length})`}
+                    Images {name === 'image-search' && isBatch && batchResults
+                      ? `(${batchResults[currentQueryIndex]?.images?.length || 0})`
+                      : name === 'image-search'
+                        ? `(${images.length})`
+                        : ''}
+                    {isBatch && batchResults && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        (Query {currentQueryIndex + 1} of {batchResults.length})
+                      </span>
+                    )}
                   </h3>
                   <div className={`grid gap-3 mb-1 ${name === 'image-search' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
-                    {(name === 'image-search' ? images : images.slice(0, 6)).map((image, idx) => {
+                    {(() => {
+                      // Show images for current query if batch mode, otherwise all images
+                      const imagesToShow = isBatch && batchResults && batchResults[currentQueryIndex]?.images
+                        ? batchResults[currentQueryIndex].images
+                        : (name === 'image-search' ? images : images.slice(0, 6));
+                      return imagesToShow.map((image, idx) => {
                       const imageUrl = typeof image === 'string' ? image : (image as any).imageUrl;
                       
                       return (
@@ -156,17 +253,109 @@ export function WebSearchToolView({
                           </div>
                         </a>
                       );
-                    })}
+                    });
+                    })()}
                   </div>
-                  {name !== 'image-search' && images.length > 6 && (
+                  {name !== 'image-search' && (() => {
+                    const currentImages = isBatch && batchResults && batchResults[currentQueryIndex]?.images
+                      ? batchResults[currentQueryIndex].images
+                      : images;
+                    return currentImages.length > 6 && (
                     <Button variant="outline" size="sm" className="mt-2 text-xs">
-                      View {images.length - 6} more images
+                        View {currentImages.length - 6} more images
                     </Button>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
 
-              {searchResults.length > 0 && name !== 'image-search' && (
+              {name !== 'image-search' && (
+                <>
+                  {isBatch && batchResults ? (
+                    // Batch mode: display current query results
+                    <div className="space-y-4">
+                      {/* Current Query Results */}
+                      {(() => {
+                        const batchItem = batchResults[currentQueryIndex];
+                        return (
+                          <div className="space-y-4">
+                            {batchItem.answer && (
+                              <div className="bg-muted/50 border border-border rounded-lg p-3">
+                                <p className="text-sm text-foreground leading-relaxed">
+                                  {batchItem.answer}
+                                </p>
+                              </div>
+                            )}
+
+                            {batchItem.results.length > 0 ? (
+                              <div className="space-y-2.5">
+                                {batchItem.results.map((result, idx) => {
+                                  // Guard against missing url/title
+                                  if (!result?.url || !result?.title) {
+                                    return null;
+                                  }
+                                  
+                                  const { icon: ResultTypeIcon, label: resultTypeLabel } = getResultType(result);
+                                  const resultKey = `batch-${currentQueryIndex}-result-${idx}`;
+                                  const isExpanded = expandedResults[resultKey] || false;
+                                  const favicon = getFavicon(result.url);
+
+                                  return (
+                                    <div
+                                      key={resultKey}
+                                      className="bg-card border border-border rounded-lg hover:border-border/80 transition-colors"
+                                    >
+                                      <div className="p-3.5">
+                                        <div className="flex items-start gap-2.5">
+                                          {favicon && (
+                                            <img
+                                              src={favicon}
+                                              alt=""
+                                              className="w-4 h-4 mt-0.5 rounded flex-shrink-0"
+                                              onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                              }}
+                                            />
+                                          )}
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                              <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 font-normal">
+                                                <ResultTypeIcon className="h-2.5 w-2.5 mr-1 opacity-70" />
+                                                {resultTypeLabel}
+                                              </Badge>
+                                            </div>
+                                            <a
+                                              href={result.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-sm font-medium text-primary hover:underline line-clamp-1 mb-1 block"
+                                            >
+                                              {truncateString(cleanUrl(result.title), 60)}
+                                            </a>
+                                            <div className="text-xs text-muted-foreground flex items-center">
+                                              <Globe className="h-3 w-3 mr-1 flex-shrink-0 opacity-60" />
+                                              <span className="truncate">{truncateString(cleanUrl(result.url), 65)}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-muted-foreground italic py-4 text-center">
+                                No results found for this query
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    // Single query mode: original display
+                    <>
+                      {searchResults.length > 0 && (
                 <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200 mb-4 flex items-center justify-between">
                   <span>Search Results ({searchResults.length})</span>
                   <Badge variant="outline" className="text-xs font-normal">
@@ -176,9 +365,13 @@ export function WebSearchToolView({
                 </div>
               )}
 
-              {name !== 'image-search' && (
                 <div className="space-y-4">
                   {searchResults.map((result, idx) => {
+                  // Guard against missing url/title
+                  if (!result?.url || !result?.title) {
+                    return null;
+                  }
+                  
                   const { icon: ResultTypeIcon, label: resultTypeLabel } = getResultType(result);
                   const isExpanded = expandedResults[idx] || false;
                   const favicon = getFavicon(result.url);
@@ -220,60 +413,7 @@ export function WebSearchToolView({
                               {truncateString(cleanUrl(result.url), 70)}
                             </div>
                           </div>
-                          {/* <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 rounded-full"
-                                  onClick={() => toggleExpand(idx)}
-                                >
-                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{isExpanded ? 'Show less' : 'Show more'}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider> */}
-                        </div>
-
-                        {/* {result.snippet && (
-                          <div className={cn(
-                            "text-sm text-zinc-600 dark:text-zinc-400",
-                            isExpanded ? "whitespace-pre-wrap break-words max-h-96 overflow-y-auto" : "line-clamp-2"
-                          )}>
-                            {isExpanded ? (
-                              // When expanded, preserve line breaks and show full content
-                              result.snippet
-                                ?.replace(/\\\\\n/g, '\n')
-                                ?.replace(/\\\\n/g, '\n')
-                                ?.replace(/\\n/g, '\n')
-                                ?.replace(/\\\\\t/g, '\t')
-                                ?.replace(/\\\\t/g, '\t')
-                                ?.replace(/\\t/g, '\t')
-                                ?.replace(/\\\\\r/g, '\r')
-                                ?.replace(/\\\\r/g, '\r')
-                                ?.replace(/\\r/g, '\r')
-                                ?.trim()
-                            ) : (
-                              // When collapsed, convert to single line
-                              result.snippet
-                                ?.replace(/\\\\\n/g, ' ')
-                                ?.replace(/\\\\n/g, ' ')
-                                ?.replace(/\\n/g, ' ')
-                                ?.replace(/\\\\\t/g, ' ')
-                                ?.replace(/\\\\t/g, ' ')
-                                ?.replace(/\\t/g, ' ')
-                                ?.replace(/\\\\\r/g, ' ')
-                                ?.replace(/\\\\r/g, ' ')
-                                ?.replace(/\\r/g, ' ')
-                                ?.replace(/\s+/g, ' ')
-                                ?.trim()
-                            )}
                           </div>
-                        )} */}
                       </div>
 
                       {isExpanded && (
@@ -298,24 +438,35 @@ export function WebSearchToolView({
                     );
                   })}
                 </div>
+                    </>
+                  )}
+                </>
               )}
             </div>
           </ScrollArea>
         ) : (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
             <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60">
+              {name === 'image-search' ? (
+                <ImageIcon className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />
+              ) : (
               <Search className="h-10 w-10 text-zinc-400 dark:text-zinc-600" />
+              )}
             </div>
             <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-              No Results Found
+              {name === 'image-search' ? 'No Images Found' : 'No Results Found'}
             </h3>
+            {query && (
             <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 w-full max-w-md text-center mb-4 shadow-sm">
               <code className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
-                {query || 'Unknown query'}
+                  {typeof query === 'string' ? query : Array.isArray(query) ? (query as string[]).join(', ') : 'Unknown query'}
               </code>
             </div>
+            )}
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Try refining your search query for better results
+              {name === 'image-search' 
+                ? 'Try refining your image search query for better results'
+                : 'Try refining your search query for better results'}
             </p>
           </div>
         )}
@@ -325,17 +476,35 @@ export function WebSearchToolView({
         <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
           {!isStreaming && (
             <>
-              {name === 'image-search' && images.length > 0 && (
+              {name === 'image-search' && (
+                <>
+                  {isBatch && batchResults ? (
+                    <Badge variant="outline" className="h-6 py-0.5">
+                      <ImageIcon className="h-3 w-3" />
+                      {batchResults.length} queries • {images.length} images
+                    </Badge>
+                  ) : images.length > 0 && (
                 <Badge variant="outline" className="h-6 py-0.5">
                   <ImageIcon className="h-3 w-3" />
                   {images.length} images
                 </Badge>
+                  )}
+                </>
               )}
-              {name !== 'image-search' && searchResults.length > 0 && (
+              {name !== 'image-search' && (
+                <>
+                  {isBatch && batchResults ? (
+                    <Badge variant="outline" className="h-6 py-0.5">
+                      <Globe className="h-3 w-3" />
+                      {batchResults.length} queries • {searchResults.length} results
+                    </Badge>
+                  ) : searchResults.length > 0 && (
                 <Badge variant="outline" className="h-6 py-0.5">
                   <Globe className="h-3 w-3" />
                   {searchResults.length} results
                 </Badge>
+                  )}
+                </>
               )}
             </>
           )}

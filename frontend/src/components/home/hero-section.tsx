@@ -2,15 +2,13 @@
 import { siteConfig } from '@/lib/home';
 import { AnimatedBg } from '@/components/ui/animated-bg';
 import { useIsMobile } from '@/hooks/utils';
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent, lazy, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { AgentRunLimitError, BillingError } from '@/lib/api/errors';
 import { useInitiateAgentMutation } from '@/hooks/dashboard/use-initiate-agent';
 import { useThreadQuery } from '@/hooks/threads/use-threads';
-import GoogleSignIn from '@/components/GoogleSignIn';
-import { useAgents } from '@/hooks/agents/use-agents';
 import {
     Dialog,
     DialogContent,
@@ -21,17 +19,27 @@ import {
 } from '@/components/ui/dialog';
 import { isLocalMode, config, isStagingMode } from '@/lib/config';
 import { toast } from 'sonner';
-import { PlanSelectionModal } from '@/components/billing/pricing';
-import GitHubSignIn from '@/components/GithubSignIn';
 import { ChatInput, ChatInputHandles } from '@/components/thread/chat-input/chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
 import { useQuery } from '@tanstack/react-query';
 import { agentKeys } from '@/hooks/agents/keys';
 import { getAgents } from '@/hooks/agents/utils';
-import { AgentRunLimitDialog } from '@/components/thread/agent-run-limit-dialog';
-import { SunaModesPanel } from '@/components/dashboard/suna-modes-panel';
 import { useSunaModePersistence } from '@/stores/suna-modes-store';
 import { useAgentSelection } from '@/stores/agent-selection-store';
+
+
+// Lazy load components only needed when dialogs are open
+const GoogleSignIn = lazy(() => import('@/components/GoogleSignIn'));
+const GitHubSignIn = lazy(() => import('@/components/GithubSignIn'));
+const PlanSelectionModal = lazy(() =>
+    import('@/components/billing/pricing').then(mod => ({ default: mod.PlanSelectionModal }))
+);
+const AgentRunLimitDialog = lazy(() =>
+    import('@/components/thread/agent-run-limit-dialog').then(mod => ({ default: mod.AgentRunLimitDialog }))
+);
+const SunaModesPanel = lazy(() =>
+    import('@/components/dashboard/suna-modes-panel').then(mod => ({ default: mod.SunaModesPanel }))
+);
 
 // Custom dialog overlay with blur effect
 const BlurredDialogOverlay = () => (
@@ -44,6 +52,7 @@ const PENDING_PROMPT_KEY = 'pendingAgentPrompt';
 
 
 export function HeroSection() {
+
     const { hero } = siteConfig;
     const isMobile = useIsMobile();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -220,10 +229,15 @@ export function HeroSection() {
 
     return (
         <section id="hero" className="w-full relative overflow-hidden">
-            <PlanSelectionModal
-                open={showPaymentModal}
-                onOpenChange={setShowPaymentModal}
-            />
+            {/* Lazy load payment modal - only needed on interaction */}
+            {showPaymentModal && (
+                <Suspense fallback={null}>
+                    <PlanSelectionModal
+                        open={showPaymentModal}
+                        onOpenChange={setShowPaymentModal}
+                    />
+                </Suspense>
+            )}
             <div className="relative flex flex-col items-center w-full px-4 sm:px-6 pb-8 sm:pb-10">
                 {/* Animated background */}
                 <AnimatedBg
@@ -260,21 +274,21 @@ export function HeroSection() {
                     } : undefined}
                 />
 
-                <div className="relative z-10 pt-16 sm:pt-24 md:pt-32 mx-auto h-full w-full max-w-6xl flex flex-col items-center justify-center">
+                <div className="relative z-10 pt-20 sm:pt-24 md:pt-32 mx-auto h-full w-full max-w-6xl flex flex-col items-center justify-center min-h-[60vh] sm:min-h-0">
 
-                    <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 pt-8 sm:pt-20 max-w-4xl mx-auto pb-7">
-                        <h1 className="text-2xl md:text-3xl lg:text-4xl font-medium tracking-tighter text-balance text-center px-2">
-                            What do you want to get done?
-                        </h1>
+                    <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 pt-12 sm:pt-20 max-w-4xl mx-auto pb-6 sm:pb-7">
+                        <h2 className="text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-medium tracking-tighter text-balance text-center px-4 sm:px-2">
+                            What would you like to build?
+                        </h2>
                     </div>
 
-                    <div className="flex flex-col items-center w-full max-w-3xl mx-auto gap-2 flex-wrap justify-center px-2 sm:px-0">
+                    <div className="flex flex-col items-center w-full max-w-3xl mx-auto gap-2 flex-wrap justify-center px-4 sm:px-0">
                         <div className="w-full relative">
                             <div className="relative z-10">
                                 <ChatInput
                                     ref={chatInputRef}
                                     onSubmit={handleChatInputSubmit}
-                                    placeholder="Describe the task you want your Worker to complete..."
+                                    placeholder="Describe your task..."
                                     loading={isSubmitting}
                                     disabled={isSubmitting}
                                     value={inputValue}
@@ -296,19 +310,21 @@ export function HeroSection() {
 
                     {/* Modes Panel - Below chat input, visible for Suna agent */}
                     {isSunaAgent && (
-                        <div className="w-full max-w-3xl mx-auto mt-4 px-2 sm:px-0">
-                            <SunaModesPanel
-                                selectedMode={selectedMode}
-                                onModeSelect={setSelectedMode}
-                                onSelectPrompt={setInputValue}
-                                isMobile={isMobile}
-                                selectedCharts={selectedCharts}
-                                onChartsChange={setSelectedCharts}
-                                selectedOutputFormat={selectedOutputFormat}
-                                onOutputFormatChange={setSelectedOutputFormat}
-                                selectedTemplate={selectedTemplate}
-                                onTemplateChange={setSelectedTemplate}
-                            />
+                        <div className="w-full max-w-3xl mx-auto mt-4 px-4 sm:px-0">
+                            <Suspense fallback={<div className="h-24 animate-pulse bg-muted/10 rounded-lg" />}>
+                                <SunaModesPanel
+                                    selectedMode={selectedMode}
+                                    onModeSelect={setSelectedMode}
+                                    onSelectPrompt={setInputValue}
+                                    isMobile={isMobile}
+                                    selectedCharts={selectedCharts}
+                                    onChartsChange={setSelectedCharts}
+                                    selectedOutputFormat={selectedOutputFormat}
+                                    onOutputFormatChange={setSelectedOutputFormat}
+                                    selectedTemplate={selectedTemplate}
+                                    onTemplateChange={setSelectedTemplate}
+                                />
+                            </Suspense>
                         </div>
                     )}
 
@@ -340,8 +356,12 @@ export function HeroSection() {
 
                     {/* OAuth Sign In */}
                     <div className="w-full space-y-3 mt-8">
-                        <GoogleSignIn returnUrl="/dashboard" />
-                        <GitHubSignIn returnUrl="/dashboard" />
+                        <Suspense fallback={<div className="h-12 bg-muted/20 rounded-full animate-pulse" />}>
+                            <GoogleSignIn returnUrl="/dashboard" />
+                        </Suspense>
+                        <Suspense fallback={<div className="h-12 bg-muted/20 rounded-full animate-pulse" />}>
+                            <GitHubSignIn returnUrl="/dashboard" />
+                        </Suspense>
                     </div>
 
                     {/* Divider */}
@@ -366,7 +386,14 @@ export function HeroSection() {
                             Sign in with email
                         </Link>
 
-{/* Create account disabled */}                    </div>
+                        <Link
+                            href={`/auth?mode=signup&returnUrl=${encodeURIComponent('/dashboard')}`}
+                            className="flex h-12 items-center justify-center w-full text-center rounded-full border border-border bg-background hover:bg-accent/50 transition-all font-medium"
+                            onClick={() => setAuthDialogOpen(false)}
+                        >
+                            Create new account
+                        </Link>
+                    </div>
 
                     <div className="mt-8 text-center text-[13px] text-muted-foreground leading-relaxed">
                         By continuing, you agree to our{' '}
@@ -382,13 +409,15 @@ export function HeroSection() {
             </Dialog>
 
             {agentLimitData && (
-                <AgentRunLimitDialog
-                    open={showAgentLimitDialog}
-                    onOpenChange={setShowAgentLimitDialog}
-                    runningCount={agentLimitData.runningCount}
-                    runningThreadIds={agentLimitData.runningThreadIds}
-                    projectId={undefined} // Hero section doesn't have a specific project context
-                />
+                <Suspense fallback={null}>
+                    <AgentRunLimitDialog
+                        open={showAgentLimitDialog}
+                        onOpenChange={setShowAgentLimitDialog}
+                        runningCount={agentLimitData.runningCount}
+                        runningThreadIds={agentLimitData.runningThreadIds}
+                        projectId={undefined} // Hero section doesn't have a specific project context
+                    />
+                </Suspense>
             )}
         </section>
     );

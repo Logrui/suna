@@ -2,12 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../suna-private"
-		},
-		{
-			"path": "../suna-supabase"
 		}
 	],
 	"settings": {}

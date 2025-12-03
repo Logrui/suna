@@ -5,7 +5,7 @@ import { ThemeToggle } from '@/components/home/theme-toggle';
 import { siteConfig } from '@/lib/home';
 import { cn } from '@/lib/utils';
 import { Menu, X, Github } from 'lucide-react';
-import { AnimatePresence, motion, useScroll } from 'motion/react';
+import { AnimatePresence, motion, useScroll } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -14,6 +14,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { useGitHubStars } from '@/hooks/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
+
+import { Button } from '@/components/ui/button';
 
 const INITIAL_WIDTH = '70rem';
 const MAX_WIDTH = '1000px';
@@ -69,6 +71,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
   const { formattedStars, loading: starsLoading } = useGitHubStars('kortix-ai', 'suna');
   const router = useRouter();
   const pathname = usePathname();
+
 
   // Filter nav links based on tabs prop
   const filteredNavLinks = tabs
@@ -164,19 +167,27 @@ export function Navbar({ tabs }: NavbarProps = {}) {
                     </span>
                   </Link>
                   {user ? (
-                    <Link
-                      className="bg-primary h-8 flex items-center justify-center text-sm font-normal tracking-wide rounded-full text-primary-foreground w-fit px-4 shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12]"
-                      href="/dashboard"
+                    <Button
+                      asChild
+                      variant="default"
+                      size="sm"
+                      className="w-fit flex items-center justify-center gap-2 bg-primary text-primary-foreground shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12]"
                     >
-                      Dashboard
-                    </Link>
+                      <Link href="/dashboard">
+                        Dashboard
+                      </Link>
+                    </Button>
                   ) : (
-                    <Link
-                      className="bg-primary text-primary-foreground h-8 flex items-center justify-center text-sm font-normal tracking-wide rounded-full w-fit px-4 shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12]"
-                      href="/auth"
+                    <Button
+                      asChild
+                      variant="default"
+                      size="sm"
+                      className="w-fit flex items-center justify-center gap-2 bg-primary text-primary-foreground shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12]"
                     >
-                      Try free
-                    </Link>
+                      <Link href="/auth">
+                        Try Free
+                      </Link>
+                    </Button>
                   )}
                 </div>
                 {/* <ThemeToggle /> */}
@@ -195,7 +206,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
               initial="hidden"
               animate="visible"
               exit="exit"
-              variants={overlayVariants as any}
+              variants={overlayVariants}
               transition={{ duration: 0.2 }}
               onClick={handleOverlayClick}
             />
@@ -205,7 +216,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
               initial="hidden"
               animate="visible"
               exit="exit"
-              variants={drawerVariants as any}
+              variants={drawerVariants}
             >
               {/* Mobile menu content */}
               <div className="flex flex-col gap-4">
@@ -223,14 +234,14 @@ export function Navbar({ tabs }: NavbarProps = {}) {
 
                 <motion.ul
                   className="flex flex-col text-sm mb-4 border border-border rounded-md"
-                  variants={drawerMenuContainerVariants as any}
+                  variants={drawerMenuContainerVariants}
                 >
                   <AnimatePresence>
                     {filteredNavLinks.map((item) => (
                       <motion.li
                         key={item.id}
                         className="p-2.5 border-b border-border last:border-b-0"
-                        variants={drawerMenuVariants as any}
+                        variants={drawerMenuVariants}
                       >
                         <a
                           href={item.href}
@@ -285,19 +296,27 @@ export function Navbar({ tabs }: NavbarProps = {}) {
                 {/* Action buttons */}
                 <div className="flex flex-col gap-2">
                   {user ? (
-                    <Link
-                      href="/dashboard"
-                      className="bg-secondary h-8 flex items-center justify-center text-sm font-normal tracking-wide rounded-full text-primary-foreground dark:text-secondary-foreground w-full px-4 shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12] hover:bg-secondary/80 transition-all ease-out active:scale-95"
+                    <Button
+                      asChild
+                      variant="default"
+                      size="sm"
+                      className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12]"
                     >
-                      Dashboard
-                    </Link>
+                      <Link href="/dashboard">
+                        Dashboard
+                      </Link>
+                    </Button>
                   ) : (
-                    <Link
-                      href="/auth"
-                      className="bg-secondary h-8 flex items-center justify-center text-sm font-normal tracking-wide rounded-full text-primary-foreground dark:text-secondary-foreground w-full px-4 shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12] hover:bg-secondary/80 transition-all ease-out active:scale-95"
+                    <Button
+                      asChild
+                      variant="default"
+                      size="sm"
+                      className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground shadow-[inset_0_1px_2px_rgba(255,255,255,0.25),0_3px_3px_-1.5px_rgba(16,24,40,0.06),0_1px_1px_rgba(16,24,40,0.08)] border border-white/[0.12]"
                     >
-                      Try free
-                    </Link>
+                      <Link href="/auth">
+                        Try Free
+                      </Link>
+                    </Button>
                   )}
                   <div className="flex justify-between">
                     <ThemeToggle />

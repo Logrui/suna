@@ -60,45 +60,6 @@ import { createPresentationViewerToolContent, parsePresentationSlidePath } from 
 import { KbToolView } from '../KbToolView';
 import { ExpandMessageToolView } from '../expand-message-tool/ExpandMessageToolView';
 
-// Helper to reconstruct XML from structured tool call (Polyfill for legacy tools)
-function reconstructXmlFromToolCall(toolCall: any): string {
-  if (!toolCall || !toolCall.function_name) return '';
-
-  const { function_name, arguments: args } = toolCall;
-  let xml = `<function_calls>\n<invoke name="${function_name}">\n`;
-
-  if (args && typeof args === 'object') {
-    Object.entries(args).forEach(([key, value]) => {
-      let stringValue = value;
-      if (typeof value === 'object') {
-        stringValue = JSON.stringify(value);
-      }
-      xml += `<parameter name="${key}">${stringValue}</parameter>\n`;
-    });
-  }
-
-  xml += `</invoke>\n</function_calls>`;
-  return xml;
-}
-
-// Helper to reconstruct tool output string (Polyfill for legacy tools)
-function reconstructToolOutput(toolResult: any): string {
-  if (!toolResult) return '';
-
-  const { output, success } = toolResult;
-  let content = '';
-
-  if (typeof output === 'string') {
-    content = output;
-  } else {
-    content = JSON.stringify(output);
-  }
-
-  // Wrap in ToolResult format if it looks like the old format expected it
-  // But mostly legacy tools just parsed the content string
-  return content;
-}
-
 
 export type ToolViewComponent = React.ComponentType<ToolViewProps>;
 
@@ -342,17 +303,5 @@ export function ToolView({ toolCall, toolResult, ...props }: ToolViewProps) {
     };
   }
 
-  // POLYFILL: Reconstruct legacy props for older tool views
-  const assistantContent = reconstructXmlFromToolCall(toolCall);
-  const toolContent = reconstructToolOutput(modifiedToolResult);
-
-  return (
-    <ToolViewComponent
-      toolCall={toolCall}
-      toolResult={modifiedToolResult}
-      assistantContent={assistantContent}
-      toolContent={toolContent}
-      {...props}
-    />
-  );
+  return <ToolViewComponent toolCall={toolCall} toolResult={modifiedToolResult} {...props} />;
 }
