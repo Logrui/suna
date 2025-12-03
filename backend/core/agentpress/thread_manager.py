@@ -19,6 +19,7 @@ from core.services.langfuse import langfuse
 from datetime import datetime, timezone
 from core.billing.billing_integration import billing_integration
 from litellm.utils import token_counter
+import litellm
 
 ToolChoice = Literal["auto", "required", "none"]
 
@@ -136,6 +137,14 @@ class ThreadManager:
                 cache_read_tokens = int((usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or 0)
             
             cache_creation_tokens = int(usage.get("cache_creation_input_tokens", 0) or 0)
+            if cache_creation_tokens == 0:
+                # Check nested in prompt_tokens_details as fallback (though it's usually at top level)
+                cache_creation_tokens = int((usage.get("prompt_tokens_details") or {}).get("cache_creation_tokens", 0) or 0)
+            
+            # Debug logging to verify cache_creation_tokens extraction
+            if cache_creation_tokens > 0:
+                logger.info(f"💾 CACHE CREATION TOKENS DETECTED: {cache_creation_tokens} tokens will be charged at cache write rates")
+            
             model = content.get("model")
             
             usage_type = "FALLBACK ESTIMATE" if is_fallback else ("ESTIMATED" if is_estimated else "EXACT")
@@ -217,6 +226,14 @@ class ThreadManager:
                     try:
                         parsed_item = json.loads(content)
                         parsed_item['message_id'] = item['message_id']
+                        
+                        # Skip empty user messages (defensive filter for legacy data)
+                        if parsed_item.get('role') == 'user':
+                            msg_content = parsed_item.get('content', '')
+                            if isinstance(msg_content, str) and not msg_content.strip():
+                                logger.warning(f"Skipping empty user message {item['message_id']} from LLM context")
+                                continue
+                        
                         messages.append(parsed_item)
                     except json.JSONDecodeError:
                         # If compressed, content is a plain string (not JSON) - this is expected
@@ -228,9 +245,29 @@ class ThreadManager:
                             })
                         else:
                             logger.error(f"Failed to parse message: {content[:100]}")
-                else:
+                elif isinstance(content, dict):
+                    # Content is already a dict (e.g., from JSON/JSONB column type)
                     content['message_id'] = item['message_id']
+                    
+                    # Skip empty user messages (defensive filter for legacy data)
+                    if content.get('role') == 'user':
+                        msg_content = content.get('content', '')
+                        if isinstance(msg_content, str) and not msg_content.strip():
+                            logger.warning(f"Skipping empty user message {item['message_id']} from LLM context")
+                            continue
+                    
+                    # Tool messages: content field is already a JSON string from success_response
+                    # No conversion needed - it's already in the correct format for Bedrock
+                    
                     messages.append(content)
+                else:
+                    # Fallback for other types
+                    logger.warning(f"Unexpected content type: {type(content)}, attempting to use as-is")
+                    messages.append({
+                        'role': 'user',
+                        'content': str(content),
+                        'message_id': item['message_id']
+                    })
 
             return messages
 
@@ -250,7 +287,6 @@ class ThreadManager:
         processor_config: Optional[ProcessorConfig] = None,
         tool_choice: ToolChoice = "auto",
         native_max_auto_continues: int = 25,
-        max_xml_tool_calls: int = 0,
         generation: Optional[StatefulGenerationClient] = None,
         latest_user_message_content: Optional[str] = None,
         cancellation_event: Optional[asyncio.Event] = None,
@@ -266,9 +302,6 @@ class ThreadManager:
         else:
             logger.error(f"Invalid processor_config type: {type(processor_config)}, creating default")
             config = ProcessorConfig()
-            
-        if max_xml_tool_calls > 0 and not config.max_xml_tool_calls:
-            config.max_xml_tool_calls = max_xml_tool_calls
 
         auto_continue_state = {
             'count': 0,
@@ -307,6 +340,10 @@ class ThreadManager:
         latest_user_message_content: Optional[str] = None, cancellation_event: Optional[asyncio.Event] = None
     ) -> Union[Dict[str, Any], AsyncGenerator]:
         """Execute a single LLM run."""
+        # Simple run counter - increments with each call
+        run_number = auto_continue_state['count'] + 1
+        
+        logger.info(f"🔥 LLM API call iteration #{run_number} of run")
         
         # CRITICAL: Ensure config is always a ProcessorConfig object
         if not isinstance(config, ProcessorConfig):
@@ -346,26 +383,24 @@ class ThreadManager:
                     if last_usage_result.data:
                         llm_end_content = last_usage_result.data.get('content', {})
                         if isinstance(llm_end_content, str):
-                            import json
                             llm_end_content = json.loads(llm_end_content)
                         
                         usage = llm_end_content.get('usage', {})
                         stored_model = llm_end_content.get('model', '')
                         
-                        # Normalize model names for comparison (strip any provider prefix like anthropic/, openai/, google/, etc.)
-                        def normalize_model_name(model: str) -> str:
-                            """Strip provider prefix (e.g., 'anthropic/claude-3' -> 'claude-3')"""
-                            return model.split('/')[-1] if '/' in model else model
+                        logger.debug(f"Fast check data - stored model: {stored_model}, current model: {llm_model}")
                         
-                        normalized_stored = normalize_model_name(stored_model)
-                        normalized_current = normalize_model_name(llm_model)
-                        
-                        logger.debug(f"Fast check data - stored: {stored_model}, current: {llm_model}, match: {normalized_stored == normalized_current}")
-                        
-                        # Only use fast path if model matches and we have stored tokens
-                        if usage and normalized_stored == normalized_current:
+                        # Use fast path if we have usage data
+                        # Token counts are similar enough for compression decisions even if model changed
+                        if usage:
                             # Use total_tokens (includes prev completion) for better accuracy
                             last_total_tokens = int(usage.get('total_tokens', 0))
+                            
+                            # Add cache creation tokens for accurate count (AWS Bedrock quota calculation)
+                            cache_creation = int(usage.get("cache_creation_input_tokens", 0) or 0)
+                            if cache_creation > 0:
+                                last_total_tokens += cache_creation
+                                logger.debug(f"Added {cache_creation} cache creation tokens to fast check total")
                             
                             # Count tokens in new message (only for first turn, not auto-continue)
                             new_msg_tokens = 0
@@ -428,7 +463,7 @@ class ThreadManager:
                                 need_compression = True
                                 # Will fetch and compress below
                         else:
-                            logger.debug(f"Fast check skipped - usage: {bool(usage)}, model_match: {normalized_stored == normalized_current}")
+                            logger.debug(f"Fast check skipped - no usage data available")
                     else:
                         logger.debug(f"Fast check skipped - no last llm_response_end message found")
                 except Exception as e:
@@ -436,20 +471,25 @@ class ThreadManager:
             
             # Always fetch messages (needed for LLM call)
             # Fast path just skips compression, not fetching!
+            import time
+            fetch_start = time.time()
             messages = await self.get_llm_messages(thread_id)
+            logger.info(f"⏱️ [TIMING] get_llm_messages(): {(time.time() - fetch_start) * 1000:.1f}ms ({len(messages)} messages)")
             
-            # Handle auto-continue context
-            if auto_continue_state['count'] > 0 and auto_continue_state['continuous_state'].get('accumulated_content'):
-                partial_content = auto_continue_state['continuous_state']['accumulated_content']
-                messages.append({"role": "assistant", "content": partial_content})
+            # Note: We no longer need to manually append partial assistant messages
+            # because we now save complete assistant messages with tool calls before auto-continuing
 
             # Apply context compression (only if needed based on fast path check)
             if ENABLE_CONTEXT_MANAGER:
-                if skip_fetch:
+                # Skip compression for first message (minimal context)
+                if len(messages) <= 2:
+                    logger.debug(f"First message: Skipping compression ({len(messages)} messages)")
+                elif skip_fetch:
                     # Fast path: We know we're under threshold, skip compression entirely
                     logger.debug(f"Fast path: Skipping compression check (under threshold)")
                 elif need_compression:
                     # We know we're over threshold, compress now
+                    compress_start = time.time()
                     logger.info(f"Applying context compression on {len(messages)} messages")
                     context_manager = ContextManager()
                     compressed_messages = await context_manager.compress_messages(
@@ -458,10 +498,11 @@ class ThreadManager:
                         system_prompt=system_prompt,
                         thread_id=thread_id
                     )
-                    logger.debug(f"Context compression completed: {len(messages)} -> {len(compressed_messages)} messages")
+                    logger.info(f"⏱️ [TIMING] Context compression: {(time.time() - compress_start) * 1000:.1f}ms ({len(messages)} -> {len(compressed_messages)} messages)")
                     messages = compressed_messages
                 else:
                     # First turn or no fast path data: Run compression check
+                    compress_start = time.time()
                     logger.debug(f"Running compression check on {len(messages)} messages")
                     context_manager = ContextManager()
                     compressed_messages = await context_manager.compress_messages(
@@ -470,6 +511,7 @@ class ThreadManager:
                         system_prompt=system_prompt,
                         thread_id=thread_id
                     )
+                    logger.debug(f"⏱️ [TIMING] Compression check: {(time.time() - compress_start) * 1000:.1f}ms")
                     messages = compressed_messages
 
             # Check if cache needs rebuild due to compression
@@ -490,7 +532,9 @@ class ThreadManager:
                     logger.debug(f"Failed to check cache_needs_rebuild flag: {e}")
             
             # Apply caching
-            if ENABLE_PROMPT_CACHING:
+            cache_start = time.time()
+            if ENABLE_PROMPT_CACHING and len(messages) > 2:
+                # Skip caching for first message (minimal context)
                 prepared_messages = await apply_anthropic_caching_strategy(
                     system_prompt, 
                     messages, 
@@ -499,15 +543,22 @@ class ThreadManager:
                     force_recalc=force_rebuild
                 )
                 prepared_messages = validate_cache_blocks(prepared_messages, llm_model)
+                logger.debug(f"⏱️ [TIMING] Prompt caching: {(time.time() - cache_start) * 1000:.1f}ms")
             else:
+                if ENABLE_PROMPT_CACHING and len(messages) <= 2:
+                    logger.debug(f"First message: Skipping caching and validation ({len(messages)} messages)")
                 prepared_messages = [system_prompt] + messages
 
             # Get tool schemas for LLM API call (after compression)
+            schema_start = time.time()
             openapi_tool_schemas = self.tool_registry.get_openapi_schemas() if config.native_tool_calling else None
+            logger.debug(f"⏱️ [TIMING] Get tool schemas: {(time.time() - schema_start) * 1000:.1f}ms")
 
             # Update generation tracking
             if generation:
                 try:
+                    # Convert tools to JSON string for Langfuse compatibility
+                    tools_param = json.dumps(openapi_tool_schemas) if openapi_tool_schemas else None
                     generation.update(
                         input=prepared_messages,
                         start_time=datetime.now(timezone.utc),
@@ -516,38 +567,78 @@ class ThreadManager:
                             "max_tokens": llm_max_tokens,
                             "temperature": llm_temperature,
                             "tool_choice": tool_choice,
-                            "tools": openapi_tool_schemas,
+                            "tools": tools_param,
                         }
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to update Langfuse generation: {e}")
+                    # Suppress verbose Langfuse validation errors
+                    logger.debug(f"Failed to update Langfuse generation: {str(e)[:100]}")
 
             # Note: We don't log token count here because cached blocks give inaccurate counts
             # The LLM's usage.prompt_tokens (reported after the call) is the accurate source of truth
+            import time
+            
+            # CRITICAL: Validate tool call pairing before sending to LLM
+            # This catches any orphaned tool results that would cause Bedrock errors
+            validation_start = time.time()
+            
+            # Ensure we have a ContextManager instance for validation (may not exist if compression was skipped)
+            if 'context_manager' not in locals():
+                context_manager = ContextManager()
+            
+            is_valid, orphaned_ids, unanswered_ids = context_manager.validate_tool_call_pairing(prepared_messages)
+            if not is_valid:
+                logger.warning(f"⚠️ PRE-SEND VALIDATION: Found pairing issues - attempting repair")
+                logger.warning(f"⚠️ Orphaned tool_results: {orphaned_ids}")
+                logger.warning(f"⚠️ Unanswered tool_calls: {unanswered_ids}")
+                
+                # Attempt to repair by fixing both directions
+                prepared_messages = context_manager.repair_tool_call_pairing(prepared_messages)
+                
+                # Re-validate after repair
+                is_valid_after, orphans_after, unanswered_after = context_manager.validate_tool_call_pairing(prepared_messages)
+                if not is_valid_after:
+                    logger.error(f"🚨 CRITICAL: Could not repair message structure. Orphaned: {len(orphans_after)}, Unanswered: {len(unanswered_after)}")
+                else:
+                    logger.info(f"✅ Message structure repaired successfully")
+            else:
+                logger.debug(f"✅ Pre-send validation passed: all tool calls properly paired")
+            logger.debug(f"⏱️ [TIMING] Pre-send validation: {(time.time() - validation_start) * 1000:.1f}ms")
+            
+            llm_call_start = time.time()
             logger.info(f"📤 Sending {len(prepared_messages)} prepared messages to LLM")
 
             # Make LLM call
             try:
+                # Use |||STOP_AGENT||| as stop sequence for XML tool calling
+                # This ensures the LLM stops after completing a tool call block
+                # Check xml_tool_calling directly - it's independent of native_tool_calling
+                stop_sequences = ["|||STOP_AGENT|||"] if config.xml_tool_calling else None
+                
                 llm_response = await make_llm_api_call(
                     prepared_messages, llm_model,
                     temperature=llm_temperature,
                     max_tokens=llm_max_tokens,
                     tools=openapi_tool_schemas,
                     tool_choice=tool_choice if config.native_tool_calling else "none",
-                    stream=stream
+                    stream=stream,
+                    stop=stop_sequences if stop_sequences else None
                 )
+                
+                # For streaming, the call returns immediately with a generator
+                # For non-streaming, this is the full response time
+                if not stream:
+                    logger.info(f"⏱️ [TIMING] LLM API call (non-streaming): {(time.time() - llm_call_start) * 1000:.1f}ms")
+                else:
+                    logger.info(f"⏱️ [TIMING] LLM API call initiated (streaming): {(time.time() - llm_call_start) * 1000:.1f}ms")
+                
             except LLMError as e:
+                logger.error(f"❌ LLMError: {e}")
                 return {"type": "status", "status": "error", "message": str(e)}
 
             # Check for error response
             if isinstance(llm_response, dict) and llm_response.get("status") == "error":
                 return llm_response
-
-            # Process response - ensure config is ProcessorConfig object
-            # logger.debug(f"Config type before response processing: {type(config)}")
-            # if not isinstance(config, ProcessorConfig):
-            #     logger.error(f"Config is not ProcessorConfig! Type: {type(config)}, Value: {config}")
-            #     config = ProcessorConfig()  # Fallback
                 
             if stream and hasattr(llm_response, '__aiter__'):
                 return self.response_processor.process_streaming_response(
@@ -583,6 +674,15 @@ class ThreadManager:
             logger.error(f"Invalid config type in auto-continue: {type(config)}, creating new one")
             config = ProcessorConfig()
         
+        # Get account_id once for billing checks
+        account_id = None
+        try:
+            client = await self.db.client
+            thread_row = await client.table('threads').select('account_id').eq('thread_id', thread_id).limit(1).execute()
+            account_id = thread_row.data[0]['account_id'] if thread_row.data and len(thread_row.data) > 0 else None
+        except Exception as e:
+            logger.warning(f"Failed to get account_id for thread {thread_id}: {e}")
+        
         while auto_continue_state['active'] and auto_continue_state['count'] < native_max_auto_continues:
             auto_continue_state['active'] = False  # Reset for this iteration
             
@@ -591,6 +691,23 @@ class ThreadManager:
                 if cancellation_event and cancellation_event.is_set():
                     logger.info(f"Cancellation signal received in auto-continue generator for thread {thread_id}")
                     break
+                
+                # Check credits before each auto-continue iteration (skip cache to get fresh balance)
+                if account_id:
+                    try:
+                        from core.billing.billing_integration import billing_integration
+                        can_run, message, _ = await billing_integration.check_and_reserve_credits(account_id)
+                        if not can_run:
+                            logger.warning(f"Stopping auto-continue - insufficient credits: {message}")
+                            yield {
+                                "type": "status",
+                                "status": "stopped",
+                                "message": f"Insufficient credits: {message}"
+                            }
+                            break
+                    except Exception as e:
+                        logger.error(f"Error checking credits in auto-continue: {e}")
+                        # Continue execution if credit check fails (don't block on billing errors)
                 
                 response_gen = await self._execute_run(
                     thread_id, system_prompt, llm_model, llm_temperature, llm_max_tokens,
@@ -638,7 +755,27 @@ class ThreadManager:
                     break
 
             except Exception as e:
-                if "AnthropicException - Overloaded" in str(e):
+                error_str = str(e)
+                
+                # Check for non-retryable errors (400 Bad Request, validation errors, etc.)
+                # These should NEVER be retried as they indicate request issues, not transient failures
+                is_non_retryable = (
+                    isinstance(e, litellm.BadRequestError) or
+                    "BadRequestError" in error_str or
+                    "is blank" in error_str or  # Bedrock "text field is blank" error
+                    "400" in error_str or
+                    "validation" in error_str.lower() or
+                    "invalid" in error_str.lower()
+                )
+                
+                if is_non_retryable:
+                    logger.error(f"🛑 Non-retryable error detected - stopping immediately: {error_str[:200]}")
+                    processed_error = ErrorProcessor.process_system_error(e, context={"thread_id": thread_id})
+                    ErrorProcessor.log_error(processed_error)
+                    yield processed_error.to_stream_dict()
+                    return
+                
+                if "AnthropicException - Overloaded" in error_str:
                     logger.error(f"Anthropic overloaded, falling back to OpenRouter")
                     llm_model = f"openrouter/{llm_model.replace('-20250514', '')}"
                     auto_continue_state['active'] = True
@@ -668,8 +805,15 @@ class ThreadManager:
                 finish_reason = content.get('finish_reason')
                 tools_executed = content.get('tools_executed', False)
                 
-                # Trigger auto-continue for: native tool calls, length limit, or XML tools executed
-                if finish_reason == 'tool_calls' or tools_executed:
+                # Don't auto-continue if agent terminated (ask/complete tool executed)
+                if finish_reason == 'agent_terminated':
+                    logger.debug("Stopping auto-continue due to agent termination (ask/complete tool)")
+                    auto_continue_state['active'] = False
+                    return False
+                
+                # Only auto-continue for 'tool_calls' or 'length' finish reasons (not 'stop' or others)
+                # tools_executed flag is only set when finish_reason == 'tool_calls', so checking finish_reason is sufficient
+                if finish_reason == 'tool_calls':
                     if native_max_auto_continues > 0:
                         logger.debug(f"Auto-continuing for tool execution ({auto_continue_state['count'] + 1}/{native_max_auto_continues})")
                         auto_continue_state['active'] = True
@@ -691,3 +835,32 @@ class ThreadManager:
     async def _create_single_error_generator(self, error_dict: Dict[str, Any]):
         """Create an async generator that yields a single error message."""
         yield error_dict
+    
+    async def cleanup(self):
+        """Explicitly release tool references for garbage collection."""
+        if hasattr(self, 'tool_registry') and self.tool_registry:
+            # First, call cleanup on any tool instances that support it (e.g., MCPToolWrapper)
+            seen_instances = set()
+            for tool_info in self.tool_registry.tools.values():
+                tool_instance = tool_info.get('instance')
+                if tool_instance and id(tool_instance) not in seen_instances:
+                    seen_instances.add(id(tool_instance))
+                    if hasattr(tool_instance, 'cleanup'):
+                        try:
+                            result = tool_instance.cleanup()
+                            # Handle both sync and async cleanup methods
+                            if hasattr(result, '__await__'):
+                                await result
+                        except Exception as e:
+                            logger.debug(f"Tool cleanup error (non-fatal): {e}")
+            
+            # Clear tool registry to release references to tool instances
+            self.tool_registry.tools.clear()
+            self.tool_registry = None
+        
+        # Clear other references that might hold memory
+        if hasattr(self, 'response_processor'):
+            self.response_processor = None
+        
+        # Note: We don't clear self.db as it's a singleton and may be used elsewhere
+        # The DBConnection singleton manages its own lifecycle
