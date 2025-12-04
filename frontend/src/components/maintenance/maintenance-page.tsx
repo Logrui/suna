@@ -27,7 +27,7 @@ function ServiceStatusCard({ title, status }: ServiceStatusCardProps) {
   return (
     <Card className="flex-1 bg-card border border-border">
       <CardContent className="p-4 h-full flex flex-col items-center justify-center gap-1">
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-medium font-medium text-muted-foreground">
           {title}
         </span>
         <div className="flex items-center gap-2">
