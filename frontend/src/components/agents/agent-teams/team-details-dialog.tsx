@@ -79,11 +79,7 @@ export function TeamDetailsDialog({
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-4">
                             <div
-                                className="h-16 w-16 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm"
-                                style={{
-                                    backgroundColor: team.icon_background || '#F3F4F6',
-                                    color: team.icon_color || '#000000'
-                                }}
+                                className="h-16 w-16 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm bg-muted/50"
                             >
                                 <Icon className="h-8 w-8" />
                             </div>
@@ -157,11 +153,7 @@ export function TeamDetailsDialog({
                                         className="flex items-center gap-3 p-3 rounded-xl border bg-background hover:border-primary/50 transition-colors group"
                                     >
                                         <div
-                                            className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border shadow-sm"
-                                            style={{
-                                                backgroundColor: agent.icon_background || '#F3F4F6',
-                                                color: agent.icon_color || '#000000'
-                                            }}
+                                            className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border shadow-sm bg-muted/50"
                                         >
                                             <AgentIcon className="h-5 w-5" />
                                         </div>
