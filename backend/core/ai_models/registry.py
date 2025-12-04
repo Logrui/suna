@@ -9,16 +9,9 @@ if TYPE_CHECKING:
 
 from .excluded_models import is_model_excluded
 
-# SHOULD_USE_ANTHROPIC = False
-SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
 
-# Set premium model ID based on environment - using MAP-tagged application inference profiles with global routing
-if SHOULD_USE_ANTHROPIC:
-    FREE_MODEL_ID = "vertex_ai/claude-haiku-4-5@20250929"
-    PREMIUM_MODEL_ID = "vertex_ai/claude-haiku-4-5@20250929"
-else:  
-    FREE_MODEL_ID = "anthropic/claude-haiku-4-5@20250929"
-    PREMIUM_MODEL_ID = "anthropic/claude-haiku-4-5@20250929"
+FREE_MODEL_ID = "vertex_ai/gemini-2.5-flash"
+PREMIUM_MODEL_ID = "vertex_ai/gemini-2.5-pro"
 
 class ModelRegistry:
     def __init__(self):
@@ -27,6 +20,20 @@ class ModelRegistry:
         self._fallback_registry: Optional[FallbackModelRegistry] = None
         self._initialize_models()
         self._initialize_fallback_registry()
+        self._initialize_aws_models()
+
+    def _initialize_aws_models(self):
+        """Initialize AWS Bedrock models."""
+        try:
+            from .aws_registry import registry as aws_registry
+            for model in aws_registry.get_all():
+                self.register(model)
+        except ImportError:
+            from core.utils.logger import logger
+            logger.warning("Could not import AWSModelRegistry - AWS models will not be available")
+        except Exception as e:
+            from core.utils.logger import logger
+            logger.error(f"Error initializing AWS models: {e}")
     
     def _initialize_models(self):
 
@@ -215,94 +222,89 @@ class ModelRegistry:
             fallback_models=["vertex_ai/gemini-3-pro-preview"]
         ))
 
-        # Claude Sonnet 4.5 Max Context (via Vertex AI)
-        self.register(Model(
-            id="vertex_ai/claude-sonnet-4-5@20250929-max",
-            name="Claude Sonnet 4.5",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["claude-sonnet-4.5-max", "vertex-claude-sonnet-4.5-max"],
-            context_window=1_000_000, # 1M in Beta
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "Extended Thinking" implied?
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["paid"],
-            priority=106,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-3-pro-preview"],
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07"
-                },
-            ),
-            variant="Max"
-        ))
+        # # Claude Sonnet 4.5 Max Context (via Vertex AI) - usually not available via Vertex AI
+        # self.register(Model(
+        #     id="vertex_ai/claude-sonnet-4-5@20250929-max",
+        #     name="Claude Sonnet 4.5",
+        #     provider=ModelProvider.VERTEX_AI,
+        #     aliases=["claude-sonnet-4.5-max", "vertex-claude-sonnet-4.5-max"],
+        #     context_window=1_000_000, # 1M in Beta
+        #     max_output_tokens=64_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #         ModelCapability.THINKING, # "Extended Thinking" implied?
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=3.00,
+        #         output_cost_per_million_tokens=15.00
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=106,
+        #     enabled=config.VERTEX_AI_PROJECT is not None,
+        #     fallback_models=["bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"],
+        #     config=ModelConfig(
+        #         extra_headers={
+        #             "anthropic-beta": "context-1m-2025-08-07"
+        #         },
+        #     ),
+        #     variant="Max"
+        # ))
 
-        # Claude Sonnet 4.5 (via Vertex AI)
-        self.register(Model(
-            id="vertex_ai/claude-sonnet-4-5@20250929",
-            name="Claude Sonnet 4.5",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
-            context_window=200_000, # 200k
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "Extended Thinking" implied?
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["free","paid"],
-            priority=106,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-3-pro-preview"],
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07"
-                },
-            ),
-        ))
+        # # Claude Sonnet 4.5 (via Vertex AI) - usually not available via Vertex AI
+        # self.register(Model(
+        #     id="vertex_ai/claude-sonnet-4-5@20250929",
+        #     name="Claude Sonnet 4.5",
+        #     provider=ModelProvider.VERTEX_AI,
+        #     aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
+        #     context_window=200_000, # 200k
+        #     max_output_tokens=64_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #         ModelCapability.THINKING, # "Extended Thinking" implied?
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=3.00,
+        #         output_cost_per_million_tokens=15.00
+        #     ),
+        #     tier_availability=["free","paid"],
+        #     priority=106,
+        #     enabled=config.VERTEX_AI_PROJECT is not None,
+        #     fallback_models=["bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"],
+        # ))
 
-        # Claude Haiku 4.5 (via Vertex AI)
-        self.register(Model(
-            id="vertex_ai/claude-haiku-4-5@20251001",
-            name="Claude Haiku 4.5",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["claude-haiku-4.5", "vertex-claude-haiku-4.5"],
-            context_window=200_000,
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "Extended Thinking"
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
-                output_cost_per_million_tokens=5.00
-            ),
-            tier_availability=["paid"],
-            priority=110,
-            recommended=True,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-flash"],
-            config=ModelConfig(
-                extra_body={
-                    "anthropic_version": "vertex-2023-10-16"
-                }
-            ),
-        ))
+        # # Claude Haiku 4.5 (via Vertex AI)- usually not available via Vertex AI
+        # self.register(Model(
+        #     id="vertex_ai/claude-haiku-4-5@20251001",
+        #     name="Claude Haiku 4.5",
+        #     provider=ModelProvider.VERTEX_AI,
+        #     aliases=["claude-haiku-4.5", "vertex-claude-haiku-4.5"],
+        #     context_window=200_000,
+        #     max_output_tokens=64_000,
+        #     capabilities=[
+        #         ModelCapability.CHAT,
+        #         ModelCapability.FUNCTION_CALLING,
+        #         ModelCapability.VISION,
+        #         ModelCapability.THINKING, # "Extended Thinking"
+        #     ],
+        #     pricing=ModelPricing(
+        #         input_cost_per_million_tokens=1.00,
+        #         output_cost_per_million_tokens=5.00
+        #     ),
+        #     tier_availability=["paid"],
+        #     priority=110,
+        #     recommended=True,
+        #     enabled=config.VERTEX_AI_PROJECT is not None,
+        #     fallback_models=["bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"],
+        #     config=ModelConfig(
+        #         extra_body={
+        #             "anthropic_version": "vertex-2023-10-16"
+        #         }
+        #     ),
+        # ))
 
         # Llama 4 Scout via Google Vertex API
         self.register(Model(
@@ -326,7 +328,7 @@ class ModelRegistry:
             fallback_models=["vertex_ai/gemini-2.5-flash"]
         ))
 
-        # Llama 4 Maverick via Google Vertex API
+        # Llama 4 Maverick via Google Vertex API - cannot handle basic Suna System Prompt
         self.register(Model(
             id="vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas",
             name="Llama 4 Maverick",

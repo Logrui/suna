@@ -137,8 +137,21 @@ def setup_api_keys() -> None:
         if bedrock_token:
             os.environ["AWS_BEARER_TOKEN_BEDROCK"] = bedrock_token
             logger.debug("AWS Bedrock bearer token configured")
-        else:
-            logger.debug("AWS_BEARER_TOKEN_BEDROCK not configured - Bedrock models will not be available")
+
+    # Set up Standard AWS Credentials (Access Key / Secret)
+    if hasattr(config, 'AWS_ACCESS_KEY_ID') and config.AWS_ACCESS_KEY_ID:
+        os.environ["AWS_ACCESS_KEY_ID"] = config.AWS_ACCESS_KEY_ID
+        
+    if hasattr(config, 'AWS_SECRET_ACCESS_KEY') and config.AWS_SECRET_ACCESS_KEY:
+        os.environ["AWS_SECRET_ACCESS_KEY"] = config.AWS_SECRET_ACCESS_KEY
+        
+    if hasattr(config, 'AWS_REGION_NAME') and config.AWS_REGION_NAME:
+        os.environ["AWS_REGION_NAME"] = config.AWS_REGION_NAME
+        
+    if config.AWS_ACCESS_KEY_ID and config.AWS_SECRET_ACCESS_KEY:
+        logger.debug("AWS Bedrock credentials configured")
+    else:
+        logger.debug("AWS Bedrock credentials not fully configured (missing key or secret)")
 
 def setup_provider_router(openai_compatible_api_key: str = None, openai_compatible_api_base: str = None):
     global provider_router

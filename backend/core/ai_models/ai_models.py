@@ -132,7 +132,7 @@ class Model:
         # Start with intelligent defaults
         params = {
             "model": model_id,
-            "num_retries": 5,
+            "num_retries": config.LITELLM_RETRIES or 2,
         }
         
     

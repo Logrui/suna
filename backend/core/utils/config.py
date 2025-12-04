@@ -315,10 +315,16 @@ class Configuration:
     OR_SITE_URL: Optional[str] = "https://kortix.ai"
     OR_APP_NAME: Optional[str] = "Kortix AI"
     
+    # LiteLLM Configuration
+    LITELLM_RETRIES: Optional[int] = 2
+    
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
     
     # AWS Bedrock authentication
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION_NAME: Optional[str] = "us-east-1"
     AWS_BEARER_TOKEN_BEDROCK: Optional[str] = None
     
     # Supabase configuration

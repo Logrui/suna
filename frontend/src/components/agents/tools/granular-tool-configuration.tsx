@@ -28,6 +28,7 @@ interface GranularToolConfigurationProps {
   disabled?: boolean;
   isSunaAgent?: boolean;
   isLoading?: boolean;
+  compact?: boolean;
 }
 
 export const GranularToolConfiguration = ({
@@ -35,7 +36,8 @@ export const GranularToolConfiguration = ({
   onToolsChange,
   disabled = false,
   isSunaAgent = false,
-  isLoading = false
+  isLoading = false,
+  compact = false
 }: GranularToolConfigurationProps) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -226,29 +228,33 @@ export const GranularToolConfiguration = ({
 
   return (
     <div className="flex flex-col h-full w-full min-w-0">
-      <div className="flex items-center justify-between flex-shrink-0 mb-4 w-full">
-        <div>
-          <h3 className="text-lg font-semibold">Tool Configuration</h3>
-          <p className="text-sm text-muted-foreground">
-            Configure tools and their individual capabilities for your agent
-          </p>
+      {!compact && (
+        <div className="flex items-center justify-between flex-shrink-0 mb-4 w-full">
+          <div>
+            <h3 className="text-lg font-semibold">Tool Configuration</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure tools and their individual capabilities for your agent
+            </p>
+          </div>
+          <Badge variant="default" className="text-xs">
+            {getEnabledToolsCount()} / {Object.keys(TOOL_GROUPS).length} tools enabled
+          </Badge>
         </div>
-        <Badge variant="default" className="text-xs">
-          {getEnabledToolsCount()} / {Object.keys(TOOL_GROUPS).length} tools enabled
-        </Badge>
-      </div>
+      )}
 
-      <div className="relative flex-shrink-0 mb-4">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Search tools and capabilities..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {!compact && (
+        <div className="relative flex-shrink-0 mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search tools and capabilities..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      )}
 
-      <div className="flex-1 overflow-auto pr-1 w-full min-w-0">
+      <div className={cn("flex-1 overflow-auto pr-1 w-full min-w-0 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent")}>
         <div className="space-y-2 pb-4 w-full">
           {filteredGroups.map((toolGroup) => {
             const isGroupEnabled = isToolGroupEnabled(toolGroup.name);
@@ -260,23 +266,26 @@ export const GranularToolConfiguration = ({
 
             return (
               <SpotlightCard key={toolGroup.name} className="bg-card border border-border w-full min-w-0 max-w-full overflow-hidden">
-                <div className="p-5 w-full box-border" style={{ maxWidth: '100%' }}>
+                <div className={cn("w-full box-border", compact ? "p-3" : "p-5")} style={{ maxWidth: '100%' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-card border border-border/50 flex-shrink-0">
-                        <IconComponent className="h-5 w-5 text-foreground" />
+                      <div className={cn(
+                        "flex items-center justify-center rounded-xl bg-card border border-border/50 flex-shrink-0",
+                        compact ? "w-9 h-9" : "w-12 h-12"
+                      )}>
+                        <IconComponent className={cn("text-foreground", compact ? "h-4 w-4" : "h-5 w-5")} />
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-foreground truncate">
+                          <h4 className={cn("font-medium text-foreground truncate", compact ? "text-sm" : "")}>
                             {toolGroup.displayName}
                           </h4>
                           {toolGroup.isCore && (
                             <Badge variant="outline" className="text-xs">Core</Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className={cn("text-muted-foreground truncate", compact ? "text-xs" : "text-sm")}>
                           {toolGroup.description}
                         </p>
                         {hasGranular && isGroupEnabled && (
@@ -317,7 +326,7 @@ export const GranularToolConfiguration = ({
 
                               return (
                                 <div key={method.name} className="flex items-center justify-between w-full">
-                                  <div className="flex items-center gap-4 flex-1 min-w-0 ml-16">
+                                  <div className={cn("flex items-center gap-4 flex-1 min-w-0", compact ? "ml-13" : "ml-16")}>
                                     <div className="flex-1 min-w-0 overflow-hidden">
                                       <div className="flex items-center gap-2 w-full overflow-hidden">
                                         <h5 className="text-sm font-medium truncate">

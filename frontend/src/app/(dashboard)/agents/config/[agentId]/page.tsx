@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAgent } from '@/hooks/agents/use-agents';
-import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle, Workflow, FileText } from 'lucide-react';
+import { ChevronLeft, Brain, BookOpen, Zap, Wrench, Server, Pencil, MessageCircle, Workflow, FileText, NotepadText, HardDrive } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -17,18 +17,20 @@ import { ToolsScreen } from './screens/tools-screen';
 import { IntegrationsScreen } from './screens/integrations-screen';
 import { WorkflowsScreen } from './screens/workflows-screen';
 import { PlaybooksScreen } from './screens/playbooks-screen';
+import { MemoryScreen } from './screens/memory-screen';
 import { useUpdateAgent } from '@/hooks/agents/use-agents';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { OverviewScreen } from './screens/overview-screen';
 
-type ConfigView = 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' | 'workflows' | 'playbooks';
+type ConfigView = 'instructions' | 'playbooks' | 'knowledge' | 'triggers' | 'tools' | 'integrations' | 'workflows' | 'overview' | 'memory';
 
 export default function AgentConfigPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
   const agentId = params.agentId as string;
-  const [activeView, setActiveView] = useState<ConfigView>('instructions');
+  const [activeView, setActiveView] = useState<ConfigView>('overview');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   const { data: agent, isLoading } = useAgent(agentId);
@@ -74,12 +76,14 @@ export default function AgentConfigPage() {
   };
 
   const menuItems = [
+    { id: 'overview' as const, label: 'Overview', icon: FileText },
     { id: 'instructions' as const, label: 'Instructions', icon: Brain },
+    { id: 'memory' as const, label: 'Memory', icon: HardDrive },
     { id: 'tools' as const, label: 'Tools', icon: Wrench },
     { id: 'integrations' as const, label: 'Integrations', icon: Server },
     { id: 'knowledge' as const, label: 'Knowledge', icon: BookOpen },
     { id: 'triggers' as const, label: 'Triggers', icon: Zap },
-    { id: 'playbooks' as const, label: 'Playbooks', icon: FileText },
+    { id: 'playbooks' as const, label: 'Playbooks', icon: NotepadText },
     { id: 'workflows' as const, label: 'Workflows', icon: Workflow },
   ];
 
@@ -164,7 +168,7 @@ export default function AgentConfigPage() {
       {/* Right Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden w-full md:w-0 md:pl-1 md:pr-1 md:min-w-0 px-4 md:px-0">
         {/* Agent Header */}
-        <div className="flex items-center justify-between pt-12 pb-6 w-full">
+        <div className="flex items-center gap-4 pt-12 pb-6 w-full">
           <div
             className="flex items-center gap-3 cursor-pointer group/header"
             onClick={() => setIsEditorOpen(true)}
@@ -195,12 +199,14 @@ export default function AgentConfigPage() {
 
         {/* Dynamic Content Based on Active View */}
         {activeView === 'instructions' && <InstructionsScreen agentId={agentId} />}
+        {activeView === 'memory' && <MemoryScreen agentId={agentId} />}
         {activeView === 'tools' && <ToolsScreen agentId={agentId} />}
         {activeView === 'integrations' && <IntegrationsScreen agentId={agentId} />}
         {activeView === 'knowledge' && <KnowledgeScreen agentId={agentId} />}
         {activeView === 'workflows' && <WorkflowsScreen agentId={agentId} />}
         {activeView === 'playbooks' && <PlaybooksScreen agentId={agentId} />}
         {activeView === 'triggers' && <TriggersScreen agentId={agentId} />}
+        {activeView === 'overview' && <OverviewScreen agentId={agentId} onNavigate={(view) => setActiveView(view as ConfigView)} />}
       </div>
 
       {/* Agent Editor Dialog */}

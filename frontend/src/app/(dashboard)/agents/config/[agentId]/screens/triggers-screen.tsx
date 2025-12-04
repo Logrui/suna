@@ -114,34 +114,20 @@ export function TriggersScreen({ agentId }: TriggersScreenProps) {
 
     return (
         <div className="flex-1 overflow-auto pb-6">
-            {/* Search Bar */}
-            <div className="flex items-center justify-between pb-4 px-1 pt-1">
-                <div className="max-w-md w-md">
-                    <div className="relative">
-                        <Input
-                            type="text"
-                            placeholder="Search"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10"
-                        />
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                            <Search className="h-4 w-4" />
-                        </div>
-                    </div>
-                </div>
+            {/* Search Bar & Create Button */}
+            <div className="flex items-center justify-start gap-4 pb-4 px-1 pt-1">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button
-                            variant="default"
+                            variant="outline"
                             size="sm"
-                            className="h-10 px-4 rounded-xl gap-2"
+                            className="flex items-center gap-2 h-10"
                         >
                             <Plus className="h-4 w-4" />
-                            Create new
+                            Create Trigger
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-72">
+                    <DropdownMenuContent align="start" className="w-72">
                         <DropdownMenuItem onClick={() => setTriggerDialogType('schedule')} className='rounded-lg'>
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <div className="flex flex-col">
@@ -162,6 +148,21 @@ export function TriggersScreen({ agentId }: TriggersScreenProps) {
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+
+                <div className="max-w-md w-md">
+                    <div className="relative">
+                        <Input
+                            type="text"
+                            placeholder="Search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-10"
+                        />
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            <Search className="h-4 w-4" />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Triggers Content */}
