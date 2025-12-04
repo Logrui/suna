@@ -595,6 +595,41 @@ class ResponseProcessor:
                 logger.info(f"Stream complete. Total chunks: {chunk_count}, finish_reason: {finish_reason}")
             logger.info(f"📝 Accumulated content length: {len(accumulated_content)} chars")
             
+            # --- Process Fallback Events from LiteLLM Router ---
+            from core.services.llm import get_fallback_events
+            fallback_events = get_fallback_events()
+            
+            # Send failure notifications (500ms toast)
+            for failure in fallback_events.get('failures', []):
+                logger.info(f"🔴 Sending model_failure notification: {failure['model']} - {failure['reason']}")
+                failure_content = {
+                    "status_type": "model_failure",
+                    "model": failure['model'],
+                    "error": failure['error'],
+                    "reason": failure['reason']
+                }
+                failure_msg = await self.add_message(
+                    thread_id=thread_id, type="status", content=failure_content,
+                    is_llm_message=False, metadata={"thread_run_id": thread_run_id}
+                )
+                if failure_msg: yield format_for_yield(failure_msg)
+            
+            # Send fallback notification (3s toast)
+            if 'fallback' in fallback_events:
+                fb = fallback_events['fallback']
+                logger.info(f"🔄 Sending model_fallback notification: {fb['requested']} -> {fb['actual']}")
+                fallback_content = {
+                    "status_type": "model_fallback",
+                    "requested_model": fb['requested'],
+                    "actual_model": fb['actual']
+                }
+                fallback_msg = await self.add_message(
+                    thread_id=thread_id, type="status", content=fallback_content,
+                    is_llm_message=False, metadata={"thread_run_id": thread_run_id}
+                )
+                if fallback_msg: yield format_for_yield(fallback_msg)
+            # --- End Fallback Event Processing ---
+            
             # Save summary to debug file
             # Save debug summary and accumulated content (if enabled)
             if global_config.DEBUG_SAVE_LLM_IO:

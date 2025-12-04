@@ -35,6 +35,66 @@ class LLMError(Exception):
     """Exception for LLM-related errors."""
     pass
 
+# Thread-local storage for fallback events using ContextVars
+from contextvars import ContextVar
+fallback_context: ContextVar[dict] = ContextVar('fallback_context', default={})
+
+def on_litellm_failure(kwargs, completion_response, start_time, end_time):
+    """Callback when a model call fails (before fallback attempt)."""
+    model = kwargs.get('model', 'unknown')
+    error_obj = getattr(completion_response, 'error', None)
+    error_msg = str(error_obj) if error_obj else 'Unknown error'
+    
+    # Extract user-friendly error reason
+    error_lower = error_msg.lower()
+    if 'rate limit' in error_lower or 'overloaded' in error_lower:
+        reason = 'Overloaded'
+    elif 'timeout' in error_lower or 'connection' in error_lower:
+        reason = 'Connection Issues'
+    elif 'busy' in error_lower:
+        reason = 'Busy Server'
+    elif 'unavailable' in error_lower or 'not found' in error_lower:
+        reason = 'Model Unavailable'
+    else:
+        reason = 'Error'
+    
+    # Store failure info in context
+    ctx = fallback_context.get({})
+    if 'failures' not in ctx:
+        ctx['failures'] = []
+    
+    ctx['failures'].append({
+        'model': model,
+        'error': error_msg,
+        'reason': reason,
+        'timestamp': end_time
+    })
+    fallback_context.set(ctx)
+    
+    logger.warning(f"🔴 Model failure: {model} - {reason}: {error_msg}")
+
+def on_litellm_success(kwargs, completion_response, start_time, end_time):
+    """Callback on successful completion (may be from fallback)."""
+    requested_model = kwargs.get('model', 'unknown')
+    actual_model = getattr(completion_response, 'model', requested_model)
+    
+    # Check if actual model differs from requested (fallback occurred)
+    if requested_model != actual_model:
+        ctx = fallback_context.get({})
+        ctx['fallback'] = {
+            'requested': requested_model,
+            'actual': actual_model,
+            'timestamp': end_time
+        }
+        fallback_context.set(ctx)
+        logger.warning(f"🔄 Fallback used: {requested_model} -> {actual_model}")
+
+def get_fallback_events() -> dict:
+    """Get and clear fallback events from current context."""
+    ctx = fallback_context.get({})
+    fallback_context.set({})  # Clear after reading
+    return ctx
+
 def setup_api_keys() -> None:
     """Set up API keys from environment variables."""
     if not config:
@@ -147,13 +207,17 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         }
     ])
     
+    # Set callbacks globally (Router doesn't accept them in __init__)
+    litellm.success_callback = [on_litellm_success]
+    litellm.failure_callback = [on_litellm_failure]
+    
     provider_router = Router(
         model_list=model_list,
         retry_after=15,
         fallbacks=fallbacks,
     )
     
-    logger.info(f"Configured LiteLLM Router with {len(fallbacks)} fallback rules")
+    logger.info(f"Configured LiteLLM Router with {len(fallbacks)} fallback rules and global callbacks")
 
 def _configure_openai_compatible(params: Dict[str, Any], model_name: str, api_key: Optional[str], api_base: Optional[str]) -> None:
     """Configure OpenAI-compatible provider setup."""

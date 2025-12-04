@@ -29,6 +29,7 @@ export interface Model {
   capabilities?: string[];
   recommended?: boolean;
   priority?: number;
+  variant?: string | null;
 }
 
 export interface AvailableModelsResponse {

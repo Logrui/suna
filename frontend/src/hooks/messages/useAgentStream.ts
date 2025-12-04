@@ -463,6 +463,28 @@ export function useAgentStream(
               });
               finalizeStream('error', currentRunIdRef.current);
               break;
+            case 'model_failure':
+              // 500ms toast for model failure
+              toast.error(
+                `[System] [LiteLLM] ${parsedContent.model} failed: ${parsedContent.reason}`,
+                { duration: 500 }
+              );
+              break;
+            case 'model_fallback':
+              // Clean up fallback model name for display
+              const cleanFallbackName = parsedContent.actual_model
+                .split('/')
+                .pop()
+                ?.replace(/-/g, ' ')
+                .split(' ')
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ') || parsedContent.actual_model;
+
+              toast.info(
+                `[System] Using ${cleanFallbackName} fallback`,
+                { duration: 1000 }
+              );
+              break;
             default:
               break;
           }

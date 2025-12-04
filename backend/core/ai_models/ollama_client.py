@@ -112,7 +112,7 @@ class OllamaClient:
             logger.error(f"Unexpected error getting model info for {model_name}: {e}")
             raise
     
-    def extract_context_window(self, model_info: Dict[str, Any]) -> int:
+    def extract_context_window(self, model_info: Dict[str, Any]) -> Optional[int]:
         """
         Extract context window from model_info.
         
@@ -135,40 +135,25 @@ class OllamaClient:
         # Debug: Log available keys in model_info to help diagnose missing context
         logger.debug(f"Extracting context for model. Available keys: {list(model_info.keys())}")
         
-        # Try to get architecture (in case Ollama API changes in future)
-        architecture = model_info.get("general.architecture", "")
-        logger.debug(f"Model architecture detected: '{architecture}'")
+        # Step 1: Search for ANY field ending with .context_length or _context_length
+        for key, value in model_info.items():
+            if key.endswith('.context_length') or key.endswith('_context_length'):
+                logger.debug(f"Found context window via dynamic search {key}: {value}")
+                return int(value)
         
-        # Try architecture-specific field first
-        if architecture:
-            context_field = f"{architecture}.context_length"
-            context_window = model_info.get(context_field)
-            if context_window:
-                logger.debug(f"Found context window via {context_field}: {context_window}")
-                return int(context_window)
-            else:
-                logger.debug(f"Field '{context_field}' not found in model_info")
-        
-        # Fallback: try known architectures
-        known_archs = ["llama", "qwen2", "qwen3", "gemma2", "gemma", "phi", "deepseek"]
-        for arch in known_archs:
-            context_field = f"{arch}.context_length"
-            context_window = model_info.get(context_field)
-            if context_window:
-                logger.debug(f"Found context window via fallback check {context_field}: {context_window}")
-                return int(context_window)
-        
+        # Step 2: Fallback to exact match if pattern search fails
+        if 'context_length' in model_info:
+             logger.debug(f"Found context window via exact match 'context_length': {model_info['context_length']}")
+             return int(model_info['context_length'])
+             
         # Log that we are hitting the default
-        logger.debug("No context window found in metadata. Checked fields: " + 
-                     ", ".join([f"{a}.context_length" for a in [architecture] + known_archs if a]))
+        logger.debug("No context window found in metadata via dynamic search or exact match.")
         
-        # Default to 128K for modern models
-        # This is reasonable because:
-        # 1. Most modern models support 128K+ context
-        # 2. Ollama doesn't expose this info in the API
-        # 3. The actual limit is enforced at runtime via num_ctx parameter
-        logger.debug(f"Using default context window of 128K (131072 tokens) for Ollama model")
-        return 131_072  # 128K
+        # Return None if context window cannot be determined
+        # The caller should decide whether to exclude the model or use a fallback
+        logger.warning(f"Could not determine context window for model. Skipping default assignment.")
+        return None
+
     
     def is_chat_model(self, capabilities: Optional[List[str]]) -> bool:
         """

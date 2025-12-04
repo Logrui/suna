@@ -183,6 +183,7 @@ class ModelManager:
             "tier_availability": model.tier_availability,
             "priority": model.priority,
             "recommended": model.recommended,
+            "variant": model.variant,
         }
     
     def list_available_models(

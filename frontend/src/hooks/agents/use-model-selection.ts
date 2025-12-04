@@ -16,6 +16,7 @@ export interface ModelOption {
   recommended?: boolean;
   capabilities?: string[];
   contextWindow?: number;
+  variant?: string | null;
 }
 
 const getDefaultModel = (models: ModelOption[], hasActiveSubscription: boolean): string => {
@@ -23,7 +24,7 @@ const getDefaultModel = (models: ModelOption[], hasActiveSubscription: boolean):
     const recommendedModel = models.find(m => m.recommended);
     if (recommendedModel) return recommendedModel.id;
   }
-  
+
   const freeModels = models.filter(m => !m.requiresSubscription);
   if (freeModels.length > 0) {
     const sortedFreeModels = freeModels.sort((a, b) => (b.priority || 0) - (a.priority || 0));
@@ -35,7 +36,7 @@ const getDefaultModel = (models: ModelOption[], hasActiveSubscription: boolean):
 
 export const useModelSelection = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
-  
+
   // Fetch models directly in this hook
   // Only fetch if user is authenticated
   const { data: modelsData, isLoading } = useQuery({
@@ -57,7 +58,9 @@ export const useModelSelection = () => {
   // Transform API data to ModelOption format
   const availableModels = useMemo<ModelOption[]>(() => {
     if (!modelsData?.models) return [];
-    
+
+    console.log('Available Models Data:', modelsData.models);
+
     return modelsData.models.map(model => ({
       id: model.id, // Always use the actual model ID
       label: model.display_name || model.short_name || model.id,
@@ -66,6 +69,7 @@ export const useModelSelection = () => {
       recommended: model.recommended || false,
       capabilities: model.capabilities || [],
       contextWindow: model.context_window || 128000,
+      variant: model.variant || null,
     })).sort((a, b) => {
       // Sort by recommended first, then priority, then name
       if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
@@ -88,12 +92,12 @@ export const useModelSelection = () => {
     if (!selectedModel || !accessibleModels.some(m => m.id === selectedModel)) {
       const hasActiveSubscription = subscriptionData?.status === 'active' || subscriptionData?.status === 'trialing';
       const defaultModelId = getDefaultModel(availableModels, hasActiveSubscription);
-      
+
       // Make sure the default model is accessible
-      const finalModel = accessibleModels.some(m => m.id === defaultModelId) 
-        ? defaultModelId 
+      const finalModel = accessibleModels.some(m => m.id === defaultModelId)
+        ? defaultModelId
         : accessibleModels[0]?.id;
-        
+
       if (finalModel) {
         console.log('🔧 useModelSelection: Setting API-determined default model:', finalModel);
         setSelectedModel(finalModel);
@@ -125,15 +129,15 @@ export const useModelSelection = () => {
       const model = availableModels.find(m => m.id === modelId);
       return model?.requiresSubscription || false;
     },
-    
+
     handleModelChange,
     customModels: [] as any[],
-    addCustomModel: (_model: any) => {},
-    updateCustomModel: (_id: string, _model: any) => {},
-    removeCustomModel: (_id: string) => {},
-    
+    addCustomModel: (_model: any) => { },
+    updateCustomModel: (_id: string, _model: any) => { },
+    removeCustomModel: (_id: string) => { },
+
     getActualModelId: (modelId: string) => modelId,
-    
-    refreshCustomModels: () => {},
+
+    refreshCustomModels: () => { },
   };
 };

@@ -59,10 +59,10 @@ class ModelRegistry:
             fallback_models=["vertex_ai/gemini-2.5-pro"]
         ))
 
-        # Gemini 3 Pro Preview (MAX TOKENS)
+        # Gemini 3 Pro Preview (MAX Context)
         self.register(Model(
-            id="vertex_ai/gemini-3-pro-preview",
-            name="Gemini 3 Pro Preview - Max",
+            id="vertex_ai/gemini-3-pro-preview-max",
+            name="Gemini 3 Pro Preview",
             provider=ModelProvider.VERTEX_AI,
             aliases=["gemini-3-pro-preview-max", "vertex-gemini-3-pro-max"],
             context_window=1_000_000,
@@ -81,13 +81,14 @@ class ModelRegistry:
             priority=120,
             recommended=False,
             enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-pro"]
+            fallback_models=["vertex_ai/gemini-2.5-pro"],
+            variant="Max"
         ))
 
-        # Gemini 2.5 Pro (MAX TOKENS)
+        # Gemini 2.5 Pro (MAX Context)
         self.register(Model(
             id="vertex_ai/gemini-2.5-pro-max",
-            name="Gemini 2.5 Pro - Max",
+            name="Gemini 2.5 Pro",
             provider=ModelProvider.VERTEX_AI,
             aliases=["gemini-2.5-pro-max", "vertex-gemini-2.5-pro-max"],
             context_window=1_000_000,
@@ -109,7 +110,8 @@ class ModelRegistry:
             priority=110,
             recommended=False,
             enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-flash"]
+            fallback_models=["vertex_ai/gemini-2.5-flash"],
+            variant="Max"
         ))
 
         # Gemini 2.5 Pro
@@ -215,10 +217,10 @@ class ModelRegistry:
 
         # Claude Sonnet 4.5 Max Context (via Vertex AI)
         self.register(Model(
-            id="vertex_ai/claude-sonnet-4-5@20250929",
-            name="Claude Sonnet 4.5 Max",
+            id="vertex_ai/claude-sonnet-4-5@20250929-max",
+            name="Claude Sonnet 4.5",
             provider=ModelProvider.VERTEX_AI,
-            aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
+            aliases=["claude-sonnet-4.5-max", "vertex-claude-sonnet-4.5-max"],
             context_window=1_000_000, # 1M in Beta
             max_output_tokens=64_000,
             capabilities=[
@@ -240,6 +242,7 @@ class ModelRegistry:
                     "anthropic-beta": "context-1m-2025-08-07"
                 },
             ),
+            variant="Max"
         ))
 
         # Claude Sonnet 4.5 (via Vertex AI)
@@ -748,6 +751,10 @@ class ModelRegistry:
                     
                     # Extract context window
                     context_window = client.extract_context_window(model_info)
+                    
+                    if context_window is None:
+                        logger.warning(f"Skipping Ollama model {model_name}: Could not determine context window")
+                        continue
                     
                     # Check if model should be excluded (based on ID or context window)
                     if is_model_excluded(model_name, "ollama", context_window=context_window):

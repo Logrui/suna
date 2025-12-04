@@ -141,6 +141,11 @@ export function ModelItemWithTooltip({
                     <span className={cn("flex-1 truncate font-medium", !canAccess && "text-muted-foreground")}>
                         {model.label}
                     </span>
+                    {model.variant && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium mr-2">
+                            {model.variant}
+                        </span>
+                    )}
                     {!canAccess && (
                         <Lock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                     )}
@@ -148,7 +153,7 @@ export function ModelItemWithTooltip({
                         <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
                     )}
                 </div>
-            </SpotlightCard>
+            </SpotlightCard >
             {tooltip}
         </>
     );
