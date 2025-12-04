@@ -47,12 +47,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Initialize realtime client with auth syncing
         try {
           await initializeRealtimeClient(supabase);
-          console.log('[AuthProvider] Realtime client initialized with auth syncing');
+          //console.log('[AuthProvider] Realtime client initialized with auth syncing');
         } catch (err) {
-          console.error('[AuthProvider] Failed to initialize realtime client:', err);
+          //console.error('[AuthProvider] Failed to initialize realtime client:', err);
         }
 
       } catch (error) {
+        console.error('❌ Error getting initial session:', error);
       } finally {
         setIsLoading(false);
       }
