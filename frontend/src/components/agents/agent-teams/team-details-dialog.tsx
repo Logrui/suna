@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { DynamicIcon } from 'lucide-react/dynamic';
-import { Users, Calendar, Tag, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Users, Calendar, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import {
     Dialog,
     DialogContent,
@@ -41,11 +42,13 @@ interface TeamData {
     structure: string;
     is_public: boolean;
     is_default: boolean;
-    tags: string[];
     slug?: string;
     icon_name?: string;
     icon_color?: string;
     icon_background?: string;
+    metadata?: {
+        is_suna_default?: boolean;
+    };
 }
 
 interface TeamDetailsDialogProps {
@@ -65,7 +68,9 @@ export function TeamDetailsDialog({
 }: TeamDetailsDialogProps) {
     if (!team) return null;
 
-    const Icon = team.icon_name ? (props: any) => <DynamicIcon name={team.icon_name as any} {...props} /> : Users;
+    if (!team) return null;
+
+    const Icon = (props: any) => <KortixLogo size={32} className={props.className} />;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -126,17 +131,6 @@ export function TeamDetailsDialog({
                             {team.description}
                         </p>
                     </div>
-
-                    {team.tags && team.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
-                            {team.tags.map(tag => (
-                                <Badge key={tag} variant="outline" className="pl-2 gap-1 font-normal">
-                                    <Tag className="h-3 w-3 text-muted-foreground" />
-                                    {tag}
-                                </Badge>
-                            ))}
-                        </div>
-                    )}
                 </div>
 
                 <Separator />
@@ -155,7 +149,7 @@ export function TeamDetailsDialog({
                     <ScrollArea className="flex-1">
                         <div className="p-6 grid gap-4 sm:grid-cols-2">
                             {team.agents.map((agent) => {
-                                const AgentIcon = agent.icon_name ? (props: any) => <DynamicIcon name={agent.icon_name as any} {...props} /> : Users;
+                                const AgentIcon = (props: any) => <KortixLogo size={20} className={props.className} />;
 
                                 return (
                                     <div

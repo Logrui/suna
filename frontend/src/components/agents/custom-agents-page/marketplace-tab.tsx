@@ -24,7 +24,7 @@ interface MarketplaceTabProps {
   getItemStyling: (item: MarketplaceTemplate) => { color: string };
   currentUserId?: string;
   onAgentPreview?: (agent: MarketplaceTemplate) => void;
-  
+
   marketplacePage: number;
   setMarketplacePage: (page: number) => void;
   marketplacePageSize: number;
@@ -108,7 +108,7 @@ export const MarketplaceTab = ({
         ) : allMarketplaceItems.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              {marketplaceSearchQuery 
+              {marketplaceSearchQuery
                 ? "No templates found matching your criteria. Try adjusting your search or filters."
                 : "No agent templates are currently available in the marketplace."}
             </p>

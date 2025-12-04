@@ -675,24 +675,7 @@ export const UnifiedAgentCard: React.FC<UnifiedAgentCardProps> = ({
         );
       }
 
-      if (variant === 'agent' && actions.onOpenNewTab) {
-        return (
-          <div className="flex justify-end mt-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                actions.onOpenNewTab?.(data, e);
-              }}
-              title="Open in new tab"
-            >
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </div>
-        );
-      }
+
 
       return null;
     };
@@ -705,6 +688,20 @@ export const UnifiedAgentCard: React.FC<UnifiedAgentCardProps> = ({
             <CardAvatar data={data} variant={variant} />
             <div className="flex items-center gap-2">
               {renderBadge()}
+              {variant === 'agent' && actions.onOpenNewTab && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-muted ml-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    actions.onOpenNewTab?.(data, e);
+                  }}
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              )}
             </div>
           </div>
 

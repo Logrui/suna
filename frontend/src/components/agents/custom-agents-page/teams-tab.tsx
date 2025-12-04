@@ -9,58 +9,12 @@ import { EmptyState } from '../empty-state';
 import { TeamsGrid } from '../agent-teams/agent-teams-grid';
 import { LoadingState } from '../loading-state';
 import { Pagination } from '../pagination';
-import { UnifiedTeamCard } from '@/components/ui/agent-team-card';
+import { UnifiedTeamCard } from '@/components/agents/agent-teams/agent-team-card';
 import { toast } from 'sonner';
+import { DEFAULT_TEAMS } from '@/components/agents/agent-teams/default-teams';
 
 // Mock Data for Agent Teams
-const MOCK_TEAMS = [
-  {
-    id: 'team-1',
-    name: 'Suna Superworker',
-    description: 'A dedicated Suna Superworker team for general long running tasks. Manus like coordination and organization loop cycle',
-    agents: [
-      { id: 'a1', name: 'Suna Planner', role: 'Planning', icon_name: 'Search', icon_color: '#fdfdfdff', icon_background: '#000000ff' },
-      { id: 'a2', name: 'Suna Worker', role: 'Execution', icon_name: 'BarChart', icon_color: '#ffffffff', icon_background: '#000000ff' },
-      { id: 'a3', name: 'Suna Verifier', role: 'Verification', icon_name: 'PenTool', icon_color: '#ffffffff', icon_background: '#000000ff' },
-    ],
-    created_at: '2025-12-03T10:00:00Z',
-    is_public: true,
-    is_default: true,
-    tags: ['Native', 'Analysis'],
-    slug: 'superworker'
-  },
-  {
-    id: 'team-2',
-    name: 'SunaWide Research',
-    description: 'Agent team for parallel processing and deploying hundreds of independent, full-context AI agents simultaneously to tackle large-scale tasks (like analyzing 250 companies or generating 50 assets) in minutes rather than hours',
-    agents: [
-      { id: 'a4', name: 'Suna Mapper', role: 'Mapping', icon_name: 'Lightbulb', icon_color: '#f59e0b', icon_background: '#fffbeb' },
-      { id: 'a5', name: 'Suna Worker', role: 'Execution', icon_name: 'Type', icon_color: '#ec4899', icon_background: '#fdf2f8' },
-    ],
-    created_at: '2025-12-03T14:30:00Z',
-    is_public: true,
-    is_default: true,
-    tags: ['Research', 'Analysis'],
-    slug: 'wide-research'
-  },
-  {
-    id: 'team-3',
-    name: 'Suna Code',
-    description: 'Automated feature implementation, code reviews, and deployment management for Github.',
-    agents: [
-      { id: 'a6', name: 'Suna Planner', role: 'Planning', icon_name: 'Server', icon_color: '#6366f1', icon_background: '#eef2ff' },
-      { id: 'a7', name: 'Suna Executor', role: 'Execution', icon_name: 'Eye', icon_color: '#ef4444', icon_background: '#fef2f2' },
-      { id: 'a8', name: 'Suna Reviewer', role: 'Quality Control', icon_name: 'GitBranch', icon_color: '#f97316', icon_background: '#fff7ed' },
-      { id: 'a9', name: 'Suna Deployer', role: 'Deployment Reviewer', icon_name: 'Shield', icon_color: '#14b8a6', icon_background: '#f0fdfa' },
-      { id: 'a10', name: 'Suna DeployBot', role: 'Release Manager', icon_name: 'Rocket', icon_color: '#8b5cf6', icon_background: '#f5f3ff' },
-    ],
-    created_at: '2025-12-03T09:15:00Z',
-    is_public: true,
-    is_default: true,
-    tags: ['DevOps', 'Automation', 'Infrastructure'],
-    slug: 'devops-assistants'
-  }
-];
+const MOCK_TEAMS = DEFAULT_TEAMS;
 
 type TeamFilter = 'all' | 'templates';
 
@@ -140,8 +94,7 @@ export const TeamsTab = ({
     const query = TeamsSearchQuery.toLowerCase();
     return MOCK_TEAMS.filter(team =>
       team.name.toLowerCase().includes(query) ||
-      team.description.toLowerCase().includes(query) ||
-      team.tags.some(tag => tag.toLowerCase().includes(query))
+      team.description.toLowerCase().includes(query)
     );
   }, [TeamsSearchQuery]);
 
@@ -155,12 +108,12 @@ export const TeamsTab = ({
   };
 
   const handleEditTeam = (id: string) => {
-    toast.info(`Edit Team ${id} feature coming soon!`);
+    toast.info(`Edit Team feature coming soon!`);
     onEditTeam(id);
   };
 
   const handleDeleteTeam = (id: string) => {
-    toast.info(`Delete Team ${id} feature coming soon!`);
+    toast.info(`Delete Team feature coming soon!`);
     onDeleteTeam(id);
   };
 
@@ -216,8 +169,8 @@ export const TeamsTab = ({
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={handleCreateTeam} className="h-12 rounded-xl gap-2">
-            <Plus className="h-4 w-4" />
+          <Button onClick={handleCreateTeam} className="h-8 rounded-lg gap-2">
+            <Plus className="h-3 w-3" />
             Create Team
           </Button>
         </div>

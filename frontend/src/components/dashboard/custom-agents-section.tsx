@@ -140,7 +140,7 @@ const FeaturedCategoryCard = ({ category }: FeaturedCategoryCardProps) => {
       "backdrop-blur-xl"
     )}>
       <div className="absolute inset-0 bg-gradient-to-tr from-background/80 via-transparent to-background/40" />
-      
+
       <div className="absolute right-0 top-0 w-48 h-48 opacity-30">
         <div className={cn(
           "absolute inset-0 bg-gradient-to-br",
@@ -157,7 +157,7 @@ const FeaturedCategoryCard = ({ category }: FeaturedCategoryCardProps) => {
           {config.tagline.split(',')[1]}
         </p>
       </div>
-      
+
       <div className="absolute right-8 top-8">
         <div className="relative">
           <div className={cn(
@@ -185,10 +185,10 @@ interface CategorySectionProps {
   onToggleExpand: (category: string) => void;
 }
 
-const CategorySection = ({ 
-  category, 
-  templates, 
-  onCardClick, 
+const CategorySection = ({
+  category,
+  templates,
+  onCardClick,
   convertTemplateToAgentData,
   expandedCategories,
   onToggleExpand
@@ -255,10 +255,10 @@ export function CustomAgentsSection({ onAgentSelect }: CustomAgentsSectionProps)
 
   const groupTemplatesByCategory = React.useMemo(() => {
     if (!templates?.templates) return {};
-    
+
     const categorized: Record<string, any[]> = {};
     const uncategorized: any[] = [];
-    
+
     templates.templates.forEach((template) => {
       if (template.categories && template.categories.length > 0) {
         template.categories.forEach((category: string) => {
@@ -271,11 +271,11 @@ export function CustomAgentsSection({ onAgentSelect }: CustomAgentsSectionProps)
         uncategorized.push(template);
       }
     });
-    
+
     if (uncategorized.length > 0) {
       categorized['Other'] = uncategorized;
     }
-    
+
     return categorized;
   }, [templates]);
 
@@ -332,9 +332,9 @@ export function CustomAgentsSection({ onAgentSelect }: CustomAgentsSectionProps)
   };
 
   const handleInstall = async (
-    item: MarketplaceTemplate, 
-    instanceName: string, 
-    profileMappings: Record<string, string>, 
+    item: MarketplaceTemplate,
+    instanceName: string,
+    profileMappings: Record<string, string>,
     customServerConfigs: Record<string, any>,
     triggerConfigs?: Record<string, Record<string, any>>,
     triggerVariables?: Record<string, Record<string, string>>
@@ -356,7 +356,7 @@ export function CustomAgentsSection({ onAgentSelect }: CustomAgentsSectionProps)
       if (result.status === 'installed' && result.instance_id) {
         toast.success(`Agent "${instanceName}" installed successfully!`);
         setShowInstallDialog(false);
-        
+
         if (onAgentSelect) {
           onAgentSelect(result.instance_id);
         }
@@ -434,7 +434,7 @@ export function CustomAgentsSection({ onAgentSelect }: CustomAgentsSectionProps)
   const hasCategories = Object.keys(categorizedTemplates).length > 0;
   const categories = Object.keys(categorizedTemplates);
 
-  const filteredCategories = selectedFilter 
+  const filteredCategories = selectedFilter
     ? { [selectedFilter]: categorizedTemplates[selectedFilter] }
     : categorizedTemplates;
 

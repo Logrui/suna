@@ -2,20 +2,10 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Settings, Trash2, Shield, Crown, ArrowRight, Bot, Sparkles } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
@@ -45,7 +35,12 @@ export interface BaseTeamData {
     agents: TeamAgent[];
     is_public?: boolean;
     created_at?: string;
-    tags?: string[];
+    icon_name?: string;
+    icon_color?: string;
+    icon_background?: string;
+    metadata?: {
+        is_suna_default?: boolean;
+    };
 }
 
 // Action handlers
@@ -80,18 +75,6 @@ export const UnifiedTeamCard: React.FC<UnifiedTeamCardProps> = ({
 }) => {
     const { onEdit, onDelete, onClick: actionOnClick } = actions;
     const { isSelected = false, isDeleting = false } = state;
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-    // Handle delete confirmation
-    const handleDeleteClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setShowDeleteDialog(true);
-    };
-
-    const handleConfirmDelete = () => {
-        setShowDeleteDialog(false);
-        onDelete?.(data);
-    };
 
     const handleCardClick = () => {
         if (onClick) {
@@ -115,8 +98,16 @@ export const UnifiedTeamCard: React.FC<UnifiedTeamCardProps> = ({
                 <CardContent className="relative p-6 flex flex-col flex-1">
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
-                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                            <Users className="h-6 w-6" />
+                        <div className="flex-shrink-0">
+                            <AgentAvatar
+                                agentName={data.name}
+                                iconName={data.icon_name ?? 'users'}
+                                iconColor={data.icon_color}
+                                backgroundColor={data.icon_background}
+                                isSunaDefault={true}
+                                size={48}
+                                className="border"
+                            />
                         </div>
                         <div className="flex gap-2">
                             {data.is_public && (
@@ -156,6 +147,7 @@ export const UnifiedTeamCard: React.FC<UnifiedTeamCardProps> = ({
                                             iconName={agent.icon_name}
                                             iconColor={agent.icon_color}
                                             backgroundColor={agent.icon_background}
+                                            isSunaDefault={true}
                                             size={32}
                                             className="border-0"
                                         />
@@ -171,72 +163,8 @@ export const UnifiedTeamCard: React.FC<UnifiedTeamCardProps> = ({
                             )}
                         </div>
 
-                        {/* Footer Actions */}
-                        <div className="pt-4 border-t border-border/50 flex items-center justify-between gap-2">
-                            <div className="flex flex-wrap gap-1">
-                                {data.tags?.slice(0, 2).map(tag => (
-                                    <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 h-5">
-                                        {tag}
-                                    </Badge>
-                                ))}
-                            </div>
-
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {onEdit && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onEdit(data, e);
-                                        }}
-                                    >
-                                        <Settings className="h-4 w-4" />
-                                    </Button>
-                                )}
-
-                                {onDelete && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                        onClick={handleDeleteClick}
-                                        disabled={isDeleting}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 </CardContent>
-
-                {/* Delete confirmation dialog */}
-                <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Team</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Are you sure you want to delete "<strong>{data.name}</strong>"? This action cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
-                                Cancel
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleConfirmDelete();
-                                }}
-                                className="bg-destructive hover:bg-destructive/90 text-white"
-                            >
-                                {isDeleting ? 'Deleting...' : 'Delete Team'}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
             </Card>
         );
     };

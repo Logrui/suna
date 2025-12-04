@@ -32,7 +32,7 @@ export const EmptyState = ({ type = 'agent', hasItems, onCreate, onClearFilters 
             {!hasItems ? (
               isAgent
                 ? 'Create your first agent to start automating tasks with custom instructions and tools. Configure custom AgentPress capabilities to fine tune agent according to your needs.'
-                : 'Create your first team to collaborate with multiple agents. Organize agents into squads for specialized tasks.'
+                : 'Create your first team to collaborate with multiple agents. Organize agents into teams for specialized tasks.'
             ) : (
               `No ${itemsLabel} match your current search and filter criteria. Try adjusting your filters or search terms.`
             )}

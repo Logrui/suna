@@ -653,8 +653,8 @@ export default function AgentsPage() {
               }}
               viewMode={viewMode}
               onCreateTeam={() => setShowNewTeamDialog(true)}
-              onEditTeam={(id) => toast.info(`Edit Team ${id} feature coming soon!`)}
-              onDeleteTeam={(id) => toast.info(`Delete Team ${id} feature coming soon!`)}
+              onEditTeam={() => toast.info(`Edit Team feature coming soon!`)}
+              onDeleteTeam={() => toast.info(`Delete Team feature coming soon!`)}
               onTeamClick={(team) => {
                 setSelectedTeam(team);
                 setShowTeamDetailsDialog(true);
@@ -729,14 +729,8 @@ export default function AgentsPage() {
           open={showTeamDetailsDialog}
           onOpenChange={setShowTeamDetailsDialog}
           team={selectedTeam}
-          onEdit={(id) => {
-            setShowTeamDetailsDialog(false);
-            toast.info(`Edit Team ${id} feature coming soon!`);
-          }}
-          onDelete={(id) => {
-            setShowTeamDetailsDialog(false);
-            toast.info(`Delete Team ${id} feature coming soon!`);
-          }}
+          onEdit={() => toast.info(`Edit Team feature coming soon!`)}
+          onDelete={() => toast.info(`Delete Team feature coming soon!`)}
         />
 
         <MarketplaceAgentPreviewDialog

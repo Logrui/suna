@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Globe, Plus, Search, BarChart, PenTool, Lightbulb, Type, Server, Eye, GitBranch, Shield, Rocket } from 'lucide-react';
+import { Globe, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '../custom-agents-page/search-bar';
@@ -9,58 +9,11 @@ import { EmptyState } from '../empty-state';
 import { TeamsGrid } from './agent-teams-grid';
 import { LoadingState } from '../loading-state';
 import { Pagination } from '../pagination';
-import { UnifiedTeamCard } from '@/components/ui/agent-team-card';
 import { toast } from 'sonner';
+import { DEFAULT_TEAMS } from './default-teams';
 
-// Mock Data for Agent Teams
-const MOCK_TEAMS = [
-  {
-    id: 'team-1',
-    name: 'Suna Superworker',
-    description: 'A dedicated Suna Superworker team for general long running tasks. Manus like coordination and organization loop cycle',
-    agents: [
-      { id: 'a1', name: 'Suna Planner', role: 'Planning', icon_name: 'Search', icon_color: '#fdfdfdff', icon_background: '#000000ff' },
-      { id: 'a2', name: 'Suna Worker', role: 'Execution', icon_name: 'BarChart', icon_color: '#ffffffff', icon_background: '#000000ff' },
-      { id: 'a3', name: 'Suna Verifier', role: 'Verification', icon_name: 'PenTool', icon_color: '#ffffffff', icon_background: '#000000ff' },
-    ],
-    created_at: '2025-12-03T10:00:00Z',
-    is_public: true,
-    is_default: true,
-    tags: ['Native', 'Analysis'],
-    slug: 'superworker'
-  },
-  {
-    id: 'team-2',
-    name: 'Wide Research',
-    description: 'Collaborative agents for generating blog posts, social media content, and marketing copy.',
-    agents: [
-      { id: 'a4', name: 'IdeaGen', role: 'Idea Generation', icon_name: 'Lightbulb', icon_color: '#f59e0b', icon_background: '#fffbeb' },
-      { id: 'a5', name: 'CopyMaster', role: 'Copywriting', icon_name: 'Type', icon_color: '#ec4899', icon_background: '#fdf2f8' },
-    ],
-    created_at: '2025-12-03T14:30:00Z',
-    is_public: true,
-    is_default: true,
-    tags: ['Research', 'Analysis'],
-    slug: 'wide-research'
-  },
-  {
-    id: 'team-3',
-    name: 'DevOps Assistants',
-    description: 'Automated pipeline monitoring, log analysis, and deployment management.',
-    agents: [
-      { id: 'a6', name: 'KubeMaster', role: 'DevOps Engineer', icon_name: 'Server', icon_color: '#6366f1', icon_background: '#eef2ff' },
-      { id: 'a7', name: 'LogWatch', role: 'Monitoring', icon_name: 'Eye', icon_color: '#ef4444', icon_background: '#fef2f2' },
-      { id: 'a8', name: 'GitBot', role: 'Version Control', icon_name: 'GitBranch', icon_color: '#f97316', icon_background: '#fff7ed' },
-      { id: 'a9', name: 'SecGuard', role: 'Security', icon_name: 'Shield', icon_color: '#14b8a6', icon_background: '#f0fdfa' },
-      { id: 'a10', name: 'DeployBot', role: 'Release Manager', icon_name: 'Rocket', icon_color: '#8b5cf6', icon_background: '#f5f3ff' },
-    ],
-    created_at: '2025-12-03T09:15:00Z',
-    is_public: true,
-    is_default: true,
-    tags: ['DevOps', 'Automation', 'Infrastructure'],
-    slug: 'devops-assistants'
-  }
-];
+// Mock/Default Data for Agent Teams Placeholder
+const MOCK_TEAMS = DEFAULT_TEAMS;
 
 type TeamFilter = 'all' | 'templates';
 
@@ -140,8 +93,7 @@ export const TeamsTab = ({
     const query = TeamsSearchQuery.toLowerCase();
     return MOCK_TEAMS.filter(team =>
       team.name.toLowerCase().includes(query) ||
-      team.description.toLowerCase().includes(query) ||
-      team.tags.some(tag => tag.toLowerCase().includes(query))
+      team.description.toLowerCase().includes(query),
     );
   }, [TeamsSearchQuery]);
 
@@ -155,12 +107,12 @@ export const TeamsTab = ({
   };
 
   const handleEditTeam = (id: string) => {
-    toast.info(`Edit Team ${id} feature coming soon!`);
+    toast.info(`Agent Teams feature coming soon!`);
     onEditTeam(id);
   };
 
   const handleDeleteTeam = (id: string) => {
-    toast.info(`Delete Team ${id} feature coming soon!`);
+    toast.info(`Agent Teams feature coming soon!`);
     onDeleteTeam(id);
   };
 
@@ -187,7 +139,7 @@ export const TeamsTab = ({
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {/* Template rendering logic would go here if we had team templates */}
             <div className="col-span-full text-center py-8 text-muted-foreground">
-              Team templates are coming soon.
+              Agent Teams feature coming soon!
             </div>
           </div>
         )}
@@ -197,7 +149,7 @@ export const TeamsTab = ({
 
   return (
     <div className="space-y-6 mt-8 flex flex-col min-h-full">
-      < div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6" >
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
         <SearchBar
           placeholder="Search Teams..."
           value={TeamsSearchQuery}
@@ -216,12 +168,12 @@ export const TeamsTab = ({
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={handleCreateTeam} className="h-12 rounded-xl gap-2">
-            <Plus className="h-4 w-4" />
+          <Button onClick={handleCreateTeam} className="h-8 rounded-lg gap-2">
+            <Plus className="h-3 w-3" />
             Create Team
           </Button>
         </div>
-      </div >
+      </div>
       <div className="flex-1">
         {TeamFilter === 'templates' ? (
           renderTemplates()
@@ -248,6 +200,6 @@ export const TeamsTab = ({
           </>
         )}
       </div>
-    </div >
+    </div>
   );
 };

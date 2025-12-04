@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UnifiedTeamCard, BaseTeamData } from '@/components/ui/agent-team-card';
+import { UnifiedTeamCard, BaseTeamData } from './agent-team-card';
 
 interface TeamsGridProps {
     Teams: BaseTeamData[];
@@ -19,7 +19,7 @@ export const TeamsGrid: React.FC<TeamsGridProps> = ({
     onTeamClick
 }) => {
     return (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {Teams.map((team) => (
                 <UnifiedTeamCard
                     key={team.id}

@@ -427,7 +427,7 @@ export const SimplifiedScheduleConfig: React.FC<SimplifiedScheduleConfigProps> =
     const newWeekdays = selectedWeekdays.includes(weekday)
       ? selectedWeekdays.filter(w => w !== weekday)
       : [...selectedWeekdays, weekday].sort();
-    
+
     // Prevent deselecting all weekdays (must have at least one)
     if (newWeekdays.length > 0) {
       setSelectedWeekdays(newWeekdays);
@@ -439,7 +439,7 @@ export const SimplifiedScheduleConfig: React.FC<SimplifiedScheduleConfigProps> =
     const newDays = selectedMonthDays.includes(day)
       ? selectedMonthDays.filter(d => d !== day)
       : [...selectedMonthDays, day].sort((a, b) => parseInt(a) - parseInt(b));
-    
+
     // Prevent deselecting all month days (must have at least one)
     if (newDays.length > 0) {
       setSelectedMonthDays(newDays);
@@ -1044,7 +1044,7 @@ export const SimplifiedScheduleConfig: React.FC<SimplifiedScheduleConfigProps> =
                           <p className="text-sm text-destructive">{errors.agent_prompt}</p>
                         )}
                         <p className="text-xs text-muted-foreground">
-                            Use <code className="text-xs bg-muted px-1 rounded">{'{{variable_name}}'}</code> to add variables to the prompt
+                          Use <code className="text-xs bg-muted px-1 rounded">{'{{variable_name}}'}</code> to add variables to the prompt
                         </p>
                       </div>
                     </div>

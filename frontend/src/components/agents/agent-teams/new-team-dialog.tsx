@@ -74,7 +74,7 @@ export function NewTeamDialog({ open, onOpenChange, onSuccess }: NewTeamDialogPr
                                 <Label htmlFor="name">Team Name</Label>
                                 <Input
                                     id="name"
-                                    placeholder="e.g. Research Squad"
+                                    placeholder="e.g. Deep Research Team"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     disabled={isSubmitting}
