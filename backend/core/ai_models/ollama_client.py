@@ -91,7 +91,7 @@ class OllamaClient:
             return self._model_cache[model_name]
         
         url = f"{self.base_url}/api/show"
-        payload = {"name": model_name}
+        payload = {"name": model_name, "verbose": True}
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -112,28 +112,22 @@ class OllamaClient:
             logger.error(f"Unexpected error getting model info for {model_name}: {e}")
             raise
     
-    def extract_context_window(self, model_info: Dict[str, Any]) -> Optional[int]:
+    def extract_context_window(self, data: Dict[str, Any]) -> Optional[int]:
         """
-        Extract context window from model_info.
-        
-        NOTE: Ollama's /api/show endpoint does NOT return context window information.
-        The 'modelinfo' field is always null. Context window (num_ctx) is a runtime 
-        parameter set during generation, not a model property.
-        
-        We default to 128K (131072) which matches modern models like:
-        - Llama 3.1 (128K native)
-        - Qwen2 (128K native)
-        - Mistral (128K extended)
-        - DeepSeek (128K native)
+        Extract context window from model data.
         
         Args:
-            model_info: Dictionary from /api/show
+            data: Dictionary from /api/show (the root response)
             
         Returns:
-            Context window size in tokens (default: 131072 = 128K)
+            Context window size in tokens, or None if not found
         """
-        # Debug: Log available keys in model_info to help diagnose missing context
-        logger.debug(f"Extracting context for model. Available keys: {list(model_info.keys())}")
+        # The API response contains a 'model_info' key which holds the actual metadata
+        # If passed the root response, try to get the inner dictionary
+        model_info = data.get('model_info', data)
+        
+        # Debug: Log available keys to help diagnose
+        logger.debug(f"Extracting context. Keys in search scope: {list(model_info.keys())}")
         
         # Step 1: Search for ANY field ending with .context_length or _context_length
         for key, value in model_info.items():

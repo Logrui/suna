@@ -758,7 +758,7 @@ class ModelRegistry:
                     
                     # Check if model should be excluded (based on ID or context window)
                     if is_model_excluded(model_name, "ollama", context_window=context_window):
-                        logger.debug(f"Skipping excluded Ollama model: {model_name} (context: {context_window}) - excluded by context size (<64k) or manual override")
+                        logger.debug(f"Skipping excluded Ollama model: {model_name} (context: {context_window}) - excluded by context size (<100k) or manual override")
                         continue
                     
                     # Construct display name
@@ -866,7 +866,21 @@ class ModelRegistry:
                         continue
                     
                     # Extract context window - LM Studio uses different field names
-                    context_window = model_data.get("max_context_length") or model_data.get("context_window", 64_000)
+                    # Try to get from list response first, otherwise fetch details
+                    context_window = model_data.get("max_context_length")
+                    
+                    if context_window is None:
+                        # Try to fetch detailed info
+                        context_window = await client.get_context_window(model_id)
+                    
+                    if context_window is None:
+                        logger.warning(f"Skipping LM Studio model {model_id}: Could not determine context window")
+                        continue
+                        
+                    # Check if model should be excluded (based on ID or context window)
+                    if is_model_excluded(model_id, "lm_studio", context_window=context_window):
+                        logger.debug(f"Skipping excluded LM Studio model: {model_id} (context: {context_window}) - excluded by context size (<100k) or manual override")
+                        continue
                     
                     # Use model name as display name
                     display_name = model_id
