@@ -53,8 +53,7 @@ def verify_webhook_secret(x_webhook_secret: str = Header(...)):
 async def initialize_user_account(account_id: str, email: Optional[str] = None) -> Dict:
     """
     Reusable function to initialize a user account:
-    1. Subscribe to free tier
-    2. Install default Suna agent
+    1. Install default Suna agent
     
     This is called automatically by the webhook on signup (triggered by database trigger).
     
@@ -72,20 +71,20 @@ async def initialize_user_account(account_id: str, email: Optional[str] = None) 
         await db.initialize()
         
         # Subscribe to free tier
-        result = await free_tier_service.auto_subscribe_to_free_tier(account_id, email)
+        #result = await free_tier_service.auto_subscribe_to_free_tier(account_id, email)
         
         # Check if already subscribed (not an error)
-        if not result.get('success'):
-            error_msg = result.get('error') or result.get('message', 'Unknown error')
-            if 'Already subscribed' in error_msg or 'already' in error_msg.lower():
-                logger.info(f"[SETUP] User {account_id} already has subscription, proceeding with agent install")
-            else:
-                logger.error(f"[SETUP] Failed to create free tier for {account_id}: {error_msg}")
-                return {
-                    'success': False,
-                    'message': f"Failed to initialize free tier: {error_msg}",
-                    'error': error_msg
-                }
+        #if not result.get('success'):
+            #error_msg = result.get('error') or result.get('message', 'Unknown error')
+            #if 'Already subscribed' in error_msg or 'already' in error_msg.lower():
+                #logger.info(f"[SETUP] User {account_id} already has subscription, proceeding with agent install")
+            #else:
+                #logger.error(f"[SETUP] Failed to create free tier for {account_id}: {error_msg}")
+                #return {
+                    #'success': False,
+                    #'message': f"Failed to initialize free tier: {error_msg}",
+                    #'error': error_msg
+                #}
         
         # Install Suna agent
         logger.info(f"[SETUP] Installing Suna agent for {account_id}")
@@ -100,7 +99,7 @@ async def initialize_user_account(account_id: str, email: Optional[str] = None) 
         return {
             'success': True,
             'message': 'Account initialized successfully',
-            'subscription_id': result.get('subscription_id'),
+            #'subscription_id': result.get('subscription_id'),
             'agent_id': agent_id
         }
         

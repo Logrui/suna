@@ -16,6 +16,7 @@ import { agentKeys } from '@/hooks/agents/keys';
 import { composioKeys } from '@/hooks/composio/keys';
 import { knowledgeBaseKeys } from '@/hooks/knowledge-base/keys';
 import { fileQueryKeys } from '@/hooks/files/use-file-queries';
+import { useContextUsageStore } from '@/stores/context-usage-store';
 
 // Define the structure returned by the hook
 export interface UseAgentStreamResult {
@@ -46,6 +47,7 @@ export function useAgentStream(
   agentId?: string,
 ): UseAgentStreamResult {
   const queryClient = useQueryClient();
+  const setContextUsage = useContextUsageStore((state) => state.setUsage);
 
   const [status, setStatus] = useState<string>('idle');
   const [textContent, setTextContent] = useState<
@@ -466,8 +468,15 @@ export function useAgentStream(
           }
           break;
         case 'llm_response_end':
+          // Extract context usage from llm_response_end
+          if (parsedContent.usage?.total_tokens && threadIdRef.current) {
+            setContextUsage(threadIdRef.current, {
+              current_tokens: parsedContent.usage.total_tokens
+            });
+          }
+          break;
         case 'llm_response_start':
-          // llm_response_end and llm_response_start messages are ignored (metadata only)
+          // llm_response_start messages are ignored (metadata only)
           break;
         case 'user':
         case 'system':
@@ -489,6 +498,7 @@ export function useAgentStream(
       updateStatus,
       addContentThrottled,
       flushPendingContent,
+      setContextUsage,
     ],
   );
 

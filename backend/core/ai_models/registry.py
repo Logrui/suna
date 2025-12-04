@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 from .excluded_models import is_model_excluded
 
 # SHOULD_USE_ANTHROPIC = False
-# CRITICAL: Production and Staging must ALWAYS use Vertex AI, never Anthropic API directly, with fallbacks to dev Vertex Studio and AI Studio
 SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
 
 # Set premium model ID based on environment - using MAP-tagged application inference profiles with global routing
@@ -31,7 +30,7 @@ class ModelRegistry:
     
     def _initialize_models(self):
 
-        # --- Vertex AI Models (Google & Anthropic) ---
+        # --- Vertex AI Models (Google & Anthropic & Others) ---
         # Note: All models below use Vertex AI as the provider
         
         # Gemini 3 Pro Preview
