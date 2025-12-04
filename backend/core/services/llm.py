@@ -306,6 +306,59 @@ async def make_llm_api_call(
     _configure_openai_compatible(params, model_name, api_key, api_base)
     _add_tools_config(params, tools, tool_choice)
     
+    # Global Label Suffix Filtering
+    # Strip internal context window tags/suffixes (e.g., -max, :max) from ALL models
+    # This ensures internal UI/logic tags don't break provider API calls
+    original_resolved_name = resolved_model_name
+    
+    # Handle :max suffix and anything following it (e.g., :max;tag)
+    if ":max" in resolved_model_name:
+        resolved_model_name = resolved_model_name.split(":max")[0]
+        
+    # Handle -max suffix (only at the end)
+    if resolved_model_name.endswith("-max"):
+        resolved_model_name = resolved_model_name[:-4]
+        
+    if original_resolved_name != resolved_model_name:
+        logger.debug(f"Stripped suffixes: {original_resolved_name} -> {resolved_model_name}")
+
+    # Inject num_ctx for Ollama models
+    if resolved_model_name.startswith("ollama/"):
+        context_window = model_manager.get_context_window(resolved_model_name)
+        
+        if "extra_body" not in params:
+            params["extra_body"] = {}
+        
+        # Ensure options dict exists
+        if "options" not in params["extra_body"]:
+            params["extra_body"]["options"] = {}
+            
+        # Set num_ctx if not already present
+        if "num_ctx" not in params["extra_body"]["options"]:
+            params["extra_body"]["options"]["num_ctx"] = context_window
+            logger.debug(f"Injected num_ctx={context_window} for Ollama model {resolved_model_name}")
+
+    # Handle LM Studio models
+    if resolved_model_name.startswith("lm_studio:") or resolved_model_name.startswith("lm_studio/"):
+        # Strip prefix to get actual model name
+        actual_model_name = resolved_model_name.split(":", 1)[-1] if ":" in resolved_model_name else resolved_model_name.split("/", 1)[-1]
+        
+        # Force OpenAI provider for LiteLLM
+        params["model"] = f"openai/{actual_model_name}"
+        
+        # Set API Base if not provided
+        if not api_base and config.LM_STUDIO_API_BASE:
+            base = config.LM_STUDIO_API_BASE.rstrip('/')
+            if not base.endswith("/v1"):
+                base += "/v1"
+            params["api_base"] = base
+            
+        # Set dummy API Key if not provided
+        if "api_key" not in params or not params["api_key"]:
+            params["api_key"] = "lm-studio"
+            
+        logger.debug(f"Configured LM Studio call: {params['model']} at {params.get('api_base')}")
+    
     try:
         # Log the complete parameters being sent to LiteLLM
         # logger.debug(f"Calling LiteLLM acompletion for {resolved_model_name}")
