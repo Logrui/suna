@@ -11,6 +11,8 @@ from .tools_api import router as tools_api_router
 from .vapi_api import router as vapi_router
 from .account_deletion import router as account_deletion_router
 from .notifications_api import router as notifications_router
+from .notifications.api import router as novu_notifications_router
+from .notifications.presence_api import router as presence_router
 from .feedback import router as feedback_router
 
 router = APIRouter()
@@ -27,6 +29,8 @@ router.include_router(tools_api_router)
 router.include_router(vapi_router)
 router.include_router(account_deletion_router)
 router.include_router(notifications_router)
+router.include_router(novu_notifications_router)
+router.include_router(presence_router)
 router.include_router(feedback_router)
 
 # Re-export the initialize and cleanup functions
