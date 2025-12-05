@@ -126,7 +126,8 @@ class Model:
         # litellm expects format like "lm_studio/model-name" or "ollama/model-name"
         # Our internal format uses "lm_studio:model-name" or "ollama:model-name" 
         # Convert the delimiter from colon to slash for litellm
-        if ":" in model_id:
+        # BUT skip this for Bedrock models which use ARNs containing colons
+        if ":" in model_id and not model_id.startswith("bedrock/"):
             model_id = model_id.replace(":", "/")
         
         # Start with intelligent defaults

@@ -197,6 +197,14 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
                 fallbacks.append({
                     model_id: model.fallback_models
                 })
+                
+                # Also add slash-replaced version for robustness (in case colons get replaced by LiteLLM or elsewhere)
+                if ":" in model_id:
+                    slash_id = model_id.replace(":", "/")
+                    if slash_id != model_id:
+                        fallbacks.append({
+                            slash_id: model.fallback_models
+                        })
                 # logger.debug(f"Added fallback for {model_id}: {model.fallback_models}")
     except Exception as e:
         logger.warning(f"Failed to load fallbacks from registry: {e}")

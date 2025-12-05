@@ -30,7 +30,7 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
-          <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-amber-50 dark:bg-amber-950/30 flex flex-col items-center justify-center'>
+          <div className='relative w-full aspect-[16/10] overflow-hidden bg-amber-50 dark:bg-amber-950/30 flex flex-col items-center justify-center'>
             <Loader2 className="h-8 w-8 animate-spin text-amber-600 mb-3" />
             <p className="text-sm font-medium text-center mb-2">Connecting to browser...</p>
             <p className="text-xs text-muted-foreground mb-2 text-center">
@@ -52,7 +52,7 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
-          <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-destructive/10 flex flex-col items-center justify-center'>
+          <div className='relative w-full aspect-[16/10] overflow-hidden bg-destructive/10 flex flex-col items-center justify-center'>
             <AlertCircle className="h-8 w-8 text-destructive mb-3" />
             <p className="text-sm font-medium text-center mb-2">Connection Failed</p>
             <p className="text-xs text-muted-foreground mb-4 text-center">
@@ -76,7 +76,7 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
-          <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-gray-100 dark:bg-gray-800'>
+          <div className='relative w-full aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800'>
             <iframe
               key={iframeKey}
               src={(() => {
@@ -95,7 +95,7 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
                 return vncUrl;
               })()}
               title="Browser preview"
-              className="absolute inset-0 w-full h-full border-0 md:w-[102%] md:h-[130%] md:-translate-y-[4.4rem] lg:-translate-y-[4.7rem] xl:-translate-y-[5.4rem] md:left-0 md:-translate-x-2"
+              className="absolute inset-0 w-full h-full border-0"
             />
           </div>
         </Card>
