@@ -19,7 +19,7 @@ class AWSModelRegistry:
         # Claude Haiku 4.5
         self.register(Model(
             id="bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
-            name="Haiku 4.5",
+            name="Claude Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-haiku-4.5", "anthropic/claude-haiku-4.5", "anthropic/claude-haiku-4-5", "Claude Haiku 4.5", "anthropic/claude-haiku-4-5-20251001", "global.anthropic.claude-haiku-4-5-20251001-v1:0", "bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48"],
             context_window=200_000,
@@ -37,13 +37,14 @@ class AWSModelRegistry:
             priority=102,
             recommended=True,
             enabled=True,
+            fallback_models=["vertex_ai/gemini-2.5-flash"],
             config=ModelConfig()
         ))
         
         # Claude Sonnet 4.5
         self.register(Model(
             id="bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh",
-            name="Sonnet 4.5",
+            name="Claude Sonnet 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4.5", "anthropic/claude-sonnet-4.5", "anthropic/claude-sonnet-4-5", "anthropic/claude-sonnet-4-5-20250929", "Claude Sonnet 4.5", "claude-sonnet-4-5-20250929", "global.anthropic.claude-sonnet-4-5-20250929-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/few7z4l830xh"],
             context_window=1_000_000,
@@ -58,9 +59,10 @@ class AWSModelRegistry:
                 output_cost_per_million_tokens=15.00 * pricing_multiplier
             ),
             tier_availability=["paid"],
-            priority=101,
+            priority=96,
             recommended=True,
             enabled=True,
+            fallback_models=["vertex_ai/gemini-2.5-pro"],
             config=ModelConfig(
                 extra_headers={
                     "anthropic-beta": "context-1m-2025-08-07" 
@@ -71,7 +73,7 @@ class AWSModelRegistry:
         # Claude Sonnet 4
         self.register(Model(
             id="bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-            name="Sonnet 4",
+            name="Claude Sonnet 4",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4", "anthropic/claude-sonnet-4", "anthropic/claude-sonnet-4-20250514", "Claude Sonnet 4", "claude-sonnet-4-20250514", "global.anthropic.claude-sonnet-4-20250514-v1:0", "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-20250514-v1:0", "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf"],
             context_window=1_000_000,
@@ -86,9 +88,10 @@ class AWSModelRegistry:
                 output_cost_per_million_tokens=15.00 * pricing_multiplier
             ),
             tier_availability=["paid"],
-            priority=100,
+            priority=95,
             recommended=True,
             enabled=True,
+            fallback_models=["vertex_ai/gemini-2.5-pro"],
             config=ModelConfig(
                 extra_headers={
                     "anthropic-beta": "context-1m-2025-08-07" 

@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 
 from .excluded_models import is_model_excluded
 
-
 FREE_MODEL_ID = "vertex_ai/gemini-2.5-flash"
 PREMIUM_MODEL_ID = "vertex_ai/gemini-2.5-pro"
 
@@ -812,7 +811,7 @@ class ModelRegistry:
                             api_base=config.OLLAMA_API_BASE,
                         ),
                         fallback_models=[
-                            "vertex_ai/claude-haiku-4-5@20251001" if SHOULD_USE_ANTHROPIC else "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash",
+                            "vertex_ai/gemini-2.5-flash",
                         ]
                     ))
                     
