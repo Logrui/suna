@@ -1,6 +1,6 @@
 ﻿<div align="center">
 
-# SYHC Self Hosted Build - Kortix – Open Source Platform to Build, Manage and Train AI Agents
+# Self Hosted Build - Kortix – Open Source Platform to Build, Manage and Train AI Agents
 
 ![Kortix Screenshot](frontend/public/banner.png)
 
@@ -44,14 +44,6 @@
 ## **Setup Instructions for Self Hosted: (Recommended only for Experienced Devs/Homelab Users)**
 
 **Note:** Self-hosting Kortix AI can be a bit of a process that requires a good understanding of Docker, Cloudflare Tunnels, and Supabase. If you are not comfortable with these technologies, it is recommended to use the cloud-hosted version of Kortix AI. After going through the setup process personally, I highly recommend using the cloud-hosted version of Kortix AI - its a really good deal compared to Manus. Self hosting w/ Cloudflare has a base cost of $10/mo minimum - Tunnel is free but you need TLS Total
-
-**Is Self Hosting Worth It?**
--Pro: Long term reduced costs - pay API costs for LLM providers
--Pro: Enables custom features and workflows and early access to more 'advanced' features
--Pro: Enables access to local running LLMs via Ollama, LMStudio, and more
--Pro: Customize to your liking and incorporate your own integrations as needed
--Con: Self-hosting requires a good understanding of Docker, Cloudflare Tunnels, and Supabase
--Con: Maintenance and keeping up to date with main can be a bit of a process
 
 **Git Clone + Docker Compose: (Recommended)**
 -Clone the repository to your local machine
