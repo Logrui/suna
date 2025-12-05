@@ -42,8 +42,13 @@ fallback_context: ContextVar[dict] = ContextVar('fallback_context', default={})
 def on_litellm_failure(kwargs, completion_response, start_time, end_time):
     """Callback when a model call fails (before fallback attempt)."""
     model = kwargs.get('model', 'unknown')
-    error_obj = getattr(completion_response, 'error', None)
-    error_msg = str(error_obj) if error_obj else 'Unknown error'
+    
+    # Check if completion_response is an Exception or has an error attribute
+    if isinstance(completion_response, Exception):
+        error_msg = str(completion_response)
+    else:
+        error_obj = getattr(completion_response, 'error', None)
+        error_msg = str(error_obj) if error_obj else 'Unknown error'
     
     # Extract user-friendly error reason
     error_lower = error_msg.lower()

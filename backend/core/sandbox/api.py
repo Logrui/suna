@@ -1,9 +1,11 @@
 import os
+import asyncio
 import urllib.parse
 import uuid
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request, WebSocket
+import aiohttp
 from fastapi.responses import Response
 from pydantic import BaseModel
 from daytona_sdk import AsyncSandbox
@@ -734,3 +736,129 @@ async def proxy_daytona_preview(
         logger.error(f"Error proxying to Daytona: {e}")
         raise HTTPException(status_code=502, detail=f"Failed to proxy request: {str(e)}")
 
+
+@router.websocket("/sandboxes/{sandbox_id}/proxy/{port}/{path:path}")
+async def proxy_daytona_websocket(
+    websocket: WebSocket,
+    sandbox_id: str,
+    port: int,
+    path: str
+):
+    """
+    Proxy WebSocket connections to the Daytona preview URL.
+    """
+    await websocket.accept()
+    
+    try:
+        # Extract token and verify access
+        token = websocket.query_params.get("token")
+        
+        # Fallback to headers (Authorization: Bearer <token>)
+        if not token:
+            auth_header = websocket.headers.get("Authorization") or websocket.headers.get("authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+                
+        # Fallback to cookies
+        if not token:
+            token = websocket.cookies.get("suna-auth-token")
+            
+        user_id = None
+        
+        if token:
+            try:
+                from core.utils.auth_utils import _decode_jwt_safely
+                payload = _decode_jwt_safely(token)
+                user_id = payload.get('sub')
+            except Exception as e:
+                logger.warning(f"Failed to decode token for WebSocket: {e}")
+        
+        client = await db.client
+        # Verify access (optional but recommended)
+        # We need to handle the case where verify_sandbox_access_optional raises HTTPException
+        try:
+            await verify_sandbox_access_optional(client, sandbox_id, user_id)
+        except HTTPException as e:
+            logger.error(f"WebSocket access denied: {e.detail}")
+            await websocket.close(code=1008, reason=str(e.detail))
+            return
+            
+        # Get the sandbox to retrieve the correct preview URL dynamically
+        sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
+        
+        # Get the authoritative preview URL from Daytona
+        preview_link_obj = await sandbox.get_preview_link(port)
+        base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
+        
+        # Convert http/https to ws/wss
+        if base_target_url.startswith("https://"):
+            base_target_url = base_target_url.replace("https://", "wss://")
+        elif base_target_url.startswith("http://"):
+            base_target_url = base_target_url.replace("http://", "ws://")
+            
+        # Strip trailing slash from base if present
+        base_target_url = base_target_url.rstrip('/')
+        
+        # Construct full target URL
+        if path and not path.startswith('/'):
+            path = f"/{path}"
+            
+        target_url = f"{base_target_url}{path}"
+        
+        # Forward query params
+        if websocket.query_params:
+            query_string = str(websocket.query_params)
+            target_url += f"?{query_string}"
+            
+        logger.debug(f"Proxying WebSocket to: {target_url}")
+        
+        # Connect to upstream
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                target_url,
+                headers={'X-Daytona-Skip-Preview-Warning': 'true'},
+                ssl=False # Disable SSL verify for upstream if needed
+            ) as upstream_ws:
+                
+                # Create tasks for bidirectional forwarding
+                async def forward_client_to_upstream():
+                    try:
+                        while True:
+                            data = await websocket.receive_bytes()
+                            await upstream_ws.send_bytes(data)
+                    except Exception as e:
+                        logger.debug(f"Client to Upstream connection closed: {e}")
+                        
+                async def forward_upstream_to_client():
+                    try:
+                        async for msg in upstream_ws:
+                            if msg.type == aiohttp.WSMsgType.BINARY:
+                                await websocket.send_bytes(msg.data)
+                            elif msg.type == aiohttp.WSMsgType.TEXT:
+                                await websocket.send_text(msg.data)
+                            elif msg.type == aiohttp.WSMsgType.CLOSED:
+                                break
+                            elif msg.type == aiohttp.WSMsgType.ERROR:
+                                break
+                    except Exception as e:
+                        logger.debug(f"Upstream to Client connection closed: {e}")
+
+                # Run both tasks
+                done, pending = await asyncio.wait(
+                    [
+                        asyncio.create_task(forward_client_to_upstream()),
+                        asyncio.create_task(forward_upstream_to_client())
+                    ],
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                # Cancel pending tasks
+                for task in pending:
+                    task.cancel()
+                    
+    except Exception as e:
+        logger.error(f"WebSocket proxy error: {e}")
+        try:
+            await websocket.close(code=1011)
+        except:
+            pass

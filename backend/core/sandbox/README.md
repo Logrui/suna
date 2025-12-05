@@ -18,9 +18,9 @@ You can modify the sandbox environment for development or to add new capabilitie
 1. Edit files in the `docker/` directory
 2. Build a custom image:
    ```
-   cd backend/sandbox/docker
+   cd backend/core/sandbox/docker
    docker compose build
-   docker push kortix/suna:0.1.3.25
+   docker push notlogrui/suna:0.1.3.25
    ```
 3. Test your changes locally using docker-compose
 
