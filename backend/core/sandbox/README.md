@@ -20,7 +20,7 @@ You can modify the sandbox environment for development or to add new capabilitie
    ```
    cd backend/core/sandbox/docker
    docker compose build
-   docker push notlogrui/suna:0.1.3.25
+   docker push notlogrui/suna:0.1.3.25.1
    ```
 3. Test your changes locally using docker-compose
 
@@ -30,7 +30,7 @@ To use your custom sandbox snapshot:
 
 1. Change the `image` parameter in `docker-compose.yml` (that defines the image name `kortix/suna:___`)
 2. Build and create a snapshot in Daytona with the same name
-3. Update the snapshot name in `backend/sandbox/sandbox.py` in the `create_sandbox` function
+3. Update the snapshot name in `backend/core/sandbox/sandbox.py` in the `create_sandbox` function
 4. If using Daytona for deployment, update the snapshot reference there as well
 
 ## Publishing New Versions
@@ -42,6 +42,6 @@ When publishing a new version of the sandbox:
 3. Push the new version: `docker push kortix/suna:0.1.3`
 4. Create a new snapshot in Daytona with the same name
 5. Update all references to the snapshot version in:
-   - `backend/utils/config.py`
+   - `backend/core/utils/config.py`
    - Daytona snapshots
    - Any other services using this snapshot

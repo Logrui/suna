@@ -131,10 +131,20 @@ ENV NODE_OPTIONS=--max-old-space-size=2048
 # Add Chrome flags to prevent multiple tabs/windows
 ENV CHROME_FLAGS="--single-process --no-first-run --no-default-browser-check --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-breakpad --disable-component-extensions-with-background-pages --disable-dev-shm-usage --disable-extensions --disable-features=TranslateUI --disable-ipc-flooding-protection --disable-renderer-backgrounding --enable-features=NetworkServiceInProcess2 --force-color-profile=srgb --metrics-recording-only --mute-audio --no-sandbox --disable-gpu"
 
-# Set up supervisor configuration
+# Set up# Copy browser API
+COPY browserApi.ts package.json tsconfig.json ./
+RUN npm install
+
+# Copy startup scripts
 RUN mkdir -p /var/log/supervisor
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY start_chrome.sh /app/start_chrome.sh
+RUN chmod +x /app/start_chrome.sh
 
-EXPOSE 7788 6080 5901 8000 8004 8080 5173 4173
+# Expose ports
+# 5901: VNC
+# 6080: noVNC
+# 8004: Browser API
+EXPOSE 5901 6080 8004 8080 5173 4173
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
