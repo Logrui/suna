@@ -3,10 +3,11 @@ import urllib.parse
 import uuid
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from pydantic import BaseModel
 from daytona_sdk import AsyncSandbox
+import asyncio
 
 from core.sandbox.sandbox import get_or_start_sandbox, delete_sandbox, create_sandbox
 from core.utils.logger import logger
@@ -632,4 +633,120 @@ async def proxy_daytona_preview(
     except Exception as e:
         logger.error(f"Error proxying to Daytona: {e}")
         raise HTTPException(status_code=502, detail=f"Failed to proxy request: {str(e)}")
+
+
+@router.websocket("/sandboxes/{sandbox_id}/proxy/{port}/websockify")
+async def proxy_daytona_websocket(
+    websocket: WebSocket,
+    sandbox_id: str,
+    port: int
+):
+    """
+    WebSocket proxy for VNC/noVNC connections to Daytona sandbox.
+
+    This endpoint handles bidirectional WebSocket communication required for VNC streaming.
+    It relays data between the frontend client and the Daytona VNC server.
+    """
+    await websocket.accept()
+    logger.debug(f"WebSocket connection accepted for sandbox={sandbox_id} port={port}")
+
+    upstream_ws = None
+
+    try:
+        # Get sandbox and retrieve the preview URL
+        client = await db.client
+        sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
+
+        # Get the authoritative preview URL from Daytona
+        preview_link_obj = await sandbox.get_preview_link(port)
+        base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
+
+        # Convert HTTP(S) URL to WebSocket URL
+        ws_url = base_target_url.replace('https://', 'wss://').replace('http://', 'ws://')
+
+        # Add websockify path if not already present
+        if not ws_url.endswith('/websockify'):
+            ws_url = ws_url.rstrip('/') + '/websockify'
+
+        logger.info(f"Connecting to upstream VNC WebSocket: {ws_url}")
+
+        # Connect to upstream Daytona WebSocket
+        import websockets
+
+        # Build headers including the skip warning header
+        extra_headers = {
+            'X-Daytona-Skip-Preview-Warning': 'true'
+        }
+
+        # Connect to Daytona VNC server with SSL verification disabled (self-signed certs)
+        upstream_ws = await websockets.connect(
+            ws_url,
+            extra_headers=extra_headers,
+            ssl=None,  # Disable SSL verification for development
+            ping_interval=20,
+            ping_timeout=10
+        )
+
+        logger.info(f"Successfully connected to upstream VNC WebSocket for sandbox {sandbox_id}")
+
+        # Create bidirectional relay tasks
+        async def relay_client_to_upstream():
+            """Relay messages from client (frontend) to upstream (Daytona)"""
+            try:
+                while True:
+                    # Receive from client
+                    data = await websocket.receive()
+
+                    if 'text' in data:
+                        await upstream_ws.send(data['text'])
+                    elif 'bytes' in data:
+                        await upstream_ws.send(data['bytes'])
+                    else:
+                        logger.warning(f"Received unknown data type from client: {data}")
+            except WebSocketDisconnect:
+                logger.debug("Client WebSocket disconnected")
+            except Exception as e:
+                logger.error(f"Error relaying client to upstream: {e}")
+            finally:
+                # Close upstream connection when client disconnects
+                if upstream_ws and not upstream_ws.closed:
+                    await upstream_ws.close()
+
+        async def relay_upstream_to_client():
+            """Relay messages from upstream (Daytona) to client (frontend)"""
+            try:
+                async for message in upstream_ws:
+                    if isinstance(message, bytes):
+                        await websocket.send_bytes(message)
+                    else:
+                        await websocket.send_text(message)
+            except websockets.exceptions.ConnectionClosed:
+                logger.debug("Upstream WebSocket disconnected")
+            except Exception as e:
+                logger.error(f"Error relaying upstream to client: {e}")
+            finally:
+                # Close client connection when upstream disconnects
+                await websocket.close()
+
+        # Run both relay tasks concurrently
+        await asyncio.gather(
+            relay_client_to_upstream(),
+            relay_upstream_to_client(),
+            return_exceptions=True
+        )
+
+    except websockets.exceptions.WebSocketException as e:
+        logger.error(f"WebSocket error connecting to Daytona: {e}")
+        await websocket.close(code=1011, reason=f"Failed to connect to VNC server: {str(e)}")
+    except HTTPException as e:
+        logger.error(f"HTTP error in WebSocket proxy: {e}")
+        await websocket.close(code=1008, reason=str(e.detail))
+    except Exception as e:
+        logger.error(f"Unexpected error in WebSocket proxy: {e}", exc_info=True)
+        await websocket.close(code=1011, reason=f"Internal error: {str(e)}")
+    finally:
+        # Cleanup
+        if upstream_ws and not upstream_ws.closed:
+            await upstream_ws.close()
+        logger.debug(f"WebSocket proxy closed for sandbox {sandbox_id}")
 
