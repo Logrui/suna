@@ -63,6 +63,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
+  const debugMode = searchParams.get('debug') === 'true';
   const queryClient = useQueryClient();
 
   const { user } = useAuth();
@@ -883,7 +884,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         isMobile={isMobile}
         initialLoadCompleted={initialLoadCompleted}
         agentName={agent && agent.name}
-        debugMode={false}
+        debugMode={debugMode}
       >
         <ThreadError error={error} />
       </ThreadLayout>
@@ -924,7 +925,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           compact={true}
           streamingTextContent={isShared ? '' : streamingTextContent}
           streamingToolCall={isShared ? undefined : streamingToolCall}
-          debugMode={false}
+          debugMode={debugMode}
         >
           {/* Thread Content - Scrollable */}
           <div
@@ -1091,7 +1092,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         leftSidebarState={leftSidebarState}
         streamingTextContent={isShared ? '' : streamingTextContent}
         streamingToolCall={isShared ? undefined : streamingToolCall}
-        debugMode={false}
+        debugMode={debugMode}
       >
         <ThreadContent
           messages={isShared ? playback.playbackState.visibleMessages : messages}
