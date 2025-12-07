@@ -651,23 +651,29 @@ async def proxy_daytona_websocket(
 
     Security: Verifies user has access to the sandbox before accepting the connection.
     """
+    logger.info(f"[VNC WebSocket] New connection request for sandbox={sandbox_id} port={port} user={user_id}")
     upstream_ws = None
 
     try:
         # Verify access BEFORE accepting the WebSocket connection
         client = await db.client
+        logger.debug(f"[VNC WebSocket] Verifying access for sandbox={sandbox_id} user={user_id}")
         await verify_sandbox_access_optional(client, sandbox_id, user_id)
+        logger.info(f"[VNC WebSocket] Access granted for sandbox={sandbox_id} user={user_id}")
 
         # Accept WebSocket connection after authorization
         await websocket.accept()
-        logger.debug(f"WebSocket connection accepted for sandbox={sandbox_id} port={port} user={user_id}")
+        logger.info(f"[VNC WebSocket] Connection accepted for sandbox={sandbox_id} port={port}")
 
         # Get sandbox and retrieve the preview URL
+        logger.debug(f"[VNC WebSocket] Retrieving sandbox object for sandbox_id={sandbox_id}")
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
 
         # Get the authoritative preview URL from Daytona
+        logger.debug(f"[VNC WebSocket] Getting preview link for port={port}")
         preview_link_obj = await sandbox.get_preview_link(port)
         base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
+        logger.info(f"[VNC WebSocket] Got Daytona preview URL: {base_target_url}")
 
         # Convert HTTP(S) URL to WebSocket URL (handle protocol prefix properly)
         if base_target_url.startswith('https://'):
@@ -681,7 +687,7 @@ async def proxy_daytona_websocket(
         if not ws_url.endswith('/websockify'):
             ws_url = ws_url.rstrip('/') + '/websockify'
 
-        logger.info(f"Connecting to upstream VNC WebSocket: {ws_url}")
+        logger.info(f"[VNC WebSocket] Connecting to upstream VNC WebSocket: {ws_url}")
 
         # Build headers including the skip warning header
         extra_headers = {
@@ -689,40 +695,56 @@ async def proxy_daytona_websocket(
         }
 
         # Connect to Daytona VNC server with SSL verification disabled (self-signed certs)
-        upstream_ws = await websockets.connect(
-            ws_url,
-            extra_headers=extra_headers,
-            ssl=None,  # Disable SSL verification for development
-            ping_interval=20,
-            ping_timeout=10
-        )
-
-        logger.info(f"Successfully connected to upstream VNC WebSocket for sandbox {sandbox_id}")
+        try:
+            upstream_ws = await websockets.connect(
+                ws_url,
+                extra_headers=extra_headers,
+                ssl=None,  # Disable SSL verification for development
+                ping_interval=20,
+                ping_timeout=10
+            )
+            logger.info(f"[VNC WebSocket] ✅ Successfully connected to upstream VNC for sandbox {sandbox_id}")
+        except Exception as conn_error:
+            logger.error(f"[VNC WebSocket] ❌ Failed to connect to upstream: {conn_error}", exc_info=True)
+            raise
 
         # Flags to track connection state and prevent double-close
         client_closed = False
         upstream_closed = False
+        bytes_relayed_to_upstream = 0
+        bytes_relayed_to_client = 0
+        messages_to_upstream = 0
+        messages_to_client = 0
 
         # Create bidirectional relay tasks
         async def relay_client_to_upstream():
             """Relay messages from client (frontend) to upstream (Daytona)"""
-            nonlocal client_closed, upstream_closed
+            nonlocal client_closed, upstream_closed, bytes_relayed_to_upstream, messages_to_upstream
             try:
+                logger.debug(f"[VNC WebSocket] Starting client→upstream relay")
                 while True:
                     # Receive from client
                     data = await websocket.receive()
 
                     if 'text' in data:
+                        msg_size = len(data['text'])
                         await upstream_ws.send(data['text'])
+                        bytes_relayed_to_upstream += msg_size
+                        messages_to_upstream += 1
+                        logger.debug(f"[VNC WebSocket] Relayed text message to upstream: {msg_size} bytes (total: {messages_to_upstream} msgs, {bytes_relayed_to_upstream} bytes)")
                     elif 'bytes' in data:
+                        msg_size = len(data['bytes'])
                         await upstream_ws.send(data['bytes'])
+                        bytes_relayed_to_upstream += msg_size
+                        messages_to_upstream += 1
+                        logger.debug(f"[VNC WebSocket] Relayed binary message to upstream: {msg_size} bytes (total: {messages_to_upstream} msgs, {bytes_relayed_to_upstream} bytes)")
                     else:
-                        logger.warning(f"Received unknown data type from client: {data}")
+                        logger.warning(f"[VNC WebSocket] Received unknown data type from client: {data}")
             except WebSocketDisconnect:
-                logger.debug("Client WebSocket disconnected")
+                logger.info(f"[VNC WebSocket] Client disconnected (sandbox={sandbox_id})")
                 client_closed = True
             except Exception as e:
-                logger.error(f"Error relaying client to upstream: {e}")
+                logger.error(f"[VNC WebSocket] Error relaying client to upstream: {e}", exc_info=True)
                 client_closed = True
             finally:
                 # Close upstream connection when client disconnects
@@ -730,23 +752,33 @@ async def proxy_daytona_websocket(
                     upstream_closed = True
                     try:
                         await upstream_ws.close()
-                    except Exception:
-                        pass  # Already closed or error during close
+                        logger.debug(f"[VNC WebSocket] Closed upstream connection from client relay")
+                    except Exception as e:
+                        logger.debug(f"[VNC WebSocket] Error closing upstream: {e}")
 
         async def relay_upstream_to_client():
             """Relay messages from upstream (Daytona) to client (frontend)"""
-            nonlocal client_closed, upstream_closed
+            nonlocal client_closed, upstream_closed, bytes_relayed_to_client, messages_to_client
             try:
+                logger.debug(f"[VNC WebSocket] Starting upstream→client relay")
                 async for message in upstream_ws:
                     if isinstance(message, bytes):
+                        msg_size = len(message)
                         await websocket.send_bytes(message)
+                        bytes_relayed_to_client += msg_size
+                        messages_to_client += 1
+                        logger.debug(f"[VNC WebSocket] Relayed binary message to client: {msg_size} bytes (total: {messages_to_client} msgs, {bytes_relayed_to_client} bytes)")
                     else:
+                        msg_size = len(message)
                         await websocket.send_text(message)
-            except websockets.exceptions.ConnectionClosed:
-                logger.debug("Upstream WebSocket disconnected")
+                        bytes_relayed_to_client += msg_size
+                        messages_to_client += 1
+                        logger.debug(f"[VNC WebSocket] Relayed text message to client: {msg_size} bytes (total: {messages_to_client} msgs, {bytes_relayed_to_client} bytes)")
+            except websockets.exceptions.ConnectionClosed as e:
+                logger.info(f"[VNC WebSocket] Upstream disconnected: code={e.code} reason={e.reason}")
                 upstream_closed = True
             except Exception as e:
-                logger.error(f"Error relaying upstream to client: {e}")
+                logger.error(f"[VNC WebSocket] Error relaying upstream to client: {e}", exc_info=True)
                 upstream_closed = True
             finally:
                 # Close client connection when upstream disconnects
@@ -754,31 +786,37 @@ async def proxy_daytona_websocket(
                     client_closed = True
                     try:
                         await websocket.close()
-                    except Exception:
-                        pass  # Already closed or error during close
+                        logger.debug(f"[VNC WebSocket] Closed client connection from upstream relay")
+                    except Exception as e:
+                        logger.debug(f"[VNC WebSocket] Error closing client: {e}")
 
         # Run both relay tasks concurrently
+        logger.info(f"[VNC WebSocket] Starting bidirectional relay for sandbox={sandbox_id}")
         await asyncio.gather(
             relay_client_to_upstream(),
             relay_upstream_to_client(),
             return_exceptions=True
         )
 
+        logger.info(f"[VNC WebSocket] Session complete for sandbox={sandbox_id}: "
+                   f"{messages_to_upstream} msgs ({bytes_relayed_to_upstream} bytes) to upstream, "
+                   f"{messages_to_client} msgs ({bytes_relayed_to_client} bytes) to client")
+
     except HTTPException as e:
         # Auth/access errors - don't accept connection
-        logger.error(f"HTTP error in WebSocket proxy: {e}")
+        logger.error(f"[VNC WebSocket] HTTP error (auth/access): {e.status_code} - {e.detail}")
         try:
             await websocket.close(code=1008, reason=str(e.detail))
         except Exception:
             pass  # Connection may not be accepted yet
     except websockets.exceptions.WebSocketException as e:
-        logger.error(f"WebSocket error connecting to Daytona: {e}")
+        logger.error(f"[VNC WebSocket] WebSocket error: {type(e).__name__} - {str(e)}", exc_info=True)
         try:
             await websocket.close(code=1011, reason=f"Failed to connect to VNC server: {str(e)}")
         except Exception:
             pass  # Already closed
     except Exception as e:
-        logger.error(f"Unexpected error in WebSocket proxy: {e}", exc_info=True)
+        logger.error(f"[VNC WebSocket] Unexpected error: {type(e).__name__} - {str(e)}", exc_info=True)
         try:
             await websocket.close(code=1011, reason=f"Internal error: {str(e)}")
         except Exception:
@@ -788,7 +826,9 @@ async def proxy_daytona_websocket(
         if upstream_ws and not upstream_ws.closed:
             try:
                 await upstream_ws.close()
+                logger.debug(f"[VNC WebSocket] Final cleanup: closed upstream connection")
             except Exception:
                 pass
-        logger.debug(f"WebSocket proxy closed for sandbox {sandbox_id}")
+        logger.info(f"[VNC WebSocket] Connection closed for sandbox={sandbox_id}")
+
 

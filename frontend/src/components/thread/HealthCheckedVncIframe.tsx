@@ -80,20 +80,38 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
             <iframe
               key={iframeKey}
               src={(() => {
-                // Construct the VNC URL with path parameter for WebSocket endpoint
-                // noVNC will connect to the websockify endpoint at the specified path
-                let vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local&path=websockify`;
+                // Construct the VNC URL with FULL path to WebSocket endpoint
+                // noVNC 'path' parameter is relative to site root, not current page
+                // Extract the full path from vnc_preview URL
+
+                // sandbox.vnc_preview format: {base_url}/api/sandboxes/{id}/proxy/6080/
+                // We need to construct: path=/api/sandboxes/{id}/proxy/6080/websockify
+
+                const vncPreviewUrl = new URL(sandbox.vnc_preview, window.location.origin);
+                const websocketPath = vncPreviewUrl.pathname.replace(/\/$/, '') + '/websockify';
+
+                console.log('[VNC Debug] Constructing VNC connection:', {
+                  vnc_preview: sandbox.vnc_preview,
+                  extracted_path: vncPreviewUrl.pathname,
+                  websocket_path: websocketPath,
+                  sandbox_id: sandbox.id
+                });
+
+                let vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local&path=${encodeURIComponent(websocketPath)}`;
 
                 // Fix mixed content issues: if page is HTTPS but VNC URL is HTTP, upgrade it
                 if (typeof window !== 'undefined' && window.location.protocol === 'https:' && vncUrl.startsWith('http:')) {
                   vncUrl = vncUrl.replace('http:', 'https:');
+                  console.log('[VNC Debug] Upgraded HTTP to HTTPS');
                 }
 
                 // Append auth token if available (for private projects)
                 if (accessToken) {
                   vncUrl = `${vncUrl}&token=${accessToken}`;
+                  console.log('[VNC Debug] Added auth token to VNC URL');
                 }
 
+                console.log('[VNC Debug] Final VNC URL:', vncUrl);
                 return vncUrl;
               })()}
               title="Browser preview"

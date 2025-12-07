@@ -33,8 +33,16 @@ export function useVncPreloader(
   const startPreloading = useCallback((vncUrl: string) => {
     // Prevent multiple simultaneous preload attempts
     if (isRetryingRef.current || status === 'ready') {
+      console.log('[VNC Preloader] Skipping preload:', { isRetrying: isRetryingRef.current, status });
       return;
     }
+
+    console.log('[VNC Preloader] Starting preload:', {
+      url: vncUrl,
+      retryCount,
+      maxRetries,
+      timeoutMs
+    });
 
     setStatus('loading');
     isRetryingRef.current = true;
@@ -52,6 +60,8 @@ export function useVncPreloader(
 
     // Set a timeout to detect if iframe fails to load (for 502 errors)
     const loadTimeout = setTimeout(() => {
+      console.log('[VNC Preloader] Load timeout reached after', timeoutMs, 'ms');
+
       if (iframe.parentNode) {
         iframe.parentNode.removeChild(iframe);
       }
@@ -69,7 +79,7 @@ export function useVncPreloader(
           startPreloading(vncUrl);
         }, delay);
       } else {
-        console.log(`❌ VNC preload failed after ${maxRetries} attempts`);
+        console.error(`❌ VNC preload failed after ${maxRetries} attempts`);
         setStatus('error');
         isRetryingRef.current = false;
       }
@@ -86,8 +96,9 @@ export function useVncPreloader(
     };
 
     // Handle iframe load errors
-    iframe.onerror = () => {
+    iframe.onerror = (event) => {
       clearTimeout(loadTimeout);
+      console.error('[VNC Preloader] iframe.onerror triggered:', event);
 
       // Clean up current iframe
       if (iframe.parentNode) {
@@ -99,18 +110,21 @@ export function useVncPreloader(
         isRetryingRef.current = false;
 
         const delay = Math.min(2000 * Math.pow(1.5, retryCount), 10000);
+        console.log(`🔄 VNC preload error, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
 
         retryTimeoutRef.current = setTimeout(() => {
           setRetryCount(prev => prev + 1);
           startPreloading(vncUrl);
         }, delay);
       } else {
+        console.error(`❌ VNC preload failed after ${maxRetries} attempts (onerror)`);
         setStatus('error');
         isRetryingRef.current = false;
       }
     };
 
     // Add to DOM to start loading
+    console.log('[VNC Preloader] Adding iframe to DOM');
     document.body.appendChild(iframe);
   }, [status, retryCount, maxRetries, timeoutMs]);
 
