@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Project } from '@/lib/api/projects';
+import { getVncLiteUrl } from '@/lib/daytona/preview-client';
 
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -19,7 +20,7 @@ interface VncPreloaderResult {
 }
 
 export function useVncPreloader(
-  sandbox: { vnc_preview?: string; pass?: string } | null,
+  sandbox: { id?: string; vnc_preview?: string; pass?: string; token?: string } | null,
   options: VncPreloaderOptions = {}
 ): VncPreloaderResult {
   const { maxRetries = 5, initialDelay = 1000, timeoutMs = 5000 } = options;
@@ -129,27 +130,28 @@ export function useVncPreloader(
   }, [status, retryCount, maxRetries, timeoutMs]);
 
   const retry = useCallback(() => {
-    if (sandbox?.vnc_preview && sandbox?.pass) {
-      // Remove trailing slash from vnc_preview to avoid double slash with /vnc_lite.html
-      const baseUrl = sandbox.vnc_preview.replace(/\/$/, '');
-      const vncUrl = `${baseUrl}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    if (sandbox?.id && sandbox?.pass) {
+      // Use direct Daytona connection (bypasses Next.js rewrites)
+      const vncUrl = getVncLiteUrl(sandbox as { id: string; pass: string; token?: string });
+      console.log('[VNC Preloader] Using direct Daytona connection for retry');
       setRetryCount(0);
       setStatus('idle');
       startPreloading(vncUrl);
     }
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading]);
+  }, [sandbox?.id, sandbox?.pass, sandbox?.token, startPreloading]);
 
   useEffect(() => {
     console.log('[VNC Preloader] Effect triggered with sandbox:', {
-      has_vnc_preview: !!sandbox?.vnc_preview,
-      vnc_preview: sandbox?.vnc_preview,
+      has_id: !!sandbox?.id,
+      sandbox_id: sandbox?.id,
       has_pass: !!sandbox?.pass,
+      has_token: !!sandbox?.token,
       current_status: status
     });
 
     // Reset status when sandbox changes
-    if (!sandbox?.vnc_preview || !sandbox?.pass) {
-      console.log('[VNC Preloader] Missing vnc_preview or pass, resetting to idle');
+    if (!sandbox?.id || !sandbox?.pass) {
+      console.log('[VNC Preloader] Missing sandbox id or pass, resetting to idle');
       setStatus('idle');
       setRetryCount(0);
       return;
@@ -161,10 +163,10 @@ export function useVncPreloader(
       return;
     }
 
-    // Remove trailing slash from vnc_preview to avoid double slash with /vnc_lite.html
-    const baseUrl = sandbox.vnc_preview.replace(/\/$/, '');
-    const vncUrl = `${baseUrl}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
-    console.log('[VNC Preloader] Constructed preload URL:', vncUrl);
+    // Use direct Daytona connection (bypasses Next.js rewrites)
+    const vncUrl = getVncLiteUrl(sandbox as { id: string; pass: string; token?: string });
+    console.log('[VNC Preloader] Constructed preload URL (direct Daytona):', vncUrl);
+    console.log('[VNC Preloader] Using direct connection, bypassing Next.js rewrites ✅');
 
     // Reset retry counter for new sandbox
     setRetryCount(0);
@@ -191,7 +193,7 @@ export function useVncPreloader(
 
       isRetryingRef.current = false;
     };
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading, initialDelay, status]);
+  }, [sandbox?.id, sandbox?.pass, sandbox?.token, startPreloading, initialDelay, status]);
 
   // Fetch auth token for private project access
   const [accessToken, setAccessToken] = useState<string | null>(null);

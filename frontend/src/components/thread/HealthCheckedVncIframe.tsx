@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useVncPreloader } from '@/hooks/files';
+import { getVncLiteUrl, getVncWebSocketUrl } from '@/lib/daytona/preview-client';
 
 interface HealthCheckedVncIframeProps {
   sandbox: {
     id: string;
     vnc_preview: string;
     pass: string;
+    token?: string;
   };
   className?: string;
 }
@@ -23,7 +25,8 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
   console.log('[VNC Component] Rendering with sandbox:', {
     id: sandbox.id,
     vnc_preview: sandbox.vnc_preview,
-    has_pass: !!sandbox.pass
+    has_pass: !!sandbox.pass,
+    has_token: !!sandbox.token
   });
 
   // Use the enhanced VNC preloader hook
@@ -120,51 +123,17 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
                 setIframeLoaded(false);
               }}
               src={(() => {
-                // Construct the VNC URL with FULL path to WebSocket endpoint
-                // noVNC 'path' parameter is relative to site root, not current page
-                // Extract the full path from vnc_preview URL
+                // Use direct Daytona connection (bypasses Next.js rewrites)
+                // Pattern: Same as realtime-client.ts for Supabase WebSocket connections
+                // Connects directly to: https://6080-{sandbox-id}.proxy.daytona.works/
 
-                // sandbox.vnc_preview format: {base_url}/api/sandboxes/{id}/proxy/6080/
-                // We need to construct: path=api/sandboxes/{id}/proxy/6080/websockify
-                // IMPORTANT: noVNC path parameter should NOT start with / (noVNC adds it automatically)
+                const vncUrl = getVncLiteUrl(sandbox);
+                const wsUrl = getVncWebSocketUrl(sandbox);
 
-                const vncPreviewUrl = new URL(sandbox.vnc_preview, window.location.origin);
-                // Remove leading slash from path - noVNC will add it when constructing WebSocket URL
-                const websocketPath = (vncPreviewUrl.pathname.replace(/\/$/, '') + '/websockify').substring(1);
-
-                console.log('[VNC Debug] Constructing VNC connection:', {
-                  vnc_preview: sandbox.vnc_preview,
-                  extracted_path: vncPreviewUrl.pathname,
-                  websocket_path: websocketPath,
-                  sandbox_id: sandbox.id
-                });
-
-                // Remove trailing slash from vnc_preview to avoid double slash with /vnc_lite.html
-                const baseUrl = sandbox.vnc_preview.replace(/\/$/, '');
-                let vncUrl = `${baseUrl}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local&path=${encodeURIComponent(websocketPath)}`;
-
-                // Fix mixed content issues: if page is HTTPS but VNC URL is HTTP, upgrade it
-                if (typeof window !== 'undefined' && window.location.protocol === 'https:' && vncUrl.startsWith('http:')) {
-                  vncUrl = vncUrl.replace('http:', 'https:');
-                  console.log('[VNC Debug] Upgraded HTTP to HTTPS');
-                }
-
-                // Append auth token if available (for private projects)
-                if (accessToken) {
-                  vncUrl = `${vncUrl}&token=${accessToken}`;
-                  console.log('[VNC Debug] Added auth token to VNC URL');
-                }
-
-                console.log('[VNC Debug] ✅ Final VNC URL:', vncUrl);
-                console.log('[VNC Debug] URL breakdown:', {
-                  base: sandbox.vnc_preview,
-                  path: '/vnc_lite.html',
-                  password: '***',
-                  autoconnect: true,
-                  scale: 'local',
-                  websocket_path: websocketPath,
-                  has_token: !!accessToken
-                });
+                console.log('[VNC Component] 🚀 Using direct Daytona connection');
+                console.log('[VNC Component] VNC URL:', vncUrl);
+                console.log('[VNC Component] WebSocket will connect to:', wsUrl);
+                console.log('[VNC Component] Bypassing Next.js rewrites ✅');
 
                 return vncUrl;
               })()}
