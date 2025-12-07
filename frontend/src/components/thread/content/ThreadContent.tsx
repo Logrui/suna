@@ -315,7 +315,29 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                 key: `assistant-group-${assistantGroupCounter}`
                                             };
                                         }
-                                    } else if (messageType !== 'status') {
+                                    } else if (messageType === 'status') {
+                                        // Check if it's a permission request status
+                                        const statusContent = typeof message.content === 'string'
+                                            ? safeJsonParse(message.content, {})
+                                            : message.content;
+
+                                        if (statusContent?.status_type === 'tool_permission_request') {
+                                            // Treat permission requests as part of the conversation (like assistant messages)
+                                            if (currentGroup && currentGroup.type === 'assistant_group') {
+                                                currentGroup.messages.push(message);
+                                            } else {
+                                                if (currentGroup) {
+                                                    groupedMessages.push(currentGroup);
+                                                }
+                                                assistantGroupCounter++;
+                                                currentGroup = {
+                                                    type: 'assistant_group',
+                                                    messages: [message],
+                                                    key: `assistant-group-${assistantGroupCounter}`
+                                                };
+                                            }
+                                        }
+                                    } else {
                                         // For any other message types, finalize current group
                                         if (currentGroup) {
                                             groupedMessages.push(currentGroup);
@@ -560,7 +582,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                     : null;
 
                                                                 group.messages.forEach((message, msgIndex) => {
-                                                                    if (message.type === 'assistant') {
+                                                                    if (message.type === 'assistant' || (message.type === 'status' && (message.content as any)?.status_type === 'tool_permission_request')) {
                                                                         const msgKey = message.message_id || `submsg-assistant-${msgIndex}`;
 
                                                                         // Check if this is the latest message (last assistant message in the last group)

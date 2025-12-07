@@ -14,6 +14,7 @@ from .notifications_api import router as notifications_router
 from .notifications.api import router as novu_notifications_router
 from .notifications.presence_api import router as presence_router
 from .feedback import router as feedback_router
+from .routes.permissions import router as permissions_router
 
 router = APIRouter()
 
@@ -32,6 +33,7 @@ router.include_router(notifications_router)
 router.include_router(novu_notifications_router)
 router.include_router(presence_router)
 router.include_router(feedback_router)
+router.include_router(permissions_router)
 
 # Re-export the initialize and cleanup functions
 __all__ = ['router', 'initialize', 'cleanup']

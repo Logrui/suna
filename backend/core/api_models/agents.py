@@ -5,6 +5,7 @@ from typing import Optional, List, Dict, Any
 
 # Import PaginationInfo directly to avoid forward reference issues
 from .common import PaginationInfo
+from .permissions import ToolPermissionSettings
 
 
 class AgentCreateRequest(BaseModel):
@@ -18,6 +19,7 @@ class AgentCreateRequest(BaseModel):
     icon_name: Optional[str] = None
     icon_color: Optional[str] = None
     icon_background: Optional[str] = None
+    permission_settings: Optional[ToolPermissionSettings] = None
 
 
 class AgentUpdateRequest(BaseModel):
@@ -34,6 +36,7 @@ class AgentUpdateRequest(BaseModel):
     icon_color: Optional[str] = None
     icon_background: Optional[str] = None
     replace_mcps: Optional[bool] = None
+    permission_settings: Optional[ToolPermissionSettings] = None
 
 
 class AgentVersionResponse(BaseModel):
@@ -51,6 +54,7 @@ class AgentVersionResponse(BaseModel):
     created_at: str
     updated_at: str
     created_by: Optional[str] = None
+    permission_settings: Optional[ToolPermissionSettings] = None
 
 
 class AgentVersionCreateRequest(BaseModel):
@@ -60,6 +64,7 @@ class AgentVersionCreateRequest(BaseModel):
     custom_mcps: Optional[List[Dict[str, Any]]] = []
     agentpress_tools: Optional[Dict[str, Any]] = {}
     version_name: Optional[str] = None
+    permission_settings: Optional[ToolPermissionSettings] = None
 
 
 class AgentResponse(BaseModel):
@@ -85,6 +90,7 @@ class AgentResponse(BaseModel):
     current_version: Optional[AgentVersionResponse] = None
     metadata: Optional[Dict[str, Any]] = None
     account_id: Optional[str] = None  # Internal field, may not always be needed in response
+    permission_settings: Optional[ToolPermissionSettings] = None
 
 
 class AgentsResponse(BaseModel):
@@ -112,6 +118,7 @@ class AgentExportData(BaseModel):
     export_version: str = "1.1"
     exported_at: str
     exported_by: Optional[str] = None
+    permission_settings: Optional[ToolPermissionSettings] = None
 
 
 class AgentImportRequest(BaseModel):
@@ -131,5 +138,3 @@ class AgentIconGenerationResponse(BaseModel):
     icon_name: str
     icon_color: str
     icon_background: str
-
-
