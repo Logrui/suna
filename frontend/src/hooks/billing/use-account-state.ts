@@ -51,30 +51,31 @@ const REFETCH_DEBOUNCE_MS = 200;
 export function invalidateAccountState(queryClient: ReturnType<typeof useQueryClient>, refetch = false, skipCache = false) {
   // Invalidate the query cache (marks data as stale)
   queryClient.invalidateQueries({ queryKey: accountStateKeys.state() });
-  
+  queryClient.invalidateQueries({ queryKey: ['billing'] });
+
   if (!refetch) return;
-  
+
   // Track if any caller wants skipCache (most aggressive wins)
   if (skipCache) {
     pendingSkipCache = true;
   }
-  
+
   // If there's already an active refetch in progress, just queue the skipCache preference
   if (activeRefetchPromise) {
     return;
   }
-  
+
   // Clear any pending debounce timeout
   if (refetchTimeout) {
     clearTimeout(refetchTimeout);
   }
-  
+
   // Debounce to batch multiple rapid calls into one
   refetchTimeout = setTimeout(() => {
     const shouldSkipCache = pendingSkipCache;
     pendingSkipCache = false;
     refetchTimeout = null;
-    
+
     // Create a single promise that all callers will share
     activeRefetchPromise = (async () => {
       try {
@@ -87,7 +88,7 @@ export function invalidateAccountState(queryClient: ReturnType<typeof useQueryCl
           queryClient.setQueryData(accountStateKeys.state(), freshData);
         } else {
           // Normal refetch - React Query handles deduplication
-          await queryClient.refetchQueries({ 
+          await queryClient.refetchQueries({
             queryKey: accountStateKeys.state(),
             type: 'active',
           });
@@ -128,7 +129,7 @@ interface UseAccountStateOptions {
  */
 export function useAccountState(options?: UseAccountStateOptions) {
   const enabled = options?.enabled ?? true;
-  
+
   return useQuery<AccountState>({
     queryKey: accountStateKeys.state(),
     queryFn: () => billingApi.getAccountState(options?.skipCache ?? false),
@@ -179,9 +180,9 @@ export function useAccountStateWithStreaming(isStreaming: boolean = false) {
 
 export function useCreateCheckoutSession() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (request: CreateCheckoutSessionRequest) => 
+    mutationFn: (request: CreateCheckoutSessionRequest) =>
       billingApi.createCheckoutSession(request),
     onSuccess: (data) => {
       // Invalidate and refetch on upgrade/update - checkout redirects user anyway
@@ -214,7 +215,7 @@ export function useCreatePortalSession() {
 
 export function useCancelSubscription() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (request?: CancelSubscriptionRequest) => billingApi.cancelSubscription(request),
     onSuccess: (response) => {
@@ -233,7 +234,7 @@ export function useCancelSubscription() {
 
 export function useReactivateSubscription() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: () => billingApi.reactivateSubscription(),
     onSuccess: (response) => {
@@ -252,7 +253,7 @@ export function useReactivateSubscription() {
 
 export function usePurchaseCredits() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (request: PurchaseCreditsRequest) => billingApi.purchaseCredits(request),
     onSuccess: (data) => {
@@ -266,7 +267,7 @@ export function usePurchaseCredits() {
 
 export function useDeductTokenUsage() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (usage: TokenUsage) => billingApi.deductTokenUsage(usage),
     onSuccess: () => {
@@ -278,7 +279,7 @@ export function useDeductTokenUsage() {
 
 export function useScheduleDowngrade() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (request: ScheduleDowngradeRequest) => billingApi.scheduleDowngrade(request),
     onSuccess: (response) => {
@@ -297,7 +298,7 @@ export function useScheduleDowngrade() {
 
 export function useCancelScheduledChange() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: () => billingApi.cancelScheduledChange(),
     onSuccess: (response) => {
@@ -316,7 +317,7 @@ export function useCancelScheduledChange() {
 
 export function useSyncSubscription() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: () => billingApi.syncSubscription(),
     onSuccess: () => {
@@ -364,9 +365,9 @@ export function useTrialStatus(options?: { enabled?: boolean }) {
 
 export function useStartTrial() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (request: { success_url: string; cancel_url: string }) => 
+    mutationFn: (request: { success_url: string; cancel_url: string }) =>
       billingApi.startTrial(request),
     onSuccess: (data) => {
       invalidateAccountState(queryClient);
@@ -379,7 +380,7 @@ export function useStartTrial() {
 
 export function useCancelTrial() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: () => billingApi.cancelTrial(),
     onSuccess: (response) => {
@@ -398,56 +399,56 @@ export function useCancelTrial() {
 export const accountStateSelectors = {
   /** Check if user can run agents (has credits) */
   canRun: (state: AccountState | undefined) => state?.credits.can_run ?? false,
-  
+
   /** Get total credits */
   totalCredits: (state: AccountState | undefined) => state?.credits.total ?? 0,
-  
+
   /** Get tier key */
   tierKey: (state: AccountState | undefined) => state?.subscription.tier_key ?? 'none',
-  
+
   /** Get tier display name */
-  tierDisplayName: (state: AccountState | undefined) => 
+  tierDisplayName: (state: AccountState | undefined) =>
     state?.subscription.tier_display_name ?? 'No Plan',
-  
+
   /** Get plan name for TierBadge (e.g., 'Plus', 'Pro', 'Ultra', 'Basic') */
   planName: (state: AccountState | undefined) => {
     if (!state) return 'Basic';
     const tierKey = state.subscription.tier_key || state.tier?.name;
     if (!tierKey || tierKey === 'none' || tierKey === 'free') return 'Basic';
-    
+
     // Use siteConfig to match tier_key to frontend tier names
     const tier = siteConfig.cloudPricingItems.find(p => p.tierKey === tierKey);
     return tier?.name || 'Basic';
   },
-  
+
   /** Check if on trial */
   isTrial: (state: AccountState | undefined) => state?.subscription.is_trial ?? false,
-  
+
   /** Check if subscription is cancelled */
   isCancelled: (state: AccountState | undefined) => state?.subscription.is_cancelled ?? false,
-  
+
   /** Get allowed models */
-  allowedModels: (state: AccountState | undefined) => 
+  allowedModels: (state: AccountState | undefined) =>
     state?.models.filter(m => m.allowed) ?? [],
-  
+
   /** Check if a specific model is allowed */
   isModelAllowed: (state: AccountState | undefined, modelId: string) =>
     state?.models.find(m => m.id === modelId)?.allowed ?? false,
-  
+
   /** Get scheduled change info */
   scheduledChange: (state: AccountState | undefined) => state?.subscription.scheduled_change,
-  
+
   /** Check if has scheduled change */
-  hasScheduledChange: (state: AccountState | undefined) => 
+  hasScheduledChange: (state: AccountState | undefined) =>
     state?.subscription.has_scheduled_change ?? false,
-  
+
   /** Get commitment info */
   commitment: (state: AccountState | undefined) => state?.subscription.commitment,
-  
+
   /** Check if can purchase credits */
-  canPurchaseCredits: (state: AccountState | undefined) => 
+  canPurchaseCredits: (state: AccountState | undefined) =>
     state?.subscription.can_purchase_credits ?? false,
-    
+
   /** Get daily credits info */
   dailyCreditsInfo: (state: AccountState | undefined) => state?.credits.daily_refresh,
 };

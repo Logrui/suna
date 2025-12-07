@@ -1,3 +1,4 @@
+
 'use client';
 
 // Re-export binary/non-editable renderers
@@ -8,6 +9,8 @@ export { CsvRenderer } from './csv-renderer';
 export { XlsxRenderer } from './xlsx-renderer';
 export { PptxRenderer } from './pptx-renderer';
 export { HtmlRenderer } from './html-renderer';
+export { FileRenderer } from './file-renderer';
+export { MarkdownRenderer } from './authenticated-markdown-renderer';
 
 // File type helpers
 export type BinaryFileType = 'pdf' | 'image' | 'binary' | 'csv' | 'xlsx' | 'pptx';
