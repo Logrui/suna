@@ -25,11 +25,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ToolView } from './tool-views/wrapper';
+import { ToolView } from '../tool-views/wrapper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { HealthCheckedVncIframe } from './HealthCheckedVncIframe';
-import { BrowserHeader } from './tool-views/BrowserToolView';
+import { HealthCheckedVncIframe } from '../HealthCheckedVncIframe';
+import { BrowserHeader } from '../tool-views/BrowserToolView';
 import { useTranslations } from 'next-intl';
 import {
   Drawer,
@@ -44,15 +44,14 @@ import {
   useKortixComputerPendingToolNavIndex,
   useKortixComputerClearPendingToolNav,
 } from '@/stores/kortix-computer-store';
-import { FileBrowserView } from './kortix-computer/FileBrowserView';
-import { FileViewerView } from './kortix-computer/FileViewerView';
-import { BrowserTakeover } from './kortix-computer/BrowserTakeover';
+import { FileBrowserView } from './FileBrowserView';
+import { FileViewerView } from './FileViewerView';
 
 // ============================================================================
 // Types & Interfaces
 // ============================================================================
 
-import { ToolCallData, ToolResultData } from './tool-views/types';
+import { ToolCallData, ToolResultData } from '../tool-views/types';
 
 /**
  * Structured tool call input - data comes directly from metadata
@@ -602,7 +601,7 @@ LoadingState.displayName = 'LoadingState';
 // Main Component
 // ============================================================================
 
-export const ToolCallSidePanel = memo(function ToolCallSidePanel({
+export const KortixComputer = memo(function KortixComputer({
   isOpen,
   onClose,
   toolCalls,
@@ -628,7 +627,6 @@ export const ToolCallSidePanel = memo(function ToolCallSidePanel({
   const [toolCallSnapshots, setToolCallSnapshots] = useState<ToolCallSnapshot[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [vncRefreshKey, setVncRefreshKey] = useState(0);
-  const [isBrowserTakeoverOpen, setIsBrowserTakeoverOpen] = useState(false);
 
   const isMobile = useIsMobile();
   const { isOpen: isDocumentModalOpen } = useDocumentModalStore();
@@ -1104,28 +1102,10 @@ export const ToolCallSidePanel = memo(function ToolCallSidePanel({
     if (persistentVncIframe) {
       return (
         <div className="h-full flex flex-col">
-          <BrowserHeader
-            isConnected={true}
-            onRefresh={handleVncRefresh}
-            onTakeover={() => setIsBrowserTakeoverOpen(true)}
-            agentName={agentName}
-          />
+          <BrowserHeader isConnected={true} onRefresh={handleVncRefresh} />
           <div className="flex-1 overflow-hidden grid items-center">
             {persistentVncIframe}
           </div>
-
-          {sandbox && (
-            <BrowserTakeover
-              isOpen={isBrowserTakeoverOpen}
-              onClose={() => setIsBrowserTakeoverOpen(false)}
-              sandbox={{
-                id: sandbox.id,
-                vnc_preview: sandbox.vnc_preview!,
-                pass: sandbox.pass!
-              }}
-              agentName={agentName}
-            />
-          )}
         </div>
       );
     }

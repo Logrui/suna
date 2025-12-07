@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import Image from 'next/image';
 import {
   Globe,
   MonitorPlay,
@@ -28,9 +29,11 @@ interface BrowserHeaderProps {
   isConnected: boolean;
   onRefresh?: () => void;
   viewToggle?: React.ReactNode;
+  onTakeover?: () => void;
+  agentName?: string;
 }
 
-export const BrowserHeader: React.FC<BrowserHeaderProps> = ({ isConnected, onRefresh, viewToggle }) => {
+export const BrowserHeader: React.FC<BrowserHeaderProps> = ({ isConnected, onRefresh, viewToggle, onTakeover, agentName }) => {
   return (
     <div className={`flex items-center justify-between px-3 md:px-4 py-2 border border-border ${!isConnected ? 'bg-muted/30 border-b' : ''}`}>
       <div className="flex items-center gap-2 justify-between min-w-0 flex-1">
@@ -45,22 +48,34 @@ export const BrowserHeader: React.FC<BrowserHeaderProps> = ({ isConnected, onRef
           </div>
         </div>
         <div className='flex items-center gap-1'>
-        <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl mr-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500/80 animate-pulse' : 'bg-gray-400'}`}></div>
-          <span className="sm:inline">Live Preview</span>
-        </Badge>
-        {viewToggle}
-        {isConnected && onRefresh && (
-          <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRefresh}
-          className="h-7 w-7 p-0 hover:bg-muted rounded-xl"
-          title="Refresh browser view"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-        )}
+          {isConnected && onTakeover && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onTakeover}
+              className="h-7 px-3 text-xs gap-1.5 rounded-full mr-2 hidden sm:flex border-purple-500/20 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+              title="Open full viewport mode"
+            >
+              <MonitorPlay className="h-3 w-3" />
+              Use {agentName ? `${agentName}'s` : ''} Browser
+            </Button>
+          )}
+          <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl mr-2">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500/80 animate-pulse' : 'bg-gray-400'}`}></div>
+            <span className="sm:inline">Live Preview</span>
+          </Badge>
+          {viewToggle}
+          {isConnected && onRefresh && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefresh}
+              className="h-7 w-7 p-0 hover:bg-muted rounded-xl"
+              title="Refresh browser view"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -199,12 +214,15 @@ export function BrowserToolView({
             <ImageLoader />
           )}
           <Card className={`p-0 overflow-hidden relative border ${imageLoading ? 'hidden' : 'block'}`}>
-            <img
+            <Image
               src={screenshotUrlFinal}
               alt="Browser Screenshot"
               className="max-w-full max-h-full object-contain"
               onLoad={handleImageLoad}
               onError={handleImageError}
+              width={1920}
+              height={1080}
+              unoptimized
             />
           </Card>
           {imageError && !imageLoading && (
@@ -224,12 +242,15 @@ export function BrowserToolView({
             <ImageLoader />
           )}
           <Card className={`overflow-hidden border ${imageLoading ? 'hidden' : 'block'}`}>
-            <img
+            <Image
               src={`data:image/jpeg;base64,${screenshotBase64Final}`}
               alt="Browser Screenshot"
               className="max-w-full max-h-full object-contain"
               onLoad={handleImageLoad}
               onError={handleImageError}
+              width={1920}
+              height={1080}
+              unoptimized
             />
           </Card>
           {imageError && !imageLoading && (
