@@ -11,7 +11,7 @@ import asyncio
 
 from core.sandbox.sandbox import get_or_start_sandbox, delete_sandbox, create_sandbox
 from core.utils.logger import logger
-from core.utils.auth_utils import get_optional_user_id, verify_and_get_user_id_from_jwt, verify_sandbox_access, verify_sandbox_access_optional
+from core.utils.auth_utils import get_optional_user_id, verify_and_get_user_id_from_jwt, verify_sandbox_access, verify_sandbox_access_optional, get_optional_user_id_from_websocket
 from core.services.supabase import DBConnection
 from core.utils.sandbox_utils import generate_unique_filename, get_uploads_directory
 
@@ -646,15 +646,38 @@ async def proxy_daytona_websocket(
 
     This endpoint handles bidirectional WebSocket communication required for VNC streaming.
     It relays data between the frontend client and the Daytona VNC server.
+    
+    Security:
+        - Authenticates user via token (header, query param, or cookie)
+        - Verifies sandbox access before accepting WebSocket connection
+        - Only allows access to sandboxes the user owns or has permission to access
     """
+    # SECURITY: Extract user_id from WebSocket connection before accepting
+    user_id = await get_optional_user_id_from_websocket(websocket)
+    
+    # SECURITY: Verify sandbox access before accepting the WebSocket connection
+    try:
+        client = await db.client
+        await verify_sandbox_access_optional(client, sandbox_id, user_id)
+    except HTTPException as e:
+        # Reject the WebSocket connection if access verification fails
+        await websocket.close(code=1008, reason=f"Access denied: {e.detail}")
+        logger.warning(f"WebSocket connection rejected for sandbox={sandbox_id}: {e.detail}")
+        return
+    except Exception as e:
+        # Reject on any unexpected error during verification
+        await websocket.close(code=1011, reason="Internal server error during access verification")
+        logger.error(f"Error verifying WebSocket access for sandbox={sandbox_id}: {e}")
+        return
+    
+    # Accept the WebSocket connection after successful authentication
     await websocket.accept()
-    logger.debug(f"WebSocket connection accepted for sandbox={sandbox_id} port={port}")
+    logger.debug(f"WebSocket connection accepted for sandbox={sandbox_id} port={port} user={user_id}")
 
     upstream_ws = None
 
     try:
         # Get sandbox and retrieve the preview URL
-        client = await db.client
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
 
         # Get the authoritative preview URL from Daytona

@@ -1,5 +1,5 @@
 import sentry
-from fastapi import HTTPException, Request, Header
+from fastapi import HTTPException, Request, Header, WebSocket
 from typing import Optional
 import jwt
 from jwt.exceptions import PyJWTError
@@ -255,6 +255,48 @@ async def get_optional_user_id(request: Request) -> Optional[str]:
         token = request.query_params.get('token')
     elif request.cookies.get('suna-auth-token'):
         token = request.cookies.get('suna-auth-token')
+
+    if not token:
+        return None
+
+    try:
+        payload = _decode_jwt_safely(token)
+
+        user_id = payload.get('sub')
+        if user_id:
+            sentry.sentry.set_user({ "id": user_id })
+            structlog.contextvars.bind_contextvars(
+                user_id=user_id
+            )
+
+        return user_id
+    except PyJWTError:
+        return None
+
+async def get_optional_user_id_from_websocket(websocket: WebSocket) -> Optional[str]:
+    """
+    Extract and validate user_id from WebSocket connection.
+    
+    This function checks for authentication tokens in the following order:
+    1. Authorization header (Bearer token)
+    2. Query parameter 'token'
+    3. Cookie 'suna-auth-token'
+    
+    Args:
+        websocket: The WebSocket connection object
+        
+    Returns:
+        Optional[str]: The user_id if authentication is successful, None otherwise
+    """
+    auth_header = websocket.headers.get('Authorization')
+    token = None
+
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    elif websocket.query_params.get('token'):
+        token = websocket.query_params.get('token')
+    elif websocket.cookies.get('suna-auth-token'):
+        token = websocket.cookies.get('suna-auth-token')
 
     if not token:
         return None
