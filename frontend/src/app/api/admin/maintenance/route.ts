@@ -20,10 +20,19 @@ async function checkAdmin(supabase: any, userId: string) {
 export async function GET() {
     try {
         const supabase = await createClient();
+
+        // Debug logging
+        const { cookies } = await import('next/headers');
+        const cookieStore = await cookies();
+        const allCookies = cookieStore.getAll().map(c => c.name);
+        console.log('[Maintenance API] Cookies present:', allCookies);
+
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            console.error('[Maintenance API] Auth error:', authError);
+            console.error('[Maintenance API] User:', user);
+            return NextResponse.json({ error: 'Unauthorized', details: authError }, { status: 401 });
         }
 
         const isAdmin = await checkAdmin(supabase, user.id);

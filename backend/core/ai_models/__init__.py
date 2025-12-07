@@ -1,7 +1,7 @@
 from .registry import ModelRegistry, registry
 from .ai_models import Model, ModelProvider, ModelCapability
 from .manager import ModelManager, model_manager
-#from .aws_registry import AWSModelRegistry WIP
+from .aws_registry import AWSModelRegistry
 from .fallback_registry import FallbackModelRegistry
 
 __all__ = [

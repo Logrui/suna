@@ -8,7 +8,7 @@ AgentPress implements mathematically optimized prompt caching for Anthropic Clau
 
 ### 1. **Dynamic Context Detection**
 - Auto-detects context window from model registry (200k-2M+ tokens)
-- Supports all models: Claude 3.7 (200k), Claude Sonnet 4 (1M), Gemini 2.5 Pro (2M) - NOTE: Gemini models are not yet fully supported for caching
+- Supports all models: Claude 3.7 (200k), Claude Sonnet 4 (1M), Gemini 2.5 Pro (2M)
 - Falls back to 200k default if model not found
 
 ### 2. **Mathematical Threshold Calculation**

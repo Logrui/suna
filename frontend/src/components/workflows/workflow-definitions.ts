@@ -132,7 +132,7 @@ export const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
 
 export function getToolDefinition(toolName: string): StepDefinition | null {
     if (!TOOL_ICONS[toolName]) return null;
-    
+
     return {
         id: `tool_${toolName}`,
         name: toolName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -148,13 +148,13 @@ export function getToolDefinition(toolName: string): StepDefinition | null {
 export function getStepDefinition(stepId: string): StepDefinition | null {
     const baseStep = BASE_STEP_DEFINITIONS.find(step => step.id === stepId);
     if (baseStep) return baseStep;
-    
+
     // Check if it's a tool
     if (stepId.startsWith('tool_')) {
         const toolName = stepId.replace('tool_', '');
         return getToolDefinition(toolName);
     }
-    
+
     return null;
 }
 
@@ -169,7 +169,7 @@ export function getStepIconAndColor(stepType: any): { icon: any; color: string }
         const toolName = stepType.config?.tool_name;
         // Use more appropriate icons for different integration types
         let icon = FileText; // Default icon for integrations
-                  if (toolName?.includes('composio')) {
+        if (toolName?.includes('composio')) {
             icon = Globe;
         } else if (toolName?.includes('mcp')) {
             icon = Cog;
@@ -207,7 +207,7 @@ export function generateAvailableStepTypes(agentTools?: {
                 if (toolDef) {
                     allSteps.push({
                         ...toolDef,
-                        description: tool.description
+                        description: tool.description || ''
                     });
                 }
             }
@@ -220,7 +220,7 @@ export function generateAvailableStepTypes(agentTools?: {
             allSteps.push({
                 id: `mcp_${tool.name}`,
                 name: tool.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                description: tool.description,
+                description: tool.description || '',
                 icon: Cog, // Better icon for MCP tools
                 category: 'integrations',
                 color: 'from-purple-500/20 to-purple-600/10 border-purple-500/20 text-purple-500',

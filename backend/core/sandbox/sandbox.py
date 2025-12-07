@@ -96,9 +96,9 @@ async def create_sandbox(password: str, project_id: str = None) -> AsyncSandbox:
         labels=labels,
         env_vars={
             "CHROME_PERSISTENT_SESSION": "true",
-            "RESOLUTION": "1048x768x24",
-            "RESOLUTION_WIDTH": "1048",
-            "RESOLUTION_HEIGHT": "768",
+            "RESOLUTION": "1440x900x24",
+            "RESOLUTION_WIDTH": "1440",
+            "RESOLUTION_HEIGHT": "900",
             "VNC_PASSWORD": password,
             "ANONYMIZED_TELEMETRY": "false",
             "CHROME_PATH": "",

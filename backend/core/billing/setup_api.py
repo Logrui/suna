@@ -17,12 +17,6 @@ async def initialize_account(
         db = DBConnection()
         await db.initialize()
         
-        result = await free_tier_service.auto_subscribe_to_free_tier(account_id)
-        
-        if not result.get('success'):
-            logger.error(f"[SETUP] Failed to create free tier for {account_id}: {result.get('error')}")
-            raise HTTPException(status_code=500, detail="Failed to initialize free tier")
-        
         logger.info(f"[SETUP] Installing Suna agent for {account_id}")
         suna_service = SunaDefaultAgentService(db)
         await suna_service.install_suna_agent_for_user(account_id)
@@ -32,7 +26,6 @@ async def initialize_account(
         return {
             'success': True,
             'message': 'Account initialized successfully',
-            'subscription_id': result.get('subscription_id')
         }
         
     except Exception as e:

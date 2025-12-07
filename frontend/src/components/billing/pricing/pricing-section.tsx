@@ -222,7 +222,7 @@ function PricingTier({
 
   const handleSubscribe = async (tierKey: string, isDowngrade = false) => {
     if (!isAuthenticated) {
-      window.location.href = '/auth?mode=signup';
+      window.location.href = '/auth';
       return;
     }
 

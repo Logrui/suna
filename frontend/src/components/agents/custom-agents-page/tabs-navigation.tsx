@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bot, ShoppingBag, FileText, Plus } from 'lucide-react';
+import { Bot, Users, FileText, Plus } from 'lucide-react';
 import { FancyTabs, TabConfig } from '@/components/ui/fancy-tabs';
 
 interface TabsNavigationProps {
@@ -14,9 +14,14 @@ const agentTabs: TabConfig[] = [
   {
     value: 'my-agents',
     icon: Bot,
-    label: 'My Agents',
+    label: 'Agents',
   },
-]; 
+  {
+    value: 'teams',
+    icon: Users,
+    label: 'Teams',
+  },
+];
 
 export const TabsNavigation = ({ activeTab, onTabChange, onCreateAgent }: TabsNavigationProps) => {
   const tabs = React.useMemo(() => {
@@ -43,5 +48,5 @@ export const TabsNavigation = ({ activeTab, onTabChange, onCreateAgent }: TabsNa
       activeTab={activeTab}
       onTabChange={handleTabSelection}
     />
-);
+  );
 }

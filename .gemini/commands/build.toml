@@ -1,0 +1,40 @@
+description = "Build and restart Docker Compose services."
+
+prompt = """
+---
+description: Build and restart Docker Compose services.
+---
+
+//turbo-all
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Goal
+
+Execute the `docker-compose-build.ps1` script to build and restart services.
+
+## Arguments
+
+- **Service** (optional, positional): The service to build and restart.
+  - Values: `all` (default), `backend`, `frontend`, `worker`.
+
+## Examples
+
+- `/build`: Build and restart all services.
+- `/build backend`: Build and restart only the backend service.
+- `/build frontend`: Build and restart only the frontend service.
+
+## Execution Steps
+
+### 1. Run Script
+
+```powershell
+.\.scripts\core\docker-compose-build.ps1 $ARGUMENTS
+```
+
+### 2. Review the docker compose build progression periodically and report back to the user with actionable next steps if the build fails. If the build succeeds offer a brief congradulations and celebratory message
+"""

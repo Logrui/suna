@@ -9,13 +9,95 @@ import { Card, CardContent } from '@/components/ui/card';
 import { isLocalMode } from '@/lib/config';
 import { AnimatedBg } from '@/components/ui/animated-bg';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { cn } from '@/lib/utils';
+
+interface ServiceStatusCardProps {
+  title: string;
+  status: 'online' | 'offline' | 'checking';
+}
+
+function ServiceStatusCard({ title, status }: ServiceStatusCardProps) {
+  const isOnline = status === 'online';
+  const isChecking = status === 'checking';
+
+  let statusText = 'Checking...';
+  if (isOnline) statusText = 'Connected';
+  if (status === 'offline') statusText = 'Offline';
+
+  return (
+    <Card className="flex-1 bg-card border border-border">
+      <CardContent className="p-4 h-full flex flex-col items-center justify-center gap-1">
+        <span className="text-medium font-medium text-muted-foreground">
+          {title}
+        </span>
+        <div className="flex items-center gap-2">
+          <div className={cn(
+            "h-2 w-2 rounded-full",
+            isChecking ? "bg-yellow-500 animate-pulse" : isOnline ? "bg-green-500" : "bg-red-500"
+          )} />
+          <span className={cn(
+            "text-sm font-medium",
+            isChecking ? "text-yellow-400" : isOnline ? "text-green-400" : "text-red-400"
+          )}>
+            {statusText}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function MaintenancePage() {
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [frontendStatus, setFrontendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const [supabaseStatus, setSupabaseStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
 
-  const { data: healthData, isLoading: isCheckingHealth, refetch } = useApiHealth();
+  const { data: healthData, isLoading: isCheckingHealth, refetch, isError: isBackendError } = useApiHealth();
+
+  const checkServices = async () => {
+    setFrontendStatus('checking');
+    setSupabaseStatus('checking');
+    setBackendStatus('checking');
+
+    // Check Frontend
+    try {
+      const frontendUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+      await fetch(frontendUrl, { method: 'HEAD', mode: 'no-cors' });
+      setFrontendStatus('online');
+    } catch (e) {
+      setFrontendStatus('offline');
+    }
+
+    // Check Supabase
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (supabaseUrl) {
+        await fetch(supabaseUrl, { method: 'HEAD', mode: 'no-cors' });
+        setSupabaseStatus('online');
+      } else {
+        setSupabaseStatus('offline');
+      }
+    } catch (e) {
+      setSupabaseStatus('offline');
+    }
+
+    // Check Backend
+    try {
+      // Use direct fetch to bypass react-query cache and ensure real-time status
+      const res = await fetch('/api/health', { cache: 'no-store' });
+      if (res.ok) {
+        setBackendStatus('online');
+      } else {
+        setBackendStatus('offline');
+      }
+    } catch (e) {
+      setBackendStatus('offline');
+    }
+  };
 
   const checkHealth = async () => {
+    checkServices();
     try {
       const result = await refetch();
       if (result.data) {
@@ -30,6 +112,7 @@ export function MaintenancePage() {
 
   useEffect(() => {
     setLastChecked(new Date());
+    checkServices();
   }, []);
 
   return (
@@ -85,6 +168,13 @@ export function MaintenancePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Individual Service Statuses */}
+          <div className="flex gap-4 w-full">
+            <ServiceStatusCard title="Frontend" status={frontendStatus} />
+            <ServiceStatusCard title="Backend" status={backendStatus} />
+            <ServiceStatusCard title="Supabase" status={supabaseStatus} />
+          </div>
         </div>
 
         {/* Grain texture overlay - ON TOP OF EVERYTHING */}

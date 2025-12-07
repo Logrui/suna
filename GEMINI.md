@@ -138,6 +138,124 @@ docker compose ps
 docker compose down
 ```
 
+### Docker Image Backup & Restoration
+
+**Critical Practice:** Before running `docker compose up -d --build`, always backup your stable working images. When Docker rebuilds images, it moves the `latest` or `local` tag to the new build, leaving old images as "dangling" (unnamed) and subject to pruning.
+
+#### Backing Up Stable Images
+
+Before rebuilding, tag your current stable images with a backup identifier:
+
+```powershell
+# Backup backend/worker image (uses same image)
+docker tag suna-backend:local suna-backend:backup-YYYY-MM-DD
+
+# Backup frontend image
+docker tag suna-frontend:latest suna-frontend:backup-YYYY-MM-DD
+
+# Example with today's date
+docker tag suna-backend:local suna-backend:backup-2025-12-03
+docker tag suna-frontend:latest suna-frontend:backup-2025-12-03
+```
+
+#### Verify Backups
+
+```powershell
+# List all backup images
+docker images | Select-String "backup"
+
+# List specific backup
+docker images | Select-String "backup-2025-12-03"
+```
+
+#### When to Backup
+
+**Always backup before:**
+- Merging upstream changes (especially from PRODUCTION branch)
+- Applying major dependency updates (`pyproject.toml`, `package.json`)
+- Implementing breaking changes or refactors
+- Testing experimental features
+- Updating Docker base images or build configurations
+
+#### Restoring from Backup
+
+If a new build fails, introduces bugs, or has breaking changes, restore the backup:
+
+```powershell
+# Restore backend to previous stable version
+docker tag suna-backend:backup-2025-12-03 suna-backend:local
+
+# Restore frontend to previous stable version
+docker tag suna-frontend:backup-2025-12-03 suna-frontend:latest
+
+# Restart services with restored images (no rebuild)
+docker compose up -d
+```
+
+**Important:** The `docker compose up -d` command (without `--build`) will use the existing tagged images.
+
+#### Multiple Backup Strategy
+
+For critical updates, maintain multiple backup points:
+
+```powershell
+# Before upstream merge
+docker tag suna-backend:local suna-backend:pre-upstream-merge
+docker tag suna-frontend:latest suna-frontend:pre-upstream-merge
+
+# After successful merge (new stable baseline)
+docker tag suna-backend:local suna-backend:stable-post-merge
+docker tag suna-frontend:latest suna-frontend:stable-post-merge
+```
+
+#### Cleanup Old Backups
+
+```powershell
+# List all images with sizes
+docker images
+
+# Remove specific backup
+docker rmi suna-backend:backup-2025-11-15
+docker rmi suna-frontend:backup-2025-11-15
+
+# Remove all dangling images (untagged)
+docker image prune
+```
+
+#### Emergency Rollback Workflow
+
+If you discover issues after deployment:
+
+1. **Stop services immediately:**
+   ```powershell
+   docker compose down
+   ```
+
+2. **Restore last known good images:**
+   ```powershell
+   docker tag suna-backend:backup-2025-12-03 suna-backend:local
+   docker tag suna-frontend:backup-2025-12-03 suna-frontend:latest
+   ```
+
+3. **Restart with stable images:**
+   ```powershell
+   docker compose up -d
+   ```
+
+4. **Verify restoration:**
+   ```powershell
+   docker compose ps
+   docker compose logs -f
+   ```
+
+#### Best Practices
+
+- **Date-based naming:** Use `backup-YYYY-MM-DD` format for easy chronological sorting
+- **Descriptive tags:** For major changes, use descriptive names like `pre-billing-refactor` or `stable-v1.2.3`
+- **Keep recent backups:** Maintain at least 2-3 recent backup points
+- **Document changes:** Note what changed between backups in commit messages or `.docs/`
+- **Test before cleanup:** Verify new build is stable before removing old backups
+
 ## Architecture
 
 ### Backend Structure
@@ -628,6 +746,20 @@ The repository includes a React Native mobile app in `apps/mobile/` (Expo-based)
    cd suna-supabase/docker && docker compose down && docker compose up -d
    cd ../../suna && docker compose down && docker compose up -d
    ```
+
+4. **Code Changes (Backend)**:
+   - **Source Code (`.py`)**: Restart is sufficient (volume mounted)
+     ```bash
+     docker compose restart backend
+     ```
+   - **Dependencies (`pyproject.toml`, `uv.lock`)**: Requires rebuild
+     ```bash
+     docker compose up -d --build backend
+     ```
+   - **System Deps (`Dockerfile`)**: Requires rebuild
+     ```bash
+     docker compose up -d --build backend
+     ```
 
 ### Checking Service Health
 

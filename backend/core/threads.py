@@ -495,8 +495,8 @@ async def get_thread_messages(
                     'updated_at': msg.get('updated_at'),
                     'agent_id': msg.get('agent_id'),
                 }
-                # Only include content for user messages
-                if msg_type == 'user':
+                # Only include content for user, assistant, and tool messages
+                if msg_type in ('user', 'assistant', 'tool'):
                     optimized_msg['content'] = msg.get('content')
                 optimized_list.append(optimized_msg)
             return optimized_list
@@ -537,8 +537,10 @@ async def add_message_to_thread(
     thread_data = thread_result.data[0]
     
     # Verify ownership or team access
+    # Verify ownership or team access
     if thread_data['account_id'] != user_id:
-        from core.utils.auth_utils import verify_and_authorize_thread_access
+        # Already imported at top level
+        pass
     await verify_and_authorize_thread_access(client, thread_id, user_id)
     
     try:

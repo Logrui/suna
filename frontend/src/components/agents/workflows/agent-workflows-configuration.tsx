@@ -12,13 +12,13 @@ import { WorkflowExecutionDialog } from '@/components/workflows/workflow-executi
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { 
-  useAgentWorkflows, 
+import {
+  useAgentWorkflows,
   useCreateAgentWorkflow,
-  useUpdateAgentWorkflow, 
+  useUpdateAgentWorkflow,
   useDeleteAgentWorkflow
 } from '@/hooks/react-query/agents/use-agent-workflows';
-import { 
+import {
   AgentWorkflow
 } from '@/hooks/react-query/agents/workflow-utils';
 
@@ -50,11 +50,11 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
         description: 'A new workflow for automating tasks',
         steps: []
       };
-      const newWorkflow = await createWorkflowMutation.mutateAsync({ 
-        agentId, 
-        workflow: defaultWorkflow 
+      const newWorkflow = await createWorkflowMutation.mutateAsync({
+        agentId,
+        workflow: defaultWorkflow
       });
-      
+
       // Auto-activate the workflow after creation
       try {
         await updateWorkflowMutation.mutateAsync({
@@ -66,7 +66,7 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
         console.warn('Failed to auto-activate workflow:', activationError);
         // Continue anyway, the workflow was created successfully
       }
-      
+
       router.push(`/agents/config/${agentId}/workflow/${newWorkflow.id}`);
     } catch (error) {
       toast.error('Failed to create workflow');
@@ -74,10 +74,10 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
   }, [agentId, router, createWorkflowMutation, updateWorkflowMutation]);
 
   const handleUpdateWorkflowStatus = useCallback(async (workflowId: string, status: AgentWorkflow['status']) => {
-    await updateWorkflowMutation.mutateAsync({ 
-      agentId, 
-      workflowId, 
-      workflow: { status } 
+    await updateWorkflowMutation.mutateAsync({
+      agentId,
+      workflowId,
+      workflow: { status }
     });
   }, [agentId, updateWorkflowMutation]);
 
@@ -97,7 +97,7 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
 
   const handleConfirmDelete = useCallback(async () => {
     if (!workflowToDelete) return;
-    
+
     try {
       await deleteWorkflowMutation.mutateAsync({ agentId, workflowId: workflowToDelete.id });
       toast.success('Workflow deleted successfully');
@@ -122,7 +122,7 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
       paused: 'text-yellow-700 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-900',
       archived: 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900'
     };
-    
+
     return (
       <Badge className={colors[status]}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -133,10 +133,10 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
   return (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-4">
-        <Button 
-          size='sm' 
-          variant='outline' 
-          className="flex items-center gap-2" 
+        <Button
+          size='sm'
+          variant='outline'
+          className="flex items-center gap-2 h-10"
           onClick={handleCreateWorkflow}
           disabled={createWorkflowMutation.isPending}
         >
@@ -216,11 +216,11 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
                     </Card>
                   </div>
                 ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
       <WorkflowExecutionDialog
         open={isExecuteDialogOpen}
         onOpenChange={setIsExecuteDialogOpen}
@@ -239,7 +239,7 @@ export function AgentWorkflowsConfiguration({ agentId, agentName }: AgentWorkflo
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700"
               disabled={deleteWorkflowMutation.isPending}

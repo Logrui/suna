@@ -709,7 +709,6 @@ class AgentRunner:
                     llm_temperature=0,
                     llm_max_tokens=max_tokens,
                     tool_choice="auto",
-                    max_xml_tool_calls=1,
                     temporary_message=temporary_message,
                     latest_user_message_content=latest_user_message_content,
                     processor_config=ProcessorConfig(
@@ -717,8 +716,7 @@ class AgentRunner:
                         native_tool_calling=False,
                         execute_tools=True,
                         execute_on_stream=True,
-                        tool_execution_strategy="parallel",
-                        xml_adding_strategy="user_message"
+                        tool_execution_strategy="parallel"
                     ),
                     native_max_auto_continues=self.config.native_max_auto_continues,
                     generation=generation,

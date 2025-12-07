@@ -1286,7 +1286,8 @@ async def get_available_models(
                     "context_window": model_data["context_window"],
                     "capabilities": model_data["capabilities"],
                     "recommended": model_data["recommended"],
-                    "priority": model_data["priority"]
+                    "priority": model_data["priority"],
+                    "variant": model_data.get("variant")
                 })
             
             return {
@@ -1335,7 +1336,8 @@ async def get_available_models(
                 "context_window": model_data["context_window"],
                 "capabilities": model_data["capabilities"],
                 "recommended": model_data["recommended"],
-                "priority": model_data["priority"]
+                "priority": model_data["priority"],
+                "variant": model_data.get("variant")
             })
         
         model_info.sort(key=lambda x: (-x["priority"], x["display_name"]))

@@ -30,6 +30,9 @@ export async function signIn(prevState: any, formData: FormData) {
 }
 
 export async function signUp(prevState: any, formData: FormData) {
+  return { message: 'Sign ups are currently disabled' };
+  
+  /*
   const origin = formData.get('origin') as string;
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -63,6 +66,7 @@ export async function signUp(prevState: any, formData: FormData) {
     useClientAuth: true,
     isSignUp: true
   };
+  */
 }
 
 export async function forgotPassword(prevState: any, formData: FormData) {

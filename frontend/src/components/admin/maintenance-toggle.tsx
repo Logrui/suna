@@ -18,7 +18,7 @@ export function MaintenanceToggle() {
 
     const fetchStatus = async () => {
         try {
-            const res = await fetch('/api/admin/maintenance');
+            const res = await fetch('/api/admin/maintenance', { credentials: 'include' });
             if (!res.ok) throw new Error('Failed to fetch status');
             const data = await res.json();
             setEnabled(data.enabled === true);
@@ -40,6 +40,7 @@ export function MaintenanceToggle() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ enabled: checked }),
+                credentials: 'include',
             });
 
             if (!res.ok) throw new Error('Failed to update status');

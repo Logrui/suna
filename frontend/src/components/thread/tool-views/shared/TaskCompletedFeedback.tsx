@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Star } from 'lucide-react';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,6 +43,7 @@ export function TaskCompletedFeedback({
   threadId,
   messageId
 }: TaskCompletedFeedbackProps) {
+
   const [rating, setRating] = useState<number | null>(null); // Can be 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5
   const [feedback, setFeedback] = useState('');
   const [helpImprove, setHelpImprove] = useState(true);
@@ -122,7 +124,7 @@ export function TaskCompletedFeedback({
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
             <p className="text-sm text-muted-foreground">
-              Task completed
+              Task Completed
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -196,7 +198,7 @@ export function TaskCompletedFeedback({
           <DialogHeader>
             <DialogTitle>Rate this result</DialogTitle>
             <DialogDescription>
-              Your feedback helps improve the agent's performance.
+              Your feedback helps us improve Kortix.
             </DialogDescription>
           </DialogHeader>
 
@@ -267,7 +269,7 @@ export function TaskCompletedFeedback({
                 htmlFor="help-improve"
                 className="text-sm text-foreground cursor-pointer"
               >
-                Help Kortix improve
+                Allow Kortix to use this conversation to improve
               </label>
             </div>
           </div>

@@ -1,0 +1,38 @@
+description = "Execute relevant commands inside Docker containers."
+
+prompt = """
+---
+description: Execute relevant commands inside Docker containers.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Goal
+
+Execute the `docker-exec.ps1` script to run commands in containers based on recent conversation history
+
+## Arguments
+
+- **Container** (required, positional): The target container.
+  - Values: `backend`, `frontend`, `worker`, `redis`.
+- **Command** (optional, remaining args): The command to run inside the container.
+  - If omitted, opens an interactive bash shell.
+
+## Examples
+
+- `/exec backend`: Open interactive shell in backend container.
+- `/exec frontend env`: Run `env` command in frontend container.
+- `/exec backend uv run pytest`: Run tests in backend container.
+
+## Execution Steps
+
+### 1. Run Script
+
+```powershell
+.\.scripts\core\docker-exec.ps1 $ARGUMENTS
+```
+"""

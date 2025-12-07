@@ -26,11 +26,15 @@ from core.sandbox import api as sandbox_api
 from core.billing.api import router as billing_router
 from core.billing.setup_api import router as setup_router
 from core.admin.admin_api import router as admin_router
+from core.setup.api import webhook_router as setup_webhook_router
 from core.admin.billing_admin_api import router as billing_admin_router
 from core.admin.master_password_api import router as master_password_router
 
 #Import New Notification Routers
 from core.admin.notification_admin_api import router as notification_admin_router
+from core.notifications.api import router as notifications_router
+
+
 
 
 from core.services import transcription as transcription_api
@@ -100,6 +104,10 @@ async def lifespan(app: FastAPI):
         from core import limits_api
         limits_api.initialize(db)
         
+        # Auto-heal: Ensure all users have Suna agent (runs in background)
+        from core.utils.suna_default_agent_service import SunaDefaultAgentService
+        asyncio.create_task(SunaDefaultAgentService(db).install_for_all_users())
+        
         yield
         
         logger.debug("Cleaning up agent resources")
@@ -140,12 +148,12 @@ async def log_requests_middleware(request: Request, call_next):
     )
 
     # Log the incoming request
-    logger.debug(f"Request started: {method} {path} from {client_ip} | Query: {query_params}")
+    #logger.debug(f"Request started: {method} {path} from {client_ip} | Query: {query_params}")
     
     try:
         response = await call_next(request)
         process_time = time.time() - start_time
-        logger.debug(f"Request completed: {method} {path} | Status: {response.status_code} | Time: {process_time:.2f}s")
+        #logger.debug(f"Request completed: {method} {path} | Status: {response.status_code} | Time: {process_time:.2f}s")
         return response
     except Exception as e:
         process_time = time.time() - start_time
@@ -201,6 +209,7 @@ api_router.include_router(core_api.router)
 api_router.include_router(sandbox_api.router)
 api_router.include_router(billing_router)
 api_router.include_router(setup_router)
+api_router.include_router(setup_webhook_router)
 api_router.include_router(api_keys_api.router)
 api_router.include_router(billing_admin_router)
 api_router.include_router(admin_router)
@@ -208,6 +217,7 @@ api_router.include_router(master_password_router)
 
 # New Notifications Routers
 api_router.include_router(notification_admin_router)
+api_router.include_router(notifications_router)
 
 
 from core.mcp_module import api as mcp_api
@@ -232,6 +242,9 @@ api_router.include_router(pipedream_api.router)
 
 api_router.include_router(triggers_api.router)
 api_router.include_router(triggers_api.workflows_router)
+
+from core.workflows import api as workflows_api
+api_router.include_router(workflows_api.router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)

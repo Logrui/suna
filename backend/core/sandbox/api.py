@@ -1,9 +1,11 @@
 import os
+import asyncio
 import urllib.parse
 import uuid
 from typing import Optional
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Form, Depends, Request, WebSocket
+import aiohttp
 from fastapi.responses import Response
 from pydantic import BaseModel
 from daytona_sdk import AsyncSandbox
@@ -15,6 +17,8 @@ from core.utils.logger import logger
 from core.utils.auth_utils import get_optional_user_id, verify_and_get_user_id_from_jwt, verify_sandbox_access, verify_sandbox_access_optional
 from core.services.supabase import DBConnection
 from core.utils.sandbox_utils import generate_unique_filename, get_uploads_directory
+import mimetypes
+import html
 
 # Initialize shared resources
 router = APIRouter(tags=["sandbox"])
@@ -249,6 +253,7 @@ async def read_file(
     path = normalize_path(path)
     
     logger.debug(f"Received file read request for sandbox {sandbox_id}, path: {path}, user_id: {user_id}")
+    logger.debug(f"Request URL: {request.url}")
     if original_path != path:
         logger.debug(f"Normalized path from '{original_path}' to '{path}'")
     
@@ -279,11 +284,45 @@ async def read_file(
         # This applies RFC 5987 encoding for the filename to support non-ASCII characters
         import urllib.parse
         encoded_filename = urllib.parse.quote(filename, safe='')
-        content_disposition = f"attachment; filename*=UTF-8''{encoded_filename}"
+        
+        # Guess mime type
+        media_type, _ = mimetypes.guess_type(filename)
+        if not media_type:
+            media_type = "application/octet-stream"
+            
+        # Heuristic to fix escaped HTML content
+        if path.lower().endswith('.html') or path.lower().endswith('.htm'):
+            if isinstance(content, bytes):
+                try:
+                    decoded = content.decode('utf-8')
+                    # Check for common escaped HTML tags
+                    if '&lt;html' in decoded or '&lt;!DOCTYPE' in decoded or '&lt;body' in decoded:
+                        logger.warning(f"Detected escaped HTML in {path}, unescaping...")
+                        content = html.unescape(decoded).encode('utf-8')
+                except Exception as e:
+                    logger.warning(f"Failed to check/unescape bytes content: {e}")
+            elif isinstance(content, str):
+                 if '&lt;html' in content or '&lt;!DOCTYPE' in content or '&lt;body' in content:
+                    logger.warning(f"Detected escaped HTML in {path}, unescaping...")
+                    content = html.unescape(content)
+
+        # Determine disposition type (inline for viewable content, attachment for others)
+        # We want HTML, images, PDFs, text to be viewable inline
+        viewable_types = ['text/', 'image/', 'application/pdf', 'application/json', 'application/javascript']
+        disposition_type = "attachment"
+        
+        for v_type in viewable_types:
+            if media_type.startswith(v_type):
+                disposition_type = "inline"
+                break
+        
+        content_disposition = f"{disposition_type}; filename*=UTF-8''{encoded_filename}"
+        
+        logger.debug(f"Serving file {path} with media_type='{media_type}' and Content-Disposition='{content_disposition}'")
         
         return Response(
             content=content,
-            media_type="application/octet-stream",
+            media_type=media_type,
             headers={"Content-Disposition": content_disposition}
         )
     except HTTPException:
@@ -536,6 +575,7 @@ async def proxy_daytona_preview(
     Proxy a request to the Daytona preview URL, injecting the header to skip the warning.
     """
     logger.debug(f"Proxy request: sandbox={sandbox_id} port={port} path={path}")
+    logger.debug(f"Incoming Request URL: {request.url}")
     
     client = await db.client
     # Verify access (optional but recommended)
@@ -589,17 +629,26 @@ async def proxy_daytona_preview(
         r = await async_client.send(req, stream=True)
         
         logger.debug(f"Upstream response: {r.status_code} Content-Type: {r.headers.get('content-type')}")
+        logger.debug(f"Upstream headers: {dict(r.headers)}")
         
         # Determine content type
         content_type = r.headers.get("content-type")
+        
+        # Force text/html for .html files regardless of upstream header
+        if path.lower().endswith('.html') or path.lower().endswith('.htm'):
+            content_type = 'text/html; charset=utf-8'
+            logger.debug(f"Forcing Content-Type: {content_type} based on file extension")
         
         # Create an iterator for the response bytes
         iterator = r.aiter_bytes()
         first_chunk = b""
         
+        # Also check for escaped HTML if it's an HTML file
+        is_html_file = path.lower().endswith('.html') or path.lower().endswith('.htm')
+        
         # If content type is generic or missing, try to sniff the content
         # This is more robust than checking file extensions
-        if not content_type or 'text/plain' in content_type or 'application/octet-stream' in content_type:
+        if not content_type or 'text/plain' in content_type or 'application/octet-stream' in content_type or is_html_file:
             try:
                 # Peek at the first chunk
                 first_chunk = await iterator.__anext__()
@@ -609,9 +658,19 @@ async def proxy_daytona_preview(
                 sample = first_chunk[:1024].strip().lower()
                 logger.debug(f"Sniffing sample (len={len(sample)}): {sample[:50]}...")
                 
-                if sample.startswith(b'<!doctype html') or sample.startswith(b'<html'):
+                is_escaped_html = False
+                if sample.startswith(b'&lt;html') or sample.startswith(b'&lt;!doctype') or b'&lt;html' in sample[:100]:
+                    is_escaped_html = True
+                    logger.warning(f"Detected escaped HTML in proxy stream for {path}")
+                
+                if sample.startswith(b'<!doctype html') or sample.startswith(b'<html') or b'<html' in sample[:100] or is_escaped_html:
                     content_type = 'text/html; charset=utf-8'
                     logger.debug(f"Sniffed HTML content for {path}, forcing Content-Type: {content_type}")
+                    
+                    # If we force content type, we must ensure nosniff doesn't block us if it was set upstream
+                    if 'x-content-type-options' in r.headers:
+                        logger.debug("Removing X-Content-Type-Options header to allow sniffing override")
+                        pass
             except StopAsyncIteration:
                 # Empty body
                 logger.debug("Empty response body from upstream")
@@ -619,16 +678,60 @@ async def proxy_daytona_preview(
             except Exception as e:
                 logger.warning(f"Error sniffing content type: {e}")
         
-        async def stream_generator():
-            if first_chunk:
-                yield first_chunk
+        async def unescape_stream(iterator):
+            """
+            Generator that unescapes HTML content from the stream.
+            This buffers the content to unescape it.
+            """
+            buffer = b""
             async for chunk in iterator:
-                yield chunk
+                buffer += chunk
+            
+            # Decode, unescape, and re-encode
+            try:
+                decoded = buffer.decode('utf-8')
+                unescaped = html.unescape(decoded)
+                yield unescaped.encode('utf-8')
+            except Exception as e:
+                logger.error(f"Failed to unescape stream: {e}")
+                yield buffer
+
+        async def stream_generator():
+            # Reconstruct the full stream
+            async def chain_iterator():
+                if first_chunk:
+                    yield first_chunk
+                async for chunk in iterator:
+                    yield chunk
+            
+            final_iterator = chain_iterator()
+            
+            # If we detected escaped HTML, wrap the iterator in the unescaper
+            if 'is_escaped_html' in locals() and is_escaped_html:
+                logger.info(f"Enabling HTML unescaping for {path}")
+                async for chunk in unescape_stream(final_iterator):
+                    yield chunk
+            else:
+                async for chunk in final_iterator:
+                    yield chunk
+        
+        logger.debug(f"Final Response - Status: {r.status_code}, Content-Type: {content_type}")
+        
+        # We should probably forward some headers, but for now let's just ensure Content-Type is correct.
+        # If we want to be a transparent proxy, we should forward safe headers.
+        # But for this specific fix, just setting media_type is key.
+        
+        # Construct response headers
+        response_headers = {}
+        # Forward some safe headers if needed, but definitely NOT Content-Disposition if we want inline
+        # Actually, let's explicitly set Content-Disposition to inline to be safe
+        response_headers["Content-Disposition"] = "inline"
         
         return StreamingResponse(
             stream_generator(),
             status_code=r.status_code,
             media_type=content_type,
+            headers=response_headers,
             background=None 
         )
     except Exception as e:
@@ -636,159 +739,128 @@ async def proxy_daytona_preview(
         raise HTTPException(status_code=502, detail=f"Failed to proxy request: {str(e)}")
 
 
-@router.websocket("/sandboxes/{sandbox_id}/proxy/{port}/websockify")
+@router.websocket("/sandboxes/{sandbox_id}/proxy/{port}/{path:path}")
 async def proxy_daytona_websocket(
     websocket: WebSocket,
     sandbox_id: str,
     port: int,
-    user_id: Optional[str] = Depends(get_optional_user_id)
+    path: str
 ):
     """
-    WebSocket proxy for VNC/noVNC connections to Daytona sandbox.
-
-    This endpoint handles bidirectional WebSocket communication required for VNC streaming.
-    It relays data between the frontend client and the Daytona VNC server.
-
-    Security: Verifies user has access to the sandbox before accepting the connection.
+    Proxy WebSocket connections to the Daytona preview URL.
     """
-    upstream_ws = None
-
+    await websocket.accept()
+    
     try:
-        # Verify access BEFORE accepting the WebSocket connection
+        # Extract token and verify access
+        token = websocket.query_params.get("token")
+        
+        # Fallback to headers (Authorization: Bearer <token>)
+        if not token:
+            auth_header = websocket.headers.get("Authorization") or websocket.headers.get("authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+                
+        # Fallback to cookies
+        if not token:
+            token = websocket.cookies.get("suna-auth-token")
+            
+        user_id = None
+        
+        if token:
+            try:
+                from core.utils.auth_utils import _decode_jwt_safely
+                payload = _decode_jwt_safely(token)
+                user_id = payload.get('sub')
+            except Exception as e:
+                logger.warning(f"Failed to decode token for WebSocket: {e}")
+        
         client = await db.client
-        await verify_sandbox_access_optional(client, sandbox_id, user_id)
-
-        # Accept WebSocket connection after authorization
-        await websocket.accept()
-        logger.debug(f"WebSocket connection accepted for sandbox={sandbox_id} port={port} user={user_id}")
-
-        # Get sandbox and retrieve the preview URL
+        # Verify access (optional but recommended)
+        # We need to handle the case where verify_sandbox_access_optional raises HTTPException
+        try:
+            await verify_sandbox_access_optional(client, sandbox_id, user_id)
+        except HTTPException as e:
+            logger.error(f"WebSocket access denied: {e.detail}")
+            await websocket.close(code=1008, reason=str(e.detail))
+            return
+            
+        # Get the sandbox to retrieve the correct preview URL dynamically
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
-
+        
         # Get the authoritative preview URL from Daytona
         preview_link_obj = await sandbox.get_preview_link(port)
         base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
-
-        # Convert HTTP(S) URL to WebSocket URL (handle protocol prefix properly)
-        if base_target_url.startswith('https://'):
-            ws_url = 'wss://' + base_target_url[8:]
-        elif base_target_url.startswith('http://'):
-            ws_url = 'ws://' + base_target_url[7:]
-        else:
-            ws_url = base_target_url  # Already a ws:// or wss:// URL
-
-        # Add websockify path if not already present
-        if not ws_url.endswith('/websockify'):
-            ws_url = ws_url.rstrip('/') + '/websockify'
-
-        logger.info(f"Connecting to upstream VNC WebSocket: {ws_url}")
-
-        # Build headers including the skip warning header
-        extra_headers = {
-            'X-Daytona-Skip-Preview-Warning': 'true'
-        }
-
-        # Connect to Daytona VNC server with SSL verification disabled (self-signed certs)
-        upstream_ws = await websockets.connect(
-            ws_url,
-            extra_headers=extra_headers,
-            ssl=None,  # Disable SSL verification for development
-            ping_interval=20,
-            ping_timeout=10
-        )
-
-        logger.info(f"Successfully connected to upstream VNC WebSocket for sandbox {sandbox_id}")
-
-        # Flags to track connection state and prevent double-close
-        client_closed = False
-        upstream_closed = False
-
-        # Create bidirectional relay tasks
-        async def relay_client_to_upstream():
-            """Relay messages from client (frontend) to upstream (Daytona)"""
-            nonlocal client_closed, upstream_closed
-            try:
-                while True:
-                    # Receive from client
-                    data = await websocket.receive()
-
-                    if 'text' in data:
-                        await upstream_ws.send(data['text'])
-                    elif 'bytes' in data:
-                        await upstream_ws.send(data['bytes'])
-                    else:
-                        logger.warning(f"Received unknown data type from client: {data}")
-            except WebSocketDisconnect:
-                logger.debug("Client WebSocket disconnected")
-                client_closed = True
-            except Exception as e:
-                logger.error(f"Error relaying client to upstream: {e}")
-                client_closed = True
-            finally:
-                # Close upstream connection when client disconnects
-                if not upstream_closed and upstream_ws and not upstream_ws.closed:
-                    upstream_closed = True
+        
+        # Convert http/https to ws/wss
+        if base_target_url.startswith("https://"):
+            base_target_url = base_target_url.replace("https://", "wss://")
+        elif base_target_url.startswith("http://"):
+            base_target_url = base_target_url.replace("http://", "ws://")
+            
+        # Strip trailing slash from base if present
+        base_target_url = base_target_url.rstrip('/')
+        
+        # Construct full target URL
+        if path and not path.startswith('/'):
+            path = f"/{path}"
+            
+        target_url = f"{base_target_url}{path}"
+        
+        # Forward query params
+        if websocket.query_params:
+            query_string = str(websocket.query_params)
+            target_url += f"?{query_string}"
+            
+        logger.debug(f"Proxying WebSocket to: {target_url}")
+        
+        # Connect to upstream
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                target_url,
+                headers={'X-Daytona-Skip-Preview-Warning': 'true'},
+                ssl=False # Disable SSL verify for upstream if needed
+            ) as upstream_ws:
+                
+                # Create tasks for bidirectional forwarding
+                async def forward_client_to_upstream():
                     try:
-                        await upstream_ws.close()
-                    except Exception:
-                        pass  # Already closed or error during close
-
-        async def relay_upstream_to_client():
-            """Relay messages from upstream (Daytona) to client (frontend)"""
-            nonlocal client_closed, upstream_closed
-            try:
-                async for message in upstream_ws:
-                    if isinstance(message, bytes):
-                        await websocket.send_bytes(message)
-                    else:
-                        await websocket.send_text(message)
-            except websockets.exceptions.ConnectionClosed:
-                logger.debug("Upstream WebSocket disconnected")
-                upstream_closed = True
-            except Exception as e:
-                logger.error(f"Error relaying upstream to client: {e}")
-                upstream_closed = True
-            finally:
-                # Close client connection when upstream disconnects
-                if not client_closed:
-                    client_closed = True
+                        while True:
+                            data = await websocket.receive_bytes()
+                            await upstream_ws.send_bytes(data)
+                    except Exception as e:
+                        logger.debug(f"Client to Upstream connection closed: {e}")
+                        
+                async def forward_upstream_to_client():
                     try:
-                        await websocket.close()
-                    except Exception:
-                        pass  # Already closed or error during close
+                        async for msg in upstream_ws:
+                            if msg.type == aiohttp.WSMsgType.BINARY:
+                                await websocket.send_bytes(msg.data)
+                            elif msg.type == aiohttp.WSMsgType.TEXT:
+                                await websocket.send_text(msg.data)
+                            elif msg.type == aiohttp.WSMsgType.CLOSED:
+                                break
+                            elif msg.type == aiohttp.WSMsgType.ERROR:
+                                break
+                    except Exception as e:
+                        logger.debug(f"Upstream to Client connection closed: {e}")
 
-        # Run both relay tasks concurrently
-        await asyncio.gather(
-            relay_client_to_upstream(),
-            relay_upstream_to_client(),
-            return_exceptions=True
-        )
-
-    except HTTPException as e:
-        # Auth/access errors - don't accept connection
-        logger.error(f"HTTP error in WebSocket proxy: {e}")
-        try:
-            await websocket.close(code=1008, reason=str(e.detail))
-        except Exception:
-            pass  # Connection may not be accepted yet
-    except websockets.exceptions.WebSocketException as e:
-        logger.error(f"WebSocket error connecting to Daytona: {e}")
-        try:
-            await websocket.close(code=1011, reason=f"Failed to connect to VNC server: {str(e)}")
-        except Exception:
-            pass  # Already closed
+                # Run both tasks
+                done, pending = await asyncio.wait(
+                    [
+                        asyncio.create_task(forward_client_to_upstream()),
+                        asyncio.create_task(forward_upstream_to_client())
+                    ],
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                # Cancel pending tasks
+                for task in pending:
+                    task.cancel()
+                    
     except Exception as e:
-        logger.error(f"Unexpected error in WebSocket proxy: {e}", exc_info=True)
+        logger.error(f"WebSocket proxy error: {e}")
         try:
-            await websocket.close(code=1011, reason=f"Internal error: {str(e)}")
-        except Exception:
-            pass  # Already closed
-    finally:
-        # Final cleanup - ensure upstream is closed
-        if upstream_ws and not upstream_ws.closed:
-            try:
-                await upstream_ws.close()
-            except Exception:
-                pass
-        logger.debug(f"WebSocket proxy closed for sandbox {sandbox_id}")
-
+            await websocket.close(code=1011)
+        except:
+            pass

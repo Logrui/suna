@@ -1,0 +1,33 @@
+---
+description: apply a migration to the relevant Supabase container
+---
+
+//turbo-all
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Goal
+
+Execute the `docker-apply-migration.ps1` script to apply a SQL migration.
+
+## Arguments
+
+- **MigrationFile** (required, positional): Path to the `.sql` migration file.
+- **-ContainerName** (optional): Name of the database container (default: `supabase-db`).
+
+## Examples
+
+- `/migrate .\migrations\001_init.sql`: Apply migration to default container.
+- `/migrate .\migrations\001_init.sql -ContainerName my-db`: Apply to specific container.
+
+## Execution Steps
+
+### 1. Run Script
+
+```powershell
+.\.scripts\core\docker-apply-migration.ps1 $ARGUMENTS
+```

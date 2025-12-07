@@ -1,0 +1,34 @@
+description = "List recently edited documentation files (.md)."
+
+prompt = """
+---
+description: List recently edited documentation files (.md).
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Goal
+
+Execute the `list-recent-docs.ps1` script to see recently modified documentation files.
+
+## Arguments
+
+- **Count** (optional, positional): Number of files to list (default: 10).
+
+## Examples
+
+- `/recent-docs`: List top 10 recently edited md files.
+- `/recent-docs 20`: List top 20.
+
+## Execution Steps
+
+### 1. Run Script
+
+```powershell
+.\.scripts\core\list-recent-docs.ps1 $ARGUMENTS
+```
+"""

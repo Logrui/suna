@@ -4,10 +4,10 @@
 			"path": "."
 		},
 		{
-			"path": "../suna-private"
+			"path": "../suna-PRODUCTION"
 		},
 		{
-			"path": "../suna-PRODUCTION"
+			"path": "../suna-supabase"
 		}
 	],
 	"settings": {}

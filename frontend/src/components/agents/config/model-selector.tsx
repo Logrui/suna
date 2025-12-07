@@ -99,7 +99,8 @@ export function AgentModelSelector({
           contextWindow: model.context_window || 128000,
           inputCostPerMillionTokens: model.input_cost_per_million_tokens,
           outputCostPerMillionTokens: model.output_cost_per_million_tokens,
-          isCustom: false
+          isCustom: false,
+          variant: model.variant || null
         });
       });
     } else {
@@ -135,6 +136,8 @@ export function AgentModelSelector({
 
     return Array.from(modelMap.values());
   }, [modelsData?.models, allModels, customModels]);
+
+  console.log('enhancedModelOptions:', enhancedModelOptions);
 
   const selectedModelDisplay = useMemo(() => {
     const model = enhancedModelOptions.find(m => m.id === selectedModel);
@@ -342,6 +345,11 @@ export function AgentModelSelector({
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <ModelProviderIcon modelId={model.id} size={24} />
                 <span className="font-medium">{model.label}</span>
+                {model.variant && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
+                    {model.variant}
+                  </span>
+                )}
               </div>
               <div className="w-16 text-right text-xs text-muted-foreground">
                 {inputCost || '—'}
@@ -570,6 +578,11 @@ export function AgentModelSelector({
                                       <div className="flex items-center gap-3 min-w-0 flex-1 pl-2">
                                         <ModelProviderIcon modelId={model.id} size={24} />
                                         <span className="font-medium">{model.label}</span>
+                                        {model.variant && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
+                                            {model.variant}
+                                          </span>
+                                        )}
                                       </div>
                                       <div className="w-16 text-right text-xs text-muted-foreground pr-2">
                                         {inputCost || '—'}

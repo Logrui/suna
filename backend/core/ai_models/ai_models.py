@@ -89,6 +89,9 @@ class Model:
     # NEW: Fallback models for rate limiting and failures
     fallback_models: List[str] = field(default_factory=list)
     
+    # NEW: Variant indicator for model variations (e.g., "Max", "Extended", "Lite")
+    variant: Optional[str] = None
+    
     def __post_init__(self):        
         if ModelCapability.CHAT not in self.capabilities:
             self.capabilities.insert(0, ModelCapability.CHAT)
@@ -129,7 +132,7 @@ class Model:
         # Start with intelligent defaults
         params = {
             "model": model_id,
-            "num_retries": 5,
+            "num_retries": config.LITELLM_RETRIES or 2,
         }
         
     
@@ -202,4 +205,5 @@ class Model:
             "metadata": self.metadata,
             "priority": self.priority,
             "recommended": self.recommended,
+            "variant": self.variant,
         } 

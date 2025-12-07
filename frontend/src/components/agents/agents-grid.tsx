@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Trash2, Star, MessageCircle, Wrench, Globe, GlobeLock, Download, Shield, AlertTriangle, GitBranch } from 'lucide-react';
+import { Settings, Trash2, Star, MessageCircle, Wrench, Globe, GlobeLock, Download, Shield, AlertTriangle, GitBranch, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
@@ -71,21 +71,21 @@ interface AgentModalProps {
   isUnpublishing: boolean;
 }
 
-const AgentModal: React.FC<AgentModalProps> = ({ 
-  agent, 
-  isOpen, 
-  onClose, 
-  onCustomize, 
-  onChat, 
-  onPublish, 
-  onUnpublish, 
-  isPublishing, 
-  isUnpublishing 
+const AgentModal: React.FC<AgentModalProps> = ({
+  agent,
+  isOpen,
+  onClose,
+  onCustomize,
+  onChat,
+  onPublish,
+  onUnpublish,
+  isPublishing,
+  isUnpublishing
 }) => {
   if (!agent) return null;
 
   const isSunaAgent = agent.metadata?.is_suna_default || false;
-  
+
   const truncateDescription = (text?: string, maxLength = 120) => {
     if (!text || text.length <= maxLength) return text || 'Try out this agent';
     return text.substring(0, maxLength) + '...';
@@ -143,6 +143,14 @@ const AgentModal: React.FC<AgentModalProps> = ({
               >
                 <MessageCircle className="h-4 w-4" />
                 Chat
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => window.open(`/dashboard?agent_id=${agent.agent_id}`, '_blank')}
+                title="Open in new tab"
+              >
+                <ExternalLink className="h-4 w-4" />
               </Button>
             </div>
             {!isSunaAgent && isStagingMode && (
@@ -204,10 +212,10 @@ const AgentModal: React.FC<AgentModalProps> = ({
   );
 };
 
-export const AgentsGrid: React.FC<AgentsGridProps> = ({ 
-  agents, 
-  onEditAgent, 
-  onDeleteAgent, 
+export const AgentsGrid: React.FC<AgentsGridProps> = ({
+  agents,
+  onEditAgent,
+  onDeleteAgent,
   onToggleDefault,
   deleteAgentMutation,
   isDeletingAgent,
@@ -219,7 +227,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [configAgentId, setConfigAgentId] = useState<string | null>(null);
   const router = useRouter();
-  
+
   const unpublishAgentMutation = useUnpublishTemplate();
 
   const handleAgentClick = (agent: Agent) => {
@@ -267,10 +275,10 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
             ...agent,
             id: agent.agent_id
           };
-          
+
           const isDeleting = isDeletingAgent?.(agent.agent_id) || false;
           const isGloballyDeleting = deleteAgentMutation?.isPending || false;
-          
+
           return (
             <div key={agent.agent_id} className="relative group flex flex-col h-full">
               {isDeleting && (
@@ -281,7 +289,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                   </div>
                 </div>
               )}
-              
+
               <div className={`transition-all duration-200 ${isDeleting ? 'opacity-60 scale-95' : ''}`}>
                 <UnifiedAgentCard
                   variant="agent"
@@ -303,6 +311,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                   }}
                   actions={{
                     onClick: () => !isDeleting && handleAgentClick(agent),
+                    onOpenNewTab: () => window.open(`/dashboard?agent_id=${agent.agent_id}`, '_blank'),
                   }}
                 />
               </div>
@@ -310,8 +319,8 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
                 {!agent.is_default && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
                         disabled={isDeleting || isGloballyDeleting}
@@ -379,7 +388,7 @@ export const AgentsGrid: React.FC<AgentsGridProps> = ({
         isPublishing={externalPublishingId === selectedAgent?.agent_id}
         isUnpublishing={unpublishingId === selectedAgent?.agent_id}
       />
-      
+
       {configAgentId && (
         <AgentConfigurationDialog
           open={showConfigDialog}

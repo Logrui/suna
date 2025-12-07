@@ -1,6 +1,9 @@
-﻿-- Migration: Setup webhook trigger for welcome emails
--- This migration creates a trigger that calls the backend when a new user is created
--- Instead of having the frontend trigger the email, Supabase will call the backend directly
+﻿-- Migration: Setup webhook trigger for user creation
+-- This migration creates a trigger that calls the backend when a new user is created.
+-- The webhook handles:
+-- 1. Account initialization (free tier subscription + Suna agent)
+-- 2. Welcome email
+-- All initialization happens automatically on the backend, eliminating client-side calls.
 
 -- ============================================================================
 -- SETUP REQUIRED: Configure webhook after migration
@@ -49,6 +52,7 @@ CREATE TABLE IF NOT EXISTS public.webhook_config (
 -- Only service_role can modify this table
 ALTER TABLE public.webhook_config ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role can manage webhook config" ON public.webhook_config;
 CREATE POLICY "Service role can manage webhook config"
   ON public.webhook_config
   FOR ALL
@@ -56,7 +60,7 @@ CREATE POLICY "Service role can manage webhook config"
   USING (true)
   WITH CHECK (true);
 
--- Block public access
+DROP POLICY IF EXISTS "No public access" ON public.webhook_config;
 CREATE POLICY "No public access"
   ON public.webhook_config
   FOR ALL
@@ -169,5 +173,5 @@ GRANT USAGE ON SCHEMA net TO postgres, service_role;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA net TO postgres, service_role;
 
 COMMENT ON FUNCTION public.trigger_welcome_email() IS 
-'Triggers a webhook to the backend when a new user is created to send welcome email. This eliminates the need for the frontend to call the backend.';
+'Triggers a webhook to the backend when a new user is created. The webhook handles account initialization (free tier + Suna agent) and welcome email. Endpoint: /api/webhooks/user-created';
 

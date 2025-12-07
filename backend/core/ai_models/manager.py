@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any, Tuple
 from .registry import registry
 from .ai_models import Model, ModelCapability
 from core.utils.logger import logger
+from core.utils.config import config
 from .registry import PREMIUM_MODEL_ID, FREE_MODEL_ID
 
 class ModelManager:
@@ -65,7 +66,7 @@ class ModelManager:
             # logger.warning(f"Model '{model_id}' not found in registry, using basic params")
             return {
                 "model": model_id,
-                "num_retries": 5,
+                "num_retries": config.LITELLM_RETRIES or 2,
                 **override_params
             }
         
@@ -183,6 +184,7 @@ class ModelManager:
             "tier_availability": model.tier_availability,
             "priority": model.priority,
             "recommended": model.recommended,
+            "variant": model.variant,
         }
     
     def list_available_models(
