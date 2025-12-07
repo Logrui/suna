@@ -69,7 +69,13 @@ We recommend **Railway** because it visually manages the relationship between th
     *   **Root Directory:** `/backend` (Important! Tell it to look in the backend folder).
 4.  **Settings > Build:**
     *   It should auto-detect the `Dockerfile` in the `/backend` folder.
-5.  **Variables:**
+5.  **Settings > Service > Command Configuration:**
+    *   **Build Command:** Leave empty (default).
+    *   **Start Command:** Leave empty (default).
+        *   *Railway will use the Dockerfile default:* `uv run gunicorn api:app ...`
+    *   **Pre-deploy Command:** Leave empty.
+        *   *Note: Database migrations should be handled directly via Supabase CLI/UI, not here.*
+6.  **Variables:**
     *   `PORT`: `8000`
     *   `ENV_MODE`: `production`
     *   `REDIS_HOST`: Reference the Redis variable (usually `redis` or use the `${Redis.HOST}` variable reference).
@@ -78,7 +84,7 @@ We recommend **Railway** because it visually manages the relationship between th
     *   `SUPABASE_KEY`: Your **Service Role** key (starts with `ey...`).
     *   `DATABASE_URL`: Your Postgres connection string. *Note: You can expose your Postgres port via Tunnel OR use the Supabase HTTP API. The backend code uses `supabase-py` client (HTTP) mostly, but Prisma/DB connections need a direct TCP connection. If you haven't tunnelled port 5432, you might need to.*
         *   *Correction:* Suna primarily uses the Supabase HTTP Client (`supabase-js`/`supabase-py`). Direct DB access is less frequent but if used (e.g. Prisma), you need to tunnel the DB port or use a connection pooler. **For now, ensure `SUPABASE_URL` and `SUPABASE_KEY` are correct.**
-6.  **Settings > Networking:**
+7.  **Settings > Networking:**
     *   Generate a Domain (e.g., `suna-backend-production.up.railway.app`). You will need this for the Frontend.
 
 ### 2.3. Deploy the Background Worker
@@ -86,9 +92,11 @@ We recommend **Railway** because it visually manages the relationship between th
 2.  Rename this service to "suna-worker".
 3.  **Settings > General:**
     *   **Root Directory:** `/backend`
-4.  **Settings > Service:**
+4.  **Settings > Service > Command Configuration:**
+    *   **Build Command:** Leave empty (default).
     *   **Start Command:** `uv run dramatiq run_agent_background`
-    *   *Note: This overrides the default Docker `CMD` which starts the API.*
+        *   *This EXPLICITLY overrides the default Docker command to run the worker instead of the API.*
+    *   **Pre-deploy Command:** Leave empty.
 5.  **Variables:**
     *   Copy all variables from the API service (REDIS, SUPABASE, Keys).
     *   Ensure it connects to the **same Redis instance**.
