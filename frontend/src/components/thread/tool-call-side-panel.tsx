@@ -743,14 +743,14 @@ export const ToolCallSidePanel = memo(function ToolCallSidePanel({
   const currentToolName = currentToolCall?.toolCall?.function_name?.replace(/_/g, '-').toLowerCase();
   const isFileOperation = currentToolName && ['create-file', 'edit-file', 'full-file-rewrite', 'read-file', 'delete-file'].includes(currentToolName);
 
-  console.log('[TOOL PANEL] Current tool:', {
-    currentToolName,
-    isFileOperation,
-    isCurrentToolStreaming,
-    totalCompletedCalls,
-    safeInternalIndex,
-    totalCalls
-  });
+  // console.log('[TOOL PANEL] Current tool:', {
+  //   currentToolName,
+  //   isFileOperation,
+  //   isCurrentToolStreaming,
+  //   totalCompletedCalls,
+  //   safeInternalIndex,
+  //   totalCalls
+  // });
 
   // Only fallback to last completed if NOT a file operation (file ops should stream)
   if (isCurrentToolStreaming && totalCompletedCalls > 0 && !isFileOperation) {
