@@ -9,6 +9,8 @@ import aiohttp
 from fastapi.responses import Response
 from pydantic import BaseModel
 from daytona_sdk import AsyncSandbox
+import asyncio
+import websockets
 
 from core.sandbox.sandbox import get_or_start_sandbox, delete_sandbox, create_sandbox
 from core.utils.logger import logger

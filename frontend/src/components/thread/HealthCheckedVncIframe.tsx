@@ -80,7 +80,10 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
             <iframe
               key={iframeKey}
               src={(() => {
-                let vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+                // Construct the VNC URL with path parameter for WebSocket endpoint
+                // noVNC will connect to the websockify endpoint at the specified path
+                let vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local&path=websockify`;
+
                 // Fix mixed content issues: if page is HTTPS but VNC URL is HTTP, upgrade it
                 if (typeof window !== 'undefined' && window.location.protocol === 'https:' && vncUrl.startsWith('http:')) {
                   vncUrl = vncUrl.replace('http:', 'https:');
@@ -88,8 +91,7 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
 
                 // Append auth token if available (for private projects)
                 if (accessToken) {
-                  const separator = vncUrl.includes('?') ? '&' : '?';
-                  vncUrl = `${vncUrl}${separator}token=${accessToken}`;
+                  vncUrl = `${vncUrl}&token=${accessToken}`;
                 }
 
                 return vncUrl;
