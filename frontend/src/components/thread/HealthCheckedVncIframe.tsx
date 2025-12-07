@@ -125,10 +125,12 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
                 // Extract the full path from vnc_preview URL
 
                 // sandbox.vnc_preview format: {base_url}/api/sandboxes/{id}/proxy/6080/
-                // We need to construct: path=/api/sandboxes/{id}/proxy/6080/websockify
+                // We need to construct: path=api/sandboxes/{id}/proxy/6080/websockify
+                // IMPORTANT: noVNC path parameter should NOT start with / (noVNC adds it automatically)
 
                 const vncPreviewUrl = new URL(sandbox.vnc_preview, window.location.origin);
-                const websocketPath = vncPreviewUrl.pathname.replace(/\/$/, '') + '/websockify';
+                // Remove leading slash from path - noVNC will add it when constructing WebSocket URL
+                const websocketPath = (vncPreviewUrl.pathname.replace(/\/$/, '') + '/websockify').substring(1);
 
                 console.log('[VNC Debug] Constructing VNC connection:', {
                   vnc_preview: sandbox.vnc_preview,
@@ -137,7 +139,9 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
                   sandbox_id: sandbox.id
                 });
 
-                let vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local&path=${encodeURIComponent(websocketPath)}`;
+                // Remove trailing slash from vnc_preview to avoid double slash with /vnc_lite.html
+                const baseUrl = sandbox.vnc_preview.replace(/\/$/, '');
+                let vncUrl = `${baseUrl}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local&path=${encodeURIComponent(websocketPath)}`;
 
                 // Fix mixed content issues: if page is HTTPS but VNC URL is HTTP, upgrade it
                 if (typeof window !== 'undefined' && window.location.protocol === 'https:' && vncUrl.startsWith('http:')) {

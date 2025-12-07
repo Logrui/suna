@@ -130,7 +130,9 @@ export function useVncPreloader(
 
   const retry = useCallback(() => {
     if (sandbox?.vnc_preview && sandbox?.pass) {
-      const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+      // Remove trailing slash from vnc_preview to avoid double slash with /vnc_lite.html
+      const baseUrl = sandbox.vnc_preview.replace(/\/$/, '');
+      const vncUrl = `${baseUrl}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
       setRetryCount(0);
       setStatus('idle');
       startPreloading(vncUrl);
@@ -159,7 +161,9 @@ export function useVncPreloader(
       return;
     }
 
-    const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    // Remove trailing slash from vnc_preview to avoid double slash with /vnc_lite.html
+    const baseUrl = sandbox.vnc_preview.replace(/\/$/, '');
+    const vncUrl = `${baseUrl}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
     console.log('[VNC Preloader] Constructed preload URL:', vncUrl);
 
     // Reset retry counter for new sandbox
