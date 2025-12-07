@@ -246,6 +246,20 @@ async def get_user_id_from_stream_auth(
             )
 
 async def get_optional_user_id(request: Request) -> Optional[str]:
+    """
+    Extract and validate user_id from HTTP request.
+    
+    This function checks for authentication tokens in the following order:
+    1. Authorization header (Bearer token)
+    2. Query parameter 'token'
+    3. Cookie 'suna-auth-token'
+    
+    Args:
+        request: The HTTP request object
+        
+    Returns:
+        Optional[str]: The user_id if authentication is successful, None otherwise
+    """
     auth_header = request.headers.get('Authorization')
     token = None
 
@@ -256,6 +270,21 @@ async def get_optional_user_id(request: Request) -> Optional[str]:
     elif request.cookies.get('suna-auth-token'):
         token = request.cookies.get('suna-auth-token')
 
+    return _validate_token_and_get_user_id(token)
+
+
+def _validate_token_and_get_user_id(token: Optional[str]) -> Optional[str]:
+    """
+    Validate JWT token and extract user_id.
+    
+    This is a shared helper function used by both HTTP and WebSocket authentication.
+    
+    Args:
+        token: The JWT token to validate
+        
+    Returns:
+        Optional[str]: The user_id if validation is successful, None otherwise
+    """
     if not token:
         return None
 
@@ -298,22 +327,7 @@ async def get_optional_user_id_from_websocket(websocket: WebSocket) -> Optional[
     elif websocket.cookies.get('suna-auth-token'):
         token = websocket.cookies.get('suna-auth-token')
 
-    if not token:
-        return None
-
-    try:
-        payload = _decode_jwt_safely(token)
-
-        user_id = payload.get('sub')
-        if user_id:
-            sentry.sentry.set_user({ "id": user_id })
-            structlog.contextvars.bind_contextvars(
-                user_id=user_id
-            )
-
-        return user_id
-    except PyJWTError:
-        return None
+    return _validate_token_and_get_user_id(token)
 
 async def is_user_admin(client, user_id: str) -> bool:
     """

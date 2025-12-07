@@ -655,9 +655,11 @@ async def proxy_daytona_websocket(
     # SECURITY: Extract user_id from WebSocket connection before accepting
     user_id = await get_optional_user_id_from_websocket(websocket)
     
+    # Get database client
+    client = await db.client
+    
     # SECURITY: Verify sandbox access before accepting the WebSocket connection
     try:
-        client = await db.client
         await verify_sandbox_access_optional(client, sandbox_id, user_id)
     except HTTPException as e:
         # Reject the WebSocket connection if access verification fails
