@@ -150,10 +150,10 @@ export const MyAgentsTab = ({
                       isActioning: isActioning,
                     }}
                     actions={{
-                      onPrimaryAction: template.is_public 
+                      onPrimaryAction: template.is_public
                         ? () => onUnpublish(template.template_id, template.name)
                         : () => onPublish(template),
-                      onSecondaryAction: template.is_public ? () => {} : undefined,
+                      onSecondaryAction: template.is_public ? () => { } : undefined,
                     }}
                   />
                 );
@@ -211,8 +211,9 @@ export const MyAgentsTab = ({
               <LoadingState viewMode={viewMode} />
             ) : agents.length === 0 ? (
               <EmptyState
-                hasAgents={(agentsPagination?.total_items || 0) > 0}
-                onCreateAgent={onCreateAgent}
+                type="agent"
+                hasItems={(agentsPagination?.total_items || 0) > 0}
+                onCreate={onCreateAgent}
                 onClearFilters={handleClearFilters}
               />
             ) : (
@@ -227,7 +228,7 @@ export const MyAgentsTab = ({
                 publishingId={publishingAgentId}
               />
             )}
-            
+
             {agentsPagination && (
               <Pagination
                 currentPage={agentsPagination.current_page}
@@ -247,4 +248,4 @@ export const MyAgentsTab = ({
       </div>
     </div>
   );
-}; 
+};

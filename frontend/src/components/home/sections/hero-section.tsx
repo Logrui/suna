@@ -465,14 +465,7 @@ export function HeroSection() {
               Sign in with email
             </Link>
 
-            <Link
-              href={`/auth?mode=signup&returnUrl=${encodeURIComponent('/dashboard')}`}
-              className="flex h-12 items-center justify-center w-full text-center rounded-full border border-border bg-background hover:bg-accent/20 transition-all"
-              onClick={() => setAuthDialogOpen(false)}
-            >
-              Create new account
-            </Link>
-          </div>
+{/* Create account disabled */}          </div>
 
           <div className="mt-4 text-center text-xs text-muted-foreground">
             By continuing, you agree to our{' '}

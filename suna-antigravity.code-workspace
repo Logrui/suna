@@ -7,10 +7,10 @@
 			"path": "../suna-supabase"
 		},
 		{
-			"path": "../suna-main"
+			"path": "../suna-private"
 		},
 		{
-			"path": "../suna-private"
+			"path": "../suna-PRODUCTION"
 		}
 	],
 	"settings": {}

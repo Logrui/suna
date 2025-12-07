@@ -18,9 +18,21 @@ class SunaDefaultAgentService:
     
     async def install_for_all_users(self) -> Dict[str, Any]:
         """Install Suna agent for all users who don't have one."""
-        logger.debug("🚀 Installing Suna agents for users who don't have them")
+        from core.utils.distributed_lock import DistributedLock
         
+        # Try to acquire lock to prevent multiple workers from running this simultaneously
+        lock = DistributedLock("suna_agent_install_all_lock", timeout_seconds=300)
+        if not await lock.acquire(wait=False):
+            logger.debug("Skipping Suna agent install check (lock held by another worker)")
+            return {
+                "installed_count": 0, 
+                "failed_count": 0, 
+                "details": ["Skipped - Lock held by another worker"]
+            }
+
         try:
+            logger.debug("🚀 Installing Suna agents for users who don't have them")
+            
             client = await self._db.client
             
             # Get all personal accounts
@@ -49,7 +61,8 @@ class SunaDefaultAgentService:
             
             for account_id in missing_accounts:
                 try:
-                    await self._create_suna_agent_for_user(account_id)
+                    # Use public method which includes existence check for extra safety
+                    await self.install_suna_agent_for_user(account_id)
                     success_count += 1
                     logger.debug(f"✅ Installed Suna for user {account_id}")
                 except Exception as e:
@@ -72,6 +85,8 @@ class SunaDefaultAgentService:
                 "failed_count": 0,
                 "details": [error_msg]
             }
+        finally:
+            await lock.release()
     
     async def install_suna_agent_for_user(self, account_id: str, replace_existing: bool = False) -> Optional[str]:
         """Install Suna agent for a specific user."""

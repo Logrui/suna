@@ -12,6 +12,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { clearUserLocalStorage } from '@/lib/utils/clear-local-storage';
 import { initializeRealtimeClient } from '@/lib/supabase/realtime-client';
+import { getApiUrl } from '@/lib/get-api-url';
 
 type AuthContextType = {
   supabase: SupabaseClient;
@@ -31,6 +32,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
 
+    const ensureAccountInitialized = async (currentSession: Session) => {
+      if (!currentSession?.user?.id) return;
+
+      const storageKey = `suna_init_checked_${currentSession.user.id}`;
+      if (localStorage.getItem(storageKey)) {
+        return; // Already checked for this user
+      }
+
+      try {
+        //console.log('[AuthProvider] Ensuring account initialized...');
+        const response = await fetch(`${getApiUrl()}/setup/initialize`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentSession.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          localStorage.setItem(storageKey, 'true');
+          //console.log('[AuthProvider] Account initialization check passed');
+        } else {
+          console.warn('[AuthProvider] Account initialization check failed:', await response.text());
+        }
+      } catch (error) {
+        console.warn('[AuthProvider] Error checking account initialization:', error);
+      }
+    };
+
     const getInitialSession = async () => {
       try {
         const {
@@ -39,15 +69,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
+        // Sync auth token to cookie for backend proxy access
+        if (currentSession?.access_token) {
+          document.cookie = `suna-auth-token=${currentSession.access_token}; path=/; max-age=${currentSession.expires_in}; SameSite=Lax; Secure`;
+
+          // Ensure account is initialized (idempotent check)
+          ensureAccountInitialized(currentSession);
+        }
+
         // Initialize realtime client with auth syncing
         try {
           await initializeRealtimeClient(supabase);
-          console.log('[AuthProvider] Realtime client initialized with auth syncing');
+          //console.log('[AuthProvider] Realtime client initialized with auth syncing');
         } catch (err) {
-          console.error('[AuthProvider] Failed to initialize realtime client:', err);
+          //console.error('[AuthProvider] Failed to initialize realtime client:', err);
         }
 
       } catch (error) {
+        console.error('❌ Error getting initial session:', error);
       } finally {
         setIsLoading(false);
       }
@@ -63,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Sync auth token to cookie for backend proxy access (e.g. Daytona previews)
         if (newSession?.access_token) {
           document.cookie = `suna-auth-token=${newSession.access_token}; path=/; max-age=${newSession.expires_in}; SameSite=Lax; Secure`;
+          ensureAccountInitialized(newSession);
         } else if (event === 'SIGNED_OUT') {
           document.cookie = 'suna-auth-token=; path=/; max-age=0; SameSite=Lax; Secure';
         }

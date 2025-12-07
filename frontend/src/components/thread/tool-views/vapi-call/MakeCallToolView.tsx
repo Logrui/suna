@@ -12,23 +12,20 @@ import { createClient } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function MakeCallToolView({
-  name = 'make-phone-call',
-  assistantContent,
-  toolContent,
+  toolCall,
+  toolResult,
   assistantTimestamp,
   toolTimestamp,
   isSuccess = true,
   isStreaming = false,
 }: ToolViewProps) {
-  const callData = extractMakeCallData(toolContent);
+  // All hooks must be called unconditionally at the top
+  // We need to extract callData first to use it in hooks, but we'll handle undefined case
+  const callData = toolCall ? extractMakeCallData(toolCall, toolResult) : null;
   const [liveTranscript, setLiveTranscript] = useState<any[]>([]);
   const [liveStatus, setLiveStatus] = useState(callData?.status || 'queued');
   const [previousTranscriptLength, setPreviousTranscriptLength] = useState(0);
-  const toolTitle = getToolTitle(name);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
-
-
-
 
   // Subscribe to real-time updates
   useVapiCallRealtime(callData?.call_id);
@@ -37,23 +34,40 @@ export function MakeCallToolView({
     queryKey: ['vapi-call', callData?.call_id],
     queryFn: async () => {
       if (!callData?.call_id) return null;
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('vapi_calls')
-        .select('*')
-        .eq('call_id', callData.call_id)
-        .single();
+      
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
 
-      if (error) {
+        const response = await fetch(`${API_URL}/vapi/calls/${callData.call_id}`, {
+          headers,
+        });
+
+        if (!response.ok) {
+          console.error('[MakeCallToolView] Error fetching call:', response.statusText);
+          return null;
+        }
+
+        const data = await response.json();
+
+        console.log('[MakeCallToolView] Fetched call data:', {
+          status: data?.status,
+          transcriptLength: Array.isArray(data?.transcript) ? data.transcript.length : 0
+        });
+        return data;
+      } catch (error) {
         console.error('[MakeCallToolView] Error fetching call:', error);
         return null;
       }
-
-      console.log('[MakeCallToolView] Fetched call data:', {
-        status: data?.status,
-        transcriptLength: Array.isArray(data?.transcript) ? data.transcript.length : 0
-      });
-      return data;
     },
     enabled: !!callData?.call_id,
     refetchInterval: (query) => {
@@ -100,6 +114,15 @@ export function MakeCallToolView({
       transcriptEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [liveTranscript, previousTranscriptLength]);
+
+  // Defensive check - handle cases where toolCall might be undefined
+  if (!toolCall) {
+    console.warn('MakeCallToolView: toolCall is undefined. Tool views should use structured props.');
+    return null;
+  }
+
+  const name = toolCall.function_name.replace(/_/g, '-').toLowerCase();
+  const toolTitle = getToolTitle(name);
 
   if (!callData) {
     return <div className="text-sm text-muted-foreground">No call data available</div>;
@@ -197,10 +220,6 @@ export function MakeCallToolView({
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {assistantContent && (
-          <div className="text-sm text-foreground">{assistantContent}</div>
-        )}
-
         <AnimatePresence mode="wait">
           {isActive && liveTranscript.length > 0 ? (
             <motion.div

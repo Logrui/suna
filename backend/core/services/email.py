@@ -11,12 +11,15 @@ class EmailService:
         self.api_token = os.getenv('MAILTRAP_API_TOKEN')
         self.sender_email = os.getenv('MAILTRAP_SENDER_EMAIL', 'dom@kortix.ai')
         self.sender_name = os.getenv('MAILTRAP_SENDER_NAME', 'Suna Team')
+        self.client = None
         
-        if not self.api_token:
-            logger.warning("MAILTRAP_API_TOKEN not found in environment variables")
-            self.client = None
+        if self.api_token:
+            try:
+                self.client = mt.MailtrapClient(token=self.api_token)
+            except Exception as e:
+                logger.warning(f"Failed to initialize Mailtrap client: {e}")
         else:
-            self.client = mt.MailtrapClient(token=self.api_token)
+            logger.info("MAILTRAP_API_TOKEN not found, email service disabled")
     
     def send_welcome_email(self, user_email: str, user_name: Optional[str] = None) -> bool:
         if not self.client:
@@ -46,6 +49,10 @@ class EmailService:
         html_content: str, 
         text_content: str
     ) -> bool:
+        if not self.client:
+            logger.debug(f"Email service disabled, skipping email to {to_email}")
+            return False
+
         try:
             mail = mt.Mail(
                 sender=mt.Address(email=self.sender_email, name=self.sender_name),

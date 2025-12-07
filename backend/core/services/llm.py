@@ -35,6 +35,71 @@ class LLMError(Exception):
     """Exception for LLM-related errors."""
     pass
 
+# Thread-local storage for fallback events using ContextVars
+from contextvars import ContextVar
+fallback_context: ContextVar[dict] = ContextVar('fallback_context', default={})
+
+def on_litellm_failure(kwargs, completion_response, start_time, end_time):
+    """Callback when a model call fails (before fallback attempt)."""
+    model = kwargs.get('model', 'unknown')
+    
+    # Check if completion_response is an Exception or has an error attribute
+    if isinstance(completion_response, Exception):
+        error_msg = str(completion_response)
+    else:
+        error_obj = getattr(completion_response, 'error', None)
+        error_msg = str(error_obj) if error_obj else 'Unknown error'
+    
+    # Extract user-friendly error reason
+    error_lower = error_msg.lower()
+    if 'rate limit' in error_lower or 'overloaded' in error_lower:
+        reason = 'Overloaded'
+    elif 'timeout' in error_lower or 'connection' in error_lower:
+        reason = 'Connection Issues'
+    elif 'busy' in error_lower:
+        reason = 'Busy Server'
+    elif 'unavailable' in error_lower or 'not found' in error_lower:
+        reason = 'Model Unavailable'
+    else:
+        reason = 'Error'
+    
+    # Store failure info in context
+    ctx = fallback_context.get({})
+    if 'failures' not in ctx:
+        ctx['failures'] = []
+    
+    ctx['failures'].append({
+        'model': model,
+        'error': error_msg,
+        'reason': reason,
+        'timestamp': end_time
+    })
+    fallback_context.set(ctx)
+    
+    logger.warning(f"🔴 Model failure: {model} - {reason}: {error_msg}")
+
+def on_litellm_success(kwargs, completion_response, start_time, end_time):
+    """Callback on successful completion (may be from fallback)."""
+    requested_model = kwargs.get('model', 'unknown')
+    actual_model = getattr(completion_response, 'model', requested_model)
+    
+    # Check if actual model differs from requested (fallback occurred)
+    if requested_model != actual_model:
+        ctx = fallback_context.get({})
+        ctx['fallback'] = {
+            'requested': requested_model,
+            'actual': actual_model,
+            'timestamp': end_time
+        }
+        fallback_context.set(ctx)
+        logger.warning(f"🔄 Fallback used: {requested_model} -> {actual_model}")
+
+def get_fallback_events() -> dict:
+    """Get and clear fallback events from current context."""
+    ctx = fallback_context.get({})
+    fallback_context.set({})  # Clear after reading
+    return ctx
+
 def setup_api_keys() -> None:
     """Set up API keys from environment variables."""
     if not config:
@@ -77,8 +142,21 @@ def setup_api_keys() -> None:
         if bedrock_token:
             os.environ["AWS_BEARER_TOKEN_BEDROCK"] = bedrock_token
             logger.debug("AWS Bedrock bearer token configured")
-        else:
-            logger.debug("AWS_BEARER_TOKEN_BEDROCK not configured - Bedrock models will not be available")
+
+    # Set up Standard AWS Credentials (Access Key / Secret)
+    if hasattr(config, 'AWS_ACCESS_KEY_ID') and config.AWS_ACCESS_KEY_ID:
+        os.environ["AWS_ACCESS_KEY_ID"] = config.AWS_ACCESS_KEY_ID
+        
+    if hasattr(config, 'AWS_SECRET_ACCESS_KEY') and config.AWS_SECRET_ACCESS_KEY:
+        os.environ["AWS_SECRET_ACCESS_KEY"] = config.AWS_SECRET_ACCESS_KEY
+        
+    if hasattr(config, 'AWS_REGION_NAME') and config.AWS_REGION_NAME:
+        os.environ["AWS_REGION_NAME"] = config.AWS_REGION_NAME
+        
+    if config.AWS_ACCESS_KEY_ID and config.AWS_SECRET_ACCESS_KEY:
+        logger.debug("AWS Bedrock credentials configured")
+    else:
+        logger.debug("AWS Bedrock credentials not fully configured (missing key or secret)")
 
 def setup_provider_router(openai_compatible_api_key: str = None, openai_compatible_api_base: str = None):
     global provider_router
@@ -147,13 +225,17 @@ def setup_provider_router(openai_compatible_api_key: str = None, openai_compatib
         }
     ])
     
+    # Set callbacks globally (Router doesn't accept them in __init__)
+    litellm.success_callback = [on_litellm_success]
+    litellm.failure_callback = [on_litellm_failure]
+    
     provider_router = Router(
         model_list=model_list,
         retry_after=15,
         fallbacks=fallbacks,
     )
     
-    logger.info(f"Configured LiteLLM Router with {len(fallbacks)} fallback rules")
+    logger.info(f"Configured LiteLLM Router with {len(fallbacks)} fallback rules and global callbacks")
 
 def _configure_openai_compatible(params: Dict[str, Any], model_name: str, api_key: Optional[str], api_base: Optional[str]) -> None:
     """Configure OpenAI-compatible provider setup."""
@@ -241,6 +323,59 @@ async def make_llm_api_call(
     # Apply additional configurations that aren't in the model config yet
     _configure_openai_compatible(params, model_name, api_key, api_base)
     _add_tools_config(params, tools, tool_choice)
+    
+    # Global Label Suffix Filtering
+    # Strip internal context window tags/suffixes (e.g., -max, :max) from ALL models
+    # This ensures internal UI/logic tags don't break provider API calls
+    original_resolved_name = resolved_model_name
+    
+    # Handle :max suffix and anything following it (e.g., :max;tag)
+    if ":max" in resolved_model_name:
+        resolved_model_name = resolved_model_name.split(":max")[0]
+        
+    # Handle -max suffix (only at the end)
+    if resolved_model_name.endswith("-max"):
+        resolved_model_name = resolved_model_name[:-4]
+        
+    if original_resolved_name != resolved_model_name:
+        logger.debug(f"Stripped suffixes: {original_resolved_name} -> {resolved_model_name}")
+
+    # Inject num_ctx for Ollama models
+    if resolved_model_name.startswith("ollama/"):
+        context_window = model_manager.get_context_window(resolved_model_name)
+        
+        if "extra_body" not in params:
+            params["extra_body"] = {}
+        
+        # Ensure options dict exists
+        if "options" not in params["extra_body"]:
+            params["extra_body"]["options"] = {}
+            
+        # Set num_ctx if not already present
+        if "num_ctx" not in params["extra_body"]["options"]:
+            params["extra_body"]["options"]["num_ctx"] = context_window
+            logger.debug(f"Injected num_ctx={context_window} for Ollama model {resolved_model_name}")
+
+    # Handle LM Studio models
+    if resolved_model_name.startswith("lm_studio:") or resolved_model_name.startswith("lm_studio/"):
+        # Strip prefix to get actual model name
+        actual_model_name = resolved_model_name.split(":", 1)[-1] if ":" in resolved_model_name else resolved_model_name.split("/", 1)[-1]
+        
+        # Force OpenAI provider for LiteLLM
+        params["model"] = f"openai/{actual_model_name}"
+        
+        # Set API Base if not provided
+        if not api_base and config.LM_STUDIO_API_BASE:
+            base = config.LM_STUDIO_API_BASE.rstrip('/')
+            if not base.endswith("/v1"):
+                base += "/v1"
+            params["api_base"] = base
+            
+        # Set dummy API Key if not provided
+        if "api_key" not in params or not params["api_key"]:
+            params["api_key"] = "lm-studio"
+            
+        logger.debug(f"Configured LM Studio call: {params['model']} at {params.get('api_base')}")
     
     try:
         # Log the complete parameters being sent to LiteLLM

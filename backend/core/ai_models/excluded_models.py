@@ -2,10 +2,10 @@
 Excluded models configuration.
 
 This file tracks models that should be excluded from the available models list.
-Models are excluded based on context window size (<100K) or other criteria.
+Models are excluded based on context window size (<64K) or other criteria.
 """
 
-# Models excluded due to small context window (<100K)
+# Models excluded due to small context window (<64K)
 # Format: "provider:model-name" or just "model-name" for automatic matching
 EXCLUDED_MODELS_SMALL_CONTEXT = {
     # CRITICAL WARNING: This list is manually maintained and may be out of sync with actual model capabilities.
@@ -38,8 +38,6 @@ EXCLUDED_MODELS_SMALL_CONTEXT = {
     "ollama:mistral:7b",  # 32K context
     "ollama:mistral-small3.2:latest",  # 32K context
     "ollama:mistral-small3.2",  # 32K context
-    "ollama:deepseek-r1:latest",  # 64K context
-    "ollama:deepseek-r1",  # 64K context
 }
 
 # Models excluded for other reasons (manually excluded by user)

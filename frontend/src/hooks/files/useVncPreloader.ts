@@ -53,8 +53,8 @@ export function useVncPreloader(
     iframe.style.position = 'absolute';
     iframe.style.left = '-9999px';
     iframe.style.top = '-9999px';
-    iframe.style.width = '1024px';
-    iframe.style.height = '768px';
+    iframe.style.width = '1440px';
+    iframe.style.height = '900px';
     iframe.style.border = '0';
     iframe.title = 'VNC Preloader';
 

@@ -1,4 +1,3 @@
-import { Icons } from '@/components/home/icons';
 import { OrbitingCircles } from '@/components/home/ui/orbiting-circle';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 

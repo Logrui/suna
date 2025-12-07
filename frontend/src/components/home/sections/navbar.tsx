@@ -195,7 +195,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
               initial="hidden"
               animate="visible"
               exit="exit"
-              variants={overlayVariants}
+              variants={overlayVariants as any}
               transition={{ duration: 0.2 }}
               onClick={handleOverlayClick}
             />
@@ -205,7 +205,7 @@ export function Navbar({ tabs }: NavbarProps = {}) {
               initial="hidden"
               animate="visible"
               exit="exit"
-              variants={drawerVariants}
+              variants={drawerVariants as any}
             >
               {/* Mobile menu content */}
               <div className="flex flex-col gap-4">
@@ -223,14 +223,14 @@ export function Navbar({ tabs }: NavbarProps = {}) {
 
                 <motion.ul
                   className="flex flex-col text-sm mb-4 border border-border rounded-md"
-                  variants={drawerMenuContainerVariants}
+                  variants={drawerMenuContainerVariants as any}
                 >
                   <AnimatePresence>
                     {filteredNavLinks.map((item) => (
                       <motion.li
                         key={item.id}
                         className="p-2.5 border-b border-border last:border-b-0"
-                        variants={drawerMenuVariants}
+                        variants={drawerMenuVariants as any}
                       >
                         <a
                           href={item.href}

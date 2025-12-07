@@ -89,6 +89,15 @@ class ErrorProcessor:
             )
         
         elif isinstance(error, RateLimitError):
+            # Check for Quota Exceeded specifically
+            if "quota" in error_message.lower() or "resource_exhausted" in error_message.lower():
+                return ProcessedError(
+                    error_type="quota_exceeded_error",
+                    message="Quota exceeded: The project does not have enough quota for this model. Please request a quota increase in Google Cloud Console.",
+                    original_error=error,
+                    context=context
+                )
+            
             return ProcessedError(
                 error_type="rate_limit_error",
                 message=f"Rate limit exceeded: Too many requests to the API. Please retry later. {error_message}",

@@ -13,8 +13,37 @@ import {
   FileArchive,
   Table,
 } from 'lucide-react';
-import { parseXmlToolCalls, isNewXmlFormat } from './xml-parser';
 import { parseToolResult, ParsedToolResult } from './tool-result-parser';
+
+// Helper to extract tool data (result and arguments)
+export function extractToolData(content: any): { toolResult: any; arguments: any } {
+  if (!content) return { toolResult: null, arguments: null };
+
+  try {
+    const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+
+    // Handle new format
+    if (parsed.tool_execution) {
+      return {
+        toolResult: parsed.tool_execution.result,
+        arguments: parsed.tool_execution.arguments
+      };
+    }
+
+    // Handle legacy format or direct arguments
+    if (parsed.arguments) {
+      return {
+        toolResult: parsed.result || parsed.output || true, // fallback
+        arguments: typeof parsed.arguments === 'string' ? JSON.parse(parsed.arguments) : parsed.arguments
+      };
+    }
+
+    return { toolResult: null, arguments: null };
+  } catch (e) {
+    return { toolResult: null, arguments: null };
+  }
+}
+
 
 // Helper function to format timestamp
 export function formatTimestamp(isoString?: string): string {
@@ -65,10 +94,9 @@ export function getToolTitle(toolName: string): string {
     'export-presentation': 'Export Presentation',
     'export_to_pptx': 'Export to PPTX',
     'export_to_pdf': 'Export to PDF',
-    'create-presentation-outline': 'Create Presentation Outline',
     'list-presentation-templates': 'List Presentation Templates',
     'upload-file': 'Upload File',
-    
+
     // Docs tools
     'create-document': 'Create Document',
     'update-document': 'Update Document',
@@ -76,7 +104,7 @@ export function getToolTitle(toolName: string): string {
     'list-documents': 'List Documents',
     'delete-document': 'Delete Document',
     'export-document': 'Export Document',
-    
+
     // Agent Creation Tools
     'create-new-agent': 'Create New Agent',
     'update-agent': 'Update Agent',
@@ -129,26 +157,18 @@ export function getToolTitle(toolName: string): string {
 export function extractCommand(content: string | object | undefined | null): string | null {
   const contentStr = normalizeContentToString(content);
   if (!contentStr) return null;
-  
-  // First try to extract from XML tags (with or without attributes)
-  const commandMatch = contentStr.match(
-    /<execute-command[^>]*>([\s\S]*?)<\/execute-command>/,
-  );
-  if (commandMatch) {
-    return commandMatch[1].trim();
-  }
-  
+
   // Try to find command in JSON structure (for native tool calls)
   try {
     const parsed = JSON.parse(contentStr);
     if (parsed.tool_calls && Array.isArray(parsed.tool_calls)) {
-      const execCommand = parsed.tool_calls.find((tc: any) => 
-        tc.function?.name === 'execute-command' || 
+      const execCommand = parsed.tool_calls.find((tc: any) =>
+        tc.function?.name === 'execute-command' ||
         tc.function?.name === 'execute_command'
       );
       if (execCommand && execCommand.function?.arguments) {
         try {
-          const args = typeof execCommand.function.arguments === 'string' 
+          const args = typeof execCommand.function.arguments === 'string'
             ? JSON.parse(execCommand.function.arguments)
             : execCommand.function.arguments;
           if (args.command) return args.command;
@@ -157,19 +177,18 @@ export function extractCommand(content: string | object | undefined | null): str
         }
       }
     }
+    // Check direct command field
+    if (parsed.command) return parsed.command;
+    if (parsed.arguments?.command) return parsed.arguments.command;
   } catch (e) {
     // Not JSON, continue with other checks
   }
-  
-  // If no XML tags found, check if the content itself is the command
-  // This handles cases where the command is passed directly
-  if (!contentStr.includes('<execute-command') && !contentStr.includes('</execute-command>')) {
-    // Check if it looks like a command (not JSON, not XML)
-    if (!contentStr.startsWith('{') && !contentStr.startsWith('<')) {
-      // Don't return content that looks like a tool result or error message
-      if (!contentStr.includes('ToolResult') && !contentStr.includes('No command')) {
-        return contentStr.trim();
-      }
+
+  // Check if the content itself is the command (plain text)
+  if (!contentStr.startsWith('{') && !contentStr.startsWith('[')) {
+    // Don't return content that looks like a tool result or error message
+    if (!contentStr.includes('ToolResult') && !contentStr.includes('No command')) {
+      return contentStr.trim();
     }
   }
   return null;
@@ -179,26 +198,18 @@ export function extractCommand(content: string | object | undefined | null): str
 export function extractSessionName(content: string | object | undefined | null): string | null {
   const contentStr = normalizeContentToString(content);
   if (!contentStr) return null;
-  
-  // First try to extract from XML tags (with or without attributes)
-  const sessionMatch = contentStr.match(
-    /<check-command-output[^>]*session_name=["']([^"']+)["']/,
-  );
-  if (sessionMatch) {
-    return sessionMatch[1].trim();
-  }
-  
+
   // Try to find session_name in JSON structure (for native tool calls)
   try {
     const parsed = JSON.parse(contentStr);
     if (parsed.tool_calls && Array.isArray(parsed.tool_calls)) {
-      const checkCommand = parsed.tool_calls.find((tc: any) => 
-        tc.function?.name === 'check-command-output' || 
+      const checkCommand = parsed.tool_calls.find((tc: any) =>
+        tc.function?.name === 'check-command-output' ||
         tc.function?.name === 'check_command_output'
       );
       if (checkCommand && checkCommand.function?.arguments) {
         try {
-          const args = typeof checkCommand.function.arguments === 'string' 
+          const args = typeof checkCommand.function.arguments === 'string'
             ? JSON.parse(checkCommand.function.arguments)
             : checkCommand.function.arguments;
           if (args.session_name) return args.session_name;
@@ -207,16 +218,19 @@ export function extractSessionName(content: string | object | undefined | null):
         }
       }
     }
+    // Check direct session_name field
+    if (parsed.session_name) return parsed.session_name;
+    if (parsed.arguments?.session_name) return parsed.arguments.session_name;
   } catch (e) {
     // Not JSON, continue with other checks
   }
-  
-  // Look for session_name attribute in the content
-  const sessionNameMatch = contentStr.match(/session_name=["']([^"']+)["']/);
+
+  // Look for session_name in the content
+  const sessionNameMatch = contentStr.match(/session_name["']?\s*[:=]\s*["']?([^"'\s]+)/i);
   if (sessionNameMatch) {
     return sessionNameMatch[1].trim();
   }
-  
+
   return null;
 }
 
@@ -230,24 +244,16 @@ export function extractCommandOutput(
   try {
     // First try to parse the JSON content
     const parsedContent = JSON.parse(contentStr);
-    
+
     // Handle check-command-output specific format
     if (parsedContent.output && typeof parsedContent.output === 'string') {
       return parsedContent.output;
     }
-    
-    if (parsedContent.content && typeof parsedContent.content === 'string') {
-      // Look for a tool_result tag
-      const toolResultMatch = parsedContent.content.match(
-        /<tool_result>\s*<(?:execute-command|check-command-output)>([\s\S]*?)<\/(?:execute-command|check-command-output)>\s*<\/tool_result>/,
-      );
-      if (toolResultMatch) {
-        return toolResultMatch[1].trim();
-      }
 
+    if (parsedContent.content && typeof parsedContent.content === 'string') {
       // Look for output field in a ToolResult pattern
       const outputMatch = parsedContent.content.match(
-        /ToolResult\(.*?output='([\s\S]*?)'.*?\)/,
+        /ToolResult\(.*?output=['"]([\s\S]*?)['"].*?\)/,
       );
       if (outputMatch) {
         return outputMatch[1];
@@ -256,30 +262,23 @@ export function extractCommandOutput(
       // Return the content itself as a fallback
       return parsedContent.content;
     }
-    
+
     // If parsedContent is the actual output (new format)
     if (typeof parsedContent === 'string') {
       return parsedContent;
     }
   } catch (e) {
     // If JSON parsing fails, try regex directly
-    const toolResultMatch = contentStr.match(
-      /<tool_result>\s*<(?:execute-command|check-command-output)>([\s\S]*?)<\/(?:execute-command|check-command-output)>\s*<\/tool_result>/,
-    );
-    if (toolResultMatch) {
-      return toolResultMatch[1].trim();
-    }
-
     const outputMatch = contentStr.match(
-      /ToolResult\(.*?output='([\s\S]*?)'.*?\)/,
+      /ToolResult\(.*?output=['"]([\s\S]*?)['"].*?\)/,
     );
     if (outputMatch) {
       return outputMatch[1];
     }
-    
+
     // If no special format is found, return the content as-is
     // This handles cases where the output is stored directly
-    if (!contentStr.startsWith('<') && !contentStr.includes('ToolResult')) {
+    if (!contentStr.startsWith('{') && !contentStr.includes('ToolResult')) {
       return contentStr;
     }
   }
@@ -312,14 +311,6 @@ export function extractFilePath(content: string | object | undefined | null): st
     // Try to parse content as JSON first
     const parsedContent = JSON.parse(contentStr);
     if (parsedContent.content) {
-      // Check if it's the new XML format
-      if (isNewXmlFormat(parsedContent.content)) {
-        const toolCalls = parseXmlToolCalls(parsedContent.content);
-        if (toolCalls.length > 0 && toolCalls[0].parameters.file_path) {
-          return cleanFilePath(toolCalls[0].parameters.file_path);
-        }
-      }
-      
       // Fall back to old format
       const oldFormatMatch = parsedContent.content.match(
         /file_path=["']([^"']+)["']/,
@@ -330,14 +321,6 @@ export function extractFilePath(content: string | object | undefined | null): st
     }
   } catch (e) {
     // Fall back to direct regex search if JSON parsing fails
-  }
-
-  // Check if it's the new XML format in raw content
-  if (isNewXmlFormat(contentStr)) {
-    const toolCalls = parseXmlToolCalls(contentStr);
-    if (toolCalls.length > 0 && toolCalls[0].parameters.file_path) {
-      return cleanFilePath(toolCalls[0].parameters.file_path);
-    }
   }
 
   // Direct regex search in the content string (old format)
@@ -371,29 +354,25 @@ export function extractFilePath(content: string | object | undefined | null): st
     try {
       // Check if it's a direct object with content field
       if ('content' in content && typeof content.content === 'string') {
-        // Look for XML tags in the content string
-        const xmlFilePathMatch =
-          content.content.match(/<(?:create-file|delete-file|full-file-rewrite|str-replace|edit-file)[^>]*\s+file_path=["']([\s\S]*?)["']/i) ||
-          content.content.match(/<edit-file[^>]*\s+target_file=["']([\s\S]*?)["']/i) ||
-          content.content.match(/<delete[^>]*\s+file_path=["']([\s\S]*?)["']/i) ||
-          content.content.match(/<delete-file[^>]*>([^<]+)<\/delete-file>/i) ||
-          content.content.match(/<(?:create-file|delete-file|full-file-rewrite|edit-file)\s+file_path=["']([^"']+)/i) ||
-          content.content.match(/<edit-file\s+target_file=["']([^"']+)/i);
-        if (xmlFilePathMatch) {
-          return cleanFilePath(xmlFilePathMatch[1]);
+        // Look for file_path in the content string
+        const filePathMatch =
+          content.content.match(/file_path=["']([\s\S]*?)["']/i) ||
+          content.content.match(/target_file=["']([\s\S]*?)["']/i);
+        if (filePathMatch) {
+          return cleanFilePath(filePathMatch[1]);
         }
       }
-      
+
       // Check for direct file_path property
       if ('file_path' in content) {
         return cleanFilePath(content.file_path as string);
       }
-      
+
       // Check for direct target_file property (edit-file tool)
       if ('target_file' in content) {
         return cleanFilePath(content.target_file as string);
       }
-      
+
       // Check for arguments.file_path
       if ('arguments' in content && content.arguments && typeof content.arguments === 'object') {
         const args = content.arguments as any;
@@ -431,19 +410,6 @@ export function extractFilePath(content: string | object | undefined | null): st
     const path = filePathMatch[1].trim();
     // Handle newlines and return first line if multiple lines
     return cleanFilePath(path);
-  }
-
-  // Look for file_path in XML-like tags (including incomplete ones for streaming)
-  const xmlFilePathMatch =
-    contentStr.match(/<(?:create-file|delete-file|full-file-rewrite|str-replace|edit-file)[^>]*\s+file_path=["']([\s\S]*?)["']/i) ||
-    contentStr.match(/<edit-file[^>]*\s+target_file=["']([\s\S]*?)["']/i) ||
-    contentStr.match(/<delete[^>]*\s+file_path=["']([\s\S]*?)["']/i) ||
-    contentStr.match(/<delete-file[^>]*>([^<]+)<\/delete-file>/i) ||
-    // Handle incomplete tags during streaming
-    contentStr.match(/<(?:create-file|delete-file|full-file-rewrite|edit-file)\s+file_path=["']([^"']+)/i) ||
-    contentStr.match(/<edit-file\s+target_file=["']([^"']+)/i);
-  if (xmlFilePathMatch) {
-    return cleanFilePath(xmlFilePathMatch[1]);
   }
 
   // Look for file paths in delete operations in particular
@@ -489,26 +455,35 @@ export function extractStrReplaceContent(content: string | object | undefined | 
   const contentStr = normalizeContentToString(content);
   if (!contentStr) return { oldStr: null, newStr: null };
 
-  // First try to extract from a str-replace tag with attributes
-  const strReplaceMatch = contentStr.match(/<str-replace[^>]*>([\s\S]*?)<\/str-replace>/);
-  if (strReplaceMatch) {
-    const innerContent = strReplaceMatch[1];
-    const oldMatch = innerContent.match(/<old_str>([\s\S]*?)<\/old_str>/);
-    const newMatch = innerContent.match(/<new_str>([\s\S]*?)<\/new_str>/);
-    
-    return {
-      oldStr: oldMatch ? oldMatch[1] : null,
-      newStr: newMatch ? newMatch[1] : null,
-    };
+  // Try to parse as JSON first
+  try {
+    const parsed = JSON.parse(contentStr);
+    if (parsed.old_str && parsed.new_str) {
+      return {
+        oldStr: parsed.old_str,
+        newStr: parsed.new_str,
+      };
+    }
+    if (parsed.arguments) {
+      const args = typeof parsed.arguments === 'string' ? JSON.parse(parsed.arguments) : parsed.arguments;
+      if (args.old_str && args.new_str) {
+        return {
+          oldStr: args.old_str,
+          newStr: args.new_str,
+        };
+      }
+    }
+  } catch (e) {
+    // Not JSON, continue
   }
 
-  // Fall back to direct search for old_str and new_str tags
-  const oldMatch = contentStr.match(/<old_str>([\s\S]*?)<\/old_str>/);
-  const newMatch = contentStr.match(/<new_str>([\s\S]*?)<\/new_str>/);
+  // Fallback: look for old_str and new_str in content
+  const oldMatch = contentStr.match(/old_str["']?\s*[:=]\s*["']?([^"'\n]+)/i);
+  const newMatch = contentStr.match(/new_str["']?\s*[:=]\s*["']?([^"'\n]+)/i);
 
   return {
-    oldStr: oldMatch ? oldMatch[1] : null,
-    newStr: newMatch ? newMatch[1] : null,
+    oldStr: oldMatch ? oldMatch[1].trim() : null,
+    newStr: newMatch ? newMatch[1].trim() : null,
   };
 }
 
@@ -523,43 +498,49 @@ export function extractFileContent(
   try {
     // Try to parse content as JSON first
     const parsedContent = JSON.parse(contentStr);
-    if (parsedContent.content) {
-      // Check if it's the new XML format
-      if (isNewXmlFormat(parsedContent.content)) {
-        const toolCalls = parseXmlToolCalls(parsedContent.content);
-        if (toolCalls.length > 0 && toolCalls[0].parameters.file_contents) {
-          return processFileContent(toolCalls[0].parameters.file_contents);
-        }
+
+    // Check for file_contents or code_edit fields
+    if (toolType === 'edit-file' && parsedContent.code_edit) {
+      return processFileContent(parsedContent.code_edit);
+    }
+    if ((toolType === 'create-file' || toolType === 'full-file-rewrite') && parsedContent.file_contents) {
+      return processFileContent(parsedContent.file_contents);
+    }
+
+    // Check in arguments
+    if (parsedContent.arguments) {
+      const args = typeof parsedContent.arguments === 'string'
+        ? JSON.parse(parsedContent.arguments)
+        : parsedContent.arguments;
+      if (toolType === 'edit-file' && args.code_edit) {
+        return processFileContent(args.code_edit);
       }
-      
-      // Fall back to old format
-      const tagName = toolType === 'create-file' ? 'create-file' : toolType === 'edit-file' ? 'edit-file' : 'full-file-rewrite';
-      const fileContentMatch = parsedContent.content.match(
-        new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'),
-      );
-      if (fileContentMatch) {
-        return processFileContent(fileContentMatch[1]);
+      if ((toolType === 'create-file' || toolType === 'full-file-rewrite') && args.file_contents) {
+        return processFileContent(args.file_contents);
+      }
+    }
+
+    // Check in content field
+    if (parsedContent.content) {
+      if (typeof parsedContent.content === 'string') {
+        return processFileContent(parsedContent.content);
+      }
+      if (typeof parsedContent.content === 'object') {
+        if (toolType === 'edit-file' && parsedContent.content.code_edit) {
+          return processFileContent(parsedContent.content.code_edit);
+        }
+        if ((toolType === 'create-file' || toolType === 'full-file-rewrite') && parsedContent.content.file_contents) {
+          return processFileContent(parsedContent.content.file_contents);
+        }
       }
     }
   } catch (e) {
-    // Fall back to direct regex search if JSON parsing fails
+    // Not JSON, continue
   }
 
-  // Check if it's the new XML format in raw content
-  if (isNewXmlFormat(contentStr)) {
-    const toolCalls = parseXmlToolCalls(contentStr);
-    if (toolCalls.length > 0 && toolCalls[0].parameters.file_contents) {
-      return processFileContent(toolCalls[0].parameters.file_contents);
-    }
-  }
-
-  // Direct regex search in the content string (old format)
-  const tagName = toolType === 'create-file' ? 'create-file' : toolType === 'edit-file' ? 'edit-file' : 'full-file-rewrite';
-  const fileContentMatch = contentStr.match(
-    new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'),
-  );
-  if (fileContentMatch) {
-    return processFileContent(fileContentMatch[1]);
+  // If content is plain text and looks like file content, return it
+  if (contentStr && !contentStr.startsWith('{') && !contentStr.startsWith('[')) {
+    return processFileContent(contentStr);
   }
 
   return null;
@@ -573,8 +554,8 @@ function processFileContent(content: string | object): string {
 
   const trimmedContent = typeof content === 'string' ? content.trim() : '';
   const isLikelyJson = (trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
-                       (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'));
-  
+    (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'));
+
   if (isLikelyJson) {
     try {
       const parsed = JSON.parse(content);
@@ -622,7 +603,7 @@ export function getFileType(filePath: string): string {
 export function extractBrowserUrl(content: string | object | undefined | null): string | null {
   const contentStr = normalizeContentToString(content);
   if (!contentStr) return null;
-  
+
   const urlMatch = contentStr.match(/url=["'](https?:\/\/[^"']+)["']/);
   return urlMatch ? urlMatch[1] : null;
 }
@@ -644,12 +625,12 @@ export function extractSearchQuery(content: string | object | undefined | null):
   const toolResultMatch = contentStr.match(
     /ToolResult\(.*?output='([\s\S]*?)'.*?\)/,
   );
-  
+
   if (toolResultMatch) {
     try {
       // Parse the output JSON from ToolResult
       const outputJson = JSON.parse(toolResultMatch[1]);
-      
+
       // Check if this is the new Tavily response format with query field
       if (outputJson.query && typeof outputJson.query === 'string') {
         return outputJson.query;
@@ -664,12 +645,12 @@ export function extractSearchQuery(content: string | object | undefined | null):
   // Try parsing as JSON first
   try {
     const parsedContent = JSON.parse(contentStr);
-    
+
     // Check if it's the new Tavily response format
     if (parsedContent.query && typeof parsedContent.query === 'string') {
       return parsedContent.query;
     }
-    
+
     // Continue with existing logic for backward compatibility
     if (typeof parsedContent.content === 'string') {
       // If the outer content is JSON and has a 'content' string field,
@@ -705,7 +686,7 @@ export function extractSearchQuery(content: string | object | undefined | null):
             if (typeof argsParsed.query === 'string') {
               return argsParsed.query;
             }
-          } catch {}
+          } catch { }
         }
       }
     }
@@ -715,15 +696,7 @@ export function extractSearchQuery(content: string | object | undefined | null):
 
   // Now search within contentToSearch (either original or nested content)
 
-  // 1. Try regex for attribute within <web-search ...> tag (with or without attributes)
-  const xmlQueryMatch = contentToSearch.match(
-    /<web-search[^>]*\s+query=[\"']([^\"']*)["'][^>]*>/i,
-  );
-  if (xmlQueryMatch && xmlQueryMatch[1]) {
-    return xmlQueryMatch[1].trim();
-  }
-
-  // 2. Try simple attribute regex (fallback, less specific)
+  // 1. Try simple attribute regex
   const simpleAttrMatch = contentToSearch.match(/query=[\"']([\s\S]*?)["']/i);
   if (simpleAttrMatch && simpleAttrMatch[1]) {
     return simpleAttrMatch[1].split(/[\"']/)[0].trim();
@@ -886,25 +859,24 @@ export function extractCrawlUrl(content: string | object | undefined | null): st
   if (!contentStr) return null;
 
   try {
-    // Try to parse content as JSON first (for the new format)
+    // Try to parse content as JSON first
     const parsedContent = JSON.parse(contentStr);
+    if (parsedContent.url) return parsedContent.url;
+    if (parsedContent.arguments?.url) return parsedContent.arguments.url;
     if (parsedContent.content) {
-      // Look for URL in the content string (with or without attributes)
-      const urlMatch = parsedContent.content.match(
-        /<(?:crawl|scrape)-webpage[^>]*\s+url=["'](https?:\/\/[^"']+)["']/i,
-      );
-      if (urlMatch) return urlMatch[1];
+      if (typeof parsedContent.content === 'string') {
+        const urlMatch = parsedContent.content.match(/url["']?\s*[:=]\s*["']?(https?:\/\/[^"'\s]+)/i);
+        if (urlMatch) return urlMatch[1];
+      } else if (parsedContent.content.url) {
+        return parsedContent.content.url;
+      }
     }
   } catch (e) {
-    // Fall back to direct regex search if JSON parsing fails
+    // Not JSON, continue
   }
 
-  // Direct regex search in the content string (updated to handle attributes)
-  const urlMatch =
-    contentStr.match(
-      /<(?:crawl|scrape)-webpage[^>]*\s+url=["'](https?:\/\/[^"']+)["']/i,
-    ) || contentStr.match(/url=["'](https?:\/\/[^"']+)["']/i);
-
+  // Direct regex search for URL
+  const urlMatch = contentStr.match(/url["']?\s*[:=]\s*["']?(https?:\/\/[^"'\s]+)/i);
   return urlMatch ? urlMatch[1] : null;
 }
 
@@ -920,162 +892,43 @@ export function extractWebpageContent(
     const parsedContent = JSON.parse(contentStr);
 
     // Handle case where content is in parsedContent.content field
-    if (parsedContent.content && typeof parsedContent.content === 'string') {
-      // Look for tool_result tag (with attributes)
-      const toolResultMatch = parsedContent.content.match(
-        /<tool_result[^>]*>\s*<(?:crawl|scrape)-webpage[^>]*>([\s\S]*?)<\/(?:crawl|scrape)-webpage>\s*<\/tool_result>/,
-      );
-      if (toolResultMatch) {
+    if (parsedContent.content) {
+      if (typeof parsedContent.content === 'object') {
+        // Content is already parsed JSON
+        const content = parsedContent.content;
+        if (Array.isArray(content) && content.length > 0) {
+          const item = content[0];
+          return {
+            title: item.Title || item.title || '',
+            text: item.Text || item.text || item.content || '',
+          };
+        }
+        return {
+          title: content.Title || content.title || 'Webpage Content',
+          text: content.Text || content.text || content.content || '',
+        };
+      }
+
+      // Content is a string, try to parse it
+      if (typeof parsedContent.content === 'string') {
         try {
-          // Try to parse the content inside the tags
-          const rawData = toolResultMatch[1];
-
-          // Look for ToolResult pattern in the raw data
-          const toolResultOutputMatch = rawData.match(
-            /ToolResult\(.*?output='([\s\S]*?)'.*?\)/,
-          );
-          if (toolResultOutputMatch) {
-            try {
-              // If ToolResult pattern found, try to parse its output which may be a stringified JSON
-              const outputJson = JSON.parse(
-                toolResultOutputMatch[1]
-                  .replace(/\\\\n/g, '\\n')
-                  .replace(/\\\\u/g, '\\u'),
-              );
-
-              // Handle array format (first item)
-              if (Array.isArray(outputJson) && outputJson.length > 0) {
-                const item = outputJson[0];
-                return {
-                  title: item.Title || item.title || '',
-                  text: item.Text || item.text || item.content || '',
-                };
-              }
-
-              // Handle direct object format
-              return {
-                title: outputJson.Title || outputJson.title || '',
-                text:
-                  outputJson.Text ||
-                  outputJson.text ||
-                  outputJson.content ||
-                  '',
-              };
-            } catch (e) {
-              // If parsing fails, use the raw output
-              return {
-                title: 'Webpage Content',
-                text: toolResultOutputMatch[1],
-              };
-            }
-          }
-
-          // Try to parse as direct JSON if no ToolResult pattern
-          const crawlData = JSON.parse(rawData);
-
-          // Handle array format
-          if (Array.isArray(crawlData) && crawlData.length > 0) {
-            const item = crawlData[0];
+          const contentJson = JSON.parse(parsedContent.content);
+          if (Array.isArray(contentJson) && contentJson.length > 0) {
+            const item = contentJson[0];
             return {
               title: item.Title || item.title || '',
               text: item.Text || item.text || item.content || '',
             };
           }
-
-          // Handle direct object format
           return {
-            title: crawlData.Title || crawlData.title || '',
-            text: crawlData.Text || crawlData.text || crawlData.content || '',
+            title: contentJson.Title || contentJson.title || 'Webpage Content',
+            text: contentJson.Text || contentJson.text || contentJson.content || '',
           };
         } catch (e) {
-          // Fallback to basic text extraction
+          // Not JSON, return as text
           return {
             title: 'Webpage Content',
-            text: toolResultMatch[1],
-          };
-        }
-      }
-
-      // Handle ToolResult pattern in the content directly
-      const toolResultOutputMatch = parsedContent.content.match(
-        /ToolResult\(.*?output='([\s\S]*?)'.*?\)/,
-      );
-      if (toolResultOutputMatch) {
-        try {
-          // Parse the output which might be a stringified JSON
-          const outputJson = JSON.parse(
-            toolResultOutputMatch[1]
-              .replace(/\\\\n/g, '\\n')
-              .replace(/\\\\u/g, '\\u'),
-          );
-
-          // Handle array format
-          if (Array.isArray(outputJson) && outputJson.length > 0) {
-            const item = outputJson[0];
-            return {
-              title: item.Title || item.title || '',
-              text: item.Text || item.text || item.content || '',
-            };
-          }
-
-          // Handle direct object format
-          return {
-            title: outputJson.Title || outputJson.title || '',
-            text:
-              outputJson.Text || outputJson.text || outputJson.content || '',
-          };
-        } catch (e) {
-          // If parsing fails, use the raw output
-          return {
-            title: 'Webpage Content',
-            text: toolResultOutputMatch[1],
-          };
-        }
-      }
-    }
-
-    // Direct handling of <crawl-webpage> or <scrape-webpage> format outside of content field (with attributes)
-    const webpageMatch = contentStr.match(
-      /<(?:crawl|scrape)-webpage[^>]*>([\s\S]*?)<\/(?:crawl|scrape)-webpage>/,
-    );
-    if (webpageMatch) {
-      const rawData = webpageMatch[1];
-
-      // Look for ToolResult pattern
-      const toolResultOutputMatch = rawData.match(
-        /ToolResult\(.*?output='([\s\S]*?)'.*?\)/,
-      );
-      if (toolResultOutputMatch) {
-        try {
-          // Parse the output which might be a stringified JSON
-          const outputString = toolResultOutputMatch[1]
-            .replace(/\\\\n/g, '\\n')
-            .replace(/\\\\u/g, '\\u');
-          const outputJson = JSON.parse(outputString);
-
-          // Handle array format
-          if (Array.isArray(outputJson) && outputJson.length > 0) {
-            const item = outputJson[0];
-            return {
-              title:
-                item.Title ||
-                item.title ||
-                (item.URL ? new URL(item.URL).hostname : ''),
-              text: item.Text || item.text || item.content || '',
-            };
-          }
-
-          // Handle direct object format
-          return {
-            title: outputJson.Title || outputJson.title || '',
-            text:
-              outputJson.Text || outputJson.text || outputJson.content || '',
-          };
-        } catch (e) {
-          // If parsing fails, use the raw output
-          return {
-            title: 'Webpage Content',
-            text: toolResultOutputMatch[1],
+            text: parsedContent.content,
           };
         }
       }
@@ -1094,16 +947,16 @@ export function extractWebpageContent(
     if (typeof parsedContent === 'object' && parsedContent !== null) {
       // Check if it's already the webpage data (new format after double-escape fix)
       if ('Title' in parsedContent || 'title' in parsedContent || 'Text' in parsedContent || 'text' in parsedContent) {
-      return {
-        title: parsedContent.Title || parsedContent.title || 'Webpage Content',
-        text:
-          parsedContent.Text ||
-          parsedContent.text ||
-          parsedContent.content ||
+        return {
+          title: parsedContent.Title || parsedContent.title || 'Webpage Content',
+          text:
+            parsedContent.Text ||
+            parsedContent.text ||
+            parsedContent.content ||
             '',
         };
       }
-      
+
       // Otherwise, try to stringify it
       return {
         title: 'Webpage Content',
@@ -1164,20 +1017,20 @@ export function extractSearchResults(
   const contentStr = normalizeContentToString(content);
   if (!contentStr) return [];
 
-    try {
+  try {
     // Instead of trying to parse the complex ToolResult JSON, 
     // let's look for the results array pattern directly in the content
-    
+
     // Look for the results array pattern within the content
     const resultsPattern = /"results":\s*\[([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/;
     const resultsMatch = contentStr.match(resultsPattern);
-    
+
     if (resultsMatch) {
       try {
         // Extract just the results array and parse it
         const resultsArrayStr = '[' + resultsMatch[1] + ']';
         const results = JSON.parse(resultsArrayStr);
-        
+
         if (Array.isArray(results)) {
           return results.map(result => ({
             title: result.title || '',
@@ -1189,12 +1042,12 @@ export function extractSearchResults(
         console.warn('Failed to parse results array:', e);
       }
     }
-    
+
     // Fallback: Look for individual result objects
     const resultObjectPattern = /\{\s*"url":\s*"([^"]+)"\s*,\s*"title":\s*"([^"]+)"\s*,\s*"content":\s*"([^"]*)"[^}]*\}/g;
     const results = [];
     let match;
-    
+
     while ((match = resultObjectPattern.exec(contentStr)) !== null) {
       results.push({
         url: match[1],
@@ -1202,14 +1055,14 @@ export function extractSearchResults(
         snippet: match[3],
       });
     }
-    
+
     if (results.length > 0) {
       return results;
     }
 
     // Try parsing the entire content as JSON (for direct Tavily responses)
     const parsedContent = JSON.parse(contentStr);
-    
+
     // Check if this is the new Tavily response format
     if (parsedContent.results && Array.isArray(parsedContent.results)) {
       return parsedContent.results.map((result: any) => ({
@@ -1218,23 +1071,9 @@ export function extractSearchResults(
         snippet: result.content || '',
       }));
     }
-    
+
     // Continue with existing logic for backward compatibility
     if (parsedContent.content && typeof parsedContent.content === 'string') {
-      // Look for a tool_result tag (with attributes)
-      const toolResultTagMatch = parsedContent.content.match(
-        /<tool_result[^>]*>\s*<web-search[^>]*>([\s\S]*?)<\/web-search>\s*<\/tool_result>/,
-      );
-      if (toolResultTagMatch) {
-        // Try to parse the results array
-        try {
-          return JSON.parse(toolResultTagMatch[1]);
-        } catch (e) {
-          // Fallback to regex extraction of URLs and titles
-          return extractUrlsAndTitles(toolResultTagMatch[1]);
-        }
-      }
-
       // Try to find JSON array in the content
       const jsonArrayMatch = parsedContent.content.match(/\[\s*{[\s\S]*}\s*\]/);
       if (jsonArrayMatch) {
@@ -1333,7 +1172,7 @@ export function getToolComponent(toolName: string): string {
     // Upload operations
     case 'upload-file':
       return 'UploadFileToolView';
-    
+
     // Docs operations
     case 'create-document':
     case 'update-document':
@@ -1356,7 +1195,7 @@ export function getToolComponent(toolName: string): string {
 // Helper function to normalize content to string
 export function normalizeContentToString(content: string | object | undefined | null): string | null {
   if (!content) return null;
-  
+
   if (typeof content === 'string') {
     // Check if it's a double-escaped JSON string (old format)
     if (content.startsWith('"{') && content.endsWith('}"')) {
@@ -1377,13 +1216,13 @@ export function normalizeContentToString(content: string | object | undefined | 
     }
     return content;
   }
-  
+
   if (typeof content === 'object' && content !== null) {
     try {
       // Handle case where content is a parsed object with content field (new format)
       if ('content' in content && typeof content.content === 'string') {
         return content.content;
-      } 
+      }
       // Handle case where content is a parsed object with content field that's also an object
       else if ('content' in content && typeof content.content === 'object' && content.content !== null) {
         // Check if the nested content has a content field
@@ -1396,7 +1235,7 @@ export function normalizeContentToString(content: string | object | undefined | 
       // Handle message format {role: 'tool', content: '...'}
       else if ('role' in content && 'content' in content && typeof content.content === 'string') {
         return content.content;
-      } 
+      }
       // Handle nested message format {role: 'assistant', content: {role: 'assistant', content: '...'}}
       else if ('role' in content && 'content' in content && typeof content.content === 'object' && content.content !== null) {
         if ('content' in content.content && typeof content.content.content === 'string') {
@@ -1404,13 +1243,13 @@ export function normalizeContentToString(content: string | object | undefined | 
         }
         // Try to stringify nested content object
         return JSON.stringify(content.content);
-      } 
+      }
       // Handle direct object that might be the content itself (new format)
       else {
-        // If it looks like it might contain XML or structured content, stringify it
+        // If it looks like it might contain structured content, stringify it
         const stringified = JSON.stringify(content);
-        // Check if the stringified version contains XML tags or other structured content
-        if (stringified.includes('<') || stringified.includes('file_path') || stringified.includes('command')) {
+        // Check if the stringified version contains structured content
+        if (stringified.includes('file_path') || stringified.includes('command')) {
           return stringified;
         }
         // Otherwise, try to extract meaningful content
@@ -1421,11 +1260,11 @@ export function normalizeContentToString(content: string | object | undefined | 
       return null;
     }
   }
-  
+
   return null;
 }
 
-// Helper function to extract file content for streaming (handles incomplete XML)
+// Helper function to extract file content for streaming
 export function extractStreamingFileContent(
   content: string | object | undefined | null,
   toolType: 'create-file' | 'full-file-rewrite' | 'edit-file',
@@ -1434,7 +1273,7 @@ export function extractStreamingFileContent(
   if (!contentStr) return null;
 
   const tagName = toolType === 'create-file' ? 'create-file' : toolType === 'edit-file' ? 'edit-file' : 'full-file-rewrite';
-  
+
   // First check if content is already a parsed object (new format)
   if (typeof content === 'object' && content !== null) {
     try {
@@ -1446,7 +1285,7 @@ export function extractStreamingFileContent(
           const tagEndIndex = content.content.indexOf(openTagMatch[0]) + openTagMatch[0].length;
           // Extract everything after the opening tag
           const afterTag = content.content.substring(tagEndIndex);
-          
+
           // Check if there's a closing tag
           const closeTagMatch = afterTag.match(new RegExp(`<\\/${tagName}>`, 'i'));
           if (closeTagMatch) {
@@ -1471,7 +1310,7 @@ export function extractStreamingFileContent(
     const tagEndIndex = contentStr.indexOf(openTagMatch[0]) + openTagMatch[0].length;
     // Extract everything after the opening tag
     const afterTag = contentStr.substring(tagEndIndex);
-    
+
     // Check if there's a closing tag
     const closeTagMatch = afterTag.match(new RegExp(`<\\/${tagName}>`, 'i'));
     if (closeTagMatch) {
@@ -1488,54 +1327,54 @@ export function extractStreamingFileContent(
 
 export const getFileIconAndColor = (filename: string) => {
   const ext = filename.split('.').pop()?.toLowerCase();
-  
+
   switch (ext) {
     case 'js':
     case 'jsx':
     case 'ts':
     case 'tsx':
-      return { 
-        icon: FileCode, 
-        color: 'text-yellow-500 dark:text-yellow-400', 
-        bgColor: 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border border-yellow-500/20' 
+      return {
+        icon: FileCode,
+        color: 'text-yellow-500 dark:text-yellow-400',
+        bgColor: 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border border-yellow-500/20'
       };
     case 'py':
-      return { 
-        icon: FileCode, 
-        color: 'text-blue-500 dark:text-blue-400', 
-        bgColor: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20' 
+      return {
+        icon: FileCode,
+        color: 'text-blue-500 dark:text-blue-400',
+        bgColor: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20'
       };
     case 'html':
     case 'css':
     case 'scss':
-      return { 
-        icon: FileCode, 
-        color: 'text-orange-500 dark:text-orange-400', 
-        bgColor: 'bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/20' 
+      return {
+        icon: FileCode,
+        color: 'text-orange-500 dark:text-orange-400',
+        bgColor: 'bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/20'
       };
-    
+
     // Data files
     case 'json':
-      return { 
-        icon: FileJson, 
-        color: 'text-green-500 dark:text-green-400', 
-        bgColor: 'bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20' 
+      return {
+        icon: FileJson,
+        color: 'text-green-500 dark:text-green-400',
+        bgColor: 'bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/20'
       };
     case 'csv':
-      return { 
-        icon: Table, 
-        color: 'text-emerald-500 dark:text-emerald-400', 
-        bgColor: 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20' 
+      return {
+        icon: Table,
+        color: 'text-emerald-500 dark:text-emerald-400',
+        bgColor: 'bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20'
       };
     case 'xml':
     case 'yaml':
     case 'yml':
-      return { 
-        icon: FileCode, 
-        color: 'text-purple-500 dark:text-purple-400', 
-        bgColor: 'bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20' 
+      return {
+        icon: FileCode,
+        color: 'text-purple-500 dark:text-purple-400',
+        bgColor: 'bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20'
       };
-    
+
     // Image files
     case 'jpg':
     case 'jpeg':
@@ -1543,114 +1382,76 @@ export const getFileIconAndColor = (filename: string) => {
     case 'gif':
     case 'svg':
     case 'webp':
-      return { 
-        icon: FileImage, 
-        color: 'text-pink-500 dark:text-pink-400', 
-        bgColor: 'bg-gradient-to-br from-pink-500/20 to-pink-600/10 border border-pink-500/20' 
+      return {
+        icon: FileImage,
+        color: 'text-pink-500 dark:text-pink-400',
+        bgColor: 'bg-gradient-to-br from-pink-500/20 to-pink-600/10 border border-pink-500/20'
       };
-    
+
     // Document files
     case 'md':
     case 'mdx':
-      return { 
-        icon: FileText, 
-        color: 'text-slate-500 dark:text-slate-400', 
-        bgColor: 'bg-gradient-to-br from-slate-500/20 to-slate-600/10 border border-slate-500/20' 
+      return {
+        icon: FileText,
+        color: 'text-slate-500 dark:text-slate-400',
+        bgColor: 'bg-gradient-to-br from-slate-500/20 to-slate-600/10 border border-slate-500/20'
       };
     case 'txt':
-      return { 
-        icon: FileText, 
-        color: 'text-zinc-500 dark:text-zinc-400', 
-        bgColor: 'bg-gradient-to-br from-zinc-500/20 to-zinc-600/10 border border-zinc-500/20' 
+      return {
+        icon: FileText,
+        color: 'text-zinc-500 dark:text-zinc-400',
+        bgColor: 'bg-gradient-to-br from-zinc-500/20 to-zinc-600/10 border border-zinc-500/20'
       };
     case 'pdf':
-      return { 
-        icon: FileType, 
-        color: 'text-red-500 dark:text-red-400', 
-        bgColor: 'bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20' 
+      return {
+        icon: FileType,
+        color: 'text-red-500 dark:text-red-400',
+        bgColor: 'bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/20'
       };
-    
+
     // Media files
     case 'mp4':
     case 'avi':
     case 'mov':
-      return { 
-        icon: FileVideo, 
-        color: 'text-indigo-500 dark:text-indigo-400', 
-        bgColor: 'bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/20' 
+      return {
+        icon: FileVideo,
+        color: 'text-indigo-500 dark:text-indigo-400',
+        bgColor: 'bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/20'
       };
     case 'mp3':
     case 'wav':
     case 'ogg':
-      return { 
-        icon: FileAudio, 
-        color: 'text-teal-500 dark:text-teal-400', 
-        bgColor: 'bg-gradient-to-br from-teal-500/20 to-teal-600/10 border border-teal-500/20' 
+      return {
+        icon: FileAudio,
+        color: 'text-teal-500 dark:text-teal-400',
+        bgColor: 'bg-gradient-to-br from-teal-500/20 to-teal-600/10 border border-teal-500/20'
       };
-    
+
     // Archive files
     case 'zip':
     case 'tar':
     case 'gz':
     case 'rar':
-      return { 
-        icon: FileArchive, 
-        color: 'text-amber-500 dark:text-amber-400', 
-        bgColor: 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20' 
+      return {
+        icon: FileArchive,
+        color: 'text-amber-500 dark:text-amber-400',
+        bgColor: 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 border border-amber-500/20'
       };
-    
+
     // Default
     default:
       if (!ext || filename.includes('/')) {
-        return { 
-          icon: FolderOpen, 
-          color: 'text-blue-500 dark:text-blue-400', 
-          bgColor: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20' 
+        return {
+          icon: FolderOpen,
+          color: 'text-blue-500 dark:text-blue-400',
+          bgColor: 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20'
         };
       }
-      return { 
-        icon: File, 
-        color: 'text-zinc-500 dark:text-zinc-400', 
-        bgColor: 'bg-gradient-to-br from-zinc-500/20 to-zinc-600/10 border border-zinc-500/20' 
+      return {
+        icon: File,
+        color: 'text-zinc-500 dark:text-zinc-400',
+        bgColor: 'bg-gradient-to-br from-zinc-500/20 to-zinc-600/10 border border-zinc-500/20'
       };
   }
 };
 
-/**
- * Extract tool data from content using the new parser with backwards compatibility
- */
-export function extractToolData(content: any): {
-  toolResult: ParsedToolResult | null;
-  arguments: Record<string, any>;
-  filePath: string | null;
-  fileContent: string | null;
-  command: string | null;
-  url: string | null;
-  query: string | null;
-} {
-  const toolResult = parseToolResult(content);
-  
-  if (toolResult) {
-    const args = toolResult.arguments || {};
-    return {
-      toolResult,
-      arguments: args,
-      filePath: args.file_path || args.path || null,
-      fileContent: args.file_contents || args.content || null,
-      command: args.command || null,
-      url: args.url || null,
-      query: args.query || null,
-    };
-  }
-
-  // Fallback to legacy parsing if new format not detected
-  return {
-    toolResult: null,
-    arguments: {},
-    filePath: null,
-    fileContent: null,
-    command: null,
-    url: null,
-    query: null,
-  };
-}

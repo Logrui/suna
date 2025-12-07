@@ -22,6 +22,7 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
         }
     }, [agent?.system_prompt]);
 
+    //Disables editing for Suna's default agent by passing disabled prop
     const isSunaAgent = agent?.metadata?.is_suna_default || false;
     const restrictions = agent?.metadata?.restrictions || {};
     const isEditable = (restrictions.system_prompt_editable !== false) && !isSunaAgent;
@@ -29,8 +30,8 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
     const handleSave = async (value: string) => {
         if (!isEditable) {
             if (isSunaAgent) {
-                toast.error("System prompt cannot be edited", {
-                    description: "Suna's system prompt is managed centrally.",
+                toast.error("Default System Prompts cannot be edited", {
+                    description: "Suna agent system prompts are managed centrally.",
                 });
             }
             return;
@@ -62,15 +63,15 @@ export function InstructionsScreen({ agentId }: InstructionsScreenProps) {
 
     return (
         <div className="flex-1 overflow-auto pb-6">
-            <div className="px-1 pt-1 flex flex-col h-full">
+            <div className="px-1 pt-1 flex flex-col h-full max-w-3xl">
                 <Label className="text-base font-semibold mb-3 block flex-shrink-0">
                     System Prompt
                 </Label>
-                <div className="flex-1 min-h-[500px]">
+                <div className="h-[500px]">
                     <ExpandableMarkdownEditor
                         value={systemPrompt}
                         onSave={handleSave}
-                        disabled={!isEditable}
+                        disabled={!isEditable && !isSunaAgent} //allow opening the System Prompt editor for the Suna Agent. You can now view the prompt and click "Edit", but saving changes will still be blocked.
                         placeholder="Define how your agent should behave..."
                         className="h-full"
                     />

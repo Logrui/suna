@@ -35,7 +35,8 @@ import { Info, X } from 'lucide-react';
 import { useLimits } from '@/hooks/dashboard/use-limits';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Progress } from '../ui/progress';
-import { NotificationBell } from '../notifications/notification-bell';
+// import { NotificationBell } from '../notifications/notification-bell';
+import { NotificationDropdown } from '../notifications/novu-notification-dropdown';
 
 // Lazy load heavy components that aren't immediately visible
 const PlanSelectionModal = lazy(() =>
@@ -322,10 +323,11 @@ export function DashboardContent() {
       <div className="flex flex-col h-screen w-full overflow-hidden relative">
         {/* Credits Display - Top right corner */}
         <div className="absolute flex items-center gap-2 top-4 right-4 z-10">
+          <NotificationDropdown />
           <Suspense fallback={<div className="h-8 w-20 bg-muted/30 rounded animate-pulse" />}>
             <CreditsDisplay />
           </Suspense>
-          <NotificationBell />
+          {/* <NotificationBell /> */}
           <Popover>
             <PopoverTrigger asChild>
               <Button size='icon' variant='outline'>

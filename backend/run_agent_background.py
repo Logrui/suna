@@ -193,9 +193,10 @@ async def run_agent_background(
                 break
 
             # Store response in Redis list and publish notification
-            response_json = json.dumps(response)
-            pending_redis_operations.append(asyncio.create_task(redis.rpush(response_list_key, response_json)))
-            pending_redis_operations.append(asyncio.create_task(redis.publish(response_channel, "new")))
+            # CRITICAL: Must await rpush before publishing to ensure data is available when subscribers read it
+            await redis.rpush(response_list_key, json.dumps(response))
+            # Fire and forget publish is okay, but awaiting ensures order
+            await redis.publish(response_channel, "new")
             total_responses += 1
 
             # Check for agent-signaled completion or error

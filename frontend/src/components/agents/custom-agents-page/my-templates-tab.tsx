@@ -92,7 +92,7 @@ export const MyTemplatesTab = ({
                   isActioning: isActioning,
                 }}
                 actions={{
-                  onPrimaryAction: template.is_public 
+                  onPrimaryAction: template.is_public
                     ? () => onUnpublish(template.template_id, template.name)
                     : () => onPublish(template),
                   onSecondaryAction: template.is_public ? onViewInMarketplace : undefined,

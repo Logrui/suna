@@ -115,7 +115,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
       </div>
 
       {configuredMCPs.length === 0 && (
-        <div className="text-center py-12 px-6 ">
+        <div className="text-center py-12 px-6">
           <div className="mx-auto w-12 h-12">
             <Server className="h-6 w-6 text-muted-foreground" />
           </div>

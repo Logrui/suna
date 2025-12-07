@@ -1,0 +1,34 @@
+---
+description: Perform a hard restart (down then up) of Docker services.
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Goal
+
+Execute the `docker-compose-hard-restart.ps1` script to hard restart services.
+
+## Arguments
+
+- **Service** (optional, positional): The service to restart.
+  - Values: `all` (default), `backend`, `frontend`, `worker`.
+- **-Build** (optional switch): Rebuild images before starting.
+
+## Examples
+
+- `/restart`: Hard restart all services.
+- `/restart backend`: Hard restart only backend.
+- `/restart -Build`: Hard restart all services with rebuild.
+- `/restart frontend -Build`: Hard restart frontend with rebuild.
+
+## Execution Steps
+
+### 1. Run Script
+
+```powershell
+.\.scripts\core\docker-compose-hard-restart.ps1 $ARGUMENTS
+```

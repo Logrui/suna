@@ -2,6 +2,79 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 PowerShell Command Requirements (Windows)
+
+**CRITICAL**: This repository runs on Windows with PowerShell. NEVER use Unix/bash commands.
+
+### ❌ Commands That Don't Exist in PowerShell
+- `head` - Use `Select-Object -First N` instead
+- `tail` - Use `Select-Object -Last N` or `Get-Content -Tail N` instead  
+- `grep` (standalone) - Use `Select-String` or `Where-Object` instead
+- `cat` - Use `Get-Content` instead
+- `ls` - Use `Get-ChildItem` or just `dir` instead
+
+### ✅ Correct PowerShell Patterns
+
+**Limiting output:**
+```powershell
+# ❌ WRONG: git log | head -50
+# ✅ CORRECT:
+git log | Select-Object -First 50
+
+# ❌ WRONG: docker logs container | tail -100
+# ✅ CORRECT:
+docker logs container --tail=100  # Use tool's native flags when available
+Get-Content file.log -Tail 100    # Or PS cmdlet
+```
+
+**Filtering:**
+```powershell
+# ❌ WRONG: git log | grep "notifications"
+# ✅ CORRECT:
+git log | Select-String "notifications"
+
+# For git specifically, use git's native filtering:
+git log --all --grep="notifications"
+```
+
+**Reading files:**
+```powershell
+# ❌ WRONG: cat file.txt
+# ✅ CORRECT:
+Get-Content file.txt
+```
+
+### Git Log Best Practices
+
+```powershell
+# ✅ Get recent commits with PowerShell filtering
+git log --all --pretty=format:"%h | %an | %ad | %s" --date=short | Select-Object -First 20
+
+# ✅ Filter commits by path (use git's native options)
+git log --all --pretty=format:"%h | %an | %ad | %s" --date=short -- path/to/files/
+
+# ✅ Search commit messages (use git's grep)
+git log --all --grep="search term" --pretty=format:"%h | %an | %ad | %s"
+
+# ✅ Count commits by author
+git shortlog -sn --all -- path/to/files/
+```
+
+### Common Replacements
+
+| ❌ Bash/Unix | ✅ PowerShell |
+|--------------|---------------|
+| `ls -la` | `Get-ChildItem` or `dir` |
+| `head -n 10` | `Select-Object -First 10` |
+| `tail -n 20` | `Select-Object -Last 20` |
+| `grep pattern` | `Select-String pattern` |
+| `cat file` | `Get-Content file` |
+| `wc -l` | `Measure-Object -Line` |
+| `sort` | `Sort-Object` |
+| `uniq` | `Select-Object -Unique` |
+
+**REMEMBER**: When using `git`, `docker`, or other cross-platform tools, prefer their **native flags** (like `--tail`, `--grep`) over PowerShell piping when possible.
+
 ## 🚨 Critical Constraint: Documentation Hard Limit
 
 **⚠️ MAXIMUM 3 MARKDOWN FILES PER REQUEST - Non-negotiable**
@@ -137,6 +210,124 @@ docker compose ps
 # Stop services
 docker compose down
 ```
+
+### Docker Image Backup & Restoration
+
+**Critical Practice:** Before running `docker compose up -d --build`, always backup your stable working images. When Docker rebuilds images, it moves the `latest` or `local` tag to the new build, leaving old images as "dangling" (unnamed) and subject to pruning.
+
+#### Backing Up Stable Images
+
+Before rebuilding, tag your current stable images with a backup identifier:
+
+```powershell
+# Backup backend/worker image (uses same image)
+docker tag suna-backend:local suna-backend:backup-YYYY-MM-DD
+
+# Backup frontend image
+docker tag suna-frontend:latest suna-frontend:backup-YYYY-MM-DD
+
+# Example with today's date
+docker tag suna-backend:local suna-backend:backup-2025-12-03
+docker tag suna-frontend:latest suna-frontend:backup-2025-12-03
+```
+
+#### Verify Backups
+
+```powershell
+# List all backup images
+docker images | Select-String "backup"
+
+# List specific backup
+docker images | Select-String "backup-2025-12-03"
+```
+
+#### When to Backup
+
+**Always backup before:**
+- Merging upstream changes (especially from PRODUCTION branch)
+- Applying major dependency updates (`pyproject.toml`, `package.json`)
+- Implementing breaking changes or refactors
+- Testing experimental features
+- Updating Docker base images or build configurations
+
+#### Restoring from Backup
+
+If a new build fails, introduces bugs, or has breaking changes, restore the backup:
+
+```powershell
+# Restore backend to previous stable version
+docker tag suna-backend:backup-2025-12-03 suna-backend:local
+
+# Restore frontend to previous stable version
+docker tag suna-frontend:backup-2025-12-03 suna-frontend:latest
+
+# Restart services with restored images (no rebuild)
+docker compose up -d
+```
+
+**Important:** The `docker compose up -d` command (without `--build`) will use the existing tagged images.
+
+#### Multiple Backup Strategy
+
+For critical updates, maintain multiple backup points:
+
+```powershell
+# Before upstream merge
+docker tag suna-backend:local suna-backend:pre-upstream-merge
+docker tag suna-frontend:latest suna-frontend:pre-upstream-merge
+
+# After successful merge (new stable baseline)
+docker tag suna-backend:local suna-backend:stable-post-merge
+docker tag suna-frontend:latest suna-frontend:stable-post-merge
+```
+
+#### Cleanup Old Backups
+
+```powershell
+# List all images with sizes
+docker images
+
+# Remove specific backup
+docker rmi suna-backend:backup-2025-11-15
+docker rmi suna-frontend:backup-2025-11-15
+
+# Remove all dangling images (untagged)
+docker image prune
+```
+
+#### Emergency Rollback Workflow
+
+If you discover issues after deployment:
+
+1. **Stop services immediately:**
+   ```powershell
+   docker compose down
+   ```
+
+2. **Restore last known good images:**
+   ```powershell
+   docker tag suna-backend:backup-2025-12-03 suna-backend:local
+   docker tag suna-frontend:backup-2025-12-03 suna-frontend:latest
+   ```
+
+3. **Restart with stable images:**
+   ```powershell
+   docker compose up -d
+   ```
+
+4. **Verify restoration:**
+   ```powershell
+   docker compose ps
+   docker compose logs -f
+   ```
+
+#### Best Practices
+
+- **Date-based naming:** Use `backup-YYYY-MM-DD` format for easy chronological sorting
+- **Descriptive tags:** For major changes, use descriptive names like `pre-billing-refactor` or `stable-v1.2.3`
+- **Keep recent backups:** Maintain at least 2-3 recent backup points
+- **Document changes:** Note what changed between backups in commit messages or `.docs/`
+- **Test before cleanup:** Verify new build is stable before removing old backups
 
 ## Architecture
 

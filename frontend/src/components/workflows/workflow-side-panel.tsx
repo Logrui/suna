@@ -89,8 +89,8 @@ export function WorkflowSidePanel({
 
     // Filter step types based on search
     const filteredStepTypes = availableStepTypes.filter(type =>
-        type.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        type.description.toLowerCase().includes(searchQuery.toLowerCase())
+        (type.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (type.description || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     React.useEffect(() => {
@@ -189,23 +189,21 @@ export function WorkflowSidePanel({
     };
 
     const renderAddStepContent = () => (
-        <div className="flex flex-col h-full">
-            <div className="pt-4 pl-4 pr-4">
-                <div className="flex items-center justify-between">
-                    <div className="ml-2 flex items-center gap-2">
-                        <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Add Step</h2>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleClose}
-                        className="h-8 w-8"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+        <div className="flex flex-col h-full bg-card rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-card">
+                <div className="flex items-center gap-2">
+                    <h2 className="text-base font-semibold text-foreground">Add Step</h2>
                 </div>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClose}
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                >
+                    <X className="h-4 w-4" />
+                </Button>
             </div>
-            <div className="flex-1 p-4 overflow-auto">
+            <div className="flex-1 p-4 overflow-auto bg-muted/30">
                 <div className="space-y-6">
                     <div>
                         <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">Choose a step type to add to your workflow</p>
@@ -273,23 +271,21 @@ export function WorkflowSidePanel({
         if (!selectedStep) return null;
 
         return (
-            <div className="flex flex-col h-full">
-                <div className="pt-4 pl-4 pr-4">
-                    <div className="flex items-center justify-between">
-                        <div className="ml-2 flex items-center gap-2">
-                            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Edit Step</h2>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleClose}
-                            className="h-8 w-8"
-                        >
-                            <X className="h-4 w-4" />
-                        </Button>
+            <div className="flex flex-col h-full bg-card rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-card">
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-base font-semibold text-foreground">Edit Step</h2>
                     </div>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleClose}
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
                 </div>
-                <div className="flex-1 p-4 overflow-auto">
+                <div className="flex-1 p-4 overflow-auto bg-muted/30">
                     <div className="space-y-6">
                         {/* Basic info */}
                         <div className="space-y-4">
@@ -369,11 +365,7 @@ export function WorkflowSidePanel({
     };
 
     const renderContent = () => (
-        <div className="flex flex-col h-full">
-            <ScrollArea className="h-full">
-                {mode === 'add' ? renderAddStepContent() : renderEditStepContent()}
-            </ScrollArea>
-        </div>
+        mode === 'add' ? renderAddStepContent() : renderEditStepContent()
     );
 
     if (!isOpen) return null;
@@ -397,7 +389,7 @@ export function WorkflowSidePanel({
                         }
                     }}
                     className={cn(
-                        'fixed top-2 right-2 bottom-4 border border-zinc-200 dark:border-zinc-800 rounded-3xl flex flex-col z-30 bg-card',
+                        'fixed top-2 right-2 bottom-4 border border-border rounded-lg flex flex-col z-30 bg-card shadow-sm',
                         isMobile
                             ? 'left-2'
                             : 'w-[40vw] sm:w-[450px] md:w-[500px] lg:w-[550px] xl:w-[645px]',

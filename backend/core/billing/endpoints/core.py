@@ -349,6 +349,7 @@ async def get_tier_configurations() -> Dict:
 async def get_available_models(
     account_id: str = Depends(verify_and_get_user_id_from_jwt)
 ) -> Dict:
+    #logger.info("Executing get_available_models with variant field fix")
     if config.ENV_MODE == EnvMode.LOCAL:
         all_models = model_manager.list_available_models(include_disabled=True)
         return {
@@ -358,6 +359,9 @@ async def get_available_models(
                     'display_name': model['name'],
                     'provider': model['provider'],
                     'allowed': True,
+                    'context_window': model.get('context_window', 128000),
+                    'capabilities': model.get('capabilities', []),
+                    'variant': model.get('variant'),
                     'reason': 'Local development mode'
                 }
                 for model in all_models
@@ -388,6 +392,7 @@ async def get_available_models(
             'capabilities': model.get('capabilities', []),
             'priority': model.get('priority', 0),
             'recommended': model.get('recommended', False),
+            'variant': model.get('variant'),
             'reason': f'Available on {tier_name} tier' if allowed else f'Requires higher tier than {tier_name}'
         })
     

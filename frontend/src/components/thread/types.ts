@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Project } from '@/lib/api/projects';
+import type { Project } from '@/lib/api/threads';
 import { Message as BaseApiMessageType } from '@/lib/api/threads';
 
 // Define a type for the params to make React.use() work properly
@@ -45,12 +45,27 @@ export interface ParsedContent {
 
 // Helper type for parsed metadata
 export interface ParsedMetadata {
-  stream_status?: 'chunk' | 'complete';
+  stream_status?: 'chunk' | 'complete' | 'tool_call_chunk';
   thread_run_id?: string;
   tool_index?: number;
   assistant_message_id?: string; // Link tool results/statuses back
   linked_tool_result_message_id?: string; // Link status to tool result
-  parsing_details?: any;
+  // New format fields - directly in metadata, no wrapper
+  tool_calls?: Array<{
+    tool_call_id: string;
+    function_name: string;
+    arguments: Record<string, any> | string; // Can be string (partial JSON during streaming) or object (complete)
+    source: 'native' | 'xml';
+  }>;
+  text_content?: string;
+  function_name?: string; // Stored directly in metadata, not in result
+  result?: {
+    success: boolean;
+    output: any;
+    error?: string | null;
+  };
+  return_format?: 'native' | 'xml';
+  tool_call_id?: string;
   [key: string]: any; // Allow other properties
 }
 

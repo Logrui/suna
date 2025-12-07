@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/utils';
 import { GrainText } from '@/components/ui/grain-text';
@@ -36,19 +37,7 @@ const workerConfigs = [
         backgroundColor: '#FFCD7E',
         borderColor: '#E0B46F',
         image: '/images/landing-showcase/slides.png',
-        fileTypeKey: 'pptx',
-        title: 'Presentation Specialist',
-        description: 'Creates professional slide decks from your content, complete with speaker notes and design layouts.',
-        capabilities: [
-            'Slide Generation',
-            'Theme Customization',
-            'Speaker Notes',
-            'Data Visualization',
-            'Layout Design',
-            'Export to PPTX'
-        ],
-        imageAlt: 'Presentation slide preview',
-        fileType: 'PPTX'
+        fileTypeKey: 'pptx'
     },
     {
         id: 'data',
@@ -57,19 +46,7 @@ const workerConfigs = [
         backgroundColor: '#9DC2FF',
         borderColor: '#91B6F3',
         image: '/images/landing-showcase/data.png',
-        fileTypeKey: 'preview',
-        title: 'Data Analyst',
-        description: 'Analyzes complex datasets, generates insights, and creates interactive visualizations.',
-        capabilities: [
-            'Data Analysis',
-            'Chart Creation',
-            'Trend Identification',
-            'Statistical Summary',
-            'Report Generation',
-            'Data Cleaning'
-        ],
-        imageAlt: 'Data analysis dashboard',
-        fileType: 'CSV/JSON'
+        fileTypeKey: 'preview'
     },
     {
         id: 'docs',
@@ -78,19 +55,7 @@ const workerConfigs = [
         backgroundColor: '#82DD95',
         borderColor: '#72C283',
         image: '/images/landing-showcase/docs.png',
-        fileTypeKey: 'document',
-        title: 'Document Writer',
-        description: 'Drafts comprehensive documents, reports, and articles with proper formatting and structure.',
-        capabilities: [
-            'Content Drafting',
-            'Formatting',
-            'Editing',
-            'Research Integration',
-            'Citation Management',
-            'Export to PDF/DOCX'
-        ],
-        imageAlt: 'Document editor interface',
-        fileType: 'DOCX'
+        fileTypeKey: 'document'
     },
     {
         id: 'research',
@@ -99,19 +64,7 @@ const workerConfigs = [
         backgroundColor: '#FFB5E4',
         borderColor: '#EF9FD1',
         image: '/images/landing-showcase/research.png',
-        fileTypeKey: 'document',
-        title: 'Research Assistant',
-        description: 'Conducts deep research on any topic, synthesizing information from multiple sources.',
-        capabilities: [
-            'Web Search',
-            'Source Verification',
-            'Summary Generation',
-            'Fact Checking',
-            'Topic Exploration',
-            'Bibliography'
-        ],
-        imageAlt: 'Research results view',
-        fileType: 'PDF'
+        fileTypeKey: 'document'
     },
     {
         id: 'images',
@@ -120,59 +73,96 @@ const workerConfigs = [
         backgroundColor: '#FFAFAF',
         borderColor: '#F19C9C',
         image: '/images/landing-showcase/images.png',
-        fileTypeKey: 'image',
-        title: 'Image Creator',
-        description: 'Generates high-quality images and artwork based on your detailed descriptions.',
-        capabilities: [
-            'Image Generation',
-            'Style Transfer',
-            'Image Editing',
-            'Variation Creation',
-            'Upscaling',
-            'Format Conversion'
-        ],
-        imageAlt: 'Image generation gallery',
-        fileType: 'PNG/JPG'
+        fileTypeKey: 'image'
     }
 ];
 
 export function ShowCaseSection() {
-    const [activeWorker, setActiveWorker] = useState<string>(workerConfigs[0].id);
-    const isMobile = useIsMobile();
+    const workers: WorkerType[] = workerConfigs.map((config) => {
+        let title = '';
+        let description = '';
+        let capabilities: string[] = [];
+        let imageAlt = '';
+        let fileType = '';
 
-    const workers: WorkerType[] = workerConfigs.map((config) => ({
-        ...config,
-        // Properties are now directly in the config object
-    }));
+        switch (config.id) {
+            case 'slides':
+                title = 'Presentation Specialist';
+                description = 'Create professional presentations from any content';
+                capabilities = ['Slide Generation', 'Layout Design', 'Content Formatting', 'Theme Customization', 'Export to PPTX', 'Visual Enhancement'];
+                imageAlt = 'Presentation slides preview';
+                fileType = 'Presentation.pptx';
+                break;
+            case 'data':
+                title = 'Data Analyst';
+                description = 'Analyze data and create visualizations';
+                capabilities = ['Data Analysis', 'Chart Generation', 'Trend Identification', 'Report Creation', 'Data Cleaning', 'Insight Extraction'];
+                imageAlt = 'Data analysis dashboard';
+                fileType = 'Analysis.csv';
+                break;
+            case 'docs':
+                title = 'Document Assistant';
+                description = 'Create and edit documents';
+                capabilities = ['Drafting', 'Editing', 'Formatting', 'Summarization', 'Proofreading', 'Content Expansion'];
+                imageAlt = 'Document editor interface';
+                fileType = 'Document.docx';
+                break;
+            case 'research':
+                title = 'Research Assistant';
+                description = 'Conduct deep research on any topic';
+                capabilities = ['Web Search', 'Source Verification', 'Data Synthesis', 'Citation Management', 'Topic Exploration', 'Summary Generation'];
+                imageAlt = 'Research findings';
+                fileType = 'Research.pdf';
+                break;
+            case 'images':
+                title = 'Creative Designer';
+                description = 'Generate and edit images';
+                capabilities = ['Image Generation', 'Style Transfer', 'Image Editing', 'Concept Art', 'Visual Design', 'Format Conversion'];
+                imageAlt = 'Image generation tool';
+                fileType = 'Image.png';
+                break;
+            default:
+                title = 'AI Worker';
+                description = ' specialized AI worker';
+                capabilities = [];
+                imageAlt = 'AI Worker';
+                fileType = 'File';
+        }
 
-    const currentWorker = workers.find(w => w.id === activeWorker) || workers[0];
+        return {
+            ...config,
+            title,
+            description,
+            capabilities,
+            imageAlt,
+            fileType
+        };
+    });
 
     return (
-        <section className="w-full px-6 py-16 md:py-24 lg:py-32">
+        <section className="w-full px-4 sm:px-6 py-12 sm:py-16 md:py-24 lg:py-32">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="text-center mb-12 md:mb-16">
-                    <h1 className="text-[43px] font-medium leading-tight mb-4">
-                        Meet Your New AI Workforce
+                <div className="text-center mb-8 sm:mb-12 md:mb-16">
+                    <h1 className="text-2xl sm:text-3xl md:text-[43px] font-medium leading-tight mb-3 sm:mb-4">
+                        AI Workers for Every Task
                     </h1>
-                    <h2 className="text-base md:text-lg max-w-3xl mx-auto block text-muted-foreground font-normal">
-                        Specialized agents ready to handle your most complex tasks.
+                    <h2 className="text-sm sm:text-base md:text-lg max-w-3xl mx-auto block text-muted-foreground font-normal px-2">
+                        Specialized agents ready to help you work faster and better.
                     </h2>
                 </div>
 
                 {/* Workers Grid */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                     {workers.map((worker) => (
                         <Card
                             key={worker.id}
-                            className="transition-all duration-300 cursor-pointer !rounded-[24px] !p-6"
-                            onMouseEnter={() => !isMobile && setActiveWorker(worker.id)}
-                            onClick={() => isMobile && setActiveWorker(worker.id)}
+                            className="transition-all duration-300 cursor-pointer !rounded-[20px] sm:!rounded-[24px] !p-4 sm:!p-6"
                         >
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                                 {/* Left side - Info */}
                                 <div className="flex flex-col">
-                                    <div className="space-y-4 flex-1">
+                                    <div className="space-y-3 sm:space-y-4 flex-1">
                                         {/* Icon */}
                                         <GrainIcon
                                             iconName={worker.iconName}
@@ -181,22 +171,22 @@ export function ShowCaseSection() {
                                         />
 
                                         {/* Title */}
-                                        <h3 className="text-[32px] font-semibold leading-tight">
+                                        <h3 className="text-xl sm:text-2xl md:text-[32px] font-semibold leading-tight">
                                             {worker.title}
                                         </h3>
 
                                         {/* Description */}
-                                        <GrainText className="text-sm md:text-base leading-relaxed text-muted-foreground">
+                                        <GrainText className="text-sm leading-relaxed text-muted-foreground">
                                             {worker.description}
                                         </GrainText>
 
                                         {/* Capabilities */}
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                             {worker.capabilities.map((capability, idx) => (
                                                 <Badge
                                                     key={idx}
                                                     variant="outline"
-                                                    className="text-sm h-9 px-4"
+                                                    className="text-xs sm:text-sm h-7 sm:h-9 px-2.5 sm:px-4"
                                                 >
                                                     {capability}
                                                 </Badge>
@@ -209,9 +199,9 @@ export function ShowCaseSection() {
                                         <Button
                                             variant="default"
                                             size="default"
-                                            className="w-fit flex items-center justify-center gap-2 bg-primary text-primary-foreground mt-4"
+                                            className="w-fit flex items-center justify-center gap-2 bg-primary text-primary-foreground mt-4 h-9 sm:h-10 text-sm"
                                         >
-                                            Try It Out
+                                            Try it out
                                             <span>→</span>
                                         </Button>
                                     </Link>
@@ -219,18 +209,19 @@ export function ShowCaseSection() {
 
                                 {/* Right side - Computer Preview */}
                                 <div className="relative">
-                                    <Card className="overflow-hidden transition-all duration-300 !p-0 h-full !rounded-[24px] flex flex-col !border-0 !gap-0">
+                                    <Card className="overflow-hidden transition-all duration-300 !p-0 h-full !rounded-[16px] sm:!rounded-[24px] flex flex-col !border-0 !gap-0">
                                         {/* Computer header */}
-                                        <div className="bg-black text-white px-4 flex items-center justify-between flex-shrink-0 h-[65px]">
+                                        <div className="bg-black text-white px-3 sm:px-4 flex items-center justify-between flex-shrink-0 h-[50px] sm:h-[65px]">
                                             <div className="flex items-center gap-2">
-                                                <KortixLogo size={16} className="invert" />
-                                                <span className="text-xl font-medium">
+                                                <KortixLogo size={14} className="invert sm:hidden" />
+                                                <KortixLogo size={16} className="invert hidden sm:block" />
+                                                <span className="text-base sm:text-xl font-medium">
                                                     Kortix Computer
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                                <span className="text-xs text-green-500 font-medium">Running</span>
+                                                <span className="text-[10px] sm:text-xs text-green-500 font-medium">Running</span>
                                             </div>
                                         </div>
 
@@ -246,10 +237,10 @@ export function ShowCaseSection() {
                                         </div>
 
                                         {/* Footer with file type */}
-                                        <div className="bg-black text-white px-4 flex items-center flex-shrink-0 h-[71px]">
-                                            <Badge variant="outline" className="text-xs font-mono gap-1.5 border-white/20 text-white">
+                                        <div className="bg-black text-white px-3 sm:px-4 flex items-center flex-shrink-0 h-[50px] sm:h-[71px]">
+                                            <Badge variant="outline" className="text-[10px] sm:text-xs font-mono gap-1 sm:gap-1.5 border-white/20 text-white">
                                                 <svg
-                                                    className="w-3 h-3"
+                                                    className="w-2.5 h-2.5 sm:w-3 sm:h-3"
                                                     viewBox="0 0 16 16"
                                                     fill="currentColor"
                                                 >

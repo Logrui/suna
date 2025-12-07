@@ -32,6 +32,7 @@ from core.notifications.types import (
     NotificationChannel,
 )
 from core.services.notification_service import NotificationService
+from core.notifications.notification_service import notification_service as novu_notification_service
 from core.services.supabase import DBConnection
 from core.utils.logger import logger
 
@@ -175,6 +176,31 @@ async def trigger_system_notification(
                 "triggered_at": datetime.now(timezone.utc).isoformat(),
             }
         )
+
+        # [HYBRID] Trigger Novu Workflow if mapped
+        try:
+            # Simple mapping of notification_key to Novu workflow_id
+            # In the future, this could be part of the template definition
+            novu_workflow_id = notification_key.replace("_", "-")
+            
+            # Construct payload for Novu
+            novu_payload = {
+                "title": title,
+                "message": message,
+                "notification_type": template.type.value,
+                "category": template.category.value,
+                **context
+            }
+
+            await novu_notification_service.trigger_workflow_admin(
+                workflow_id=novu_workflow_id,
+                payload_template=novu_payload,
+                subscriber_id=user_id
+            )
+            logger.info(f"Triggered Novu workflow '{novu_workflow_id}' for user {user_id}")
+        except Exception as e:
+            # Log but don't fail the main notification trigger
+            logger.warning(f"Failed to trigger Novu workflow for '{notification_key}': {e}")
 
         # Step 8: Build result
         channels_used = []

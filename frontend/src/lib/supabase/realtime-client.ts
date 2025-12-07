@@ -20,7 +20,7 @@ let authUnsubscribe: (() => void) | null = null;
  */
 export async function initializeRealtimeClient(mainClient: SupabaseClient): Promise<SupabaseClient> {
     if (realtimeClientInstance) {
-        console.log('[RealtimeManager] Realtime client already initialized');
+        //console.log('[RealtimeManager] Realtime client already initialized');
         return realtimeClientInstance;
     }
 
@@ -32,7 +32,7 @@ export async function initializeRealtimeClient(mainClient: SupabaseClient): Prom
         process.env.NEXT_PUBLIC_SUPABASE_URL ||
         'http://localhost:8888';
 
-    console.log('[RealtimeManager] Initializing with URL:', realtimeUrl);
+    //console.log('[RealtimeManager] Initializing with URL:', realtimeUrl);
 
     realtimeClientInstance = createSupabaseClient(
         realtimeUrl,
@@ -54,11 +54,11 @@ export async function initializeRealtimeClient(mainClient: SupabaseClient): Prom
     try {
         const { data: { session }, error } = await mainClient.auth.getSession();
         if (error) {
-            console.warn('[RealtimeManager] Failed to get initial session:', error);
+            //console.warn('[RealtimeManager] Failed to get initial session:', error);
         } else if (session?.access_token) {
             await realtimeClientInstance.realtime.setAuth(session.access_token);
-            console.log('[RealtimeManager] ✅ Initial auth synced');
-            console.log('[RealtimeManager] User:', session.user?.email, 'Token:', session.access_token.substring(0, 20) + '...');
+            //console.log('[RealtimeManager] ✅ Initial auth synced');
+            //console.log('[RealtimeManager] User:', session.user?.email, 'Token:', session.access_token.substring(0, 20) + '...');
         } else {
             console.log('[RealtimeManager] No initial session (user not logged in yet)');
         }
@@ -68,22 +68,22 @@ export async function initializeRealtimeClient(mainClient: SupabaseClient): Prom
 
     // PHASE 2: Listen to all auth changes and sync token
     authUnsubscribe = mainClient.auth.onAuthStateChange(async (event, session) => {
-        console.log('[RealtimeManager] Auth state changed:', event);
+        //console.log('[RealtimeManager] Auth state changed:', event);
 
         if (session?.access_token) {
             try {
                 await realtimeClientInstance!.realtime.setAuth(session.access_token);
-                console.log('[RealtimeManager] ✅ Auth synced on', event);
-                console.log('[RealtimeManager] User:', session.user?.email, 'Token:', session.access_token.substring(0, 20) + '...');
+                //console.log('[RealtimeManager] ✅ Auth synced on', event);
+                //console.log('[RealtimeManager] User:', session.user?.email, 'Token:', session.access_token.substring(0, 20) + '...');
             } catch (err) {
                 console.error('[RealtimeManager] Failed to sync auth:', err);
             }
         } else {
-            console.log('[RealtimeManager] Auth cleared on', event, '(user signed out or session expired)');
+            //console.log('[RealtimeManager] Auth cleared on', event, '(user signed out or session expired)');
         }
     }).data.subscription.unsubscribe;
 
-    console.log('[RealtimeManager] Initialization complete. Auth syncing active.');
+    //console.log('[RealtimeManager] Initialization complete. Auth syncing active.');
     return realtimeClientInstance;
 }
 

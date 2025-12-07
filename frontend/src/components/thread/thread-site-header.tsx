@@ -21,9 +21,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "@/hooks/threads/keys";
 import { threadKeys } from "@/hooks/threads/keys";
 import { useAdminRole } from "@/hooks/admin/use-admin-role";
-import { NotificationBell } from '@/components/notifications/notification-bell';
+// import { NotificationBell } from '@/components/notifications/notification-bell';
+import { NotificationDropdown } from '@/components/notifications/novu-notification-dropdown';
 import { DebugModal } from "./debug-modal";
 import { CostModal } from "./cost-modal";
+import { NotificationBell } from "@novu/notification-center";
 
 interface ThreadSiteHeaderProps {
   threadId?: string;
@@ -275,6 +277,9 @@ export function SiteHeader({
               </Tooltip>
             )}
 
+            {/* <NotificationBell /> */}
+            <NotificationDropdown />
+
             {/* Cost Estimate Button - Only show for admins */}
             {showDebugButtons && (
               <Tooltip>
@@ -310,8 +315,8 @@ export function SiteHeader({
               </TooltipContent>
             </Tooltip>
 
-            <NotificationBell />
-
+            {/* commented out custom implemented NotificationBell */}
+            {/* <NotificationBell /> */}
 
             <Tooltip>
               <TooltipTrigger asChild>
