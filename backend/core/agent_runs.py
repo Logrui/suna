@@ -393,37 +393,52 @@ async def _ensure_sandbox_for_thread(client, project_id: str, files: List[Upload
 
         # Get preview links using proxy URLs to bypass Daytona warning
         from core.utils.preview_urls import get_vnc_preview_url, get_website_preview_url
-        
+
+        logger.info(f"[Sandbox Setup] Generating preview URLs for sandbox={sandbox_id}")
         vnc_url = get_vnc_preview_url(sandbox_id)
         website_url = get_website_preview_url(sandbox_id)
-        
+        logger.info(f"[Sandbox Setup] Generated VNC URL: {vnc_url}")
+        logger.info(f"[Sandbox Setup] Generated Website URL: {website_url}")
+
         # Still need to get token from Daytona for authentication
+        logger.debug(f"[Sandbox Setup] Fetching Daytona preview link for port 6080")
         vnc_link = await sandbox.get_preview_link(6080)
+        logger.debug(f"[Sandbox Setup] Daytona preview link response: {vnc_link}")
+
         token = None
         if hasattr(vnc_link, 'token'):
             token = vnc_link.token
+            logger.debug(f"[Sandbox Setup] Extracted token from attribute: {token}")
         elif "token='" in str(vnc_link):
             token = str(vnc_link).split("token='")[1].split("'")[0]
+            logger.debug(f"[Sandbox Setup] Extracted token from string: {token}")
+        else:
+            logger.warning(f"[Sandbox Setup] No token found in preview link response")
 
         # Update project with sandbox info
+        sandbox_data = {
+            'id': sandbox_id,
+            'pass': sandbox_pass,
+            'vnc_preview': vnc_url,
+            'sandbox_url': website_url,
+            'token': token
+        }
+        logger.info(f"[Sandbox Setup] Updating project {project_id} with sandbox data: {sandbox_data}")
+
         update_result = await client.table('projects').update({
-            'sandbox': {
-                'id': sandbox_id,
-                'pass': sandbox_pass,
-                'vnc_preview': vnc_url,
-                'sandbox_url': website_url,
-                'token': token
-            }
+            'sandbox': sandbox_data
         }).eq('project_id', project_id).execute()
 
         if not update_result.data:
-            logger.error(f"Failed to update project {project_id} with new sandbox {sandbox_id}")
+            logger.error(f"[Sandbox Setup] Failed to update project {project_id} with new sandbox {sandbox_id}")
             if sandbox_id:
                 try:
                     await delete_sandbox(sandbox_id)
                 except Exception as e:
-                    logger.error(f"Error deleting sandbox: {str(e)}")
+                    logger.error(f"[Sandbox Setup] Error deleting sandbox: {str(e)}")
             raise Exception("Database update failed")
+
+        logger.info(f"[Sandbox Setup] ✅ Successfully configured sandbox {sandbox_id} for project {project_id}")
         
         return sandbox, sandbox_id
     except Exception as e:

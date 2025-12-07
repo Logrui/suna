@@ -138,8 +138,16 @@ export function useVncPreloader(
   }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading]);
 
   useEffect(() => {
+    console.log('[VNC Preloader] Effect triggered with sandbox:', {
+      has_vnc_preview: !!sandbox?.vnc_preview,
+      vnc_preview: sandbox?.vnc_preview,
+      has_pass: !!sandbox?.pass,
+      current_status: status
+    });
+
     // Reset status when sandbox changes
     if (!sandbox?.vnc_preview || !sandbox?.pass) {
+      console.log('[VNC Preloader] Missing vnc_preview or pass, resetting to idle');
       setStatus('idle');
       setRetryCount(0);
       return;
@@ -147,10 +155,12 @@ export function useVncPreloader(
 
     // Don't restart if already in progress or ready
     if (status === 'loading' || status === 'ready') {
+      console.log('[VNC Preloader] Already loading or ready, skipping');
       return;
     }
 
     const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    console.log('[VNC Preloader] Constructed preload URL:', vncUrl);
 
     // Reset retry counter for new sandbox
     setRetryCount(0);
@@ -185,14 +195,18 @@ export function useVncPreloader(
   useEffect(() => {
     const fetchToken = async () => {
       try {
+        console.log('[VNC Preloader] Fetching auth token...');
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
+          console.log('[VNC Preloader] ✅ Got auth token');
           setAccessToken(session.access_token);
+        } else {
+          console.log('[VNC Preloader] No auth session found (public access mode)');
         }
       } catch (err) {
-        console.error('[VncPreloader] Failed to fetch auth token:', err);
+        console.error('[VNC Preloader] Failed to fetch auth token:', err);
       }
     };
 

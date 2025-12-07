@@ -17,12 +17,27 @@ interface HealthCheckedVncIframeProps {
 
 export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncIframeProps) {
   const [iframeKey, setIframeKey] = useState(0);
+  const [iframeError, setIframeError] = useState<string | null>(null);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
+  console.log('[VNC Component] Rendering with sandbox:', {
+    id: sandbox.id,
+    vnc_preview: sandbox.vnc_preview,
+    has_pass: !!sandbox.pass
+  });
 
   // Use the enhanced VNC preloader hook
   const { status, retryCount, retry, isPreloaded, accessToken } = useVncPreloader(sandbox, {
     maxRetries: 5,
     initialDelay: 1000,
     timeoutMs: 5000
+  });
+
+  console.log('[VNC Component] Hook status:', {
+    status,
+    retryCount,
+    isPreloaded,
+    has_accessToken: !!accessToken
   });
 
   // VNC URL received but preloading in progress
@@ -73,12 +88,37 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
   }
 
   if (isPreloaded) {
+    console.log('[VNC Component] Rendering iframe (preload complete)');
+
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
           <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-gray-100 dark:bg-gray-800'>
+            {iframeError && (
+              <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-xs p-2 z-10">
+                ⚠️ iframe error: {iframeError}
+              </div>
+            )}
+            {!iframeLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-700 z-5">
+                <div className="text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-600 mb-2 mx-auto" />
+                  <p className="text-xs text-gray-600">Loading VNC client...</p>
+                </div>
+              </div>
+            )}
             <iframe
               key={iframeKey}
+              onLoad={() => {
+                console.log('[VNC Component] ✅ iframe onLoad event fired');
+                setIframeLoaded(true);
+                setIframeError(null);
+              }}
+              onError={(e) => {
+                console.error('[VNC Component] ❌ iframe onError event fired:', e);
+                setIframeError('Failed to load VNC client');
+                setIframeLoaded(false);
+              }}
               src={(() => {
                 // Construct the VNC URL with FULL path to WebSocket endpoint
                 // noVNC 'path' parameter is relative to site root, not current page
@@ -111,11 +151,23 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
                   console.log('[VNC Debug] Added auth token to VNC URL');
                 }
 
-                console.log('[VNC Debug] Final VNC URL:', vncUrl);
+                console.log('[VNC Debug] ✅ Final VNC URL:', vncUrl);
+                console.log('[VNC Debug] URL breakdown:', {
+                  base: sandbox.vnc_preview,
+                  path: '/vnc_lite.html',
+                  password: '***',
+                  autoconnect: true,
+                  scale: 'local',
+                  websocket_path: websocketPath,
+                  has_token: !!accessToken
+                });
+
                 return vncUrl;
               })()}
               title="Browser preview"
               className="absolute inset-0 w-full h-full border-0 md:w-[102%] md:h-[130%] md:-translate-y-[4.4rem] lg:-translate-y-[4.7rem] xl:-translate-y-[5.4rem] md:left-0 md:-translate-x-2"
+              allow="fullscreen"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-modals"
             />
           </div>
         </Card>

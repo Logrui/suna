@@ -574,36 +574,47 @@ async def proxy_daytona_preview(
     """
     Proxy a request to the Daytona preview URL, injecting the header to skip the warning.
     """
-    logger.debug(f"Proxy request: sandbox={sandbox_id} port={port} path={path}")
-    logger.debug(f"Incoming Request URL: {request.url}")
-    
+    is_vnc_request = 'vnc' in path.lower() or port == 6080
+    log_prefix = "[VNC HTTP Proxy]" if is_vnc_request else "[HTTP Proxy]"
+
+    logger.info(f"{log_prefix} Incoming request: sandbox={sandbox_id} port={port} path={path}")
+    logger.debug(f"{log_prefix} Full request URL: {request.url}")
+    logger.debug(f"{log_prefix} Request headers: {dict(request.headers)}")
+
     client = await db.client
     # Verify access (optional but recommended)
+    logger.debug(f"{log_prefix} Verifying sandbox access for user={user_id}")
     await verify_sandbox_access_optional(client, sandbox_id, user_id)
+    logger.debug(f"{log_prefix} Access verified")
 
     try:
         # Get the sandbox to retrieve the correct preview URL dynamically
+        logger.debug(f"{log_prefix} Retrieving sandbox object from database")
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
-        
+        logger.debug(f"{log_prefix} Sandbox retrieved successfully")
+
         # Get the authoritative preview URL from Daytona
         # This handles different domains (daytona.app, daytona.work, etc.) automatically
+        logger.debug(f"{log_prefix} Fetching Daytona preview link for port {port}")
         preview_link_obj = await sandbox.get_preview_link(port)
         base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
-        
+        logger.info(f"{log_prefix} Got Daytona preview URL: {base_target_url}")
+
         # Strip trailing slash from base if present to avoid double slashes
         base_target_url = base_target_url.rstrip('/')
-        
+
         # Construct full target URL
         # Ensure path starts with / if it's not empty
         if path and not path.startswith('/'):
             path = f"/{path}"
-            
+
         target_url = f"{base_target_url}{path}"
-        
+
         if request.query_params:
             target_url += f"?{request.query_params}"
-            
-        logger.debug(f"Proxying to upstream Daytona URL: {target_url}")
+            logger.debug(f"{log_prefix} Added query params: {request.query_params}")
+
+        logger.info(f"{log_prefix} Final upstream target URL: {target_url}")
 
         import httpx
         from fastapi.responses import StreamingResponse
