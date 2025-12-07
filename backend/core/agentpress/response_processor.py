@@ -39,6 +39,7 @@ from core.utils.json_helpers import (
     to_json_string, format_for_yield
 )
 from core.agentpress.xml_tool_parser import strip_xml_tool_calls
+from core.services.permission_service import PermissionService, PermissionResult
 
 # Note: Debug stream saving is controlled by global_config.DEBUG_SAVE_LLM_IO
 
@@ -486,7 +487,7 @@ class ResponseProcessor:
                                         if started_msg_obj: yield format_for_yield(started_msg_obj)
                                         yielded_tool_indices.add(tool_index) # Mark status as yielded
 
-                                        execution_task = asyncio.create_task(self._execute_tool(tool_call))
+                                        execution_task = asyncio.create_task(self._execute_tool(tool_call, thread_id))
                                         pending_tool_executions.append({
                                             "task": execution_task, "tool_call": tool_call,
                                             "tool_index": tool_index, "context": context
@@ -542,7 +543,7 @@ class ResponseProcessor:
                                 if started_msg_obj: yield format_for_yield(started_msg_obj)
                                 yielded_tool_indices.add(tool_index) # Mark status as yielded
 
-                                execution_task = asyncio.create_task(self._execute_tool(tool_call_data))
+                                execution_task = asyncio.create_task(self._execute_tool(tool_call_data, thread_id))
                                 pending_tool_executions.append({
                                     "task": execution_task, "tool_call": tool_call_data,
                                     "tool_index": tool_index, "context": context
@@ -917,7 +918,7 @@ class ResponseProcessor:
                     self.trace.event(name="executing_tools_after_stream", level="DEFAULT", status_message=(f"Executing {len(final_tool_calls_to_process)} tools ({config.tool_execution_strategy}) after stream"))
 
                     try:
-                        results_list = await self._execute_tools(final_tool_calls_to_process, config.tool_execution_strategy)
+                        results_list = await self._execute_tools(final_tool_calls_to_process, config.tool_execution_strategy, thread_id)
                         logger.debug(f"✅ STREAMING: Tool execution after stream completed, got {len(results_list)} results")
                     except Exception as stream_exec_error:
                         logger.error(f"❌ STREAMING: Tool execution after stream failed: {str(stream_exec_error)}")
@@ -1131,6 +1132,32 @@ class ResponseProcessor:
                         self.trace.event(name="error_saving_llm_response_end", level="ERROR", status_message=(f"Error saving llm_response_end: {str(e)}"))
 
         except Exception as e:
+            # Check for permission exception bubbling up from tool execution
+            if "PermissionRequiredException" in type(e).__name__:
+                logger.info(f"✋ Permission request caught in process_streaming_response")
+
+                # Save tool_permission_request status message
+                permission_content = {
+                    "status_type": "tool_permission_request",
+                    "tool_call_id": None, # Will be filled if we have it? Need to check context
+                    "function_name": e.tool_name,
+                    "arguments": e.arguments,
+                    "reason": e.reason
+                }
+
+                # Try to extract a specific tool_call_id if possible, but the Exception doesn't carry it
+                # We could modify the exception to carry context, but for now generic info is okay.
+
+                perm_msg_obj = await self.add_message(
+                    thread_id=thread_id, type="status", content=permission_content,
+                    is_llm_message=False, metadata={"thread_run_id": thread_run_id if 'thread_run_id' in locals() else None}
+                )
+                if perm_msg_obj:
+                    yield format_for_yield(perm_msg_obj)
+
+                # STOP execution gracefully (don't raise error)
+                return
+
             # Use ErrorProcessor for consistent error handling
             processed_error = ErrorProcessor.process_system_error(e, context={"thread_id": thread_id})
             ErrorProcessor.log_error(processed_error)
@@ -1470,7 +1497,7 @@ class ResponseProcessor:
                 self.trace.event(name="executing_tools_with_strategy", level="DEFAULT", status_message=(f"Executing {len(tool_calls_to_execute)} tools with strategy: {config.tool_execution_strategy}"))
 
                 try:
-                    tool_results = await self._execute_tools(tool_calls_to_execute, config.tool_execution_strategy)
+                    tool_results = await self._execute_tools(tool_calls_to_execute, config.tool_execution_strategy, thread_id)
                     logger.debug(f"✅ NON-STREAMING: Tool execution completed, got {len(tool_results)} results")
                 except Exception as exec_error:
                     logger.error(f"❌ NON-STREAMING: Tool execution failed: {str(exec_error)}")
@@ -1545,6 +1572,28 @@ class ResponseProcessor:
                     self.trace.event(name="error_saving_assistant_response_end_for_non_stream", level="ERROR", status_message=(f"Error saving assistant response end for non-stream: {str(e)}"))
 
         except Exception as e:
+             # Check for permission exception bubbling up from tool execution
+             if "PermissionRequiredException" in type(e).__name__:
+                logger.info(f"✋ Permission request caught in process_non_streaming_response")
+
+                # Save tool_permission_request status message
+                permission_content = {
+                    "status_type": "tool_permission_request",
+                    "function_name": e.tool_name,
+                    "arguments": e.arguments,
+                    "reason": e.reason
+                }
+
+                perm_msg_obj = await self.add_message(
+                    thread_id=thread_id, type="status", content=permission_content,
+                    is_llm_message=False, metadata={"thread_run_id": thread_run_id if 'thread_run_id' in locals() else None}
+                )
+                if perm_msg_obj:
+                    yield format_for_yield(perm_msg_obj)
+
+                # STOP execution gracefully
+                return
+
              # Use ErrorProcessor for consistent error handling
              processed_error = ErrorProcessor.process_system_error(e, context={"thread_id": thread_id})
              ErrorProcessor.log_error(processed_error)
@@ -1587,13 +1636,112 @@ class ResponseProcessor:
             if end_msg_obj: yield format_for_yield(end_msg_obj)
 
     # Tool execution methods
-    async def _execute_tool(self, tool_call: Dict[str, Any]) -> ToolResult:
+    async def _execute_tool(self, tool_call: Dict[str, Any], thread_id: str = None) -> ToolResult:
         """Execute a single tool call and return the result."""
         span = self.trace.span(name=f"execute_tool.{tool_call['function_name']}", input=tool_call["arguments"])
         function_name = "unknown"
         try:
             function_name = tool_call["function_name"]
             arguments = tool_call["arguments"]
+
+            # --- Permission Check ---
+            if thread_id:
+                try:
+                    from core.services.supabase import DBConnection
+                    from core.services.permission_service import PermissionService, PermissionResult
+
+                    db = DBConnection()
+                    client = await db.client
+
+                    # 1. Fetch thread metadata
+                    thread_result = await client.table('threads').select('metadata').eq('thread_id', thread_id).maybe_single().execute()
+                    thread_metadata = thread_result.data['metadata'] if thread_result.data else {}
+
+                    # 2. Get permission settings from agent_config
+                    permission_settings = None
+                    if self.agent_config and 'permission_settings' in self.agent_config:
+                        # Need to deserialize because it might be a dict or object
+                        # PermissionService expects ToolPermissionSettings object or dict (it handles both?)
+                        # Actually PermissionService types say ToolPermissionSettings | None
+                        from core.api_models.permissions import ToolPermissionSettings
+                        p_settings_data = self.agent_config['permission_settings']
+                        if isinstance(p_settings_data, dict):
+                            permission_settings = ToolPermissionSettings(**p_settings_data)
+                        else:
+                            permission_settings = p_settings_data
+
+                    # 3. Check Permission
+                    permission_result = PermissionService.check_permission(permission_settings, function_name, thread_metadata)
+
+                    if permission_result == PermissionResult.DENIED:
+                        logger.warning(f"🛑 Tool execution DENIED for {function_name}")
+                        span.end(status_message="permission_denied", level="WARNING")
+                        return ToolResult(success=False, output=f"Permission denied: Execution of '{function_name}' is not allowed by current security settings.")
+
+                    if permission_result == PermissionResult.REQUIRES_APPROVAL or function_name == "ask_permission":
+                        logger.info(f"✋ Tool execution REQUIRES APPROVAL for {function_name}")
+
+                        # Special handling for ask_permission tool - we stop execution and treat it as a request
+                        # Or if STRICT mode triggered this, we also stop.
+
+                        # We need to signal the ResponseProcessor to stop loop and save a request message.
+                        # Since _execute_tool returns ToolResult, we can return a special result?
+                        # Or raise a specific exception?
+                        # Returning a ToolResult with success=False might just look like a failure.
+
+                        # Let's add a special attribute to ToolResult or use a custom exception
+                        # that ResponseProcessor catches.
+
+                        # Actually, looking at ResponseProcessor logic, if we return a result, it saves it.
+                        # We want to save a "tool_permission_request" status message instead of a normal result.
+
+                        class PermissionRequiredException(Exception):
+                            def __init__(self, tool_name, arguments, reason=None):
+                                self.tool_name = tool_name
+                                self.arguments = arguments
+                                self.reason = reason
+
+                        # If it's the ask_permission tool, extract the real tool/args
+                        if function_name == "ask_permission":
+                            real_tool = arguments.get("tool_name")
+                            real_args = arguments.get("arguments")
+                            reason = arguments.get("reason")
+                            raise PermissionRequiredException(real_tool, real_args, reason)
+                        else:
+                            # Strict mode interception
+                            raise PermissionRequiredException(function_name, arguments, "Execution requires approval in Strict mode.")
+
+                # --- Hook to clear temp grants on successful execution ---
+                if hasattr(result, 'success') and result.success and thread_id:
+                    try:
+                        from core.services.supabase import DBConnection
+                        from core.services.permission_service import PermissionService
+
+                        db = DBConnection()
+                        client = await db.client
+
+                        # Fetch latest metadata again to avoid race conditions (optimistic)
+                        thread_result = await client.table('threads').select('metadata').eq('thread_id', thread_id).maybe_single().execute()
+                        if thread_result.data:
+                            current_metadata = thread_result.data['metadata'] or {}
+                            updated_metadata = PermissionService.consume_permission(current_metadata, function_name, result.success)
+
+                            # Only update if changed
+                            # (Naive check, could be optimized)
+                            if updated_metadata != current_metadata:
+                                await client.table('threads').update({'metadata': updated_metadata}).eq('thread_id', thread_id).execute()
+                                logger.debug(f"Consumed permission for {function_name}")
+                    except Exception as e:
+                        logger.error(f"Error consuming permission grant: {e}")
+                # -------------------------------------------------------
+
+                except ImportError:
+                    pass
+                except Exception as e:
+                    if "PermissionRequiredException" in type(e).__name__:
+                        raise e
+                    logger.error(f"Error checking permissions: {e}")
+            # ------------------------
 
             logger.debug(f"🔧 EXECUTING TOOL: {function_name}")
             # logger.debug(f"📝 RAW ARGUMENTS TYPE: {type(arguments)}")
@@ -1683,10 +1831,51 @@ class ResponseProcessor:
                     logger.error(f"❌ Tool returned invalid result type: {type(result)}")
                     result = ToolResult(success=False, output=f"Tool returned invalid result type: {type(result)}")
 
+            # --- Hook to clear temp grants on successful execution ---
+            if result.success and thread_id:
+                try:
+                    from core.services.supabase import DBConnection
+                    from core.services.permission_service import PermissionService
+
+                    db = DBConnection()
+                    client = await db.client
+
+                    # Fetch latest metadata again to avoid race conditions (optimistic)
+                    thread_result = await client.table('threads').select('metadata').eq('thread_id', thread_id).maybe_single().execute()
+                    if thread_result.data:
+                        current_metadata = thread_result.data['metadata'] or {}
+                        updated_metadata = PermissionService.consume_permission(current_metadata, function_name, result.success)
+
+                        # Only update if changed
+                        if updated_metadata != current_metadata:
+                            await client.table('threads').update({'metadata': updated_metadata}).eq('thread_id', thread_id).execute()
+                            logger.debug(f"Consumed permission for {function_name}")
+                except Exception as e:
+                    logger.error(f"Error consuming permission grant: {e}")
+            # -------------------------------------------------------
+
             span.end(status_message="tool_executed", output=str(result))
             return result
 
         except Exception as e:
+            # Check for permission exception passed up from permission block
+            if "PermissionRequiredException" in type(e).__name__:
+                logger.info(f"✋ Permission exception caught in _execute_tool main block")
+                # We re-raise to be handled by the caller (ResponseProcessor main loop)
+                # But wait, we need to return a special result or handle it here?
+                # The processor loop calls _execute_tools, which calls this.
+                # If we raise here, _execute_tools will catch it?
+                # _execute_tools catches generic Exception and returns ErrorResult.
+                # We need to ensure PermissionRequiredException bubbles up or is handled specifically.
+
+                # Let's inspect _execute_tools. It catches Exception.
+                # We need to modify _execute_tools to handle this specifically if we raise it.
+                # OR we return a special ToolResult that indicates "Waiting for permission".
+                # But ResponseProcessor needs to know to STOP.
+
+                # Let's re-raise and modify _execute_tools to let it pass through.
+                raise e
+
             logger.error(f"❌ CRITICAL ERROR executing tool {function_name}: {str(e)}")
             logger.error(f"❌ Error type: {type(e).__name__}")
             logger.error(f"❌ Tool call data: {tool_call}")
@@ -1697,7 +1886,8 @@ class ResponseProcessor:
     async def _execute_tools(
         self,
         tool_calls: List[Dict[str, Any]],
-        execution_strategy: ToolExecutionStrategy = "sequential"
+        execution_strategy: ToolExecutionStrategy = "sequential",
+        thread_id: str = None
     ) -> List[Tuple[Dict[str, Any], ToolResult]]:
         """Execute tool calls with the specified strategy.
 
@@ -1709,6 +1899,7 @@ class ResponseProcessor:
             execution_strategy: Strategy for executing tools:
                 - "sequential": Execute tools one after another, waiting for each to complete
                 - "parallel": Execute all tools simultaneously for better performance
+            thread_id: ID of the conversation thread (needed for permission checks)
 
         Returns:
             List of tuples containing the original tool call and its result
@@ -1735,20 +1926,20 @@ class ResponseProcessor:
         try:
             if execution_strategy == "sequential":
                 logger.debug("🔄 Dispatching to sequential execution")
-                return await self._execute_tools_sequentially(tool_calls)
+                return await self._execute_tools_sequentially(tool_calls, thread_id)
             elif execution_strategy == "parallel":
                 logger.debug("🔄 Dispatching to parallel execution")
-                return await self._execute_tools_in_parallel(tool_calls)
+                return await self._execute_tools_in_parallel(tool_calls, thread_id)
             else:
                 logger.warning(f"⚠️ Unknown execution strategy: {execution_strategy}, falling back to sequential")
-                return await self._execute_tools_sequentially(tool_calls)
+                return await self._execute_tools_sequentially(tool_calls, thread_id)
         except Exception as dispatch_error:
             logger.error(f"❌ CRITICAL: Failed to dispatch tool execution: {str(dispatch_error)}")
             logger.error(f"❌ Dispatch error type: {type(dispatch_error).__name__}")
             logger.error(f"❌ Tool calls that caused dispatch failure: {tool_calls}")
             raise
 
-    async def _execute_tools_sequentially(self, tool_calls: List[Dict[str, Any]]) -> List[Tuple[Dict[str, Any], ToolResult]]:
+    async def _execute_tools_sequentially(self, tool_calls: List[Dict[str, Any]], thread_id: str = None) -> List[Tuple[Dict[str, Any], ToolResult]]:
         """Execute tool calls sequentially and return results.
 
         This method executes tool calls one after another, waiting for each tool to complete
@@ -1756,6 +1947,7 @@ class ResponseProcessor:
 
         Args:
             tool_calls: List of tool calls to execute
+            thread_id: ID of the conversation thread (needed for permission checks)
 
         Returns:
             List of tuples containing the original tool call and its result
@@ -1778,7 +1970,7 @@ class ResponseProcessor:
 
                 try:
                     logger.debug(f"🚀 Calling _execute_tool for {tool_name}")
-                    result = await self._execute_tool(tool_call)
+                    result = await self._execute_tool(tool_call, thread_id)
                     logger.debug(f"✅ _execute_tool returned for {tool_name}: success={result.success if hasattr(result, 'success') else 'N/A'}")
 
                     # Validate result
@@ -1796,6 +1988,11 @@ class ResponseProcessor:
                         break  # Stop executing remaining tools
 
                 except Exception as e:
+                    # Let permission exceptions bubble up to main processor loop
+                    if "PermissionRequiredException" in type(e).__name__:
+                        logger.info(f"✋ Permission exception in sequential execution for {tool_name} - bubbling up")
+                        raise e
+
                     logger.error(f"❌ ERROR executing tool {tool_name}: {str(e)}")
                     logger.error(f"❌ Error type: {type(e).__name__}")
                     logger.error(f"❌ Tool call that failed: {tool_call}")
@@ -1816,6 +2013,9 @@ class ResponseProcessor:
             return results
 
         except Exception as e:
+            # Let permission exceptions bubble up
+            if "PermissionRequiredException" in type(e).__name__:
+                raise e
             logger.error(f"❌ CRITICAL ERROR in sequential tool execution: {str(e)}")
             logger.error(f"❌ Error type: {type(e).__name__}")
             logger.error(f"❌ Tool calls data: {tool_calls}")
@@ -1841,7 +2041,7 @@ class ResponseProcessor:
 
             return completed_results + error_results
 
-    async def _execute_tools_in_parallel(self, tool_calls: List[Dict[str, Any]]) -> List[Tuple[Dict[str, Any], ToolResult]]:
+    async def _execute_tools_in_parallel(self, tool_calls: List[Dict[str, Any]], thread_id: str = None) -> List[Tuple[Dict[str, Any], ToolResult]]:
         """Execute tool calls in parallel and return results.
 
         This method executes all tool calls simultaneously using asyncio.gather, which
@@ -1849,6 +2049,7 @@ class ResponseProcessor:
 
         Args:
             tool_calls: List of tool calls to execute
+            thread_id: ID of the conversation thread (needed for permission checks)
 
         Returns:
             List of tuples containing the original tool call and its result
@@ -1868,7 +2069,7 @@ class ResponseProcessor:
             tasks = []
             for i, tool_call in enumerate(tool_calls):
                 logger.debug(f"📋 Creating task {i+1} for tool: {tool_call.get('function_name', 'unknown')}")
-                task = self._execute_tool(tool_call)
+                task = self._execute_tool(tool_call, thread_id)
                 tasks.append(task)
 
             logger.debug(f"✅ Created {len(tasks)} tasks for parallel execution")
@@ -1877,6 +2078,17 @@ class ResponseProcessor:
             logger.debug("🚀 Starting parallel execution with asyncio.gather")
             results = await asyncio.gather(*tasks, return_exceptions=True)
             logger.debug(f"✅ Parallel execution completed, got {len(results)} results")
+
+            # Check if any result is a PermissionRequiredException and bubble it up
+            # If ANY tool requires permission, we should probably stop everything?
+            # Or should we let others finish?
+            # The current design stops the agent loop if permission is needed.
+            # So if one tool raises PermissionRequiredException, we bubble it up.
+
+            for result in results:
+                if isinstance(result, Exception) and "PermissionRequiredException" in type(result).__name__:
+                    logger.info("✋ Permission exception caught in parallel execution - bubbling up")
+                    raise result
 
             # Process results and handle any exceptions
             processed_results = []
@@ -1915,6 +2127,9 @@ class ResponseProcessor:
             return processed_results
 
         except Exception as e:
+            # Let permission exceptions bubble up
+            if "PermissionRequiredException" in type(e).__name__:
+                raise e
             logger.error(f"❌ CRITICAL ERROR in parallel tool execution: {str(e)}")
             logger.error(f"❌ Error type: {type(e).__name__}")
             logger.error(f"❌ Tool calls data: {tool_calls}")

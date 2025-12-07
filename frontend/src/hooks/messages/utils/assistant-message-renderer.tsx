@@ -6,9 +6,10 @@
  */
 
 import React from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, ShieldAlert } from 'lucide-react';
 import { UnifiedMessage, ParsedMetadata } from '@/components/thread/types';
 import { safeJsonParse, getToolIcon, getUserFriendlyToolName } from '@/components/thread/utils';
+import { PermissionRequestView } from '@/components/thread/tool-views/wrapper/PermissionRequestView';
 import { ComposioUrlDetector } from '@/components/thread/content/composio-url-detector';
 import { renderAttachments } from '@/components/thread/content/ThreadContent';
 import { TaskCompletedFeedback } from '@/components/thread/tool-views/shared/TaskCompletedFeedback';
@@ -187,6 +188,22 @@ function renderRegularToolCall(
  */
 export function renderAssistantMessage(props: AssistantMessageRendererProps): React.ReactNode {
   const { message } = props;
+
+  // Check for permission request status message
+  if (message.type === 'status') {
+    const content = typeof message.content === 'string'
+      ? safeJsonParse(message.content, {})
+      : message.content;
+
+    if (content?.status_type === 'tool_permission_request') {
+      return (
+        <div className="my-4">
+          <PermissionRequestView message={message} isLast={props.isLatestMessage || false} />
+        </div>
+      );
+    }
+  }
+
   const metadata = safeJsonParse<ParsedMetadata>(message.metadata, {});
   
   const toolCalls = metadata.tool_calls || [];
