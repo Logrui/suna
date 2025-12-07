@@ -574,36 +574,47 @@ async def proxy_daytona_preview(
     """
     Proxy a request to the Daytona preview URL, injecting the header to skip the warning.
     """
-    logger.debug(f"Proxy request: sandbox={sandbox_id} port={port} path={path}")
-    logger.debug(f"Incoming Request URL: {request.url}")
-    
+    is_vnc_request = 'vnc' in path.lower() or port == 6080
+    log_prefix = "[VNC HTTP Proxy]" if is_vnc_request else "[HTTP Proxy]"
+
+    logger.info(f"{log_prefix} Incoming request: sandbox={sandbox_id} port={port} path={path}")
+    logger.debug(f"{log_prefix} Full request URL: {request.url}")
+    logger.debug(f"{log_prefix} Request headers: {dict(request.headers)}")
+
     client = await db.client
     # Verify access (optional but recommended)
+    logger.debug(f"{log_prefix} Verifying sandbox access for user={user_id}")
     await verify_sandbox_access_optional(client, sandbox_id, user_id)
+    logger.debug(f"{log_prefix} Access verified")
 
     try:
         # Get the sandbox to retrieve the correct preview URL dynamically
+        logger.debug(f"{log_prefix} Retrieving sandbox object from database")
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
-        
+        logger.debug(f"{log_prefix} Sandbox retrieved successfully")
+
         # Get the authoritative preview URL from Daytona
         # This handles different domains (daytona.app, daytona.work, etc.) automatically
+        logger.debug(f"{log_prefix} Fetching Daytona preview link for port {port}")
         preview_link_obj = await sandbox.get_preview_link(port)
         base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
-        
+        logger.info(f"{log_prefix} Got Daytona preview URL: {base_target_url}")
+
         # Strip trailing slash from base if present to avoid double slashes
         base_target_url = base_target_url.rstrip('/')
-        
+
         # Construct full target URL
         # Ensure path starts with / if it's not empty
         if path and not path.startswith('/'):
             path = f"/{path}"
-            
+
         target_url = f"{base_target_url}{path}"
-        
+
         if request.query_params:
             target_url += f"?{request.query_params}"
-            
-        logger.debug(f"Proxying to upstream Daytona URL: {target_url}")
+            logger.debug(f"{log_prefix} Added query params: {request.query_params}")
+
+        logger.info(f"{log_prefix} Final upstream target URL: {target_url}")
 
         import httpx
         from fastapi.responses import StreamingResponse
@@ -748,71 +759,88 @@ async def proxy_daytona_websocket(
 ):
     """
     Proxy WebSocket connections to the Daytona preview URL.
+
+    Supports flexible path routing for VNC and other WebSocket services.
     """
+    logger.info(f"[VNC WebSocket] New connection request for sandbox={sandbox_id} port={port} path={path}")
+
     await websocket.accept()
-    
+    logger.info(f"[VNC WebSocket] Connection accepted for sandbox={sandbox_id}")
+
+    # Message relay statistics
+    bytes_to_upstream = 0
+    bytes_to_client = 0
+    messages_to_upstream = 0
+    messages_to_client = 0
+
     try:
         # Extract token and verify access
         token = websocket.query_params.get("token")
-        
+
         # Fallback to headers (Authorization: Bearer <token>)
         if not token:
             auth_header = websocket.headers.get("Authorization") or websocket.headers.get("authorization")
             if auth_header and auth_header.startswith("Bearer "):
                 token = auth_header.split(" ")[1]
-                
+
         # Fallback to cookies
         if not token:
             token = websocket.cookies.get("suna-auth-token")
-            
+
         user_id = None
-        
+
         if token:
             try:
                 from core.utils.auth_utils import _decode_jwt_safely
                 payload = _decode_jwt_safely(token)
                 user_id = payload.get('sub')
+                logger.debug(f"[VNC WebSocket] Decoded user_id from token: {user_id}")
             except Exception as e:
-                logger.warning(f"Failed to decode token for WebSocket: {e}")
-        
+                logger.warning(f"[VNC WebSocket] Failed to decode token: {e}")
+
         client = await db.client
-        # Verify access (optional but recommended)
-        # We need to handle the case where verify_sandbox_access_optional raises HTTPException
+
+        # Verify access
+        logger.debug(f"[VNC WebSocket] Verifying access for sandbox={sandbox_id} user={user_id}")
         try:
             await verify_sandbox_access_optional(client, sandbox_id, user_id)
+            logger.info(f"[VNC WebSocket] Access granted for sandbox={sandbox_id} user={user_id}")
         except HTTPException as e:
-            logger.error(f"WebSocket access denied: {e.detail}")
+            logger.error(f"[VNC WebSocket] Access denied: {e.detail}")
             await websocket.close(code=1008, reason=str(e.detail))
             return
-            
+
         # Get the sandbox to retrieve the correct preview URL dynamically
+        logger.debug(f"[VNC WebSocket] Retrieving sandbox object for sandbox_id={sandbox_id}")
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
-        
+
         # Get the authoritative preview URL from Daytona
+        logger.debug(f"[VNC WebSocket] Getting preview link for port={port}")
         preview_link_obj = await sandbox.get_preview_link(port)
         base_target_url = preview_link_obj.url if hasattr(preview_link_obj, 'url') else str(preview_link_obj)
-        
+        logger.info(f"[VNC WebSocket] Got Daytona preview URL: {base_target_url}")
+
         # Convert http/https to ws/wss
         if base_target_url.startswith("https://"):
             base_target_url = base_target_url.replace("https://", "wss://")
         elif base_target_url.startswith("http://"):
             base_target_url = base_target_url.replace("http://", "ws://")
-            
+
         # Strip trailing slash from base if present
         base_target_url = base_target_url.rstrip('/')
-        
+
         # Construct full target URL
         if path and not path.startswith('/'):
             path = f"/{path}"
-            
+
         target_url = f"{base_target_url}{path}"
-        
+
         # Forward query params
         if websocket.query_params:
             query_string = str(websocket.query_params)
             target_url += f"?{query_string}"
-            
-        logger.debug(f"Proxying WebSocket to: {target_url}")
+
+        logger.info(f"[VNC WebSocket] Connecting to upstream WebSocket: {target_url}")
         
         # Connect to upstream
         async with aiohttp.ClientSession() as session:
@@ -821,29 +849,52 @@ async def proxy_daytona_websocket(
                 headers={'X-Daytona-Skip-Preview-Warning': 'true'},
                 ssl=False # Disable SSL verify for upstream if needed
             ) as upstream_ws:
-                
+                logger.info(f"[VNC WebSocket] ✅ Successfully connected to upstream for sandbox {sandbox_id}")
+
                 # Create tasks for bidirectional forwarding
                 async def forward_client_to_upstream():
+                    nonlocal bytes_to_upstream, messages_to_upstream
                     try:
+                        logger.debug(f"[VNC WebSocket] Starting client→upstream relay")
                         while True:
                             data = await websocket.receive_bytes()
+                            msg_size = len(data)
                             await upstream_ws.send_bytes(data)
+                            bytes_to_upstream += msg_size
+                            messages_to_upstream += 1
+                            logger.debug(f"[VNC WebSocket] Relayed binary to upstream: {msg_size} bytes (total: {messages_to_upstream} msgs, {bytes_to_upstream} bytes)")
                     except Exception as e:
-                        logger.debug(f"Client to Upstream connection closed: {e}")
-                        
+                        logger.info(f"[VNC WebSocket] Client disconnected (sandbox={sandbox_id})")
+                        logger.debug(f"[VNC WebSocket] Client to upstream closed: {e}")
+
                 async def forward_upstream_to_client():
+                    nonlocal bytes_to_client, messages_to_client
                     try:
+                        logger.debug(f"[VNC WebSocket] Starting upstream→client relay")
                         async for msg in upstream_ws:
                             if msg.type == aiohttp.WSMsgType.BINARY:
+                                msg_size = len(msg.data)
                                 await websocket.send_bytes(msg.data)
+                                bytes_to_client += msg_size
+                                messages_to_client += 1
+                                logger.debug(f"[VNC WebSocket] Relayed binary to client: {msg_size} bytes (total: {messages_to_client} msgs, {bytes_to_client} bytes)")
                             elif msg.type == aiohttp.WSMsgType.TEXT:
+                                msg_size = len(msg.data)
                                 await websocket.send_text(msg.data)
+                                bytes_to_client += msg_size
+                                messages_to_client += 1
+                                logger.debug(f"[VNC WebSocket] Relayed text to client: {msg_size} bytes (total: {messages_to_client} msgs, {bytes_to_client} bytes)")
                             elif msg.type == aiohttp.WSMsgType.CLOSED:
+                                logger.info(f"[VNC WebSocket] Upstream closed connection")
                                 break
                             elif msg.type == aiohttp.WSMsgType.ERROR:
+                                logger.error(f"[VNC WebSocket] Upstream WebSocket error")
                                 break
                     except Exception as e:
-                        logger.debug(f"Upstream to Client connection closed: {e}")
+                        logger.info(f"[VNC WebSocket] Upstream disconnected")
+                        logger.debug(f"[VNC WebSocket] Upstream to client closed: {e}")
+
+                logger.info(f"[VNC WebSocket] Starting bidirectional relay for sandbox={sandbox_id}")
 
                 # Run both tasks
                 done, pending = await asyncio.wait(
@@ -853,14 +904,26 @@ async def proxy_daytona_websocket(
                     ],
                     return_when=asyncio.FIRST_COMPLETED
                 )
-                
+
                 # Cancel pending tasks
                 for task in pending:
                     task.cancel()
+
+                logger.info(f"[VNC WebSocket] Session complete for sandbox={sandbox_id}: "
+                           f"{messages_to_upstream} msgs ({bytes_to_upstream} bytes) to upstream, "
+                           f"{messages_to_client} msgs ({bytes_to_client} bytes) to client")
                     
-    except Exception as e:
-        logger.error(f"WebSocket proxy error: {e}")
+    except HTTPException as e:
+        logger.error(f"[VNC WebSocket] HTTP error: {e.status_code} - {e.detail}")
         try:
-            await websocket.close(code=1011)
-        except:
+            await websocket.close(code=1008, reason=str(e.detail))
+        except Exception:
             pass
+    except Exception as e:
+        logger.error(f"[VNC WebSocket] Unexpected error: {type(e).__name__} - {str(e)}", exc_info=True)
+        try:
+            await websocket.close(code=1011, reason=f"Internal error: {str(e)}")
+        except Exception:
+            pass
+    finally:
+        logger.info(f"[VNC WebSocket] Connection closed for sandbox={sandbox_id}")

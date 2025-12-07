@@ -245,18 +245,18 @@ export function NotificationDropdown() {
     const { user } = useAuth();
     const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APPLICATION_IDENTIFIER;
 
-    console.log('[Novu] Debug:', {
-        userId: user?.id,
-        appId: applicationIdentifier,
-        hasUser: !!user,
-        hasAppId: !!applicationIdentifier
-    });
+    // console.log('[Novu] Debug:', {
+    //     userId: user?.id,
+    //     appId: applicationIdentifier,
+    //     hasUser: !!user,
+    //     hasAppId: !!applicationIdentifier
+    // });
 
     if (!user?.id || !applicationIdentifier) {
-        console.warn('[Novu] Missing requirements:', {
-            missingUser: !user?.id,
-            missingAppId: !applicationIdentifier
-        });
+        // console.warn('[Novu] Missing requirements:', {
+        //     missingUser: !user?.id,
+        //     missingAppId: !applicationIdentifier
+        // });
         // return null; // Removed check as requested
     }
 

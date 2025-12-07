@@ -17,6 +17,7 @@ export type Project = {
     sandbox_url?: string;
     id?: string;
     pass?: string;
+    token?: string; // Daytona authentication token
   };
   is_public?: boolean;
   icon_name?: string | null;

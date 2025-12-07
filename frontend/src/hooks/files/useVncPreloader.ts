@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Project } from '@/lib/api/projects';
+import { getVncLiteUrl } from '@/lib/daytona/preview-client';
 
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -19,7 +20,7 @@ interface VncPreloaderResult {
 }
 
 export function useVncPreloader(
-  sandbox: { vnc_preview?: string; pass?: string } | null,
+  sandbox: { id?: string; vnc_preview?: string; pass?: string; token?: string } | null,
   options: VncPreloaderOptions = {}
 ): VncPreloaderResult {
   const { maxRetries = 5, initialDelay = 1000, timeoutMs = 5000 } = options;
@@ -33,8 +34,16 @@ export function useVncPreloader(
   const startPreloading = useCallback((vncUrl: string) => {
     // Prevent multiple simultaneous preload attempts
     if (isRetryingRef.current || status === 'ready') {
+      console.log('[VNC Preloader] Skipping preload:', { isRetrying: isRetryingRef.current, status });
       return;
     }
+
+    console.log('[VNC Preloader] Starting preload:', {
+      url: vncUrl,
+      retryCount,
+      maxRetries,
+      timeoutMs
+    });
 
     setStatus('loading');
     isRetryingRef.current = true;
@@ -52,6 +61,8 @@ export function useVncPreloader(
 
     // Set a timeout to detect if iframe fails to load (for 502 errors)
     const loadTimeout = setTimeout(() => {
+      console.log('[VNC Preloader] Load timeout reached after', timeoutMs, 'ms');
+
       if (iframe.parentNode) {
         iframe.parentNode.removeChild(iframe);
       }
@@ -69,7 +80,7 @@ export function useVncPreloader(
           startPreloading(vncUrl);
         }, delay);
       } else {
-        console.log(`❌ VNC preload failed after ${maxRetries} attempts`);
+        console.error(`❌ VNC preload failed after ${maxRetries} attempts`);
         setStatus('error');
         isRetryingRef.current = false;
       }
@@ -86,8 +97,9 @@ export function useVncPreloader(
     };
 
     // Handle iframe load errors
-    iframe.onerror = () => {
+    iframe.onerror = (event) => {
       clearTimeout(loadTimeout);
+      console.error('[VNC Preloader] iframe.onerror triggered:', event);
 
       // Clean up current iframe
       if (iframe.parentNode) {
@@ -99,33 +111,47 @@ export function useVncPreloader(
         isRetryingRef.current = false;
 
         const delay = Math.min(2000 * Math.pow(1.5, retryCount), 10000);
+        console.log(`🔄 VNC preload error, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
 
         retryTimeoutRef.current = setTimeout(() => {
           setRetryCount(prev => prev + 1);
           startPreloading(vncUrl);
         }, delay);
       } else {
+        console.error(`❌ VNC preload failed after ${maxRetries} attempts (onerror)`);
         setStatus('error');
         isRetryingRef.current = false;
       }
     };
 
     // Add to DOM to start loading
+    console.log('[VNC Preloader] Adding iframe to DOM');
     document.body.appendChild(iframe);
   }, [status, retryCount, maxRetries, timeoutMs]);
 
   const retry = useCallback(() => {
-    if (sandbox?.vnc_preview && sandbox?.pass) {
-      const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    if (sandbox?.id && sandbox?.pass) {
+      // Use direct Daytona connection (bypasses Next.js rewrites)
+      const vncUrl = getVncLiteUrl(sandbox as { id: string; pass: string; token?: string });
+      console.log('[VNC Preloader] Using direct Daytona connection for retry');
       setRetryCount(0);
       setStatus('idle');
       startPreloading(vncUrl);
     }
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading]);
+  }, [sandbox?.id, sandbox?.pass, sandbox?.token, startPreloading]);
 
   useEffect(() => {
+    console.log('[VNC Preloader] Effect triggered with sandbox:', {
+      has_id: !!sandbox?.id,
+      sandbox_id: sandbox?.id,
+      has_pass: !!sandbox?.pass,
+      has_token: !!sandbox?.token,
+      current_status: status
+    });
+
     // Reset status when sandbox changes
-    if (!sandbox?.vnc_preview || !sandbox?.pass) {
+    if (!sandbox?.id || !sandbox?.pass) {
+      console.log('[VNC Preloader] Missing sandbox id or pass, resetting to idle');
       setStatus('idle');
       setRetryCount(0);
       return;
@@ -133,10 +159,14 @@ export function useVncPreloader(
 
     // Don't restart if already in progress or ready
     if (status === 'loading' || status === 'ready') {
+      console.log('[VNC Preloader] Already loading or ready, skipping');
       return;
     }
 
-    const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    // Use direct Daytona connection (bypasses Next.js rewrites)
+    const vncUrl = getVncLiteUrl(sandbox as { id: string; pass: string; token?: string });
+    console.log('[VNC Preloader] Constructed preload URL (direct Daytona):', vncUrl);
+    console.log('[VNC Preloader] Using direct connection, bypassing Next.js rewrites ✅');
 
     // Reset retry counter for new sandbox
     setRetryCount(0);
@@ -163,7 +193,7 @@ export function useVncPreloader(
 
       isRetryingRef.current = false;
     };
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading, initialDelay, status]);
+  }, [sandbox?.id, sandbox?.pass, sandbox?.token, startPreloading, initialDelay, status]);
 
   // Fetch auth token for private project access
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -171,14 +201,18 @@ export function useVncPreloader(
   useEffect(() => {
     const fetchToken = async () => {
       try {
+        console.log('[VNC Preloader] Fetching auth token...');
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
+          console.log('[VNC Preloader] ✅ Got auth token');
           setAccessToken(session.access_token);
+        } else {
+          console.log('[VNC Preloader] No auth session found (public access mode)');
         }
       } catch (err) {
-        console.error('[VncPreloader] Failed to fetch auth token:', err);
+        console.error('[VNC Preloader] Failed to fetch auth token:', err);
       }
     };
 

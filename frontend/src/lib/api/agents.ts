@@ -466,7 +466,7 @@ export const streamAgent = (
       activeStreams.set(agentRunId, eventSource);
 
       eventSource.onopen = () => {
-        console.log(`[STREAM] EventSource opened for ${agentRunId}`);
+        // console.log(`[STREAM] EventSource opened for ${agentRunId}`);
       };
 
       eventSource.onmessage = (event) => {

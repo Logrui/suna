@@ -7,6 +7,7 @@ the X-Daytona-Skip-Preview-Warning header.
 """
 
 from core.utils.config import config
+from core.utils.logger import logger
 
 
 def get_proxy_preview_url(sandbox_id: str, port: int, path: str = "") -> str:
@@ -32,26 +33,30 @@ def get_proxy_preview_url(sandbox_id: str, port: int, path: str = "") -> str:
         'https://kortix.syhc.dev/api/sandboxes/sandbox-123/proxy/8080/index.html'
     """
     base_url = config.WEBHOOK_BASE_URL or "http://localhost:8000"
-    
+
     # Ensure path starts with / if not empty, or is / if empty
     if not path:
         path = "/"
     elif not path.startswith('/'):
         path = f"/{path}"
-    
-    return f"{base_url}/api/sandboxes/{sandbox_id}/proxy/{port}{path}"
+
+    result_url = f"{base_url}/api/sandboxes/{sandbox_id}/proxy/{port}{path}"
+    logger.debug(f"[Preview URL] Generated proxy URL: {result_url} (sandbox={sandbox_id}, port={port}, path={path})")
+
+    return result_url
 
 
 def get_vnc_preview_url(sandbox_id: str) -> str:
     """
     Get VNC (Computer) preview URL for a sandbox.
-    
+
     Args:
         sandbox_id: The Daytona sandbox ID
-    
+
     Returns:
         Proxy URL for VNC access on configured VNC port (default 6080)
     """
+    logger.info(f"[VNC Preview URL] Generating VNC preview URL for sandbox={sandbox_id} on port={config.DAYTONA_VNC_PORT}")
     return get_proxy_preview_url(sandbox_id, config.DAYTONA_VNC_PORT)
 
 
