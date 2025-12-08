@@ -19,7 +19,7 @@ description: "Task list template for feature implementation"
 
 ## Phase 1: Environment & Fetch (The "Ingestion")
 **Purpose**: Get the raw materials ready.
-- [ ] T001 Run `fetch-upstream` to update `.upstream-cache` to target ref.
+- [ ] T001 Run `fetch-upstream` to update `.portkit-cache` to target ref.
 - [ ] T002 Run `map-dependencies` on upstream entry points to finalize Blast Radius.
 - [ ] T003 [P] Create local directory structure (`src/features/...`).
 

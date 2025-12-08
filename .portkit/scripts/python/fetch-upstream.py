@@ -8,7 +8,7 @@ from pathlib import Path
 # Configuration
 PORTKIT_ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG_FILE = PORTKIT_ROOT / "config.json"
-CACHE_DIR = PORTKIT_ROOT.parent / ".upstream-cache"
+CACHE_DIR = PORTKIT_ROOT.parent / ".portkit-cache"
 
 def load_config():
     if not CONFIG_FILE.exists():
@@ -39,8 +39,8 @@ def main():
     # Ensure cache directory exists
     if not CACHE_DIR.exists():
         print(f"Cloning upstream from {upstream_url}...")
-        # Clone straight into .upstream-cache
-        # We need to create the parent dir context if .upstream-cache doesn't exist?
+        # Clone straight into .portkit-cache
+        # We need to create the parent dir context if .portkit-cache doesn't exist?
         # git clone creates the dir.
         try:
             subprocess.run(["git", "clone", upstream_url, str(CACHE_DIR)], check=True, capture_output=False)

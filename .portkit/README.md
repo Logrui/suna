@@ -17,12 +17,12 @@ A "Soft Fork" cannot survive by manually merging files one by one. It requires a
 
 ## 1.5. Ingestion Strategy (The "Source of Truth")
 To analyze upstream code without polluting our repo, we use a **Shadow Cache Strategy**:
-*   **Location**: `.upstream-cache/` (Gitignored).
+*   **Location**: `.portkit-cache/` (Gitignored).
 *   **Mechanism**: A script `scripts/fetch-upstream.ts` that:
-    1.  Checks if `.upstream-cache` exists.
+    1.  Checks if `.portkit-cache` exists.
     2.  If not, clones the remote upstream repo (defined in `.portkit/config.json`).
     3.  If yes, performs `git fetch --all` and `git checkout <target_ref>`.
-*   **Agent Access**: Agents are strictly forbidden from editing `.upstream-cache`. They treats it as Read-Only Reference Material.
+*   **Agent Access**: Agents are strictly forbidden from editing `.portkit-cache`. They treats it as Read-Only Reference Material.
 
 ## 1.6. Directory Structure (The "Physical" Architecture)
 Use this reference to understand where components live:
@@ -123,7 +123,7 @@ To enable the agents, we need deterministic scripts to minimize context usage an
 
 5.  **`fetch-upstream.ts` / `fetch-upstream.py`**:
     *   Input: Target Git Ref (tag/branch/commit).
-    *   Action: Manages the `.upstream-cache` shadow repo. Ensures it is present, fetches latest, and checks out the specific target ref.
+    *   Action: Manages the `.portkit-cache` shadow repo. Ensures it is present, fetches latest, and checks out the specific target ref.
     *   Output: Path to the checked-out shadow repo.
 
 6.  **`extract-region.ts` / `extract-region.py`**:

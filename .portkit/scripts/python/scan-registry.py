@@ -32,7 +32,7 @@ def main():
     for root, dirs, files in os.walk("."):
         if ".git" in dirs: dirs.remove(".git")
         if "node_modules" in dirs: dirs.remove("node_modules")
-        if ".upstream-cache" in dirs: dirs.remove(".upstream-cache")
+        if ".portkit-cache" in dirs: dirs.remove(".portkit-cache")
         
         for file in files:
             if file.endswith(('.ts', '.tsx', '.js', '.py', '.md')):
