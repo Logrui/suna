@@ -143,6 +143,7 @@ export type SubscriptionStatus = 'no_subscription' | 'active';
 export interface ChatInputHandles {
   getPendingFiles: () => File[];
   clearPendingFiles: () => void;
+  setValue: (value: string) => void;
 }
 
 export interface ChatInputProps {
@@ -360,6 +361,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
     useImperativeHandle(ref, () => ({
       getPendingFiles: () => pendingFiles,
       clearPendingFiles: () => setPendingFiles([]),
+      setValue: (newValue: string) => setLocalValue(newValue),
     }));
 
     useEffect(() => {

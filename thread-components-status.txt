@@ -1,2 +1,0 @@
-A  frontend/src/components/thread/kortix-computer/KortixComputerHeader.tsx
-A  frontend/src/components/thread/tool-views/command-tool/ListCommandsToolView.tsx

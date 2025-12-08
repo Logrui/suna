@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "Bash(curl:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "WebFetch(domain:supabase.com)",
+      "Bash(ls -la \"D:\\Homelab\\suna\\specs\\feature\\workflows-playbooks\"\" 2>&1 || ls -la \"D:Homelabsunaspecs003-advanced-workflows\"\")",
+      "Bash(supabase --version:*)",
+      "Bash(powershell.exe -NoProfile -Command \".\\.specify\\scripts\\powershell\\check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks\")",
+      "Bash(ls:*)",
+      "Bash($productionFiles = git ls-tree -r --name-only PRODUCTION -- frontend/)",
+      "Bash(Sort-Object)",
+      "Bash($localFiles = git ls-tree -r --name-only HEAD -- frontend/)",
+      "Bash(Compare-Object $productionFiles $localFiles -PassThru)",
+      "Bash(Where-Object { $_SideIndicator -eq \"<=\" })",
+      "Bash(Select-Object -ExpandProperty InputObject)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -232,8 +232,6 @@ apps/mobile/app-example
 # Docker-specific env files
 *.env.docker
 
-.claude/
-.specify/
 .vscode/
 .windsurf/
 .backend.credentials/
@@ -241,13 +239,10 @@ apps/mobile/app-example
 # --- Shadow Repo Links ---
 .docs/
 .github/
-.specify/
 .vscode/
 .windsurf/
 .cloudflared/
 .env.local
-.scripts/
-.scripts/core/*
 .credentials/
 .cloudflared/
 .docs/
