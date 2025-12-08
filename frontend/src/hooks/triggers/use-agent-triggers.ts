@@ -2,17 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TriggerConfiguration } from '@/components/agents/triggers/types';
 import { createClient } from '@/lib/supabase/client';
 import { TriggerLimitError } from '@/lib/api/errors';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '@/lib/get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 const fetchAgentTriggers = async (agentId: string): Promise<TriggerConfiguration[]> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('You must be logged in to create a trigger');
-    }
-    const response = await fetch(`${API_URL}/triggers/agents/${agentId}/triggers`, {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('You must be logged in to create a trigger');
+  }
+  const response = await fetch(`${API_URL}/triggers/agents/${agentId}/triggers`, {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
   });
   if (!response.ok) {
@@ -28,12 +32,12 @@ const createTrigger = async (data: {
   description?: string;
   config: Record<string, any>;
 }): Promise<TriggerConfiguration> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('You must be logged in to create a trigger');
-    }
-    const response = await fetch(`${API_URL}/triggers/agents/${data.agentId}/triggers`, {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('You must be logged in to create a trigger');
+  }
+  const response = await fetch(`${API_URL}/triggers/agents/${data.agentId}/triggers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
     body: JSON.stringify({
@@ -43,18 +47,18 @@ const createTrigger = async (data: {
       config: data.config,
     }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     const detail = errorData.detail || errorData;
-    
+
     if (response.status === 402 && detail.error_code === 'TRIGGER_LIMIT_EXCEEDED') {
       throw new TriggerLimitError(response.status, detail);
     }
-    
+
     throw new Error(detail.message || errorData.detail || 'Failed to create trigger');
   }
-  
+
   return response.json();
 };
 
@@ -65,12 +69,12 @@ const updateTrigger = async (data: {
   config?: Record<string, any>;
   is_active?: boolean;
 }): Promise<TriggerConfiguration> => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error('You must be logged in to create a trigger');
-    }
-    const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('You must be logged in to create a trigger');
+  }
+  const response = await fetch(`${API_URL}/triggers/${data.triggerId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
     body: JSON.stringify({
@@ -80,12 +84,12 @@ const updateTrigger = async (data: {
       is_active: data.is_active,
     }),
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || 'Failed to update trigger');
   }
-  
+
   return response.json();
 };
 
@@ -99,7 +103,7 @@ const deleteTrigger = async (data: { triggerId: string; agentId: string }): Prom
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || 'Failed to delete trigger');
@@ -117,7 +121,7 @@ export const useAgentTriggers = (agentId: string) => {
 
 export const useCreateTrigger = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: createTrigger,
     onSuccess: (newTrigger) => {
@@ -136,7 +140,7 @@ export const useCreateTrigger = () => {
 
 export const useUpdateTrigger = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: updateTrigger,
     onSuccess: (updatedTrigger) => {
@@ -146,7 +150,7 @@ export const useUpdateTrigger = () => {
         ['agent-triggers', updatedTrigger.agent_id],
         (old: TriggerConfiguration[] | undefined) => {
           if (!old) return [updatedTrigger];
-          return old.map(trigger => 
+          return old.map(trigger =>
             trigger.trigger_id === updatedTrigger.trigger_id ? updatedTrigger : trigger
           );
         }
@@ -157,7 +161,7 @@ export const useUpdateTrigger = () => {
 
 export const useDeleteTrigger = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: deleteTrigger,
     onSuccess: (_, { triggerId, agentId }) => {
@@ -170,7 +174,7 @@ export const useDeleteTrigger = () => {
 
 export const useToggleTrigger = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: { triggerId: string; isActive: boolean }) => {
       return updateTrigger({
@@ -185,7 +189,7 @@ export const useToggleTrigger = () => {
         ['agent-triggers', updatedTrigger.agent_id],
         (old: TriggerConfiguration[] | undefined) => {
           if (!old) return [updatedTrigger];
-          return old.map(trigger => 
+          return old.map(trigger =>
             trigger.trigger_id === updatedTrigger.trigger_id ? updatedTrigger : trigger
           );
         }

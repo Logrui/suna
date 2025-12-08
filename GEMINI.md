@@ -819,3 +819,10 @@ docker exec suna-frontend-1 wget -O - http://backend:8000/api/health
 2. **Must configure:** `.docs/sandbox_issues/BASEJUMP_SCHEMA_EXPOSURE_FIX_v2.md` - Basejump schema
 3. **Understand KB:** `.docs/file storage and embeddings/README.md` - Knowledge base system
 4. **Optional sandboxing:** `.docs/initialsetup/7. sandbox debugging/GRACEFUL_DEGRADATION_PATTERN.md`
+
+## Portkit Awareness
+This repository uses **Portkit** for syncing upstream features to this soft-fork.
+- **Strategy**: `.portkit/README.md` (Read this first for any Portkit task).
+- **Registry**: `.portkit/addon-features-registry/feature-registry.json` (Source of Truth for features).
+- **Tools**: `.portkit/scripts/` (Use `uv run scripts/python/script.py` or `npx tsx scripts/typescript/script.ts`).
+- **Workflow**: Specify -> Research -> Plan -> Tasks -> Implement -> Verify.

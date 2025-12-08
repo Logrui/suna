@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { FileCache } from './use-cached-file';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '@/lib/get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
 // Track in-progress image loads to prevent duplication
 const inProgressImageLoads = new Map<string, Promise<string>>();
@@ -32,7 +34,7 @@ export function useImageContent(sandboxId?: string, filePath?: string) {
     // Define consistent cache keys
     const cacheKey = `${sandboxId}:${normalizedPath}:blob`;
     const loadKey = `${sandboxId}:${normalizedPath}`;
-    
+
     // Check if image is already in cache
     const cached = FileCache.get(cacheKey);
     if (cached) {
@@ -61,7 +63,7 @@ export function useImageContent(sandboxId?: string, filePath?: string) {
     // Check if this image is already being loaded by another component
     if (inProgressImageLoads.has(loadKey)) {
       setIsLoading(true);
-      
+
       inProgressImageLoads.get(loadKey)!
         .then(blobUrl => {
           setImageUrl(blobUrl);
@@ -72,15 +74,17 @@ export function useImageContent(sandboxId?: string, filePath?: string) {
           setError(err);
           setIsLoading(false);
         });
-      
+
       return;
     }
     setIsLoading(true);
-    
+
     // Create a URL for the fetch request
+    // feature-start: frontend-getapiurl-implementation
     const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+    // feature-end: frontend-getapiurl-implementation
     url.searchParams.append('path', normalizedPath);
-    
+
     // Create a promise for this load and track it
     const loadPromise = fetch(url.toString(), {
       headers: {
@@ -98,13 +102,13 @@ export function useImageContent(sandboxId?: string, filePath?: string) {
         const blobUrl = URL.createObjectURL(blob);
         // Cache both the blob and the URL
         FileCache.set(cacheKey, blobUrl);
-        
+
         return blobUrl;
       });
-    
+
     // Store the promise in the in-progress map
     inProgressImageLoads.set(loadKey, loadPromise);
-    
+
     // Now use the promise for our state
     loadPromise
       .then(blobUrl => {
@@ -113,12 +117,12 @@ export function useImageContent(sandboxId?: string, filePath?: string) {
       })
       .catch(err => {
         console.error('Failed to load image:', err);
-        console.error('Image loading details:', { 
-          sandboxId, 
-          filePath, 
+        console.error('Image loading details:', {
+          sandboxId,
+          filePath,
           normalizedPath,
           hasToken: !!session?.access_token,
-          backendUrl: getApiUrl() 
+          backendUrl: getApiUrl()
         });
         setError(err);
         setIsLoading(false);

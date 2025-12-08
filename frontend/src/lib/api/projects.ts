@@ -2,9 +2,13 @@ import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
 import { NoAccessTokenAvailableError } from './errors';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '../get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 export type Project = {
   id: string;
@@ -39,7 +43,7 @@ export const getProjects = async (): Promise<Project[]> => {
     }
 
     const projectsMap = new Map<string, Project>();
-    
+
     response.data.threads.forEach((thread: any) => {
       if (thread.project) {
         const project = thread.project;
@@ -91,7 +95,7 @@ export const getProject = async (projectId: string): Promise<Project> => {
       const ensureSandboxActive = async () => {
         const maxRetries = 5;
         const baseDelay = 2000;
-        
+
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
             const {
@@ -118,26 +122,26 @@ export const getProject = async (projectId: string): Promise<Project> => {
               const errorText = await response
                 .text()
                 .catch(() => 'No error details available');
-              
+
               if (attempt < maxRetries - 1) {
                 const delay = Math.min(baseDelay * Math.pow(2, attempt), 30000);
                 console.log(`Sandbox ensure-active failed (${response.status}), retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
               }
-              
+
               console.warn(
                 `Failed to ensure sandbox is active after all retries: ${response.status} ${response.statusText}`,
                 errorText,
               );
               return;
             }
-            
+
             try {
               const result = await response.json();
               const sandboxId = result.sandbox_id;
               console.log('Sandbox is active:', sandboxId);
-              
+
               window.dispatchEvent(new CustomEvent('sandbox-active', {
                 detail: { sandboxId, projectId }
               }));

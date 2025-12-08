@@ -39,7 +39,7 @@ Do not proceed to Registry Update until this phase passes. A broken feature shou
         *   If no: Suggest creating one via `/portkit.generate.tests` OR run a manual walkthrough plan.
 
 4.  **Registry Coverage Audit (The Safety Net)**:
-    *   **Action**: `uv run scripts/python/scan-registry.py --audit`
+    *   **Action**: `uv run scripts/python/update-registry.py --audit`
     *   **Goal**: Detect if any *modified* or *new* files are missing `// feature-start` tags.
     *   **Logic**:
         *   If it returns "success": Pass.

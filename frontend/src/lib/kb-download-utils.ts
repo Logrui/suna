@@ -1,8 +1,12 @@
-import { toast } from 'sonner';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '@/lib/get-api-url';
+// feature-end: frontend-getapiurl-implementation
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 /**
  * Download a single file from knowledge base
@@ -21,7 +25,7 @@ export async function downloadFile(entryId: string, fileName: string) {
         // Get file content from API
         const endpoint = `${API_URL}/knowledge-base/entries/${entryId}/content`;
         console.log('Downloading from:', endpoint);
-        
+
         const response = await fetch(endpoint, {
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,
@@ -79,7 +83,7 @@ export async function downloadFolderAsZip(folderId: string, folderName: string) 
 
         // Check if zip download endpoint exists
         const zipEndpoint = `${API_URL}/knowledge-base/folders/${folderId}/download-zip`;
-        
+
         const response = await fetch(zipEndpoint, {
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,
@@ -137,7 +141,7 @@ async function downloadFolderFilesIndividually(folderId: string, folderName: str
         // Download each file with a slight delay to avoid overwhelming the browser
         for (const entry of entries) {
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             try {
                 const contentResponse = await fetch(`${API_URL}/knowledge-base/entries/${entry.entry_id}/content`, {
                     headers: {

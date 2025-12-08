@@ -22,6 +22,7 @@ declare const process: {
   };
 };
 
+// feature-start: frontend-getapiurl-implementation
 export const getApiUrl = () => {
   if (typeof window !== 'undefined') {
     // Browser context: use relative URL
@@ -37,3 +38,4 @@ export const getApiUrl = () => {
   //console.log('[getApiUrl] Server context detected, returning:', serverUrl);
   return serverUrl;
 };
+// feature-end: frontend-getapiurl-implementation

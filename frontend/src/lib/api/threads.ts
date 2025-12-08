@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from '../error-handler';
 import { backendApi } from '../api-client';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '../get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
 export type Thread = {
   thread_id: string;
@@ -333,7 +335,9 @@ export const createThread = async (projectId: string): Promise<Thread> => {
     throw new Error('You must be logged in to create a thread');
   }
 
+  // feature-start: frontend-getapiurl-implementation
   const API_URL = getApiUrl();
+  // feature-end: frontend-getapiurl-implementation
 
   // Use backend API endpoint - it handles project creation as well
   const response = await fetch(`${API_URL}/threads`, {

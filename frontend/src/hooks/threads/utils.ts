@@ -1,8 +1,12 @@
 import { createClient } from "@/lib/supabase/client";
 import { getProject, updateProject, type Project } from "@/lib/api/threads";
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from "@/lib/get-api-url";
+// feature-end: frontend-getapiurl-implementation
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 // Re-export Project type for consistent imports
 export type { Project };

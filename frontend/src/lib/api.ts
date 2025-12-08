@@ -1,10 +1,14 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError } from './error-handler';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from './get-api-url';
+// feature-end: frontend-getapiurl-implementation
 import { backendApi } from './api-client';
 import posthog from 'posthog-js';
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 // Set to keep track of agent runs that are known to be non-running
 const nonRunningAgentRuns = new Set<string>();

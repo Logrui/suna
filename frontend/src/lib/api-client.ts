@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/client';
 import { handleApiError, handleNetworkError, ErrorContext, ApiError } from './error-handler';
 import { parseTierRestrictionError } from './api/errors';
-import { getApiUrl } from './get-api-url';
-
 // Don't cache API_URL at module load time - call getApiUrl() dynamically
+// feature-start: frontend-getapiurl-implementation
+import { getApiUrl } from './get-api-url';
+// feature-end: frontend-getapiurl-implementation
 // This ensures browser gets window.location.origin and server gets Docker hostname
 
 export interface ApiClientOptions {

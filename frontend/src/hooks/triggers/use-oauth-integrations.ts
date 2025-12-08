@@ -1,9 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '@/lib/get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 interface OAuthIntegration {
   trigger_id: string;
@@ -114,7 +118,7 @@ export const useOAuthCallbackHandler = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const agentId = sessionStorage.getItem('oauth_agent_id');
     const provider = sessionStorage.getItem('oauth_provider');
-    
+
     const slackSuccess = urlParams.get('slack_success');
     const discordSuccess = urlParams.get('discord_success');
     const teamsSuccess = urlParams.get('teams_success');
@@ -129,24 +133,24 @@ export const useOAuthCallbackHandler = () => {
     if (slackSuccess || discordSuccess || teamsSuccess) {
       const providerName = slackSuccess ? 'Slack' : discordSuccess ? 'Discord' : 'Teams';
       toast.success(`${providerName} integration installed successfully!`);
-      
+
       if (agentId) {
         queryClient.invalidateQueries({ queryKey: ['oauth-integrations', agentId] });
       }
 
       sessionStorage.removeItem('oauth_agent_id');
       sessionStorage.removeItem('oauth_provider');
-      
+
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     } else if (slackError || discordError || teamsError) {
       const error = slackError || discordError || teamsError;
       const providerName = slackError ? 'Slack' : discordError ? 'Discord' : 'Teams';
       toast.error(`Failed to install ${providerName} integration: ${error}`);
-      
+
       sessionStorage.removeItem('oauth_agent_id');
       sessionStorage.removeItem('oauth_provider');
-      
+
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }

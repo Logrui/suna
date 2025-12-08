@@ -168,7 +168,7 @@ To enable the agents, we need deterministic scripts to minimize context usage an
     *   Output: **Structured JSON Report** (e.g., `{ "status": "failed", "step": "lint", "errors": [...] }`).
     *   Benefit: Agents struggle to parse massive terminal logs. This provides a clear, machine-readable signal of success or failure.
 
-8.  **`scan-registry.ts` / `scan-registry.py`**:
+8.  **`update-registry.ts` / `update-registry.py`**:
     *   Action: Scans the local codebase for feature annotations (e.g., `@feature: <name>` comments or directory patterns) and validates/updates `feature-registry.json`.
     *   **Audit Mode**: Run with `--audit` to detect modified or new files that are missing feature tags (Safety Net).
     *   Benefit: Automates registry maintenance to prevent drift and ensures no code is orphaned.
@@ -214,12 +214,12 @@ These high-level workflows consolidate the previous granular commands.
 ## 4.5. Optional & Utility Workflows
 
 1.  **`portkit-init.md`**: (**/portkit.init**) **STRONGLY RECOMMENDED**
-    *   *Action*: Updates agent memory (`agent.md`, `gemini.md`) to be aware of Portkit and file structure
+        - **Tools**: `.portkit/scripts/` (Use `uv run scripts/python/script.py` or `npx tsx scripts/typescript/script.ts`).
     *   *Timing*: Run once on first setup.
 
 2.  **`portkit-verify.md`**: (**/portkit.verify**) **STRONGLY RECOMMENDED**
     *   *Previously 'Audit'*.
-    *   *Action*: Agent audits the implementation. Runs `verify-project`, `scan-registry --audit` (Registry Coverage Check), and orchestrates behavioral verification.
+    *   *Action*: Agent audits the implementation. Runs `verify-project`, `update-registry --audit` (Registry Coverage Check), and orchestrates behavioral verification.
     *   *Output*: `review.md`.
 
 3.  **`portkit-generate-tests.md`**: (**/portkit.generate.tests**)
@@ -300,7 +300,7 @@ Sections: `safety_check_report`, `sync_feature_report`, `verify_build`, `registr
     *   [x] `portkit.update.registry` (Commit).
 
 *   [ ] **Scripts (The "Hard" Tooling)**:
-    *   [x] `scan-registry.py` (Registry Management + Audit).
+    *   [x] `update-registry.py` (Registry Management + Audit).
     *   [x] `fetch-upstream.py` (Cache Management).
     *   [x] `map-dependencies` (Polyglot AST - Python/TypeScipt).
     *   [x] `init-registry.ps1` (Safe Bootstrap).
@@ -337,7 +337,7 @@ Sections: `safety_check_report`, `sync_feature_report`, `verify_build`, `registr
 4.  **Audit Test**:
     *   Modify a registered file *without* updating the registry.
     *   Run `/portkit.verify`.
-    *   *Check*: Does the "Safety Net" (`scan-registry --audit`) trigger a warning?
+    *   *Check*: Does the "Safety Net" (`update-registry --audit`) trigger a warning?
 
 ### Feedback Log:
 *   *(User to add items here based on testing results)*

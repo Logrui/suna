@@ -4,9 +4,13 @@ import { backendApi } from '../api-client';
 import { BillingError, AgentRunLimitError, ProjectLimitError, NoAccessTokenAvailableError } from './errors';
 import { nonRunningAgentRuns, activeStreams, cleanupEventSource } from './streaming';
 import { Message } from './threads';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '../get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 // Helper function to check if a model is a local model (Ollama or LM Studio)
 export function isLocalModel(modelId: string | undefined): boolean {

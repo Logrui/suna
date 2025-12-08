@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthProvider';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '@/lib/get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
 // Global cache to persist between component mounts
 const fileCache = new Map<string, {
@@ -95,7 +97,9 @@ export function useCachedFile<T = string>(
       // Use normalized path consistently
       const normalizedPath = normalizePath(filePath || '');
 
+      // feature-start: frontend-getapiurl-implementation
       const url = new URL(`${getApiUrl()}/sandboxes/${sandboxId}/files/content`);
+      // feature-end: frontend-getapiurl-implementation
 
       // Properly encode the path parameter for UTF-8 support
       url.searchParams.append('path', normalizedPath);

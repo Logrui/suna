@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { TriggerProvider } from '@/components/agents/triggers/types';
 import { createClient } from '@/lib/supabase/client';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '@/lib/get-api-url';
+// feature-end: frontend-getapiurl-implementation
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 const fetchTriggerProviders = async (): Promise<TriggerProvider[]> => {
   const supabase = createClient();

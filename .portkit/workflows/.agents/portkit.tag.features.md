@@ -31,6 +31,15 @@ Essential for "locking" pre-existing features so they aren't accidentally overwr
             *   *OR* Use `grep` to find specific function definitions mentioned in input.
         *   Apply the edits.
 
+4.  **Blast Radius Tagging (Recursive Protection)**:
+    *   **Goal**: A feature is not just its definition; it is also its *usage*.
+    *   **Action**: 
+        *   If the user specified a specific function or class (e.g., `getApiUrl`):
+            *   Run `grep` or `smart-diff-feature` to find ALL files that import/call this function.
+            *   **Interactive Decision**: Ask user "Found X files using [Function]. Tag these usages too? (y/n)".
+            *   If 'y': Go to those files and wrap the *specific call lines* with `// feature-start: [name]` tags.
+    *   **Why?**: This prevents "Spooky Action at a Distance" where a port overwrites a file that *uses* your critical feature, breaking the link.
+
 4.  **Registry Sync**:
     *   After tagging, **Recommendation**: Suggest the user runs `/portkit.update.registry` to index the new tags.
 

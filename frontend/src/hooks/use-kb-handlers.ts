@@ -1,11 +1,15 @@
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+// feature-start: frontend-getapiurl-implementation
 import { getApiUrl } from '@/lib/get-api-url';
+// feature-end: frontend-getapiurl-implementation
 import { FileNameValidator } from '@/lib/validation';
 import { Entry } from '@/hooks/react-query/knowledge-base/use-folders';
 
+// feature-start: frontend-getapiurl-implementation
 const API_URL = getApiUrl();
+// feature-end: frontend-getapiurl-implementation
 
 export interface TreeItem {
     id: string;

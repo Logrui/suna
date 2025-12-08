@@ -1,7 +1,52 @@
 {
-    "metadata": {
-        "version": "1.0",
-        "last_updated": "2025-12-08T00:00:00Z"
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-12-08T00:00:00Z"
+  },
+  "features": {
+    "slash-commands": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        ".portkit\\README.md"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
     },
-    "features": {}
+    "name": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        ".portkit\\scripts\\python\\extract-region.py"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
+    },
+    "frontend-getapiurl-implementation": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        "frontend\\src\\hooks\\secure-mcp\\use-secure-mcp.ts",
+        "frontend\\src\\hooks\\threads\\utils.ts",
+        "frontend\\src\\hooks\\triggers\\use-agent-triggers.ts",
+        "frontend\\src\\hooks\\triggers\\use-all-triggers.ts",
+        "frontend\\src\\hooks\\triggers\\use-oauth-integrations.ts",
+        "frontend\\src\\hooks\\triggers\\use-trigger-providers.ts",
+        "frontend\\src\\hooks\\use-cached-file.ts",
+        "frontend\\src\\hooks\\use-image-content.ts",
+        "frontend\\src\\hooks\\use-kb-handlers.ts",
+        "frontend\\src\\hooks\\useSlashCommands.ts",
+        "frontend\\src\\lib\\api-client.ts",
+        "frontend\\src\\lib\\api.ts",
+        "frontend\\src\\lib\\api\\agents.ts",
+        "frontend\\src\\lib\\api\\projects.ts",
+        "frontend\\src\\lib\\api\\threads.ts",
+        "frontend\\src\\lib\\email.ts",
+        "frontend\\src\\lib\\get-api-url.ts",
+        "frontend\\src\\lib\\kb-download-utils.ts"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
+    }
+  }
 }

@@ -23,7 +23,13 @@ This acts as the "Commit" step for Portkit. Until this runs, the system is unawa
 
 3.  **Execution (Deep Scan)**:
     *   **Goal**: Lock the current state of feature files.
-    *   **Run Script**: `uv run scripts/python/scan-registry.py --update --feature [Name]`.
+    *   **Run Script**: 
+        *   Python: `uv run scripts/python/update-registry.py --update`
+        *   TypeScript: `npx tsx scripts/typescript/update-registry.ts --update`
+        *   **Flags**:
+            *   `--update`: Commits changes to `feature-registry.json`. Without this, it runs in "Dry Run" mode.
+            *   `--audit`: Checks for files that have been modified but are NOT tagged (Safety Net).
+            *   `--folder [path]`: Limits the scan to a specific directory (Performance Optimization).
     *   **Logic (Mental Model)**:
         *   Script scans for `// feature-start: [Name]` tags.
         *   Calculates checksums/paths of tagged regions.

@@ -47,24 +47,44 @@ def main():
     parser = argparse.ArgumentParser(description="Scan codebase for feature tags.")
     parser.add_argument("--update", action="store_true", help="Update registry file")
     parser.add_argument("--audit", action="store_true", help="Check for changed files missing feature tags")
+    parser.add_argument("--folder", help="Limit scan to specific folder")
     args = parser.parse_args()
 
     feature_map = {}
     
     import subprocess
+    feature_map = {}
+    
     try:
-        # Use git to list tracked files (excludes gitignored, node_modules, etc. automatically)
-        result = subprocess.run(['git', 'ls-files'], check=True, stdout=subprocess.PIPE, text=True)
-        files = result.stdout.splitlines()
+        # OPTIMIZATION: Use git grep to find ONLY files that contain our tags.
+        # This avoids opening thousands of files that have no tags.
+        # -I: Ignore binary
+        # -l: Print filename only
+        # "feature-start:" matches both // and # styles
         
-        for file_path in files:
-            # Filter extensions
-            if file_path.endswith(('.ts', '.tsx', '.js', '.py', '.md')):
+        # Determine search path from args
+        search_path = args.folder if args.folder else '.'
+        
+        cmd = ['git', 'grep', '-I', '-l', 'feature-start:', '--', search_path]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            files = result.stdout.splitlines()
+            # Normalize paths to handle potential OS differences in git output (though usually forward slash)
+            files = [f.strip() for f in files if f.strip()]
+            
+            for file_path in files:
                 path = Path(file_path)
                 if path.exists():
                     scan_file(path, feature_map)
+        else:
+            # git grep returns 1 if no matches found, which is fine
+            if result.returncode != 1:
+                print(f"git grep returned code {result.returncode}")
+
     except Exception as e:
-        print(f"Error running git ls-files: {e}. Falling back to slow walk.")
+        print(f"Error running git grep optimization: {e}. Falling back to slow walk.")
         # Fallback to os.walk if git isn't available
         for root, dirs, files in os.walk("."):
             if ".git" in dirs: dirs.remove(".git")
