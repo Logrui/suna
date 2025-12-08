@@ -252,7 +252,4 @@ frontend/.open-next/
 frontend/.next/
 
 .n8n-examples/
-
-.gemini/
-.agent/
 .txt
