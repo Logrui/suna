@@ -170,7 +170,8 @@ To enable the agents, we need deterministic scripts to minimize context usage an
 
 8.  **`scan-registry.ts` / `scan-registry.py`**:
     *   Action: Scans the local codebase for feature annotations (e.g., `@feature: <name>` comments or directory patterns) and validates/updates `feature-registry.json`.
-    *   Benefit: Automates registry maintenance to prevent drift.
+    *   **Audit Mode**: Run with `--audit` to detect modified or new files that are missing feature tags (Safety Net).
+    *   Benefit: Automates registry maintenance to prevent drift and ensures no code is orphaned.
 
 9.  **`pack-context.ts` / `pack-context.py`**:
     *   Input: List of file paths (from `codemap_report`).
@@ -218,7 +219,7 @@ These high-level workflows consolidate the previous granular commands.
 
 2.  **`portkit-verify.md`**: (**/portkit.verify**) **STRONGLY RECOMMENDED**
     *   *Previously 'Audit'*.
-    *   *Action*: Agent audits the implementation. Runs `verify-project` and orchestrates behavioral verification.
+    *   *Action*: Agent audits the implementation. Runs `verify-project`, `scan-registry --audit` (Registry Coverage Check), and orchestrates behavioral verification.
     *   *Output*: `review.md`.
 
 3.  **`portkit-generate-tests.md`**: (**/portkit.generate.tests**)
@@ -259,26 +260,87 @@ Sections: `plan`, `checklist`.
 *   Decompose the implementation plan into a list of tasks that can be executed by the Builder Agent.
 
 ### Phase D: Audit (The `review.md`)
-Sections: `safety_check_report`, `sync_feature_report`, `verify_build`.
-*   **Content**: "What was synced, what was left behind, and the results of the build/lint checks."
+Sections: `safety_check_report`, `sync_feature_report`, `verify_build`, `registry_audit`.
+*   **Content**: "What was synced, what was left behind, the results of the build/lint checks, and confirmation that all new code is properly tagged."
 
 ## 6. Next Steps (Implementation)
 
 1.  **Registry**: Build `feature-registry.json` by auditing `.docs/addon-features` - this should be a new slash/workflow command as well `/update-addon-features-registry`
 2.  **Scripts**: Scaffold the TypeScript tooling environment in `.portkit/scripts/`.
 3.  **Workflows (The Executable Prompts)**: Scaffold the following into `.agent/workflows/` (and ensure they are registered in IDE specific folders and formats):
-    *   [ ] `portkit.init.md`
-    *   [ ] `portkit.specify.md`
-    *   [ ] `portkit.research.md`
-    *   [ ] `portkit.plan.md`
-    *   [ ] `portkit.tasks.md`
-    *   [ ] `portkit.implement.md`
-    *   [ ] `portkit.verify.md`
-    *   [ ] `portkit.generate.tests.md`
-    *   [ ] `portkit.update.registry.md`
-    *   [ ] `portkit.tag.features.md`
-    *   [ ] `portkit.codemap.md`
+    *   [x] `portkit.init.md`
+    *   [x] `portkit.specify.md`
+    *   [x] `portkit.research.md`
+    *   [x] `portkit.plan.md`
+    *   [x] `portkit.tasks.md`
+    *   [x] `portkit.implement.md`
+    *   [x] `portkit.verify.md`
+    *   [x] `portkit.generate.tests.md`
+    *   [x] `portkit.update.registry.md`
+    *   [x] `portkit.tag.features.md`
+    *   [x] `portkit.codemap.md`
 
+
+## 7. Portkit Development Status (Self-Tracking)
+**Current Stage**: Implementation & Refinement
+
+*   [x] **Core Architecture**:
+    *   [x] Directory Structure (`.portkit/`).
+    *   [x] Feature Registry Schema (`feature-registry.json`).
+    *   [x] Cache Strategy (`.portkit-cache/`).
+
+*   [x] **Workflows (The "Soft" Tooling)**:
+    *   [x] `portkit.init` (Bootstrapping).
+    *   [x] `portkit.specify` (Target Definition).
+    *   [x] `portkit.research` (Analysis).
+    *   [x] `portkit.plan` (Architecture).
+    *   [x] `portkit.tasks` (Atomic Work).
+    *   [x] `portkit.implement` (Execution).
+    *   [x] `portkit.verify` (Audit & Safety Net).
+    *   [x] `portkit.update.registry` (Commit).
+
+*   [ ] **Scripts (The "Hard" Tooling)**:
+    *   [x] `scan-registry.py` (Registry Management + Audit).
+    *   [x] `fetch-upstream.py` (Cache Management).
+    *   [x] `map-dependencies` (Polyglot AST - Python/TypeScipt).
+    *   [x] `init-registry.ps1` (Safe Bootstrap).
+    *   [x] `smart-diff-feature` (Blast Radius Analysis).
+    *   [x] `pack-context` (Context Optimization).
+    *   [ ] `extract-region` (Component Morphing helper).
+    *   [ ] `verify-project` (Build/Lint Wrapper).
+
+*   [ ] **Refinement & Polish**:
+    *   [ ] **Polyglot Parity**: Ensure TS and Python scripts have feature parity.
+    *   [ ] **Unified Script Routers**: Abstract the Python/TS tool selection behind a single entry point (e.g., `map-deps <file>` auto-detects language).
+    *   [ ] **Gemini Support**: Scaffold workflows for Gemini CLI (TOML format).
+    *   [ ] **Testing**: Run a full end-to-end "Dry Run" port of a dummy feature.
+    *   [ ] **Guardian Logic**: Hard enforcement of registry locks (preventing agent overwrites).
+
+## 8. Testing Workflows & Scripts (User Feedback Loop)
+**Current Status**: Awaiting User Field Testing.
+
+**Goal**: Using a secondary agent (e.g., in a separate window or IDE), attempt to execute a "Portkit Run" in this repository and report failures/friction points here.
+
+### Testing Protocol:
+1.  **Bootstrap Test**:
+    *   Run `/portkit.init`.
+    *   *Check*: Does it detect the registry? Does it update `agent.md` correctly?
+2.  **Registry Lockdown Test**:
+    *   Run `/portkit.tag.features` on a small folder (e.g., `backend/core/utils/`).
+    *   Run `/portkit.update.registry`.
+    *   *Check*: Is `feature-registry.json` populated with file paths?
+3.  **Simulation Port (Dry Run)**:
+    *   Run `/portkit.specify "Port the 'Accordion' component from Upstream UI"`.
+    *   Run `/portkit.research`.
+    *   Run `/portkit.plan`.
+    *   *Check*: Are the artifacts (`spec.md`, `research.md`, `plan.md`) created in the correct `.portkit/specs/` folder?
+4.  **Audit Test**:
+    *   Modify a registered file *without* updating the registry.
+    *   Run `/portkit.verify`.
+    *   *Check*: Does the "Safety Net" (`scan-registry --audit`) trigger a warning?
+
+### Feedback Log:
+*   *(User to add items here based on testing results)*
 
 ## 99999. Developer Notes and Scratchpad Area (AI AGENTS ARE TO NOT EDIT ANYTHING BELOW THE LINE OF THIS DOCUMENTS)
 

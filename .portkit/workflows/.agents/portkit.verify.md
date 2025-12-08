@@ -38,14 +38,20 @@ Do not proceed to Registry Update until this phase passes. A broken feature shou
         *   If yes: Run `npx playwright test tests/feature.spec.ts`.
         *   If no: Suggest creating one via `/portkit.generate.tests` OR run a manual walkthrough plan.
 
-5.  **Phase 3: Validation Report**:
-    *   Read template: `.portkit/templates/review.md`.
-    *   **Fill Sections**:
-        *   `## Automated Checks`: Pass/Fail status of Build/Lint.
-        *   `## Manual Verification`: User sign-off.
-        *   `## Registry Status`: Is it ready to be locked?
+4.  **Registry Coverage Audit (The Safety Net)**:
+    *   **Action**: `uv run scripts/python/scan-registry.py --audit`
+    *   **Goal**: Detect if any *modified* or *new* files are missing `// feature-start` tags.
+    *   **Logic**:
+        *   If it returns "success": Pass.
+        *   If it returns "warning" with a list of "untracked_files":
+            *   **STOP**. You have created orphaned code.
+            *   **Fix**: Go back and add tags to those files.
+
+5.  **Report Generation**:
+    *   Compile findings into `review.md`.
+    *   Verdict: `PASS` / `FAIL`.
     *   Write to: `.portkit/specs/[feature]/review.md`.
 
 6.  **Completion**:
     *   If **PASS**: Suggest the user runs `/portkit.update.registry` to lock the feature.
-    *   If **FAIL**: Suggest potential remediation steps or suggest to the user to run `/portkit.implement` again to fix bugs. 
+    *   If **FAIL**: Suggest potential remediation steps or suggest to the user to run `/portkit.implement` again to fix bugs.

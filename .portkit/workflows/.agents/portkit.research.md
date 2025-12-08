@@ -56,4 +56,4 @@ Use the provided scripts to handle large files. Avoid manual reading of massive 
 
 6.  **Completion**:
     *   Output summary of the Research.
-    *   **Recommendation**: Suggest the user runs `/portkit.plan` to proceed with the implementation strategy.
+    *   **Recommendation**: Suggest the user runs `/portkit.plan` to proceed with planning the implementation strategy.

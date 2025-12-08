@@ -27,6 +27,7 @@ Tasks must be granular enough (one file per task ideally) to prevent the downstr
 3.  **Task Generation Logic**:
     *   **Goal**: Translate "Morph Strategies" and "Bridge Adapters" into executable `T###` tasks.
     *   **Critical Constraint**: Tasks MUST be atomic. An agent should be able to execute one task without asking for clarification.
+    *   **Registry Enforcement**: Any task that creates a **new file** MUST include an instruction to add `// feature-start: [name]` and `// feature-end: [name]` tags to that file.
 
 4.  **Task Format Rules (REQUIRED)**:
     *   Every task MUST strictly follow this format:

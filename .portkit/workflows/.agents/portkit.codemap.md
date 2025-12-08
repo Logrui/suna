@@ -77,4 +77,4 @@ This is an exploratory tool. It does not initiate a full porting process or modi
 
 4.  **Completion**:
     *   Save file to `.portkit/specs/[feature-name]/[YYYY-MM-DD]-[feature-name].codemap.md`.
-    *   Report success and full path.
+    *   Report success and full path of the new codemap you created.

@@ -15,29 +15,66 @@ def scan_file(path, feature_map):
 
     # Find all feature-start tags
     matches = re.findall(r"//\s*feature-start:\s*([\w-]+)", content)
+    # Also support python hash comments
+    matches += re.findall(r"#\s*feature-start:\s*([\w-]+)", content)
+    
     for feature in matches:
         if feature not in feature_map:
             feature_map[feature] = []
         if str(path) not in feature_map[feature]:
             feature_map[feature].append(str(path))
 
+def get_changed_files():
+    """Get list of modified and new files from git."""
+    files = set()
+    try:
+        # 1. Modified tracked files (diff against HEAD)
+        res = subprocess.run(['git', 'diff', '--name-only', 'HEAD'], capture_output=True, text=True)
+        if res.returncode == 0:
+            files.update(res.stdout.splitlines())
+
+        # 2. Untracked (new) files
+        res = subprocess.run(['git', 'ls-files', '--others', '--exclude-standard'], capture_output=True, text=True)
+        if res.returncode == 0:
+            files.update(res.stdout.splitlines())
+    except Exception as e:
+        print(f"Warning: Could not get git status for audit: {e}")
+    
+    # Filter for relevant extensions
+    return [Path(f) for f in files if f.endswith(('.ts', '.tsx', '.js', '.py', '.md'))]
+
 def main():
     parser = argparse.ArgumentParser(description="Scan codebase for feature tags.")
     parser.add_argument("--update", action="store_true", help="Update registry file")
+    parser.add_argument("--audit", action="store_true", help="Check for changed files missing feature tags")
     args = parser.parse_args()
 
     feature_map = {}
     
-    # Walk all files (ignoring node_modules, .git, etc)
-    for root, dirs, files in os.walk("."):
-        if ".git" in dirs: dirs.remove(".git")
-        if "node_modules" in dirs: dirs.remove("node_modules")
-        if ".portkit-cache" in dirs: dirs.remove(".portkit-cache")
+    import subprocess
+    try:
+        # Use git to list tracked files (excludes gitignored, node_modules, etc. automatically)
+        result = subprocess.run(['git', 'ls-files'], check=True, stdout=subprocess.PIPE, text=True)
+        files = result.stdout.splitlines()
         
-        for file in files:
-            if file.endswith(('.ts', '.tsx', '.js', '.py', '.md')):
-                path = Path(root) / file
-                scan_file(path, feature_map)
+        for file_path in files:
+            # Filter extensions
+            if file_path.endswith(('.ts', '.tsx', '.js', '.py', '.md')):
+                path = Path(file_path)
+                if path.exists():
+                    scan_file(path, feature_map)
+    except Exception as e:
+        print(f"Error running git ls-files: {e}. Falling back to slow walk.")
+        # Fallback to os.walk if git isn't available
+        for root, dirs, files in os.walk("."):
+            if ".git" in dirs: dirs.remove(".git")
+            if "node_modules" in dirs: dirs.remove("node_modules")
+            if ".portkit-cache" in dirs: dirs.remove(".portkit-cache")
+            
+            for file in files:
+                if file.endswith(('.ts', '.tsx', '.js', '.py', '.md')):
+                    path = Path(root) / file
+                    scan_file(path, feature_map)
 
     # Output or Update
     if args.update:
@@ -64,6 +101,45 @@ def main():
         with open(REGISTRY_PATH, 'w') as f:
             json.dump(registry, f, indent=2)
         print("Registry Updated.")
+    elif args.audit:
+        changed_files = get_changed_files()
+        
+        # Flatten feature_map to get set of all currently tagged files
+        all_tagged_files = set()
+        for file_list in feature_map.values():
+            all_tagged_files.update(file_list) # file_list contains string paths
+            
+        untracked = []
+        for cf in changed_files:
+            # Normalize path separators
+            cf_str = str(cf).replace(os.sep, '/')
+            # Check if this changed file appears in ANY feature list
+            # We use loose matching because file_list might be relative differently? 
+            # Actually scan_file uses relative paths so exact match should work if normalized.
+            
+            # Simple check: Is this file in the set of all feature-tagged files?
+            # Windows path normalization is key here. scan_file uses Path(file_path) which might use backslashes.
+            # feature_map stores str(path).
+            
+            # Use Path object comparison for robustness
+            is_tagged = False
+            for tagged_path in all_tagged_files:
+                if Path(tagged_path).resolve() == cf.resolve():
+                    is_tagged = True
+                    break
+            
+            if not is_tagged:
+                untracked.append(str(cf))
+                
+        if untracked:
+            print(json.dumps({
+                "status": "warning",
+                "message": "Found modified/new files without Feature Tags.",
+                "untracked_files": untracked
+            }, indent=2))
+            exit(1) # Signal failure to the agent
+        else:
+            print(json.dumps({"status": "success", "message": "All modified files are properly tagged."}, indent=2))
     else:
         print(json.dumps(feature_map, indent=2))
 
