@@ -8,7 +8,7 @@
 ## 1. Port Scope (The "Target")
 **What are we pulling?**
 *   **Upstream Entry Points**: 
-    *   Backend: `backend/core/sandbox/api.py`
+    *   Backend: `backend/core/sandbox/api.py` (Merge Strategy: Append/Integrate, do not overwrite)
     *   Frontend: `frontend/src/components/thread/kortix-computer/*`
     *   Common: `frontend/src/components/thread/HealthCheckedVncIframe.tsx`
 *   **Feature Description**: Port the latest "computer use" / sandbox capabilities from the upstream PRODUCTION branch, enabling the agent to interact with a virtual desktop/environment.
@@ -25,8 +25,10 @@ We are not just copying files; we are adapting them to our **Local Architecture*
 ### B. Bridge Adapters (Morph/Replace)
 **Upstream Dependency** -> **Local Replacement**
 *   `Upstream Billing/Credits` -> `[Omitted/Mocked]` (Strict Requirement: No Billing)
+*   **Billing UI Elements** -> **Strip** (Remove DOM elements/logic completely)
 *   `Upstream Auth` -> `Local Auth (Supabase/Basejump)`
 *   `Translations (next-intl)` -> `[Omitted]` (Use raw strings)
+*   **Translation Handling** -> **Inline English** (Replace `t('key')` with hardcoded English text from upstream JSON)
 
 ### C. Omissions (Nuke)
 **Intentionally excluded components:**
@@ -58,3 +60,11 @@ After the port is complete, these scenarios must pass locally.
 *   [ ] No billing code is present.
 *   [ ] Existing Slash Commands function without regression.
 *   [ ] No "Poison Imports" (e.g. `next-intl`) remain.
+
+## Clarifications
+*   **Q**: How should we handle UI elements related to Billing/Credits?
+    *   **A**: **Strip** - Completely remove the relevant DOM elements and logic.
+*   **Q**: How should we resolve text strings for `next-intl`?
+    *   **A**: **Inline English** - Look up the key in the upstream `en.json` file and hardcode the English string.
+*   **Q**: How should we apply upstream changes to `backend/core/sandbox/api.py`?
+    *   **A**: **Merge & Append** - Carefully add new endpoints/functions to the existing file; preserve existing logic.

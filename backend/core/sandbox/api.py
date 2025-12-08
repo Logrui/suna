@@ -741,18 +741,7 @@ async def proxy_daytona_preview(
         raise HTTPException(status_code=502, detail=f"Failed to proxy request: {str(e)}")
 
 # feature-start: daytona-preview-bypass
-@router.websocket("/sandboxes/{sandbox_id}/proxy/{port}/{path:path}")
-async def proxy_daytona_websocket(
-    websocket: WebSocket,
-    sandbox_id: str,
-    port: int,
-    path: str
-):
-    """
-    Proxy WebSocket connections to the Daytona preview URL.
-    """
-    await websocket.accept()
-    # ... implementation continues via normal flow
+# WebSocket proxy implementation below uses daytona-preview-bypass feature logic
 # feature-end: daytona-preview-bypass
 
 

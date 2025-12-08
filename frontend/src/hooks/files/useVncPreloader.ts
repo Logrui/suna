@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { getVncLiteUrl } from '@/lib/daytona/preview-client';
 
 // feature-start: daytona-preview-bypass
-import { Project } from '@/lib/api/projects';
-
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface VncPreloaderOptions {
@@ -21,7 +20,7 @@ interface VncPreloaderResult {
 }
 
 export function useVncPreloader(
-  sandbox: { vnc_preview?: string; pass?: string } | null,
+  sandbox: { id: string; pass: string; token?: string; vnc_preview?: string } | null,
   options: VncPreloaderOptions = {}
 ): VncPreloaderResult {
   const { maxRetries = 5, initialDelay = 1000, timeoutMs = 5000 } = options;
@@ -29,7 +28,7 @@ export function useVncPreloader(
   const [status, setStatus] = useState<VncStatus>('idle');
   const [retryCount, setRetryCount] = useState(0);
   const preloadedIframeRef = useRef<HTMLIFrameElement | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRetryingRef = useRef(false);
 
   const startPreloading = useCallback((vncUrl: string) => {
@@ -117,17 +116,16 @@ export function useVncPreloader(
   }, [status, retryCount, maxRetries, timeoutMs]);
 
   const retry = useCallback(() => {
-    if (sandbox?.vnc_preview && sandbox?.pass) {
-      const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    if (sandbox?.id && sandbox?.pass) {
+      const vncUrl = getVncLiteUrl(sandbox);
       setRetryCount(0);
       setStatus('idle');
       startPreloading(vncUrl);
     }
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading]);
+  }, [sandbox?.id, sandbox?.pass, sandbox?.token, startPreloading]);
 
   useEffect(() => {
-    // Reset status when sandbox changes
-    if (!sandbox?.vnc_preview || !sandbox?.pass) {
+    if (!sandbox?.id || !sandbox?.pass) {
       setStatus('idle');
       setRetryCount(0);
       return;
@@ -138,7 +136,9 @@ export function useVncPreloader(
       return;
     }
 
-    const vncUrl = `${sandbox.vnc_preview}/vnc_lite.html?password=${sandbox.pass}&autoconnect=true&scale=local`;
+    const vncUrl = getVncLiteUrl(sandbox);
+    // console.log('[VNC Preloader] Constructed preload URL:', vncUrl);
+    // console.log('[VNC Preloader] Using direct Daytona connection');
 
     // Reset retry counter for new sandbox
     setRetryCount(0);
@@ -165,27 +165,10 @@ export function useVncPreloader(
 
       isRetryingRef.current = false;
     };
-  }, [sandbox?.vnc_preview, sandbox?.pass, startPreloading, initialDelay, status]);
+  }, [sandbox?.id, sandbox?.pass, startPreloading, initialDelay, status]);
 
-  // Fetch auth token for private project access
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchToken = async () => {
-      try {
-        const { createClient } = await import('@/lib/supabase/client');
-        const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          setAccessToken(session.access_token);
-        }
-      } catch (err) {
-        console.error('[VncPreloader] Failed to fetch auth token:', err);
-      }
-    };
-
-    fetchToken();
-  }, []);
+  // Unused proxy auth logic removed
+  const accessToken = null;
 
   return {
     status,

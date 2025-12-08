@@ -6,14 +6,14 @@ import React, { memo, useMemo, useCallback, useState, useEffect, useRef } from '
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiMessageType } from '@/components/thread/types';
-import { 
-  CircleDashed, 
-  X, 
-  ChevronLeft, 
-  ChevronRight, 
-  Computer, 
-  Minimize2, 
-  Globe, 
+import {
+  CircleDashed,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Computer,
+  Minimize2,
+  Globe,
   Zap,
   FolderOpen,
 } from 'lucide-react';
@@ -30,7 +30,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { HealthCheckedVncIframe } from '../HealthCheckedVncIframe';
 import { BrowserHeader } from '../tool-views/BrowserToolView';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl';
 import {
   Drawer,
   DrawerContent,
@@ -38,12 +38,13 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
-import { 
-  useKortixComputerStore, 
+import {
+  useKortixComputerStore,
   ViewType,
   useKortixComputerPendingToolNavIndex,
   useKortixComputerClearPendingToolNav,
 } from '@/stores/kortix-computer-store';
+// feature-start: kortix-computer-v2
 import { FileBrowserView } from './FileBrowserView';
 import { FileViewerView } from './FileViewerView';
 
@@ -120,18 +121,18 @@ interface ViewToggleProps {
 }
 
 const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFilesTab = true }: ViewToggleProps) {
-  const viewOptions = showFilesTab 
+  const viewOptions = showFilesTab
     ? ['tools', 'files', 'browser'] as const
     : ['tools', 'browser'] as const;
-  
+
   const getViewIndex = (view: ViewType) => {
     if (!showFilesTab && view === 'files') return 0;
     return viewOptions.indexOf(view as any);
   };
-  
+
   const tabWidth = 28; // w-7 = 28px
   const gap = 4; // gap-1 = 4px
-  
+
   return (
     <div className="relative flex items-center gap-1 bg-muted rounded-3xl px-1 py-1">
       <motion.div
@@ -152,11 +153,10 @@ const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFil
           <Button
             size="sm"
             onClick={() => onViewChange('tools')}
-            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${
-              currentView === 'tools'
-                ? 'text-black dark:text-white'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'tools'
+              ? 'text-black dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
           >
             <Zap className="h-3.5 w-3.5" />
           </Button>
@@ -172,11 +172,10 @@ const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFil
             <Button
               size="sm"
               onClick={() => onViewChange('files')}
-              className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${
-                currentView === 'files'
-                  ? 'text-black dark:text-white'
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}
+              className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'files'
+                ? 'text-black dark:text-white'
+                : 'text-gray-500 dark:text-gray-400'
+                }`}
             >
               <FolderOpen className="h-3.5 w-3.5" />
             </Button>
@@ -192,11 +191,10 @@ const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFil
           <Button
             size="sm"
             onClick={() => onViewChange('browser')}
-            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${
-              currentView === 'browser'
-                ? 'text-black dark:text-white'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'browser'
+              ? 'text-black dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
           >
             <Globe className="h-3.5 w-3.5" />
           </Button>
@@ -461,10 +459,10 @@ NavigationControls.displayName = 'NavigationControls';
 // ============================================================================
 
 interface EmptyStateProps {
-  t: (key: string) => string;
+  // t: (key: string) => string;
 }
 
-const EmptyState = memo(function EmptyState({ t }: EmptyStateProps) {
+const EmptyState = memo(function EmptyState({ }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full w-full p-8">
       <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
@@ -478,10 +476,10 @@ const EmptyState = memo(function EmptyState({ t }: EmptyStateProps) {
         </div>
         <div className="space-y-2">
           <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-            {t('noActionsYet')}
+            No actions yet
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            {t('workerActionsDescription')}
+            Worker actions will appear here
           </p>
         </div>
       </div>
@@ -501,7 +499,7 @@ interface LoadingStateProps {
 
 const LoadingState = memo(function LoadingState({ agentName, onClose, isMobile }: LoadingStateProps) {
   const { activeView, setActiveView } = useKortixComputerStore();
-  
+
   if (isMobile) {
     return (
       <DrawerContent className="h-[85vh]">
@@ -559,7 +557,7 @@ LoadingState.displayName = 'LoadingState';
 // ============================================================================
 // Main Component
 // ============================================================================
-
+// feature-start: kortix-computer-v2
 export const KortixComputer = memo(function KortixComputer({
   isOpen,
   onClose,
@@ -579,7 +577,7 @@ export const KortixComputer = memo(function KortixComputer({
   sandboxId,
   projectId,
 }: KortixComputerProps) {
-  const t = useTranslations('thread');
+  // const t = useTranslations('thread');
   const [dots, setDots] = useState('');
   const [internalIndex, setInternalIndex] = useState(0);
   const [navigationMode, setNavigationMode] = useState<NavigationMode>('live');
@@ -592,13 +590,13 @@ export const KortixComputer = memo(function KortixComputer({
   const sandbox = project?.sandbox;
 
   // Kortix Computer Store
-  const { 
-    activeView, 
-    filesSubView, 
+  const {
+    activeView,
+    filesSubView,
     selectedFilePath,
     setActiveView,
   } = useKortixComputerStore();
-  
+
   // Pending tool navigation from store (triggered by clicking tool in ThreadContent)
   const pendingToolNavIndex = useKortixComputerPendingToolNavIndex();
   const clearPendingToolNav = useKortixComputerClearPendingToolNav();
@@ -624,7 +622,8 @@ export const KortixComputer = memo(function KortixComputer({
           sandbox={{
             id: sandbox.id,
             vnc_preview: sandbox.vnc_preview,
-            pass: sandbox.pass
+            pass: sandbox.pass,
+            token: (sandbox as any).token
           }}
         />
       </div>
@@ -673,7 +672,7 @@ export const KortixComputer = memo(function KortixComputer({
   useEffect(() => {
     // Only auto-switch when viewing tools
     if (activeView !== 'tools') return;
-    
+
     const safeIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
     const currentSnapshot = toolCallSnapshots[safeIndex];
     const isCurrentSnapshotBrowserTool = isBrowserTool(currentSnapshot?.toolCall.toolCall?.function_name?.replace(/_/g, '-'));
@@ -929,7 +928,7 @@ export const KortixComputer = memo(function KortixComputer({
       internalNavigate(externalNavigateToIndex, 'external_click');
     }
   }, [externalNavigateToIndex, totalCalls, internalNavigate, setActiveView]);
-  
+
   // Handle pending tool navigation from store (triggered by clicking tool in ThreadContent)
   useEffect(() => {
     if (pendingToolNavIndex !== null && pendingToolNavIndex >= 0 && pendingToolNavIndex < totalCalls) {
@@ -966,7 +965,7 @@ export const KortixComputer = memo(function KortixComputer({
 
   const renderToolsView = () => {
     if (!displayToolCall && toolCallSnapshots.length === 0) {
-      return <EmptyState t={t} />;
+      return <EmptyState />;
     }
 
     if (!displayToolCall && toolCallSnapshots.length > 0) {
@@ -1245,3 +1244,4 @@ export const KortixComputer = memo(function KortixComputer({
   );
 });
 
+// feature-end: kortix-computer-v2

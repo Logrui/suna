@@ -60,16 +60,17 @@ interface FileBrowserViewProps {
   projectId?: string;
 }
 
+// feature-start: kortix-computer-v2
 export function FileBrowserView({
   sandboxId,
   project,
   projectId,
 }: FileBrowserViewProps) {
   const { session } = useAuth();
-  
+
   // Kortix Computer Store
-  const { 
-    currentPath, 
+  const {
+    currentPath,
     navigateToPath,
     openFile,
     selectedVersion,
@@ -77,7 +78,7 @@ export function FileBrowserView({
     setSelectedVersion,
     clearSelectedVersion,
   } = useKortixComputerStore();
-  
+
   // Download restriction for free tier users
   const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
     featureName: 'files',
@@ -175,10 +176,10 @@ export function FileBrowserView({
   // NOT any nested folder inside a presentation (like images/, assets/, etc.)
   const isPresentationFolder = useCallback((file: FileInfo): boolean => {
     if (!file.is_dir) return false;
-    
+
     // Get the parent path
     const pathParts = file.path.split('/').filter(Boolean);
-    
+
     // Check if parent folder is "presentations" and this is a direct child
     // Path should be like: /workspace/presentations/my_presentation
     // PathParts would be: ["workspace", "presentations", "my_presentation"]
@@ -188,7 +189,7 @@ export function FileBrowserView({
         return true;
       }
     }
-    
+
     return false;
   }, []);
 
@@ -278,7 +279,7 @@ export function FileBrowserView({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         // Make path relative to the current folder
-        const relativePath = file.path.startsWith(basePath) 
+        const relativePath = file.path.startsWith(basePath)
           ? file.path.slice(basePath.length)
           : file.path.replace(/^\/workspace\//, '');
 
@@ -365,10 +366,10 @@ export function FileBrowserView({
       });
 
       // Generate a meaningful name based on current path
-      const folderName = currentPath === '/workspace' 
-        ? 'workspace' 
+      const folderName = currentPath === '/workspace'
+        ? 'workspace'
         : currentPath.split('/').filter(Boolean).pop() || 'folder';
-      
+
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -474,14 +475,14 @@ export function FileBrowserView({
       }
       return <Folder className="h-9 w-9 text-blue-500" />;
     }
-    
+
     const extension = file.name.split('.').pop()?.toLowerCase();
-    
+
     // Check for specific file types
     if (['md', 'txt', 'doc'].includes(extension || '')) {
       return <FileText className="h-8 w-8 text-muted-foreground" />;
     }
-    
+
     return <File className="h-8 w-8 text-muted-foreground" />;
   }, [isPresentationFolder]);
 
@@ -504,7 +505,7 @@ export function FileBrowserView({
       }
       const data = await response.json();
       setWorkspaceVersions(data.versions || []);
-      
+
       // If there's a selected version, update the date in the global store
       if (selectedVersion && data.versions && data.versions.length > 0) {
         const versionInfo = data.versions.find(v => v.commit === selectedVersion);
@@ -512,7 +513,7 @@ export function FileBrowserView({
           setSelectedVersion(selectedVersion, versionInfo.date);
         }
       }
-      
+
       console.log('[FileBrowserView] Loaded workspace history', { count: (data.versions || []).length });
     } catch (error) {
       console.error('[FileBrowserView] Failed to load workspace history', error);
@@ -556,10 +557,10 @@ export function FileBrowserView({
       if (!response.ok) {
         throw new Error(`Failed to fetch files at commit: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setVersionFiles(data.files || []);
-      
+
       if (showToast && versionDate) {
         toast.success(`Viewing workspace from ${new Date(versionDate).toLocaleDateString()}`);
       }
@@ -662,169 +663,169 @@ export function FileBrowserView({
         onBreadcrumbClick={navigateToBreadcrumb}
         actions={
           <>
-          {/* Download progress */}
-          {downloadProgress && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2">
-              <Loader className="h-3 w-3 animate-spin" />
-              <span>
-                {downloadProgress.total > 0
-                  ? `${downloadProgress.current}/${downloadProgress.total}`
-                  : 'Preparing...'
-                }
-              </span>
-            </div>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownloadFolder}
-            disabled={isDownloadingAll || isLoadingFiles}
-            className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
-            title="Download folder"
-          >
-            {isDownloadingAll ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleUpload}
-            disabled={isUploading || !!selectedVersion}
-            className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
-            title={selectedVersion ? 'Cannot upload while viewing historical version' : 'Upload file'}
-          >
-            {isUploading ? (
-              <Loader className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-          </Button>
-
-          <div className="flex-1" />
-
-          {/* Version history dropdown */}
-          <DropdownMenu onOpenChange={(open) => { if (open) loadWorkspaceHistory(false); }}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isLoadingFiles}
-                className="h-8 px-3 gap-1.5 text-xs bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
-              >
-                {isLoadingVersions ? (
-                  <Loader className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <svg className="h-3.5 w-3.5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
+            {/* Download progress */}
+            {downloadProgress && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2">
+                <Loader className="h-3 w-3 animate-spin" />
                 <span>
-                  {selectedVersion && selectedVersionDate ? (
-                    new Date(selectedVersionDate).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric'
-                    })
-                  ) : (
-                    'History'
-                  )}
+                  {downloadProgress.total > 0
+                    ? `${downloadProgress.current}/${downloadProgress.total}`
+                    : 'Preparing...'
+                  }
                 </span>
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-[400px] overflow-y-auto w-[320px]">
-              {isLoadingVersions ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-sm text-muted-foreground">Loading history...</span>
-                </div>
-              ) : workspaceVersions.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <span className="text-sm text-muted-foreground">No history available</span>
-                </div>
-              ) : (
-                workspaceVersions.map((version, index) => {
-                  const isCurrent = index === 0;
-                  const isSelected = isCurrent ? !selectedVersion : selectedVersion === version.commit;
-                  const parts = (version.message || '').split(':');
+              </div>
+            )}
 
-                  return (
-                    <DropdownMenuItem
-                      key={version.commit}
-                      onClick={() => loadFilesAtVersion(isCurrent ? null : version.commit)}
-                      className={cn(
-                        "flex items-start gap-2 cursor-pointer py-2.5 px-3 rounded-xl",
-                        isSelected && "bg-accent"
-                      )}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-1">
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-sm">
-                              {parts[0]}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadFolder}
+              disabled={isDownloadingAll || isLoadingFiles}
+              className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              title="Download folder"
+            >
+              {isDownloadingAll ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUpload}
+              disabled={isUploading || !!selectedVersion}
+              className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              title={selectedVersion ? 'Cannot upload while viewing historical version' : 'Upload file'}
+            >
+              {isUploading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+            </Button>
+
+            <div className="flex-1" />
+
+            {/* Version history dropdown */}
+            <DropdownMenu onOpenChange={(open) => { if (open) loadWorkspaceHistory(false); }}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoadingFiles}
+                  className="h-8 px-3 gap-1.5 text-xs bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                >
+                  {isLoadingVersions ? (
+                    <Loader className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <svg className="h-3.5 w-3.5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <span>
+                    {selectedVersion && selectedVersionDate ? (
+                      new Date(selectedVersionDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                      })
+                    ) : (
+                      'History'
+                    )}
+                  </span>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-[400px] overflow-y-auto w-[320px]">
+                {isLoadingVersions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Loading history...</span>
+                  </div>
+                ) : workspaceVersions.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <span className="text-sm text-muted-foreground">No history available</span>
+                  </div>
+                ) : (
+                  workspaceVersions.map((version, index) => {
+                    const isCurrent = index === 0;
+                    const isSelected = isCurrent ? !selectedVersion : selectedVersion === version.commit;
+                    const parts = (version.message || '').split(':');
+
+                    return (
+                      <DropdownMenuItem
+                        key={version.commit}
+                        onClick={() => loadFilesAtVersion(isCurrent ? null : version.commit)}
+                        className={cn(
+                          "flex items-start gap-2 cursor-pointer py-2.5 px-3 rounded-xl",
+                          isSelected && "bg-accent"
+                        )}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-1">
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium text-sm">
+                                {parts[0]}
+                              </div>
+                              {parts.length > 1 && (
+                                <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                                  {parts.slice(1).join(':').trim()}
+                                </div>
+                              )}
                             </div>
-                            {parts.length > 1 && (
-                              <div className="text-xs text-muted-foreground mt-0.5 truncate">
-                                {parts.slice(1).join(':').trim()}
+
+                            {!isCurrent && (
+                              <div className="flex items-center ml-3 shrink-0">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openRevertModal(version.commit);
+                                  }}
+                                  className="h-6 px-2 text-[11px] inline-flex items-center rounded-full hover:bg-muted"
+                                  title="Restore this version"
+                                >
+                                  <span className="text-[11px]">Restore</span>
+                                </Button>
                               </div>
                             )}
                           </div>
 
-                          {!isCurrent && (
-                            <div className="flex items-center ml-3 shrink-0">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openRevertModal(version.commit);
-                                }}
-                                className="h-6 px-2 text-[11px] inline-flex items-center rounded-full hover:bg-muted"
-                                title="Restore this version"
-                              >
-                                <span className="text-[11px]">Restore</span>
-                              </Button>
-                            </div>
-                          )}
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(version.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: new Date(version.date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                            })} at {new Date(version.date).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </div>
                         </div>
+                      </DropdownMenuItem>
+                    );
+                  })
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(version.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: new Date(version.date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                          })} at {new Date(version.date).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true
-                          })}
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                  );
-                })
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            onChange={processUpload}
-            disabled={isUploading}
-          />
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={processUpload}
+              disabled={isUploading}
+            />
           </>
         }
       />
 
       {/* Version viewing banner */}
       {selectedVersion && (
-        <VersionBanner 
+        <VersionBanner
           versionDate={selectedVersionDate || undefined}
           onReturnToCurrent={() => loadFilesAtVersion(null)}
         />
@@ -895,14 +896,14 @@ export function FileBrowserView({
                 >
                   {/* Presentation badge */}
                   {isPresentationFolder(file) && (
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="absolute top-1 right-1 text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
                     >
                       Presentation
                     </Badge>
                   )}
-                  
+
                   <div className="w-12 h-12 flex items-center justify-center mb-1 flex-shrink-0">
                     {getFileIcon(file)}
                   </div>
@@ -1005,4 +1006,5 @@ export function FileBrowserView({
     </div>
   );
 }
+// feature-end: kortix-computer-v2
 

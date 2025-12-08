@@ -1,71 +1,59 @@
-# Portkit - Research Report: Kortix Computer v2
+# Portkit - Research: Kortix Computer v2
 
-**Source**: `.portkit-cache` (Upstream PRODUCTION)
-**Target**: `kortix-computer-v2`
-**Spec**: `specs/kortix-computer-v2/spec.md`
+## Codemap
+The "Kortix Computer" feature spans frontend interactions and backend sandbox control.
 
-## 1. Codemap (The Blast Radius)
-
-### A. File Structure & Purpose
+### Component Tree
 ```mermaid
 graph TD
-    subgraph Frontend [Frontend Components]
-        KC[KortixComputer.tsx] -->|Container| VNC[HealthCheckedVncIframe.tsx]
-        KC -->|File Explorer| FB[FileBrowserView.tsx]
-        KC -->|File Viewer| FV[FileViewerView.tsx]
-        KC -->|Browser State| BTV[BrowserToolView.tsx]
-        KC -.->|Dependency| NI[next-intl (POISON)]
-    end
-
-    subgraph Backend [Backend Services]
-        API[backend/core/sandbox/api.py] -->|Orchestrates| DSDK[Daytona SDK]
-        API -->|Access| AUTH[core.utils.auth_utils]
-        API -->|Data| DB[core.services.supabase]
-    end
-
-    KC -->|API Calls| API
+    A[Thread/Message] -->|Render Tool| B[KortixComputer.tsx]
+    B --> C[FileBrowserView.tsx]
+    B --> D[FileViewerView.tsx]
+    B --> E[HealthCheckedVncIframe.tsx]
+    B --> F[VersionBanner.tsx]
+    
+    B -->|API: /sandboxes/{id}/files| G[Backend: api.py]
+    B -->|API: /sandboxes/{id}/proxy| G
+    
+    G --> H[Daytona SDK]
+    G --> I[Supabase Auth]
 ```
 
-### B. Critical Component Analysis
+### Critical Paths
+1.  **VNC Stream**: `HealthCheckedVncIframe` -> Backend Proxy -> Daytona container.
+2.  **File Operations**: Frontend -> `api.py` -> Daytona `fs` operations.
+3.  **Git History**: New endpoints in `api.py` allow viewing file history/diffs.
 
-#### 1. `KortixComputer.tsx` (Frontend Entry)
-*   **Role**: Main aggregator component for the computer interface. Handles mode switching (VNC vs File Browser).
-*   **Dependencies**: 
-    *   `components/thread/HealthCheckedVncIframe`: Core VNC renderer.
-    *   `next-intl`: **INCOMPATIBLE**. Must be stripped.
-    *   `framer-motion`: For animations (Keep).
-*   **Complexity**: High (42KB).
+## Semantic Diff (Upstream vs Local)
 
-#### 2. `backend/core/sandbox/api.py` (Backend Gateway)
-*   **Role**: FastAPI router managing sandbox lifecycles and proxying VNC traffic.
+### Backend (`backend/core/sandbox/api.py`)
+*   **Upstream Status**: significantly larger (~1350 lines vs ~870 lines).
+*   **New Endpoints** (Missing Locally):
+    *   `GET /sandboxes/{id}/files/history`: Lists git commit history for files.
+    *   `GET /sandboxes/{id}/files/content-by-hash`: Reads file content at specific commit.
+    *   `Retry Logic`: `retry_with_backoff` wrapper introduced for transient Daytona errors.
+*   **Action**: **Merge Required**. We must append the new endpoints and helper functions (`retry_with_backoff`) to our local file, carefully preserving our custom `ensure_project_sandbox` logic.
+
+### Frontend (`frontend/src/components/thread/kortix-computer/`)
+*   **Upstream Status**: New components.
 *   **Dependencies**:
-    *   `daytona_sdk`: External lib.
-    *   `core.utils.auth_utils`: Upstream auth. **ADAPTATION REQUIRED** to use local `auth_utils` (check compatibility).
-*   **State**: Manages sandbox instances in memory/database.
+    *   `next-intl` (POISON): Used in `KortixComputer.tsx` (`useTranslations`).
+    *   `sonner`, `framer-motion`: Standard deps (likely available).
+*   **Action**: **Port & Strip**.
+    *   Replace `useTranslations` with hardcoded English strings.
+    *   Copy mostly as-is, removing localization hooks.
 
-#### 3. `HealthCheckedVncIframe.tsx`
-*   **Role**: Embedded VNC client wrapper.
-*   **Dependencies**: Likely minimal, but relies on backend proxy endpoints.
+## Specifications & Limitations
+1.  **Billing**: No explicit billing logic found in `kortix-computer` components or `api.py`.
+    *   *Risk*: Low.
+2.  **Localization**: `next-intl` removal is the primary modification task.
+    *   *Strategy*: "Inline English" (replace `t('key')` with actual text).
+3.  **Auth**: Upstream uses `VerifyUser`, we use `Supabase/Basejump`.
+    *   *Strategy*: Ensure `api.py` merge uses `core.utils.auth_utils` (already present locally).
 
-## 2. Semantic Diff & Adaptation Needs
+## Blast Radius
+*   **High**: `backend/core/sandbox/api.py` (Merge conflict potential).
+*   **Low**: New Frontend components (Additive).
 
-### A. Dependency Conflicts
-| File | Dependency | Status | Action |
-| `KortixComputer.tsx` | `next-intl` | ❌ Toxic | **STRIP**: Replace with raw strings. |
-| `KortixComputer.tsx` | `use-document-modal-store` | ⚠️ Risk | **CHECK**: Ensure store exists locally. |
-| `api.py` | `daytona_sdk` | ⚠️ Missing? | **INSTALL**: Add to `backend/pyproject.toml`. |
-
-### B. Implementation Risks
-*   **Auth Mismatch**: Upstream `auth_utils` might have different user object structure than local Basejump implementation.
-    *   *Mitigation*: Verify `get_current_user` signatures in `api.py` matches local `backend/core/services/auth.py`.
-
-## 3. Specifications & Limitations
-*   **Billing**: Upstream likely checks for "Credits" before starting sandbox in `api.py`.
-    *   *Constraint*: we must **REMOVE** this check entirely given the spec.
-*   **Slash Commands**: No overrides found in this blast radius, but careful with `ThreadComponent` integration.
-
-## 4. Recommended Next Steps (Plan)
-1.  **Sanitize**: Create `task` to copy `KortixComputer.tsx` but run a sed/regex pass to remove `next-intl`.
-2.  **Backend Dependencies**: Add `daytona_sdk` to local backend.
-3.  **Integration**: created a new `tool-view` registration for `KortixComputer`.
-
+## Conclusion
+The port is feasible. The main complexity lies in merging `api.py` to gain the new Git/History capabilities without breaking our custom sandbox orchestration.

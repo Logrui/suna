@@ -77,18 +77,18 @@ const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
  */
 function normalizeWorkspacePath(path: string): string {
   if (!path) return '/workspace';
-  
+
   // Handle paths that start with "workspace" (without leading /)
   // This prevents "/workspace/workspace" when someone passes "workspace" or "workspace/foo"
   if (path === 'workspace' || path.startsWith('workspace/')) {
     return '/' + path;
   }
-  
+
   // If already starts with /workspace, return as-is
   if (path.startsWith('/workspace')) {
     return path;
   }
-  
+
   // Otherwise, prepend /workspace/
   return `/workspace/${path.replace(/^\//, '')}`;
 }
@@ -140,6 +140,7 @@ interface FileViewerViewProps {
   projectId?: string;
 }
 
+// feature-start: kortix-computer-v2
 export function FileViewerView({
   sandboxId,
   filePath,
@@ -872,251 +873,251 @@ export function FileViewerView({
         fileName={fileName}
         actions={
           <>
-          {/* File navigation for multiple files */}
-          {hasMultipleFiles && (
-            <div className="flex items-center gap-1 mr-1">
-              <button
-                onClick={navigatePrevious}
-                disabled={!canNavigatePrev}
-                className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                title="Previous file (←)"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-              <span className="text-[10px] text-muted-foreground tabular-nums min-w-[32px] text-center">
-                {currentFileIndex + 1}/{filePathList?.length || 0}
-              </span>
-              <button
-                onClick={navigateNext}
-                disabled={!canNavigateNext}
-                className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                title="Next file (→)"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
+            {/* File navigation for multiple files */}
+            {hasMultipleFiles && (
+              <div className="flex items-center gap-1 mr-1">
+                <button
+                  onClick={navigatePrevious}
+                  disabled={!canNavigatePrev}
+                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Previous file (←)"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <span className="text-[10px] text-muted-foreground tabular-nums min-w-[32px] text-center">
+                  {currentFileIndex + 1}/{filePathList?.length || 0}
+                </span>
+                <button
+                  onClick={navigateNext}
+                  disabled={!canNavigateNext}
+                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Next file (→)"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
 
-          {/* For markdown files with editor: Save + Export */}
-          {isMarkdownFile && mdEditorControls && (
-            <TooltipProvider delayDuration={300}>
-              <>
-                {/* Save Button */}
-                {mdEditorControls.saveState === 'saving' ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground"
-                    title="Saving..."
-                  >
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </Button>
-                ) : mdEditorControls.saveState === 'saved' ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="h-8 w-8 p-0 bg-transparent border border-green-500/20 rounded-xl text-green-600"
-                    title="Saved"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                ) : mdEditorControls.saveState === 'error' ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={mdEditorControls.save}
-                    className="h-8 w-8 p-0 bg-transparent border border-red-500/20 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
-                    title="Retry save"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                  </Button>
+            {/* For markdown files with editor: Save + Export */}
+            {isMarkdownFile && mdEditorControls && (
+              <TooltipProvider delayDuration={300}>
+                <>
+                  {/* Save Button */}
+                  {mdEditorControls.saveState === 'saving' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground"
+                      title="Saving..."
+                    >
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </Button>
+                  ) : mdEditorControls.saveState === 'saved' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="h-8 w-8 p-0 bg-transparent border border-green-500/20 rounded-xl text-green-600"
+                      title="Saved"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  ) : mdEditorControls.saveState === 'error' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={mdEditorControls.save}
+                      className="h-8 w-8 p-0 bg-transparent border border-red-500/20 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      title="Retry save"
+                    >
+                      <AlertCircle className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={mdEditorControls.save}
+                          disabled={!mdEditorControls.hasChanges}
+                          className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                          title="Save file"
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {mdEditorControls.hasChanges ? (
+                          <>Save changes <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-muted rounded font-mono">⌘S</kbd></>
+                        ) : (
+                          'No changes to save'
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  {/* Export Dropdown - uses shared FileDownloadButton component */}
+                  <FileDownloadButton
+                    content={typeof rawContent === 'string' ? rawContent : ''}
+                    fileName={fileName}
+                    getHtmlContent={mdEditorControls?.getHtml ? () => mdEditorControls.getHtml() : undefined}
+                  />
+                </>
+              </TooltipProvider>
+            )}
+
+            <div className="flex-1" />
+
+            {/* Version history dropdown */}
+            <DropdownMenu onOpenChange={(open) => { if (open) loadVersionHistory(false); }}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isCachedFileLoading}
+                  className="h-8 px-3 gap-1.5 text-xs bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                >
+                  {isLoadingVersions ? (
+                    <Loader className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <svg className="h-3.5 w-3.5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <span>
+                    {selectedVersion && selectedVersionDate ? (
+                      new Date(selectedVersionDate).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric'
+                      })
+                    ) : (
+                      'History'
+                    )}
+                  </span>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-[400px] overflow-y-auto w-[320px]">
+                {isLoadingVersions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Loading history...</span>
+                  </div>
+                ) : fileVersions.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <span className="text-sm text-muted-foreground">No history available</span>
+                  </div>
                 ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={mdEditorControls.save}
-                        disabled={!mdEditorControls.hasChanges}
-                        className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                        title="Save file"
+                  fileVersions.map((version, index) => {
+                    const isCurrent = index === 0;
+                    const isSelected = isCurrent ? !selectedVersion : selectedVersion === version.commit;
+                    const parts = (version.message || '').split(':');
+                    console.log('[FileViewerView] history item parts', { commit: version.commit, parts });
+
+                    return (
+                      <DropdownMenuItem
+                        key={version.commit}
+                        onClick={() => {
+                          if (isCurrent) {
+                            // Return to current: clear unsaved & cache, then refetch
+                            clearGlobalSelectedVersion();
+                            setContentError(null);
+                            setIsLoadingVersionContent(true);
+                            clearUnsavedContent(filePath);
+
+                            const normalizedPath = normalizeWorkspacePath(filePath);
+
+                            ['text', 'blob', 'json'].forEach(contentType => {
+                              const cacheKey = `${sandboxId}:${normalizedPath}:${contentType}`;
+                              FileCache.delete(cacheKey);
+                            });
+
+                            refetchFile().finally(() => setIsLoadingVersionContent(false));
+                          } else {
+                            loadFileByVersion(version.commit);
+                          }
+                        }}
+                        className={cn(
+                          "flex items-start gap-2 cursor-pointer py-2.5 px-3 rounded-xl",
+                          isSelected && "bg-accent"
+                        )}
                       >
-                        <Save className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {mdEditorControls.hasChanges ? (
-                        <>Save changes <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-muted rounded font-mono">⌘S</kbd></>
-                      ) : (
-                        'No changes to save'
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-1">
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate font-medium text-sm">
+                                {parts[0]}
+                              </div>
+                              {parts.length > 1 && (
+                                <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                                  {parts.slice(1).join(':').trim()}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center ml-3 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!isCurrent) openRevertModal(version.commit);
+                                }}
+                                className={cn(
+                                  'h-6 px-2 text-[11px] inline-flex items-center gap-0.5 rounded-full',
+                                  isCurrent ? 'opacity-90 cursor-default' : 'hover:bg-muted'
+                                )}
+                                disabled={isCurrent}
+                                title={isCurrent ? 'Current version' : 'Restore this version'}
+                              >
+                                {isCurrent ? (
+                                  <span className="px-1">Current</span>
+                                ) : (
+                                  <>
+                                    <span className="text-[11px]">Restore</span>
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(version.date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: new Date(version.date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                            })} at {new Date(version.date).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            })}
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })
                 )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                {/* Export Dropdown - uses shared FileDownloadButton component */}
-                <FileDownloadButton
-                  content={typeof rawContent === 'string' ? rawContent : ''}
-                  fileName={fileName}
-                  getHtmlContent={mdEditorControls?.getHtml ? () => mdEditorControls.getHtml() : undefined}
-                />
-              </>
-            </TooltipProvider>
-          )}
-
-          <div className="flex-1" />
-
-          {/* Version history dropdown */}
-          <DropdownMenu onOpenChange={(open) => { if (open) loadVersionHistory(false); }}>
-            <DropdownMenuTrigger asChild>
+            {/* Download button - for non-markdown files */}
+            {!isMarkdownFile && (
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isCachedFileLoading}
-                className="h-8 px-3 gap-1.5 text-xs bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                onClick={handleDownload}
+                disabled={isDownloading || isCachedFileLoading}
+                className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                title="Download file"
               >
-                {isLoadingVersions ? (
-                  <Loader className="h-3.5 w-3.5 animate-spin" />
+                {isDownloading ? (
+                  <Loader className="h-4 w-4 animate-spin" />
                 ) : (
-                  <svg className="h-3.5 w-3.5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <Download className="h-4 w-4" />
                 )}
-                <span>
-                  {selectedVersion && selectedVersionDate ? (
-                    new Date(selectedVersionDate).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric'
-                    })
-                  ) : (
-                    'History'
-                  )}
-                </span>
-                <ChevronDown className="h-3 w-3" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-[400px] overflow-y-auto w-[320px]">
-              {isLoadingVersions ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-sm text-muted-foreground">Loading history...</span>
-                </div>
-              ) : fileVersions.length === 0 ? (
-                <div className="flex items-center justify-center py-8">
-                  <span className="text-sm text-muted-foreground">No history available</span>
-                </div>
-              ) : (
-                fileVersions.map((version, index) => {
-                  const isCurrent = index === 0;
-                  const isSelected = isCurrent ? !selectedVersion : selectedVersion === version.commit;
-                  const parts = (version.message || '').split(':');
-                  console.log('[FileViewerView] history item parts', { commit: version.commit, parts });
-
-                  return (
-                    <DropdownMenuItem
-                      key={version.commit}
-                      onClick={() => {
-                        if (isCurrent) {
-                          // Return to current: clear unsaved & cache, then refetch
-                          clearGlobalSelectedVersion();
-                          setContentError(null);
-                          setIsLoadingVersionContent(true);
-                          clearUnsavedContent(filePath);
-
-                          const normalizedPath = normalizeWorkspacePath(filePath);
-
-                          ['text', 'blob', 'json'].forEach(contentType => {
-                            const cacheKey = `${sandboxId}:${normalizedPath}:${contentType}`;
-                            FileCache.delete(cacheKey);
-                          });
-
-                          refetchFile().finally(() => setIsLoadingVersionContent(false));
-                        } else {
-                          loadFileByVersion(version.commit);
-                        }
-                      }}
-                      className={cn(
-                        "flex items-start gap-2 cursor-pointer py-2.5 px-3 rounded-xl",
-                        isSelected && "bg-accent"
-                      )}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-1">
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-sm">
-                              {parts[0]}
-                            </div>
-                            {parts.length > 1 && (
-                              <div className="text-xs text-muted-foreground mt-0.5 truncate">
-                                {parts.slice(1).join(':').trim()}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center ml-3 shrink-0">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!isCurrent) openRevertModal(version.commit);
-                              }}
-                              className={cn(
-                                'h-6 px-2 text-[11px] inline-flex items-center gap-0.5 rounded-full',
-                                isCurrent ? 'opacity-90 cursor-default' : 'hover:bg-muted'
-                              )}
-                              disabled={isCurrent}
-                              title={isCurrent ? 'Current version' : 'Restore this version'}
-                            >
-                              {isCurrent ? (
-                                <span className="px-1">Current</span>
-                              ) : (
-                                <>
-                                  <span className="text-[11px]">Restore</span>
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(version.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: new Date(version.date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                          })} at {new Date(version.date).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true
-                          })}
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                  );
-                })
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Download button - for non-markdown files */}
-          {!isMarkdownFile && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              disabled={isDownloading || isCachedFileLoading}
-              className="h-8 w-8 p-0 bg-transparent border border-border rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50"
-              title="Download file"
-            >
-              {isDownloading ? (
-                <Loader className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-            </Button>
-          )}
+            )}
           </>
         }
       />
@@ -1384,4 +1385,5 @@ export function FileViewerView({
     </div>
   );
 }
+// feature-end: kortix-computer-v2
 

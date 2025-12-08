@@ -52,14 +52,36 @@ def main():
         run_git(["fetch", "--all"], cwd=CACHE_DIR)
 
     # Checkout Target
-    print(f"Checking out {args.ref}...")
-    run_git(["checkout", args.ref], cwd=CACHE_DIR)
-    
-    # Enable pulling if it's a branch
+    print(f"Syncing to {args.ref}...")
+
+    # Strategy: Try to set up a tracking branch first (for branches), 
+    # fallback to detached checkout (for tags/commits).
     try:
-        run_git(["pull"], cwd=CACHE_DIR)
-    except:
-        pass # Detached head or tag
+        # Check if ref exists on remote as a branch
+        remote_ref = f"origin/{args.ref}"
+        res = subprocess.run(
+            ["git", "rev-parse", "--verify", remote_ref], 
+            cwd=CACHE_DIR, capture_output=True, text=True
+        )
+        
+        if res.returncode == 0:
+            # It's a remote branch. Force local branch to match it and track it.
+            # -B creates or resets the branch to start point
+            print(f"  > git checkout -B {args.ref} {remote_ref}")
+            run_git(["checkout", "-B", args.ref, remote_ref], cwd=CACHE_DIR)
+        else:
+            # Not a remote branch (likely a tag or commit hash)
+            print(f"  > git checkout {args.ref}")
+            run_git(["checkout", args.ref], cwd=CACHE_DIR)
+
+        # Pull to ensure we are up to date (redundant for -B but safe)
+        if res.returncode == 0:
+            print(f"  > git pull")
+            run_git(["pull"], cwd=CACHE_DIR)
+
+    except Exception as e:
+        print(f"\nCRITICAL ERROR: Failed to sync upstream: {e}")
+        sys.exit(1)
 
     print(f"Success. Upstream available at: {CACHE_DIR}")
 

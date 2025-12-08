@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
 import { CircleDashed, CheckCircle, AlertTriangle, Info, CheckCircle2, Clock } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl';
 import { UnifiedMessage, ParsedContent, ParsedMetadata } from '@/components/thread/types';
 import { FileAttachmentGrid } from '@/components/thread/file-attachment';
 import { useFilePreloader } from '@/hooks/files';
@@ -20,7 +20,7 @@ import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
 import { TaskCompletedFeedback } from '@/components/thread/tool-views/shared/TaskCompletedFeedback';
 import { PromptExamples } from '@/components/shared/prompt-examples';
-import { 
+import {
     renderAssistantMessage,
     extractTextFromPartialJson,
     extractTextFromStreamingAskComplete,
@@ -32,8 +32,8 @@ import {
 
 // Configuration for prompt/answer rendering
 const PROMPT_SAMPLES_CONFIG = {
-  enableAskSamples: true,
-  enableCompleteSamples: true,
+    enableAskSamples: true,
+    enableCompleteSamples: true,
 } as const;
 
 // Helper function to render attachments (keeping original implementation for now)
@@ -112,7 +112,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
     const contentRef = useRef<HTMLDivElement>(null);
     const [shouldJustifyToTop, setShouldJustifyToTop] = useState(false);
     const { session } = useAuth();
-    const t = useTranslations();
+    // const t = useTranslations();
+    const t = (key: string) => key;
 
     // React Query file preloader
     const { preloadFiles } = useFilePreloader();
@@ -510,11 +511,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
 
                                                                 // Check if this is the last group
                                                                 const isLastGroup = groupIndex === finalGroupedMessages.length - 1;
-                                                                
+
                                                                 // Find the last assistant message in this group
                                                                 const assistantMessages = group.messages.filter(m => m.type === 'assistant');
-                                                                const lastAssistantMessageId = assistantMessages.length > 0 
-                                                                    ? assistantMessages[assistantMessages.length - 1].message_id 
+                                                                const lastAssistantMessageId = assistantMessages.length > 0
+                                                                    ? assistantMessages[assistantMessages.length - 1].message_id
                                                                     : null;
 
                                                                 group.messages.forEach((message, msgIndex) => {
@@ -536,7 +537,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                             threadId,
                                                                             onPromptFill,
                                                                         });
-                                                                        
+
                                                                         // Skip if no content rendered
                                                                         if (!renderedContent) return;
 
@@ -562,7 +563,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                         // Detect XML tags in streaming content
                                                                         let detectedTag: string | null = null;
                                                                         let tagStartIndex = -1;
-                                                                        
+
                                                                         // Check for ask/complete tags (XML format)
                                                                         const askIndex = streamingTextContent.indexOf('<ask');
                                                                         const completeIndex = streamingTextContent.indexOf('<complete');
@@ -618,8 +619,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                                         const streamingContent = textToRender.substring(tagStartIndex);
                                                                                         const extractedText = extractTextFromStreamingAskComplete(streamingContent, detectedTag as 'ask' | 'complete');
                                                                                         return (
-                                                                                            <ComposioUrlDetector 
-                                                                                                content={extractedText} 
+                                                                                            <ComposioUrlDetector
+                                                                                                content={extractedText}
                                                                                             />
                                                                                         );
                                                                                     })()
@@ -688,36 +689,36 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
 
                                                                         const textToRender = streamingText || '';
                                                                         const textBeforeTag = detectedTag ? textToRender.substring(0, tagStartIndex) : textToRender;
-                                                                        
+
                                                                         // For ask and complete, render as markdown directly (not as tool stream)
                                                                         const isAskOrComplete = detectedTag === 'ask' || detectedTag === 'complete';
 
                                                                         return (
                                                                             <>
                                                                                 {textBeforeTag && (
-                                                                                            <ComposioUrlDetector content={textBeforeTag} />
-                                                                                        )}
+                                                                                    <ComposioUrlDetector content={textBeforeTag} />
+                                                                                )}
 
-                                                                                        {detectedTag && isAskOrComplete ? (
-                                                                                            // Extract and render just the text content (strip all XML)
-                                                                                            (() => {
-                                                                                                const streamingContent = textToRender.substring(tagStartIndex);
-                                                                                                const extractedText = extractTextFromStreamingAskComplete(streamingContent, detectedTag as 'ask' | 'complete');
-                                                                                                return (
-                                                                                                    <ComposioUrlDetector 
-                                                                                                        content={extractedText} 
-                                                                                                    />
-                                                                                                );
-                                                                                            })()
-                                                                                        ) : detectedTag ? (
-                                                                                            <ShowToolStream
-                                                                                                content={textToRender.substring(tagStartIndex)}
-                                                                                                messageId="streamingTextContent"
-                                                                                                onToolClick={handleToolClick}
-                                                                                                showExpanded={true}
-                                                                                                startTime={Date.now()} // Tool just started now
+                                                                                {detectedTag && isAskOrComplete ? (
+                                                                                    // Extract and render just the text content (strip all XML)
+                                                                                    (() => {
+                                                                                        const streamingContent = textToRender.substring(tagStartIndex);
+                                                                                        const extractedText = extractTextFromStreamingAskComplete(streamingContent, detectedTag as 'ask' | 'complete');
+                                                                                        return (
+                                                                                            <ComposioUrlDetector
+                                                                                                content={extractedText}
                                                                                             />
-                                                                                        ) : null}
+                                                                                        );
+                                                                                    })()
+                                                                                ) : detectedTag ? (
+                                                                                    <ShowToolStream
+                                                                                        content={textToRender.substring(tagStartIndex)}
+                                                                                        messageId="streamingTextContent"
+                                                                                        onToolClick={handleToolClick}
+                                                                                        showExpanded={true}
+                                                                                        startTime={Date.now()} // Tool just started now
+                                                                                    />
+                                                                                ) : null}
                                                                             </>
                                                                         );
                                                                     })()}
@@ -725,25 +726,25 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                             )}
 
                                                             {/* Show streaming tool call indicator OR streaming ask/complete text inside the last assistant group */}
-                                                            {groupIndex === finalGroupedMessages.length - 1 && 
-                                                                !readOnly && 
-                                                                streamingToolCall && 
+                                                            {groupIndex === finalGroupedMessages.length - 1 &&
+                                                                !readOnly &&
+                                                                streamingToolCall &&
                                                                 (() => {
                                                                     // Check if this is ask/complete - render as text instead of tool indicator
                                                                     const parsedMetadata = safeJsonParse<ParsedMetadata>(streamingToolCall.metadata, {});
                                                                     const toolCalls = parsedMetadata.tool_calls || [];
-                                                                    
+
                                                                     const askOrCompleteTool = toolCalls.find(tc => {
                                                                         const toolName = tc.function_name?.replace(/_/g, '-').toLowerCase() || '';
                                                                         return toolName === 'ask' || toolName === 'complete';
                                                                     });
-                                                                    
+
                                                                     // For ask/complete, render the text content directly
                                                                     if (askOrCompleteTool) {
                                                                         // Check if the last assistant message already has completed ask/complete
                                                                         const currentGroupAssistantMessages = group.messages.filter(m => m.type === 'assistant');
-                                                                        const lastAssistantMessage = currentGroupAssistantMessages.length > 0 
-                                                                            ? currentGroupAssistantMessages[currentGroupAssistantMessages.length - 1] 
+                                                                        const lastAssistantMessage = currentGroupAssistantMessages.length > 0
+                                                                            ? currentGroupAssistantMessages[currentGroupAssistantMessages.length - 1]
                                                                             : null;
                                                                         if (lastAssistantMessage) {
                                                                             const lastMsgMetadata = safeJsonParse<ParsedMetadata>(lastAssistantMessage.metadata, {});
@@ -757,7 +758,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                                 return null;
                                                                             }
                                                                         }
-                                                                        
+
                                                                         // Extract text from arguments
                                                                         const toolArgs: any = askOrCompleteTool.arguments;
                                                                         let askCompleteText = '';
@@ -773,30 +774,30 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                                 askCompleteText = toolArgs?.text || '';
                                                                             }
                                                                         }
-                                                                        
+
                                                                         const toolName = askOrCompleteTool.function_name?.replace(/_/g, '-').toLowerCase() || '';
                                                                         const textToShow = askCompleteText || (toolName === 'ask' ? 'Asking...' : 'Completing...');
-                                                                        
+
                                                                         return (
                                                                             <div className="mt-2">
-                                                                                <ComposioUrlDetector 
-                                                                                    content={textToShow} 
+                                                                                <ComposioUrlDetector
+                                                                                    content={textToShow}
                                                                                 />
                                                                             </div>
                                                                         );
                                                                     }
-                                                                    
+
                                                                     // For non-ask/complete tools, check if any tool calls exist
                                                                     const isAskOrComplete = toolCalls.some(tc => {
                                                                         const toolName = tc.function_name?.replace(/_/g, '-').toLowerCase() || '';
                                                                         return toolName === 'ask' || toolName === 'complete';
                                                                     });
-                                                                    
+
                                                                     // Don't render tool call indicator for ask/complete - they're handled above
                                                                     if (isAskOrComplete) {
                                                                         return null;
                                                                     }
-                                                                    
+
                                                                     return (
                                                                         <div className="mt-2">
                                                                             <div className="my-1">
@@ -806,16 +807,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                                         const firstToolCall = toolCalls[0];
                                                                                         const toolName = firstToolCall.function_name?.replace(/_/g, '-') || '';
                                                                                         const IconComponent = getToolIcon(toolName);
-                                                                                        
+
                                                                                         // Extract display parameter (same logic as rendered version)
                                                                                         let paramDisplay = '';
                                                                                         if (firstToolCall.arguments) {
-                                                                                            const args = typeof firstToolCall.arguments === 'string' 
+                                                                                            const args = typeof firstToolCall.arguments === 'string'
                                                                                                 ? safeJsonParse<Record<string, any>>(firstToolCall.arguments, {})
                                                                                                 : firstToolCall.arguments;
                                                                                             paramDisplay = (args as any)?.file_path || (args as any)?.command || (args as any)?.query || (args as any)?.url || '';
                                                                                         }
-                                                                                        
+
                                                                                         return (
                                                                                             <button
                                                                                                 onClick={() => handleToolClick(streamingToolCall.message_id || null, toolName)}
@@ -833,7 +834,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                                             </button>
                                                                                         );
                                                                                     }
-                                                                                    
+
                                                                                     // Fallback if no tool calls found
                                                                                     return (
                                                                                         <button
@@ -851,16 +852,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                 })()}
 
                                                             {/* Show loader when agent is running but not streaming, inside the last assistant group */}
-                                                            {groupIndex === finalGroupedMessages.length - 1 && 
-                                                                !readOnly && 
-                                                                (agentStatus === 'running' || agentStatus === 'connecting') && 
-                                                                !streamingTextContent && 
+                                                            {groupIndex === finalGroupedMessages.length - 1 &&
+                                                                !readOnly &&
+                                                                (agentStatus === 'running' || agentStatus === 'connecting') &&
+                                                                !streamingTextContent &&
                                                                 !streamingToolCall &&
                                                                 (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') && (
-                                                                <div className="mt-2">
-                                                                    <AgentLoader />
-                                                                </div>
-                                                            )}
+                                                                    <div className="mt-2">
+                                                                        <AgentLoader />
+                                                                    </div>
+                                                                )}
                                                         </div>
                                                     </div>
                                                 </div>
