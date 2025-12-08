@@ -3,7 +3,7 @@ import { ExternalLink, ShieldCheck, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Markdown } from '@/components/ui/markdown';
+import { UnifiedMarkdown } from '@/components/markdown';
 
 interface ComposioUrlDetectorProps {
   content: string;
@@ -21,7 +21,7 @@ interface ComposioUrl {
 // Common toolkit name mappings for better display
 const TOOLKIT_NAME_MAPPINGS: Record<string, string> = {
   'gmail': 'Gmail',
-  'github': 'GitHub', 
+  'github': 'GitHub',
   'gitlab': 'GitLab',
   'google_sheets': 'Google Sheets',
   'google_drive': 'Google Drive',
@@ -78,7 +78,7 @@ function formatToolkitName(toolkitSlug: string): string {
   if (TOOLKIT_NAME_MAPPINGS[toolkitSlug.toLowerCase()]) {
     return TOOLKIT_NAME_MAPPINGS[toolkitSlug.toLowerCase()];
   }
-  
+
   // Fall back to converting snake_case to Title Case
   return toolkitSlug
     .split('_')
@@ -90,7 +90,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
   // Use a smaller, more focused context window
   const contextBefore = content.substring(Math.max(0, urlStartIndex - 200), urlStartIndex);
   const contextAfter = content.substring(urlStartIndex, Math.min(content.length, urlStartIndex + 100));
-  
+
   // Look for the most recent/closest pattern before the URL
   // Pattern 1: [toolkit:slug:name] Authentication:
   let match = contextBefore.match(/\[toolkit:([^:]+):([^\]]+)\]\s+Authentication:\s*$/i);
@@ -99,7 +99,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
     const toolkitName = match[2].trim();
     return { toolkitName, toolkitSlug };
   }
-  
+
   // Pattern 2: Service Name Authentication:
   match = contextBefore.match(/([A-Za-z]+(?:\s+[A-Za-z]+)*)\s+Authentication:\s*$/i);
   if (match) {
@@ -107,7 +107,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
     const slug = serviceName.toLowerCase().replace(/\s+/g, '_');
     return { toolkitName: serviceName, toolkitSlug: slug };
   }
-  
+
   // Pattern 3: Numbered list with service name
   match = contextBefore.match(/\d+\.\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(?:Integration|Authentication)(?:\s+[^:\n]*)?:?\s*$/i);
   if (match) {
@@ -115,7 +115,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
     const slug = serviceName.toLowerCase().replace(/\s+/g, '_');
     return { toolkitName: serviceName, toolkitSlug: slug };
   }
-  
+
   // Pattern 3b: Handle numbered list with emojis
   match = contextBefore.match(/\d+\.\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)\s+(?:Integration|Authentication)\s*[^\w\n]*\s*$/i);
   if (match) {
@@ -123,7 +123,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
     const slug = serviceName.toLowerCase().replace(/\s+/g, '_');
     return { toolkitName: serviceName, toolkitSlug: slug };
   }
-  
+
   // Pattern 4: Service Authentication (for...)
   match = contextBefore.match(/([A-Za-z]+(?:\s+[A-Za-z]+)*)\s+Authentication\s+\([^)]*\)\s*:?\s*$/i);
   if (match) {
@@ -131,7 +131,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
     const slug = serviceName.toLowerCase().replace(/\s+/g, '_');
     return { toolkitName: serviceName, toolkitSlug: slug };
   }
-  
+
   // Pattern 5: Look for "Sign in to [Service]" in the URL context
   const urlContext = contextAfter.substring(0, 100);
   match = urlContext.match(/Sign\s+in\s+to\s+([A-Za-z]+(?:\s+[A-Za-z]+)*)/i);
@@ -140,7 +140,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
     const slug = serviceName.toLowerCase().replace(/\s+/g, '_');
     return { toolkitName: serviceName, toolkitSlug: slug };
   }
-  
+
   // Pattern 6: Look in the immediate context before URL (within 100 chars)
   const immediateContext = content.substring(Math.max(0, urlStartIndex - 100), urlStartIndex);
   match = immediateContext.match(/([A-Za-z]+)\s+(?:authentication|auth|connect)\s*(?:link|url)?:?\s*$/i);
@@ -149,7 +149,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
     const slug = serviceName.toLowerCase().replace(/\s+/g, '_');
     return { toolkitName: serviceName, toolkitSlug: slug };
   }
-  
+
   // Pattern 7: Look for common toolkit names in the immediate context only
   const commonToolkits = Object.keys(TOOLKIT_NAME_MAPPINGS);
   for (const toolkit of commonToolkits) {
@@ -159,7 +159,7 @@ function extractToolkitInfoFromContext(content: string, urlStartIndex: number): 
       return { toolkitName, toolkitSlug: toolkit };
     }
   }
-  
+
   return { toolkitName: null, toolkitSlug: null };
 }
 
@@ -179,24 +179,24 @@ function detectComposioUrls(content: string): ComposioUrl[] {
     /https:\/\/[^\/\s]+\/connect\/[^\s)]+/g,
     /https:\/\/[^\s)]+[?&](client_id|redirect_uri|response_type|scope)=[^\s)]+/g,
   ];
-  
+
   const urls: ComposioUrl[] = [];
   const processedUrls = new Set<string>(); // To avoid duplicates
-  
+
   for (const pattern of authUrlPatterns) {
     let match;
     pattern.lastIndex = 0; // Reset regex state
     while ((match = pattern.exec(content)) !== null) {
       const url = match[0];
-      
+
       // Skip if we've already processed this URL
       if (processedUrls.has(url)) {
         continue;
       }
-      
+
       processedUrls.add(url);
       const { toolkitName, toolkitSlug } = extractToolkitInfoFromContext(content, match.index);
-      
+
       // Debug logging to help identify what's being detected
       console.log('ComposioUrlDetector Debug:', {
         url: url.substring(0, 50) + '...',
@@ -204,7 +204,7 @@ function detectComposioUrls(content: string): ComposioUrl[] {
         toolkitSlug,
         contextBefore: content.substring(Math.max(0, match.index - 100), match.index)
       });
-      
+
       urls.push({
         url,
         toolkitName,
@@ -214,7 +214,7 @@ function detectComposioUrls(content: string): ComposioUrl[] {
       });
     }
   }
-  
+
   return urls.sort((a, b) => a.startIndex - b.startIndex);
 }
 
@@ -230,14 +230,14 @@ interface ComposioConnectButtonProps {
   toolkitSlug?: string;
 }
 
-const ComposioConnectButton: React.FC<ComposioConnectButtonProps> = ({ 
-  url, 
+const ComposioConnectButton: React.FC<ComposioConnectButtonProps> = ({
+  url,
   toolkitName,
   toolkitSlug
 }) => {
   const displayName = toolkitName || (toolkitSlug ? formatToolkitName(toolkitSlug) : 'Service');
   const logoUrl = toolkitSlug ? TOOLKIT_LOGOS[toolkitSlug.toLowerCase()] : null;
-  
+
   const handleConnect = () => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -267,12 +267,12 @@ const ComposioConnectButton: React.FC<ComposioConnectButtonProps> = ({
               )}
             </div>
           </div>
-          
+
           <div className="flex-1 min-w-0 flex items-center gap-2 justify-between">
             <div className="flex flex-col mb-3">
               <div className="flex items-center">
                 <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">
-                    Sign in to {displayName}
+                  Sign in to {displayName}
                 </h3>
               </div>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 -mt-1">
@@ -294,15 +294,16 @@ const ComposioConnectButton: React.FC<ComposioConnectButtonProps> = ({
   );
 };
 
-export const ComposioUrlDetector: React.FC<ComposioUrlDetectorProps> = ({ 
-  content, 
-  className 
+export const ComposioUrlDetector: React.FC<ComposioUrlDetectorProps> = ({
+  content,
+  className
 }) => {
   const composioUrls = detectComposioUrls(content);
 
+  // Don't pass prose/chat-markdown classes to UnifiedMarkdown - it has its own styling
   if (composioUrls.length === 0) {
     return (
-      <Markdown className={className}>{content}</Markdown>
+      <UnifiedMarkdown content={content} />
     );
   }
 
@@ -312,19 +313,19 @@ export const ComposioUrlDetector: React.FC<ComposioUrlDetectorProps> = ({
   composioUrls.forEach((composioUrl, index) => {
     if (composioUrl.startIndex > lastIndex) {
       const textBefore = content.substring(lastIndex, composioUrl.startIndex);
-      
+
       const cleanedTextBefore = hasAuthUrlPattern(content, composioUrl)
         ? textBefore
-            // Remove [toolkit:slug:name] pattern
-            .replace(/\[toolkit:[^:]+:[^\]]+\]\s+/gi, '')
-            // Remove authentication/auth/connect/visit url/link patterns
-            .replace(/(?:authentication|auth|connect|visit)\s+(?:url|link)?:\s*$/i, '')
-            .trim()
+          // Remove [toolkit:slug:name] pattern
+          .replace(/\[toolkit:[^:]+:[^\]]+\]\s+/gi, '')
+          // Remove authentication/auth/connect/visit url/link patterns
+          .replace(/(?:authentication|auth|connect|visit)\s+(?:url|link)?:\s*$/i, '')
+          .trim()
         : textBefore;
 
       if (cleanedTextBefore.trim()) {
         contentParts.push(
-          <Markdown key={`text-${index}`} className={className}>{cleanedTextBefore}</Markdown>
+          <UnifiedMarkdown key={`text-${index}`} content={cleanedTextBefore} />
         );
       }
     }
@@ -345,7 +346,7 @@ export const ComposioUrlDetector: React.FC<ComposioUrlDetectorProps> = ({
     const remainingText = content.substring(lastIndex);
     if (remainingText.trim()) {
       contentParts.push(
-        <Markdown key="text-final" className={className}>{remainingText}</Markdown>
+        <UnifiedMarkdown key="text-final" content={remainingText} />
       );
     }
   }

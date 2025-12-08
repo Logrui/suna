@@ -11,7 +11,13 @@ import { CodeRenderer } from './code-renderer';
 import { useImageContent } from '@/hooks/files';
 import { MermaidRenderer } from '@/components/ui/mermaid-renderer';
 import { isMermaidCode } from '@/lib/mermaid-utils';
-import type { FileRendererProject } from './index';
+// Local interface definition to avoid circular deps or missing exports
+export interface FileRendererProject {
+  sandbox?: string | {
+    id?: string;
+    sandbox_url?: string;
+  };
+}
 
 // Process Unicode escape sequences in content
 export const processUnicodeContent = (content: any, forCodeBlock: boolean = false): string => {
