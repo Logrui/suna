@@ -12,7 +12,7 @@ $ARGUMENTS
 ## Outline
 1.  **Welcome**: Acknowledge that this is the **Portkit** initialization workflow (Speckit for Upstream Sync).
 2.  **Verify Structure**: Check for existence of core Portkit files:
-    *   `.portkit/UPSTREAM_SYNC_STRATEGY.md`
+    *   `.portkit/README.md`
     *   `.portkit/addon-features-registry/addon-features-registry.json`
     *   `.portkit/scripts/` (Ensure contents exist)
     *   `.portkit/templates/` (Ensure spec-template, etc. exist)
@@ -24,7 +24,7 @@ $ARGUMENTS
         ```markdown
         ## Portkit Awareness
         This repository uses **Portkit** for syncing upstream features to this soft-fork.
-        - **Strategy**: `.portkit/UPSTREAM_SYNC_STRATEGY.md` (Read this first for any Portkit task).
+        - **Strategy**: `.portkit/README.md` (Read this first for any Portkit task).
         - **Registry**: `.portkit/addon-features-registry/addon-features-registry.json` (Source of Truth for features).
         - **Tools**: `.portkit/scripts/` (Use `uv run scripts/python/script.py` or `npx ts-node scripts/typescript/script.ts`).
         - **Workflow**: Specify -> Research -> Plan -> Tasks -> Implement -> Verify.

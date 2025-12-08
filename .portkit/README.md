@@ -1,6 +1,6 @@
 # Upstream Sync Strategy v5.0: The Living Strategy (Portkit)
 
-**Location**: `.portkit/UPSTREAM_SYNC_STRATEGY.md`
+**Location**: `.portkit/README.md`
 **Status**: LIVING ARCHITECTURE DOCUMENT (Blueprint for Portkit)
 
 ## 0. What is Portkit?
@@ -28,7 +28,7 @@ To analyze upstream code without polluting our repo, we use a **Shadow Cache Str
 Use this reference to understand where components live:
 ```
 .portkit/
-├── UPSTREAM_SYNC_STRATEGY.md       # (This File) The Master Blueprint.
+├── README.md                       # (This File) The Master Blueprint.
 ├── addon-features-registry/
 │   └── addon-features-registry.json # The "Source of Truth" for custom features.
 ├── scripts/

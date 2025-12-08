@@ -1,0 +1,7 @@
+{
+    "upstream_url": "https://github.com/placeholder/repo.git",
+    "mappings": {
+        "frontend": "frontend",
+        "backend": "backend"
+    }
+}

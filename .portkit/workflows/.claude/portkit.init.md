@@ -16,7 +16,7 @@ To initialize the Claude environment with "Portkit Awareness", ensuring subseque
 
 ## Execution Steps
 1.  **Verify Structure**:
-    *   Check for `.portkit/UPSTREAM_SYNC_STRATEGY.md`.
+    *   Check for `.portkit/README.md`.
     *   Check for `.portkit/addon-features-registry/addon-features-registry.json`.
 
 2.  **Update Memory**:
