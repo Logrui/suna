@@ -18,7 +18,7 @@ interface HealthCheckedVncIframeProps {
 export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncIframeProps) {
   const [iframeKey, setIframeKey] = useState(0);
   const [isBrowserLoading, setIsBrowserLoading] = useState(true);
-
+  
   // Use the enhanced VNC preloader hook
   const { status, retryCount, retry, isPreloaded } = useVncPreloader(sandbox, {
     maxRetries: 5,

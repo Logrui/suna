@@ -38,6 +38,7 @@
       "plan": "Plan",
       "billing": "Facturation",
       "usage": "Utilisation",
+      "referrals": "Parrainages",
       "knowledgeBase": "Base de Connaissances",
       "integrations": "Intégrations",
       "envManager": "Gestionnaire d'Environnement"
@@ -45,6 +46,14 @@
     "general": {
       "title": "Paramètres du Profil",
       "description": "Gère les infos de ton compte",
+      "profilePicture": {
+        "title": "Photo de Profil",
+        "upload": "Télécharger l'avatar",
+        "hint": "JPG, PNG ou GIF. Max 5 Mo.",
+        "invalidType": "Veuillez sélectionner un fichier image",
+        "tooLarge": "L'image doit faire moins de 5 Mo",
+        "uploadFailed": "Échec du téléchargement de la photo de profil"
+      },
       "name": "Nom",
       "email": "Email",
       "namePlaceholder": "Entre ton nom",
@@ -76,6 +85,13 @@
         "billingRemoved": "Toutes les données de facturation seront supprimées",
         "scheduled30Days": "Ton compte sera programmé pour suppression dans 30 jours",
         "gracePeriod": "Tu peux annuler cette demande à tout moment pendant la période de grâce de 30 jours. Après 30 jours, toutes tes données seront définitivement supprimées et ne pourront pas être récupérées.",
+        "chooseDeletionType": "Choisis le type de suppression :",
+        "gracePeriodOption": "Période de Grâce de 30 Jours",
+        "gracePeriodDescription": "Ton compte sera programmé pour suppression dans 30 jours. Tu peux annuler cette demande à tout moment pendant la période de grâce.",
+        "immediateOption": "Suppression Immédiate",
+        "immediateDescription": "Ton compte et toutes les données seront définitivement supprimés immédiatement. Cette action ne peut pas être annulée.",
+        "warningImmediate": "Cette action ne peut pas être annulée",
+        "warningGracePeriod": "Cette action ne peut pas être annulée après 30 jours",
         "confirmText": "Tape supprimer pour confirmer",
         "confirmPlaceholder": "delete",
         "keepAccount": "Garder le Compte",
@@ -84,9 +100,78 @@
         "cancelDeletion": "Annuler la Suppression"
       }
     },
+    "referrals": {
+      "title": "Programme de Parrainage",
+      "description": "Partage ton lien de parrainage avec tes amis. Lorsqu'ils s'inscrivent et créent un compte, tu gagnes",
+      "creditsPerReferral": "100 crédits non-expirables",
+      "youEarn": "Tu gagnes",
+      "friendGets": "Ton ami obtient",
+      "maxEarnable": "Maximum gagnable par parrainages:",
+      "maxCredits": "$100 en crédits",
+      "yourReferralCode": "Ton Code de Parrainage",
+      "referralLink": "Lien de Parrainage",
+      "shareYourLink": "Partage ton lien de parrainage",
+      "yourStats": "Tes statistiques",
+      "enterCodeDescription": "Entre un code de parrainage pour gagner des crédits",
+      "enterCode": "Entrer le code",
+      "refresh": "Actualiser",
+      "copyCode": "Copier le code",
+      "copyLink": "Copier le lien",
+      "share": "Partager",
+      "stats": {
+        "totalReferrals": "Total de Parrainages",
+        "successful": "Réussis",
+        "creditsEarned": "Crédits Gagnés"
+      },
+      "recentReferrals": "Parrainages Récents",
+      "signupComplete": "Inscription Terminée",
+      "pending": "En Attente",
+      "noReferrals": "Aucun parrainage pour le moment. Partage ton lien de parrainage pour commencer!",
+      "copied": "Copié!",
+      "codeCopied": "Code de parrainage copié dans le presse-papiers",
+      "linkCopied": "Lien de parrainage copié dans le presse-papiers",
+      "codeRefreshed": "Code de parrainage actualisé avec succès",
+      "refreshFailed": "Échec de l'actualisation du code de parrainage",
+      "inviteByEmail": "Inviter par Email",
+      "inviteByEmailDescription": "Ajoute jusqu'à 3 adresses email (appuie sur Entrée, Espace ou Virgule)",
+      "emailAddress": "Adresse email",
+      "emailPlaceholder": "Entre les adresses email (appuie sur Entrée, Espace ou Virgule)",
+      "emailsAdded": "emails",
+      "sent": "envoyé",
+      "send": "Envoyer",
+      "sending": "Envoi...",
+      "sendAllInvites": "Envoyer Toutes les Invitations",
+      "allSent": "Tout Envoyé",
+      "emailSent": "Invitation de parrainage envoyée avec succès"
+    },
     "billing": {
       "title": "Facturation et Abonnement",
       "description": "Gérez vos crédits et votre abonnement",
+      "totalCredits": "Total des Crédits Disponibles",
+      "allCredits": "Tous les crédits",
+      "monthlyCredits": "Crédits Mensuels",
+      "renewalIn": "Renouvellement dans {days} {days, plural, one {jour} other {jours}}",
+      "noRenewal": "Aucun renouvellement programmé",
+      "extraCredits": "Crédits Supplémentaires",
+      "nonExpiring": "N'expirent pas",
+      "renews": "Se renouvelle {date}",
+      "manageSubscription": "Gérer l'Abonnement",
+      "getAdditionalCredits": "Obtenir des Crédits Supplémentaires",
+      "changePlan": "Changer de Plan",
+      "annualCommitment": "Engagement Annuel",
+      "activeUntil": "Actif jusqu'au {date}",
+      "subscriptionCancelled": "Votre abonnement sera annulé le {date}",
+      "reactivate": "Réactiver",
+      "creditsExplained": "Crédits expliqués",
+      "cancelPlan": "Annuler le Plan",
+      "reactivateSubscription": "Réactiver l'Abonnement",
+      "reactivating": "Réactivation en cours...",
+      "cancelDialogTitle": "Annuler l'Abonnement",
+      "cancelDialogDescription": "Êtes-vous sûr de vouloir annuler votre abonnement ? Vous continuerez à avoir accès jusqu'au {date}.",
+      "keepSubscription": "Garder l'Abonnement",
+      "cancelling": "Annulation en cours...",
+      "localMode": "Mode Local Actif",
+      "localModeDescription": "Toutes les fonctionnalités premium sont disponibles dans cet environnement",
       "insufficientCredits": "Crédits insuffisants",
       "insufficientCreditsMessage": "Vérification de facturation échouée : Crédits insuffisants. Votre solde est {balance}. Veuillez ajouter des crédits pour continuer.",
       "creditsExhausted": "Vous avez épuisé vos crédits. Mettez à niveau maintenant.",
@@ -100,7 +185,10 @@
       "opening": "Ouverture de la Base de Connaissances",
       "redirecting": "Redirection vers la page Base de Connaissances..."
     },
-    "integrations": "Intégrations"
+    "integrations": {
+      "opening": "Ouverture des Intégrations",
+      "redirecting": "Redirection vers la page Intégrations..."
+    }
   },
   "triggers": {
     "getStarted": "Commence en ajoutant un trigger",
@@ -156,6 +244,11 @@
     "monthlyOn1st": "Mensuel le 1er"
   },
   "sidebar": {
+    "referAndEarn": "Parrainer et Gagner",
+    "referralShareTitle": "Parrainer des Amis",
+    "referralShareSubtitle": "Gagnez 400 crédits",
+    "new": "Nouveau",
+    "upgrade": "Améliorer",
     "chats": "Chats",
     "agents": "Agents",
     "workers": "Workers",
@@ -220,9 +313,42 @@
     "customWorkers": "Workers Personnalisés",
     "scheduledTriggers": "Triggers Programmées",
     "appTriggers": "Triggers d'App",
-    "limitsExceeded": "Tu as atteint ta limite de chats ({current}/{limit}). Améliore ton plan pour créer plus de chats.",
+    "limitsExceeded": "Tu as atteint ta limite de chats. Améliore ton plan pour créer plus de chats.",
     "agentInitiatedSuccessfully": "Agent démarré avec succès",
-    "aiAssistantReady": "Ton assistant IA est prêt à aider"
+    "aiAssistantReady": "Ton assistant IA est prêt à aider",
+    "greetings": {
+      "morning": [
+        "Bonjour ! Quoi de prévu aujourd'hui ?",
+        "Salut ! Qu'est-ce qu'on construit ?",
+        "Bonjour ! Prêt à être productif ?"
+      ],
+      "afternoon": [
+        "Bon après-midi ! Comment puis-je aider ?",
+        "Ça roule ? Qu'est-ce qu'on fait ?"
+      ],
+      "evening": [
+        "Bonsoir ! On travaille tard ?",
+        "Salut ! Sur quoi on bosse ce soir ?",
+        "Bonsoir ! C'est parti."
+      ],
+      "random": [
+        "Devine qui est de retour !",
+        "Ohé ! Que peut faire Kortix pour toi ?",
+        "Qu'est-ce que tu veux accomplir ?",
+        "Créons quelque chose de génial",
+        "Prêt quand tu l'es !",
+        "Quoi de neuf ?",
+        "À ton service ! C'est quoi la mission ?",
+        "Faisons de la magie",
+        "Quel défi relève-t-on ?",
+        "Tes désirs sont des ordres",
+        "C'est quoi le programme ?",
+        "Attache ta ceinture ! On va où ?",
+        "Un jour de plus, un projet de plus",
+        "Qu'est-ce qui te trotte dans la tête ?",
+        "Allez, on y va !"
+      ]
+    }
   },
   "thread": {
     "integrations": "Intégrations",
@@ -374,6 +500,7 @@
     "credits": "Crédits",
     "popular": "Populaire",
     "creditsExplained": "Crédits expliqués",
+    "creditsExhausted": "+200 Crédits dans {time}. Mettez à niveau pour utiliser maintenant.",
     "creditsExhaustedRefreshIn": "Vous avez épuisé vos crédits. Ils seront renouvelés dans {time}",
     "trialActive": "Essai Actif",
     "trialBadge": "Essai de 7 Jours",
@@ -469,6 +596,9 @@
     "downgradePending": "Rétrogradation en Attente",
     "downgrade": "Rétrograder",
     "switchToLegacyYearly": "Passer à l'Annuel Legacy",
+    "confirmDowngradeTitle": "Veux-tu vraiment rétrograder ?",
+    "confirmDowngradeDescription": "Tu es sur le point de passer au plan {planName}. Ce changement prendra effet à la fin de ton période de facturation actuelle.",
+    "confirmDowngrade": "Oui, Rétrograder",
     "pickPlan": "Choisis le plan qui fonctionne pour toi.",
     "reachedLimit": "Tu as atteint tes limites.",
     "projectLimit": "Limite de Projet ({current}/{limit})",
@@ -489,9 +619,35 @@
       "integrations": "100+ intégrations",
       "premiumAIModels": "Modèles IA Premium",
       "prioritySupport": "Support Prioritaire"
+    },
+    "downgradeDialog": {
+      "confirmTitle": "Confirmer le changement de plan",
+      "confirmSubtitle": "Nous sommes désolés de vous voir partir",
+      "confirmDescription": "Vous êtes sur le point de passer au plan {planName}. Ce changement prendra effet à la fin de votre période de facturation actuelle. Vous conserverez vos avantages actuels jusque-là.",
+      "continue": "Continuer",
+      "keepCurrentPlan": "Garder mon plan actuel",
+      "feedbackTitle": "Aidez-nous à nous améliorer",
+      "feedbackSubtitle": "Vos retours façonnent l'avenir de Kortix",
+      "whatWouldMakeYouStay": "Qu'est-ce qui vous ferait rester?",
+      "feedbackPlaceholder": "S'il y avait une chose que nous pouvions changer ou ajouter pour que Kortix en vaille la peine pour vous, quelle serait-elle?",
+      "feedbackFooter": "Notre équipe lit chaque réponse. Vos mots influencent directement ce que nous construisons ensuite.",
+      "confirmDowngrade": "Confirmer le changement",
+      "processing": "Traitement...",
+      "pleaseSelectReason": "Veuillez sélectionner une raison",
+      "reasons": {
+        "tooExpensive": "C'est trop cher pour mes besoins",
+        "notUsingOften": "Je n'utilise pas assez Kortix",
+        "foundAlternative": "J'ai trouvé une autre solution",
+        "technicalIssues": "J'ai rencontré des problèmes techniques",
+        "resultsNotGood": "Les résultats n'ont pas répondu à mes attentes",
+        "other": "Autre raison"
+      }
     }
   },
   "auth": {
+    "haveReferralCode": "Tu as un code de parrainage?",
+    "referralCode": "Code de Parrainage",
+    "enterCode": "Entrer le code",
     "logIntoAccount": "Connecte-toi à ton compte",
     "createAccount": "Créer un compte",
     "signInOrCreateAccount": "Connecte-toi ou crée ton compte Kortix",
@@ -528,7 +684,16 @@
     "magicLinkSent": "On t'a envoyé un magic link à",
     "magicLinkDescription": "Clique sur le lien dans ton email pour te connecter. Le lien expirera dans 1 heure.",
     "magicLinkExplanation": "On t'enverra un lien sécurisé pour te connecter. Pas besoin de mot de passe.",
-    "byContinuingYouAgree": "En continuant, tu acceptes notre <privacyPolicy>Politique de Confidentialité</privacyPolicy> et nos <termsOfService>Conditions d'Utilisation</termsOfService>"
+    "magicLinkExpired": "Ce lien a expiré",
+    "magicLinkExpiredDescription": "Le magic link sur lequel tu as cliqué a expiré. Les magic links expirent après 1 heure pour des raisons de sécurité.",
+    "resendMagicLink": "Renvoyer le magic link",
+    "resending": "Renvoi en cours...",
+    "byContinuingYouAgree": "En continuant, tu acceptes notre <privacyPolicy>Politique de Confidentialité</privacyPolicy> et nos <termsOfService>Conditions d'Utilisation</termsOfService>",
+    "openProvider": "Ouvrir {provider}",
+    "didntReceiveEmail": "Tu n'as pas reçu l'e-mail ?",
+    "resend": "Renvoyer",
+    "alreadySignedIn": "Tu es déjà connecté. Aucune action requise.",
+    "goToDashboard": "Aller au Tableau de bord"
   },
   "onboarding": {
     "welcome": "Bienvenue",
@@ -664,6 +829,25 @@
     "pt": "Português",
     "fr": "Français",
     "es": "Español"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Gère comment tu reçois les notifications",
+    "preferences": "Préférences de Notification",
+    "channels": "Canaux de Notification",
+    "emailNotifications": "Notifications par Email",
+    "emailDescription": "Recevoir des notifications par email",
+    "pushNotifications": "Notifications Push",
+    "pushDescription": "Recevoir des notifications push sur ton appareil",
+    "inAppNotifications": "Notifications dans l'App",
+    "inAppDescription": "Voir les notifications dans l'app",
+    "deviceTokens": "Appareils Enregistrés",
+    "noDevices": "Aucun appareil enregistré",
+    "settingsUpdated": "Préférences de notification mises à jour avec succès",
+    "settingsFailed": "Échec de la mise à jour des préférences de notification",
+    "enableAll": "Activer Toutes",
+    "disableAll": "Désactiver Toutes",
+    "saveChanges": "Sauvegarder"
   },
   "suna": {
     "samplePrompts": "Exemples de prompts",

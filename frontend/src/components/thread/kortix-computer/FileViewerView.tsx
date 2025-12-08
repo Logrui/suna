@@ -37,6 +37,7 @@ import { useKortixComputerStore } from '@/stores/kortix-computer-store';
 import { PresentationViewer } from '../tool-views/presentation-tools/PresentationViewer';
 import { FullScreenPresentationViewer } from '../tool-views/presentation-tools/FullScreenPresentationViewer';
 import { usePresentationViewerStore } from '@/stores/presentation-viewer-store';
+import { KortixComputerHeader } from './KortixComputerHeader';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,28 @@ import { FileDownloadButton } from '../tool-views/shared/FileDownloadButton';
 
 // Define API_URL
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+
+/**
+ * Normalize a file path to ensure it starts with /workspace
+ * Handles paths like "workspace", "workspace/foo", "/workspace", "/workspace/foo", "/foo", "foo"
+ */
+function normalizeWorkspacePath(path: string): string {
+  if (!path) return '/workspace';
+  
+  // Handle paths that start with "workspace" (without leading /)
+  // This prevents "/workspace/workspace" when someone passes "workspace" or "workspace/foo"
+  if (path === 'workspace' || path.startsWith('workspace/')) {
+    return '/' + path;
+  }
+  
+  // If already starts with /workspace, return as-is
+  if (path.startsWith('/workspace')) {
+    return path;
+  }
+  
+  // Otherwise, prepend /workspace/
+  return `/workspace/${path.replace(/^\//, '')}`;
+}
 
 // API Helper: Get file history (git commits)
 async function fetchFileHistory(
@@ -285,7 +308,7 @@ export function FileViewerView({
     setContentError(null);
     try {
       // Normalize path for cache operations and clear legacy cache for this file
-      const normalizedPath = filePath.startsWith('/workspace') ? filePath : `/workspace/${filePath.replace(/^\//, '')}`;
+      const normalizedPath = normalizeWorkspacePath(filePath);
       ['text', 'blob', 'json'].forEach(contentType => {
         const cacheKey = `${sandboxId}:${normalizedPath}:${contentType}`;
         FileCache.delete(cacheKey);
@@ -407,7 +430,7 @@ export function FileViewerView({
       clearUnsavedContent(filePath);
 
       // Always clear caches and refetch after restore
-      const normalizedPath = filePath.startsWith('/workspace') ? filePath : `/workspace/${filePath.replace(/^\//, '')}`;
+      const normalizedPath = normalizeWorkspacePath(filePath);
 
       console.log('[FileViewerView] Clearing caches for path:', normalizedPath);
 
@@ -435,7 +458,7 @@ export function FileViewerView({
     } finally {
       setRevertInProgress(false);
     }
-  }, [revertCommitInfo, revertMode, revertCurrentRelativePath, revertSelectedPaths, sandboxId, filePath, session?.access_token, refetchFile, queryClient, clearUnsavedContent, clearGlobalSelectedVersion]);
+  }, [revertCommitInfo, revertMode, revertCurrentRelativePath, sandboxId, filePath, session?.access_token, refetchFile, queryClient, clearUnsavedContent, clearGlobalSelectedVersion]);
 
   // Track the last loaded version+path combo to prevent re-loading
   const lastLoadedRef = useRef<{ version: string | null, path: string | null }>({ version: null, path: null });
@@ -603,9 +626,7 @@ export function FileViewerView({
       }
 
       // Normalize path for cache operations
-      const normalizedPath = filePath.startsWith('/workspace')
-        ? filePath
-        : `/workspace/${filePath.replace(/^\//, '')}`;
+      const normalizedPath = normalizeWorkspacePath(filePath);
 
       // Clear unsaved content from store
       clearUnsavedContent(filePath);
@@ -747,63 +768,51 @@ export function FileViewerView({
       : '';
 
     return (
-      <div className="flex flex-col h-full max-w-full overflow-hidden min-w-0 border-t border-zinc-200 dark:border-zinc-800">
+      <div className="h-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-3 py-2 flex items-center justify-between border-b shrink-0 bg-zinc-50/80 dark:bg-zinc-900/80 max-w-full min-w-0">
-          {/* Left: Home + Name */}
-          <div className="flex items-center gap-3 min-w-0 flex-1 max-w-full">
-            <button
-              onClick={goBackToBrowser}
-              className="relative p-2 rounded-lg border shrink-0 bg-linear-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 border-zinc-200 dark:border-zinc-700 hover:from-zinc-200 hover:to-zinc-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800 transition-all"
-              title="Back to files"
-            >
-              <Home className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
-            </button>
+        <KortixComputerHeader
+          icon={Home}
+          onIconClick={goBackToBrowser}
+          iconTitle="Back to files"
+          fileName={presentationName}
+          actions={
+            <>
+              {hasMultipleFiles && (
+                <div className="flex items-center gap-1 mr-1">
+                  <button
+                    onClick={navigatePrevious}
+                    disabled={!canNavigatePrev}
+                    className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Previous file (←)"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="text-[10px] text-muted-foreground tabular-nums min-w-[32px] text-center">
+                    {currentFileIndex + 1}/{filePathList?.length || 0}
+                  </span>
+                  <button
+                    onClick={navigateNext}
+                    disabled={!canNavigateNext}
+                    className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Next file (→)"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
 
-            <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-
-            <span className="px-2 py-1 text-xs font-medium text-foreground bg-muted rounded truncate max-w-[200px]">
-              {presentationName}
-            </span>
-          </div>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-            {hasMultipleFiles && (
-              <div className="flex items-center gap-1 mr-1">
-                <button
-                  onClick={navigatePrevious}
-                  disabled={!canNavigatePrev}
-                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  title="Previous file (←)"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </button>
-                <span className="text-[10px] text-muted-foreground tabular-nums min-w-[32px] text-center">
-                  {currentFileIndex + 1}/{filePathList?.length || 0}
-                </span>
-                <button
-                  onClick={navigateNext}
-                  disabled={!canNavigateNext}
-                  className="p-1 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  title="Next file (→)"
-                >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleOpenPresentationFullscreen}
-              className="h-7 w-7 p-0"
-              title="Open fullscreen"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div >
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleOpenPresentationFullscreen}
+                className="h-7 w-7 p-0"
+                title="Open fullscreen"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          }
+        />
 
         {/* Presentation content - use a mock tool call for PresentationViewer */}
         <div className="flex-1 overflow-hidden max-w-full min-w-0">
@@ -854,28 +863,15 @@ export function FileViewerView({
   }
 
   return (
-    <div className="flex flex-col h-full max-w-full overflow-hidden min-w-0 border-t border-zinc-200 dark:border-zinc-800">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 flex items-center justify-between shrink-0 max-w-full min-w-0">
-        {/* Left: Home + Filename */}
-        <div className="flex items-center gap-3 min-w-0 flex-1 max-w-full">
-          <button
-            onClick={goBackToBrowser}
-            className="relative p-2 rounded-lg border shrink-0 bg-linear-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 border-zinc-200 dark:border-zinc-700 hover:from-zinc-200 hover:to-zinc-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800 transition-all"
-            title="Back to files"
-          >
-            <Home className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
-          </button>
-
-          <ChevronRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-
-          <span className="px-2 py-1 text-xs font-medium text-foreground rounded truncate max-w-[200px]">
-            {fileName}
-          </span>
-        </div>
-
-        {/* Right: Actions */}
-        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+      <KortixComputerHeader
+        icon={Home}
+        onIconClick={goBackToBrowser}
+        iconTitle="Back to files"
+        fileName={fileName}
+        actions={
+          <>
           {/* File navigation for multiple files */}
           {hasMultipleFiles && (
             <div className="flex items-center gap-1 mr-1">
@@ -984,7 +980,7 @@ export function FileViewerView({
                 {isLoadingVersions ? (
                   <Loader className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3.5 w-3.5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 )}
@@ -1029,9 +1025,7 @@ export function FileViewerView({
                           setIsLoadingVersionContent(true);
                           clearUnsavedContent(filePath);
 
-                          const normalizedPath = filePath.startsWith('/workspace')
-                            ? filePath
-                            : `/workspace/${filePath.replace(/^\//, '')}`;
+                          const normalizedPath = normalizeWorkspacePath(filePath);
 
                           ['text', 'blob', 'json'].forEach(contentType => {
                             const cacheKey = `${sandboxId}:${normalizedPath}:${contentType}`;
@@ -1123,8 +1117,9 @@ export function FileViewerView({
               )}
             </Button>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Version viewing banner */}
       {selectedVersion && (
@@ -1137,9 +1132,7 @@ export function FileViewerView({
             setIsLoadingVersionContent(true);
             clearUnsavedContent(filePath);
 
-            const normalizedPath = filePath.startsWith('/workspace')
-              ? filePath
-              : `/workspace/${filePath.replace(/^\//, '')}`;
+            const normalizedPath = normalizeWorkspacePath(filePath);
 
             ['text', 'blob', 'json'].forEach(contentType => {
               const cacheKey = `${sandboxId}:${normalizedPath}:${contentType}`;
@@ -1176,9 +1169,7 @@ export function FileViewerView({
                   onClick={() => {
                     setContentError(null);
                     // Trigger refetch by clearing cache
-                    const normalizedPath = filePath.startsWith('/workspace')
-                      ? filePath
-                      : `/workspace/${filePath.replace(/^\//, '')}`;
+                    const normalizedPath = normalizeWorkspacePath(filePath);
                     const contentType = FileCache.getContentTypeFromPath(normalizedPath);
                     const cacheKey = `${sandboxId}:${normalizedPath}:${contentType}`;
                     FileCache.delete(cacheKey);
@@ -1393,3 +1384,4 @@ export function FileViewerView({
     </div>
   );
 }
+

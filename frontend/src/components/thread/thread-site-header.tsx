@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button"
-import { FolderOpen, ExternalLink, Monitor, Copy, Check, Bug, PanelRight, DollarSign } from "lucide-react"
+import { FolderOpen, Upload, PanelRightOpen, PanelRightClose, Copy, Check } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -20,12 +20,6 @@ import { ShareModal } from "@/components/sidebar/share-modal"
 import { useQueryClient } from "@tanstack/react-query";
 import { projectKeys } from "@/hooks/threads/keys";
 import { threadKeys } from "@/hooks/threads/keys";
-import { useAdminRole } from "@/hooks/admin/use-admin-role";
-// import { NotificationBell } from '@/components/notifications/notification-bell';
-import { NotificationDropdown } from '@/components/notifications/novu-notification-dropdown';
-import { DebugModal } from "./debug-modal";
-import { CostModal } from "./cost-modal";
-import { NotificationBell } from "@novu/notification-center";
 
 interface ThreadSiteHeaderProps {
   threadId?: string;
@@ -33,9 +27,9 @@ interface ThreadSiteHeaderProps {
   projectName: string;
   onViewFiles: () => void;
   onToggleSidePanel: () => void;
+  isSidePanelOpen?: boolean;
   onProjectRenamed?: (newName: string) => void;
   isMobileView?: boolean;
-  debugMode?: boolean;
   variant?: 'default' | 'shared';
 }
 
@@ -45,9 +39,9 @@ export function SiteHeader({
   projectName,
   onViewFiles,
   onToggleSidePanel,
+  isSidePanelOpen = false,
   onProjectRenamed,
   isMobileView,
-  debugMode,
   variant = 'default',
 }: ThreadSiteHeaderProps) {
   const pathname = usePathname()
@@ -59,13 +53,9 @@ export function SiteHeader({
   const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
-  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false)
-  const [isCostModalOpen, setIsCostModalOpen] = useState(false)
 
   const isMobile = useIsMobile() || isMobileView
   const updateProjectMutation = useUpdateProject()
-  const { data: adminData } = useAdminRole();
-  const showDebugButtons = adminData?.isAdmin || false;
 
   const openShareModal = () => {
     setShowShareModal(true)
@@ -187,13 +177,6 @@ export function SiteHeader({
         </div>
 
         <div className="flex items-center gap-1 pr-4">
-          {/* Debug mode indicator */}
-          {debugMode && (
-            <div className="bg-amber-500 text-black text-xs px-2 py-0.5 rounded-md mr-2">
-              Debug
-            </div>
-          )}
-
           {/* Show all buttons on both mobile and desktop - responsive tooltips */}
           <TooltipProvider>
             {variant === 'shared' ? (
@@ -218,85 +201,9 @@ export function SiteHeader({
                 onClick={openShareModal}
                 className="h-9 px-3 cursor-pointer gap-2"
               >
-                <ExternalLink className="h-4 w-4" />
+                <Upload className="h-4 w-4" />
                 <span>Share</span>
               </Button>
-            )}
-
-            {/* Debug Mode Button - Only show for admins or in local mode */}
-            {showDebugButtons && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      const url = new URL(window.location.href);
-                      const isDebugActive = url.searchParams.get('debug') === 'true';
-
-                      if (isDebugActive) {
-                        // Remove debug parameter
-                        url.searchParams.delete('debug');
-                      } else {
-                        // Add debug parameter
-                        url.searchParams.set('debug', 'true');
-                      }
-
-                      window.location.href = url.toString();
-                    }}
-                    className={cn(
-                      "h-9 w-9 cursor-pointer",
-                      debugMode && "bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30"
-                    )}
-                  >
-                    <Bug className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side={isMobile ? "bottom" : "bottom"}>
-                  <p>{debugMode ? 'Exit Debug Mode' : 'Enter Debug Mode'}</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Toggle Debug Side Panel Button - Only show for admins or in local mode */}
-            {showDebugButtons && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsDebugModalOpen(true)}
-                    className="h-9 w-9 cursor-pointer"
-                  >
-                    <PanelRight className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side={isMobile ? "bottom" : "bottom"}>
-                  <p>Toggle Debug Panel</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* <NotificationBell /> */}
-            <NotificationDropdown />
-
-            {/* Cost Estimate Button - Only show for admins */}
-            {showDebugButtons && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsCostModalOpen(true)}
-                    className="h-9 w-9 cursor-pointer"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side={isMobile ? "bottom" : "bottom"}>
-                  <p>View Cost & Token Usage</p>
-                </TooltipContent>
-              </Tooltip>
             )}
 
             <Tooltip>
@@ -304,7 +211,7 @@ export function SiteHeader({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={onViewFiles}
+                  onClick={() => onViewFiles()}
                   className="h-9 w-9 cursor-pointer"
                 >
                   <FolderOpen className="h-4 w-4" />
@@ -315,8 +222,7 @@ export function SiteHeader({
               </TooltipContent>
             </Tooltip>
 
-            {/* commented out custom implemented NotificationBell */}
-            {/* <NotificationBell /> */}
+
 
             <Tooltip>
               <TooltipTrigger asChild>
@@ -326,11 +232,15 @@ export function SiteHeader({
                   onClick={onToggleSidePanel}
                   className="h-9 w-9 cursor-pointer"
                 >
-                  <Monitor className="h-4 w-4" />
+                  {isSidePanelOpen ? (
+                    <PanelRightClose className="h-4 w-4" />
+                  ) : (
+                    <PanelRightOpen className="h-4 w-4" />
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side={isMobile ? "bottom" : "bottom"}>
-                <p>Toggle Computer Preview (CMD+I)</p>
+                <p>{isSidePanelOpen ? 'Close' : 'Open'} Kortix Computer (CMD+I)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -344,16 +254,6 @@ export function SiteHeader({
           projectId={projectId}
         />
       )}
-      <DebugModal
-        isOpen={isDebugModalOpen}
-        onClose={() => setIsDebugModalOpen(false)}
-        threadId={threadId}
-      />
-      <CostModal
-        isOpen={isCostModalOpen}
-        onClose={() => setIsCostModalOpen(false)}
-        threadId={threadId}
-      />
     </>
   )
-}
+} 

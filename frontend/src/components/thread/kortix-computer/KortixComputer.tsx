@@ -6,14 +6,14 @@ import React, { memo, useMemo, useCallback, useState, useEffect, useRef } from '
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ApiMessageType } from '@/components/thread/types';
-import {
-  CircleDashed,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Computer,
-  Minimize2,
-  Globe,
+import { 
+  CircleDashed, 
+  X, 
+  ChevronLeft, 
+  ChevronRight, 
+  Computer, 
+  Minimize2, 
+  Globe, 
   Zap,
   FolderOpen,
 } from 'lucide-react';
@@ -38,8 +38,8 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
-import {
-  useKortixComputerStore,
+import { 
+  useKortixComputerStore, 
   ViewType,
   useKortixComputerPendingToolNavIndex,
   useKortixComputerClearPendingToolNav,
@@ -120,18 +120,18 @@ interface ViewToggleProps {
 }
 
 const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFilesTab = true }: ViewToggleProps) {
-  const viewOptions = showFilesTab
+  const viewOptions = showFilesTab 
     ? ['tools', 'files', 'browser'] as const
     : ['tools', 'browser'] as const;
-
+  
   const getViewIndex = (view: ViewType) => {
     if (!showFilesTab && view === 'files') return 0;
     return viewOptions.indexOf(view as any);
   };
-
+  
   const tabWidth = 28; // w-7 = 28px
   const gap = 4; // gap-1 = 4px
-
+  
   return (
     <div className="relative flex items-center gap-1 bg-muted rounded-3xl px-1 py-1">
       <motion.div
@@ -162,7 +162,7 @@ const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFil
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">
-          <p>Actions</p>
+          <span>Actions</span>
         </TooltipContent>
       </Tooltip>
 
@@ -240,93 +240,52 @@ const PanelHeader = memo(function PanelHeader({
 
   if (variant === 'drawer') {
     return (
-      <DrawerHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <DrawerTitle className="text-lg font-medium">
-              {title}
-            </DrawerTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            <ViewToggle currentView={currentView} onViewChange={onViewChange} showFilesTab={showFilesTab} />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-              title="Minimize"
-            >
-              <Minimize2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </DrawerHeader>
-    );
-  }
-
-  if (variant === 'motion') {
-    return (
-      <div className="p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="ml-2">
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                {title}
-              </h2>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {isStreaming && (
-              <div className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-1.5">
-                <CircleDashed className="h-3 w-3 animate-spin" />
-                <span>Running</span>
-              </div>
-            )}
-            <ViewToggle currentView={currentView} onViewChange={onViewChange} showFilesTab={showFilesTab} />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-              title="Minimize"
-            >
-              <Minimize2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="pt-4 pl-4 pr-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="ml-2">
-            <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-              {title}
-            </h2>
-          </div>
-        </div>
+      <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
+        <DrawerTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          {title}
+        </DrawerTitle>
         <div className="flex items-center gap-2">
-          {isStreaming && (
-            <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl">
-              <CircleDashed className="h-3 w-3 animate-spin" />
-              <span>Running</span>
-            </Badge>
-          )}
           <ViewToggle currentView={currentView} onViewChange={onViewChange} showFilesTab={showFilesTab} />
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
             className="h-8 w-8"
-            title={showMinimize ? "Minimize" : "Close"}
+            title="Minimize"
           >
-            {showMinimize ? <Minimize2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+            <Minimize2 className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // Both motion and desktop variants use same fixed height header
+  return (
+    <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
+      <div className="flex items-center gap-3">
+        <h2 className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          {title}
+        </h2>
+        {isStreaming && (
+          <div className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 flex items-center gap-1.5">
+            <CircleDashed className="h-3 w-3 animate-spin" />
+            <span>Running</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <ViewToggle currentView={currentView} onViewChange={onViewChange} showFilesTab={showFilesTab} />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="h-8 w-8"
+          title={showMinimize ? "Minimize" : "Close"}
+        >
+          {showMinimize ? <Minimize2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+        </Button>
       </div>
     </div>
   );
@@ -542,7 +501,7 @@ interface LoadingStateProps {
 
 const LoadingState = memo(function LoadingState({ agentName, onClose, isMobile }: LoadingStateProps) {
   const { activeView, setActiveView } = useKortixComputerStore();
-
+  
   if (isMobile) {
     return (
       <DrawerContent className="h-[85vh]">
@@ -633,13 +592,13 @@ export const KortixComputer = memo(function KortixComputer({
   const sandbox = project?.sandbox;
 
   // Kortix Computer Store
-  const {
-    activeView,
-    filesSubView,
+  const { 
+    activeView, 
+    filesSubView, 
     selectedFilePath,
     setActiveView,
   } = useKortixComputerStore();
-
+  
   // Pending tool navigation from store (triggered by clicking tool in ThreadContent)
   const pendingToolNavIndex = useKortixComputerPendingToolNavIndex();
   const clearPendingToolNav = useKortixComputerClearPendingToolNav();
@@ -714,7 +673,7 @@ export const KortixComputer = memo(function KortixComputer({
   useEffect(() => {
     // Only auto-switch when viewing tools
     if (activeView !== 'tools') return;
-
+    
     const safeIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
     const currentSnapshot = toolCallSnapshots[safeIndex];
     const isCurrentSnapshotBrowserTool = isBrowserTool(currentSnapshot?.toolCall.toolCall?.function_name?.replace(/_/g, '-'));
@@ -970,7 +929,7 @@ export const KortixComputer = memo(function KortixComputer({
       internalNavigate(externalNavigateToIndex, 'external_click');
     }
   }, [externalNavigateToIndex, totalCalls, internalNavigate, setActiveView]);
-
+  
   // Handle pending tool navigation from store (triggered by clicking tool in ThreadContent)
   useEffect(() => {
     if (pendingToolNavIndex !== null && pendingToolNavIndex >= 0 && pendingToolNavIndex < totalCalls) {
@@ -1036,7 +995,7 @@ export const KortixComputer = memo(function KortixComputer({
       }
 
       return (
-        <div className="flex-1 p-4 overflow-auto">
+        <div className="h-full p-4">
           <div className="space-y-4">
             <Skeleton className="h-8 w-32" />
             <Skeleton className="h-20 w-full rounded-md" />
@@ -1047,7 +1006,7 @@ export const KortixComputer = memo(function KortixComputer({
 
     if (!displayToolCall || !displayToolCall.toolCall) {
       return (
-        <div className="flex-1 p-4 overflow-auto">
+        <div className="h-full p-4">
           <div className="space-y-4">
             <Skeleton className="h-8 w-32" />
             <Skeleton className="h-20 w-full rounded-md" />
@@ -1057,23 +1016,21 @@ export const KortixComputer = memo(function KortixComputer({
     }
 
     return (
-      <div className="h-full w-full max-w-full max-h-full overflow-hidden min-w-0 min-h-0" style={{ contain: 'strict' }}>
-        <ToolView
-          toolCall={displayToolCall.toolCall}
-          toolResult={displayToolCall.toolResult}
-          assistantTimestamp={displayToolCall.assistantTimestamp}
-          toolTimestamp={displayToolCall.toolTimestamp}
-          isSuccess={isSuccess}
-          isStreaming={isStreaming}
-          project={project}
-          messages={messages}
-          agentStatus={agentStatus}
-          currentIndex={displayIndex}
-          totalCalls={displayTotalCalls}
-          onFileClick={onFileClick}
-          streamingText={isStreaming ? streamingText : undefined}
-        />
-      </div>
+      <ToolView
+        toolCall={displayToolCall.toolCall}
+        toolResult={displayToolCall.toolResult}
+        assistantTimestamp={displayToolCall.assistantTimestamp}
+        toolTimestamp={displayToolCall.toolTimestamp}
+        isSuccess={isSuccess}
+        isStreaming={isStreaming}
+        project={project}
+        messages={messages}
+        agentStatus={agentStatus}
+        currentIndex={displayIndex}
+        totalCalls={displayTotalCalls}
+        onFileClick={onFileClick}
+        streamingText={isStreaming ? streamingText : undefined}
+      />
     );
   };
 
@@ -1101,7 +1058,7 @@ export const KortixComputer = memo(function KortixComputer({
   const renderBrowserView = () => {
     if (persistentVncIframe) {
       return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col overflow-hidden">
           <BrowserHeader isConnected={true} onRefresh={handleVncRefresh} />
           <div className="flex-1 overflow-hidden grid items-center">
             {persistentVncIframe}
@@ -1111,9 +1068,9 @@ export const KortixComputer = memo(function KortixComputer({
     }
 
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col overflow-hidden">
         <BrowserHeader isConnected={false} />
-        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-900/50">
+        <div className="flex-1 overflow-auto flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-900/50">
           <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
             <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-200 dark:border-zinc-700">
               <Globe className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
@@ -1287,3 +1244,4 @@ export const KortixComputer = memo(function KortixComputer({
     </motion.div>
   );
 });
+

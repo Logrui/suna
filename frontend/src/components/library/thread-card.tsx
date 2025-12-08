@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { listSandboxFiles, getProjects, getSandboxFileContent } from '@/lib/api';
-import { FileViewerModal } from '@/components/thread/file-viewer-modal';
+import { FileViewerModal } from '@/components/thread-old/file-viewer-modal';
 import { FileIcon } from '@/components/library/file-icons';
 import { MarkdownPreview } from '@/components/library/markdown-preview';
 import { FileCard } from '@/components/library/file-card';

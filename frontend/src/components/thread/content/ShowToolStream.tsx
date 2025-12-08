@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CircleDashed } from 'lucide-react';
-import { extractToolNameFromStream } from '@/components/thread/tool-views/xml-parser';
 import { getToolIcon, getUserFriendlyToolName, extractPrimaryParam } from '@/components/thread/utils';
 import { CodeBlockCode } from '@/components/ui/code-block';
 import { getLanguageFromFileName } from '../tool-views/file-operation/_utils';
@@ -91,146 +90,124 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
         stableStartTimeRef.current = Date.now();
     }
 
-    const rawToolName = extractToolNameFromStream(content);
+    // Extract tool name from content - try JSON first, then fallback to simple extraction
+    let rawToolName: string | null = null;
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.function?.name) {
+        rawToolName = parsed.function.name;
+      } else if (parsed.tool_name) {
+        rawToolName = parsed.tool_name;
+      }
+    } catch (e) {
+      // Not JSON, try simple regex extraction
+      const match = content.match(/(?:function|tool)[_\-]?name["']?\s*[:=]\s*["']?([^"'\s]+)/i);
+      if (match) {
+        rawToolName = match[1];
+      }
+    }
     const toolName = getUserFriendlyToolName(rawToolName || '');
     const isEditFile = toolName === 'AI File Edit';
     const isCreateFile = toolName === 'Creating File';
     const isFullFileRewrite = toolName === 'Rewriting File';
 
-    // Clean function call XML content but preserve other HTML/XML
-    const cleanXMLContent = (rawContent: string): { html: string; plainText: string } => {
+    // Extract content from JSON or plain text
+    const extractContent = (rawContent: string): { html: string; plainText: string } => {
         if (!rawContent || typeof rawContent !== 'string') return { html: '', plainText: '' };
 
-        // Remove only function call related XML tags: function_calls, invoke, parameter
-        const cleaned = rawContent
-            .replace(/<function_calls[^>]*>/gi, '')
-            .replace(/<\/function_calls>/gi, '')
-            .replace(/<invoke[^>]*>/gi, '')
-            .replace(/<\/invoke>/gi, '');
-
-        // Extract all parameter content with names
-        const parameterMatches = cleaned.match(/<parameter\s+name=["'][^"']*["']>([\\s\\S]*?)(<\/parameter>|$)/gi);
-        if (parameterMatches) {
-            const paramEntries = parameterMatches.map(match => {
-                const fullMatch = match.match(/<parameter\s+name=["']([^"']*)["']>([\\s\\S]*?)(<\/parameter>|$)/i);
-                if (fullMatch) {
-                    const paramName = fullMatch[1];
-                    const paramValue = fullMatch[2].trim();
-
-                    if (paramValue) {
-                        return {
-                            name: paramName,
-                            value: paramValue,
-                            html: `<strong>${paramName}:</strong> ${paramValue}`,
-                            plainText: `${paramName}: ${paramValue}`
-                        };
-                    }
-                }
-                return null;
-            }).filter(entry => entry !== null);
-
-            if (paramEntries.length > 0) {
-                return {
-                    html: paramEntries.map(entry => entry.html).join('\n\n'),
-                    plainText: paramEntries.map(entry => entry.plainText).join('\n\n')
-                };
+        try {
+            // Try to parse as JSON first
+            const parsed = JSON.parse(rawContent);
+            if (parsed.content) {
+                return { html: parsed.content, plainText: parsed.content };
             }
+            if (parsed.arguments) {
+                const argsStr = typeof parsed.arguments === 'string' 
+                    ? parsed.arguments 
+                    : JSON.stringify(parsed.arguments);
+                return { html: argsStr, plainText: argsStr };
+            }
+        } catch (e) {
+            // Not JSON, return as-is
         }
 
-        // Fallback: remove only parameter tags but preserve other HTML/XML
-        const cleanText = cleaned.replace(/<\/?parameter[^>]*>/gi, '').trim();
-        return { html: cleanText, plainText: cleanText };
+        return { html: rawContent, plainText: rawContent };
     };
 
-    // Extract streaming content with parameter names
+    // Extract streaming content from JSON or plain text
     const streamingContent = React.useMemo(() => {
         if (!content) return { html: '', plainText: '' };
 
-        // For file operations, prioritize showing just the content without param names for cleaner code display
-        if (STREAMABLE_TOOLS.FILE_OPERATIONS.has(toolName || '')) {
-            let paramName: string | null = null;
-            if (isEditFile) paramName = 'code_edit';
-            else if (isCreateFile || isFullFileRewrite) paramName = 'file_contents';
-
-            if (paramName) {
-                const newMatch = content.match(new RegExp(`<parameter\\s+name=["']${paramName}["']>([\\s\\S]*)`, 'i'));
-                if (newMatch && newMatch[1]) {
-                    const cleanContent = newMatch[1].replace(/<\/parameter>[\s\S]*$/, '');
-                    return { html: cleanContent, plainText: cleanContent };
+        try {
+            // Try to parse as JSON first
+            const parsed = JSON.parse(content);
+            
+            // For file operations, extract file_contents or code_edit
+            if (STREAMABLE_TOOLS.FILE_OPERATIONS.has(toolName || '')) {
+                if (isEditFile && parsed.code_edit) {
+                    return { html: parsed.code_edit, plainText: parsed.code_edit };
                 }
-                // Fallback for old formats
-                if (isEditFile) {
-                    const oldMatch = content.match(/<code_edit>([\s\S]*)/i);
-                    if (oldMatch && oldMatch[1]) {
-                        const cleanContent = oldMatch[1].replace(/<\/code_edit>[\s\S]*$/, '');
-                        return { html: cleanContent, plainText: cleanContent };
+                if ((isCreateFile || isFullFileRewrite) && parsed.file_contents) {
+                    return { html: parsed.file_contents, plainText: parsed.file_contents };
+                }
+                if (parsed.arguments) {
+                    const args = typeof parsed.arguments === 'string' ? JSON.parse(parsed.arguments) : parsed.arguments;
+                    if (isEditFile && args.code_edit) {
+                        return { html: args.code_edit, plainText: args.code_edit };
+                    }
+                    if ((isCreateFile || isFullFileRewrite) && args.file_contents) {
+                        return { html: args.file_contents, plainText: args.file_contents };
                     }
                 }
             }
-        }
 
-        // For other tools, show parameter names with values
-        // Command tools - extract command parameter with name
-        if (STREAMABLE_TOOLS.COMMAND_TOOLS.has(toolName || '')) {
-            const commandMatch = content.match(/<parameter\s+name=["']command["']>([\\s\\S]*?)(<\/parameter>|$)/i);
-            if (commandMatch && commandMatch[1]) {
-                const value = commandMatch[1].trim();
-                return {
-                    html: `<strong>command:</strong> ${value}`,
-                    plainText: `command: ${value}`
-                };
-            }
-        }
-
-        // Browser tools - extract parameters with names
-        if (STREAMABLE_TOOLS.BROWSER_TOOLS.has(toolName || '')) {
-            const urlMatch = content.match(/<parameter\s+name=["']url["']>([\\s\\S]*?)(<\/parameter>|$)/i);
-            const actionMatch = content.match(/<parameter\s+name=["']action["']>([\\s\\S]*?)(<\/parameter>|$)/i);
-            const instructionMatch = content.match(/<parameter\s+name=["']instruction["']>([\\s\\S]*?)(<\/parameter>|$)/i);
-
-            if (urlMatch && urlMatch[1]) {
-                const value = urlMatch[1].trim();
-                return { html: `<strong>url:</strong> ${value}`, plainText: `url: ${value}` };
-            }
-            if (actionMatch && actionMatch[1]) {
-                const value = actionMatch[1].trim();
-                return { html: `<strong>action:</strong> ${value}`, plainText: `action: ${value}` };
-            }
-            if (instructionMatch && instructionMatch[1]) {
-                const value = instructionMatch[1].trim();
-                return { html: `<strong>instruction:</strong> ${value}`, plainText: `instruction: ${value}` };
-            }
-        }
-
-        // Web tools - extract parameters with names
-        if (STREAMABLE_TOOLS.WEB_TOOLS.has(toolName || '')) {
-            const queryMatch = content.match(/<parameter\s+name=["']query["']>([\\s\\S]*?)(<\/parameter>|$)/i);
-            const urlMatch = content.match(/<parameter\s+name=["']url["']>([\\s\\S]*?)(<\/parameter>|$)/i);
-
-            if (queryMatch && queryMatch[1]) {
-                const value = queryMatch[1].trim();
-                return { html: `<strong>query:</strong> ${value}`, plainText: `query: ${value}` };
-            }
-            if (urlMatch && urlMatch[1]) {
-                const value = urlMatch[1].trim();
-                return { html: `<strong>url:</strong> ${value}`, plainText: `url: ${value}` };
-            }
-        }
-
-        // For other streamable tools, try to extract with parameter names
-        if (STREAMABLE_TOOLS.OTHER_STREAMABLE.has(toolName || '')) {
-            const commonParams = ['text', 'content', 'data', 'config', 'description', 'prompt'];
-            for (const param of commonParams) {
-                const match = content.match(new RegExp(`<parameter\\s+name=["']${param}["']>([\\s\\S]*?)(<\\/parameter>|$)`, 'i'));
-                if (match && match[1]) {
-                    const value = match[1].trim();
-                    return { html: `<strong>${param}:</strong> ${value}`, plainText: `${param}: ${value}` };
+            // Command tools - extract command
+            if (STREAMABLE_TOOLS.COMMAND_TOOLS.has(toolName || '')) {
+                if (parsed.command) {
+                    return { html: `<strong>command:</strong> ${parsed.command}`, plainText: `command: ${parsed.command}` };
+                }
+                if (parsed.arguments?.command) {
+                    return { html: `<strong>command:</strong> ${parsed.arguments.command}`, plainText: `command: ${parsed.arguments.command}` };
                 }
             }
+
+            // Browser tools
+            if (STREAMABLE_TOOLS.BROWSER_TOOLS.has(toolName || '')) {
+                if (parsed.url) {
+                    return { html: `<strong>url:</strong> ${parsed.url}`, plainText: `url: ${parsed.url}` };
+                }
+                if (parsed.action) {
+                    return { html: `<strong>action:</strong> ${parsed.action}`, plainText: `action: ${parsed.action}` };
+                }
+                if (parsed.instruction) {
+                    return { html: `<strong>instruction:</strong> ${parsed.instruction}`, plainText: `instruction: ${parsed.instruction}` };
+                }
+            }
+
+            // Web tools
+            if (STREAMABLE_TOOLS.WEB_TOOLS.has(toolName || '')) {
+                if (parsed.query) {
+                    return { html: `<strong>query:</strong> ${parsed.query}`, plainText: `query: ${parsed.query}` };
+                }
+                if (parsed.url) {
+                    return { html: `<strong>url:</strong> ${parsed.url}`, plainText: `url: ${parsed.url}` };
+                }
+            }
+
+            // Fallback: return content or arguments as string
+            if (parsed.content) {
+                return { html: parsed.content, plainText: parsed.content };
+            }
+            if (parsed.arguments) {
+                const argsStr = typeof parsed.arguments === 'string' ? parsed.arguments : JSON.stringify(parsed.arguments);
+                return { html: argsStr, plainText: argsStr };
+            }
+        } catch (e) {
+            // Not JSON, return as-is
         }
 
-        // Fallback: clean all XML and return with parameter names
-        return cleanXMLContent(content);
+        // Fallback: return content as-is
+        return { html: content, plainText: content };
     }, [content, toolName, isEditFile, isCreateFile, isFullFileRewrite]);
 
     // Show streaming content for all streamable tools with delayed transitions
@@ -287,7 +264,7 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
                     {/* Tool name header */}
                     <button
                         onClick={() => onToolClick?.(messageId, toolName)}
-                        className={`w-full flex items-center gap-1.5 py-1 px-2 text-xs text-muted-foreground hover:bg-muted/80 transition-all duration-400 ease-in-out cursor-pointer ${shouldShowContent ? 'bg-muted' : 'bg-muted rounded-2xl'
+                        className={`w-full flex items-center gap-1.5 py-1 px-2 text-xs text-muted-foreground hover:bg-muted/80 transition-all duration-400 ease-in-out cursor-pointer ${shouldShowContent ? 'bg-muted' : 'bg-muted rounded-lg'
                             }`}
                     >
                         <div className=' flex items-center justify-center p-1 rounded-sm'>
@@ -382,9 +359,9 @@ export const ShowToolStream: React.FC<ShowToolStreamProps> = ({
         <div className="my-1">
             <button
                 onClick={() => onToolClick?.(messageId, toolName)}
-                className="animate-shimmer inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
+                className="inline-flex items-center gap-1.5 h-8 p-1.5 text-xs text-muted-foreground bg-card hover:bg-card/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50 whitespace-nowrap"
             >
-                <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
+                <div className='flex items-center justify-center'>
                     <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                 </div>
                 <span className="font-mono text-xs text-foreground">{displayName}</span>

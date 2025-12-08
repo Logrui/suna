@@ -1,6 +1,6 @@
 'use client';
 
-import { FileViewerModal } from '@/components/thread/file-viewer-modal';
+import { FileViewerModal } from '@/components/thread-old/file-viewer-modal';
 import { useGlobalFileViewerStore } from '@/stores/global-file-viewer-store';
 
 /**

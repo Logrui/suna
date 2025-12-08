@@ -24,43 +24,22 @@ import { Button } from '@/components/ui/button';
 import { ImageLoader } from './shared/ImageLoader';
 import { ParsedContent } from '../types';
 import { JsonViewer } from './shared/JsonViewer';
+import { KortixComputerHeader } from '../kortix-computer/KortixComputerHeader';
 
 interface BrowserHeaderProps {
   isConnected: boolean;
   onRefresh?: () => void;
   viewToggle?: React.ReactNode;
-  onTakeover?: () => void;
-  agentName?: string;
 }
 
-export const BrowserHeader: React.FC<BrowserHeaderProps> = ({ isConnected, onRefresh, viewToggle, onTakeover, agentName }) => {
+export const BrowserHeader: React.FC<BrowserHeaderProps> = ({ isConnected, onRefresh, viewToggle }) => {
   return (
-    <div className={`flex items-center justify-between px-3 md:px-4 py-2 border border-border ${!isConnected ? 'bg-muted/30 border-b' : ''}`}>
-      <div className="flex items-center gap-2 justify-between min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <div className="relative p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20">
-            <Globe className="w-5 h-5 text-purple-500 dark:text-purple-400" />
-          </div>
-          <div>
-            <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-              Browser
-            </CardTitle>
-          </div>
-        </div>
-        <div className='flex items-center gap-1'>
-          {isConnected && onTakeover && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onTakeover}
-              className="h-7 px-3 text-xs gap-1.5 rounded-full mr-2 hidden sm:flex border-purple-500/20 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/20"
-              title="Open full viewport mode"
-            >
-              <MonitorPlay className="h-3 w-3" />
-              Use {agentName ? `${agentName}'s` : ''} Browser
-            </Button>
-          )}
-          <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl mr-2">
+    <KortixComputerHeader
+      icon={Globe}
+      title="Browser"
+      actions={
+        <>
+          <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500/80 animate-pulse' : 'bg-gray-400'}`}></div>
             <span className="sm:inline">Live Preview</span>
           </Badge>
@@ -76,9 +55,9 @@ export const BrowserHeader: React.FC<BrowserHeaderProps> = ({ isConnected, onRef
               <RefreshCw className="h-3.5 w-3.5" />
             </Button>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 };
 
@@ -268,7 +247,7 @@ export function BrowserToolView({
   };
 
   return (
-    <Card className="gap-0 flex border shadow-none border-t border-b-0 border-x-0 p-0 rounded-none flex-col h-full overflow-scroll bg-card">
+    <Card className="gap-0 flex border-0 shadow-none p-0 py-0 rounded-none flex-col h-full overflow-scroll bg-card">
       <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">

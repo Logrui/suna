@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Fragment, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   File,
@@ -50,6 +50,7 @@ import { cn } from '@/lib/utils';
 import { useKortixComputerStore } from '@/stores/kortix-computer-store';
 import { Badge } from '@/components/ui/badge';
 import { VersionBanner } from './VersionBanner';
+import { KortixComputerHeader } from './KortixComputerHeader';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -65,10 +66,10 @@ export function FileBrowserView({
   projectId,
 }: FileBrowserViewProps) {
   const { session } = useAuth();
-
+  
   // Kortix Computer Store
-  const {
-    currentPath,
+  const { 
+    currentPath, 
     navigateToPath,
     openFile,
     selectedVersion,
@@ -76,7 +77,7 @@ export function FileBrowserView({
     setSelectedVersion,
     clearSelectedVersion,
   } = useKortixComputerStore();
-
+  
   // Download restriction for free tier users
   const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
     featureName: 'files',
@@ -125,6 +126,10 @@ export function FileBrowserView({
     if (typeof path !== 'string' || !path) {
       return '/workspace';
     }
+    // Handle paths that start with "workspace" (without leading /)
+    if (path === 'workspace' || path.startsWith('workspace/')) {
+      return '/' + path;
+    }
     return path.startsWith('/workspace')
       ? path
       : `/workspace/${path.replace(/^\//, '')}`;
@@ -170,10 +175,10 @@ export function FileBrowserView({
   // NOT any nested folder inside a presentation (like images/, assets/, etc.)
   const isPresentationFolder = useCallback((file: FileInfo): boolean => {
     if (!file.is_dir) return false;
-
+    
     // Get the parent path
     const pathParts = file.path.split('/').filter(Boolean);
-
+    
     // Check if parent folder is "presentations" and this is a direct child
     // Path should be like: /workspace/presentations/my_presentation
     // PathParts would be: ["workspace", "presentations", "my_presentation"]
@@ -183,7 +188,7 @@ export function FileBrowserView({
         return true;
       }
     }
-
+    
     return false;
   }, []);
 
@@ -273,7 +278,7 @@ export function FileBrowserView({
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         // Make path relative to the current folder
-        const relativePath = file.path.startsWith(basePath)
+        const relativePath = file.path.startsWith(basePath) 
           ? file.path.slice(basePath.length)
           : file.path.replace(/^\/workspace\//, '');
 
@@ -360,10 +365,10 @@ export function FileBrowserView({
       });
 
       // Generate a meaningful name based on current path
-      const folderName = currentPath === '/workspace'
-        ? 'workspace'
+      const folderName = currentPath === '/workspace' 
+        ? 'workspace' 
         : currentPath.split('/').filter(Boolean).pop() || 'folder';
-
+      
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -469,14 +474,14 @@ export function FileBrowserView({
       }
       return <Folder className="h-9 w-9 text-blue-500" />;
     }
-
+    
     const extension = file.name.split('.').pop()?.toLowerCase();
-
+    
     // Check for specific file types
     if (['md', 'txt', 'doc'].includes(extension || '')) {
       return <FileText className="h-8 w-8 text-muted-foreground" />;
     }
-
+    
     return <File className="h-8 w-8 text-muted-foreground" />;
   }, [isPresentationFolder]);
 
@@ -499,7 +504,7 @@ export function FileBrowserView({
       }
       const data = await response.json();
       setWorkspaceVersions(data.versions || []);
-
+      
       // If there's a selected version, update the date in the global store
       if (selectedVersion && data.versions && data.versions.length > 0) {
         const versionInfo = data.versions.find(v => v.commit === selectedVersion);
@@ -507,7 +512,7 @@ export function FileBrowserView({
           setSelectedVersion(selectedVersion, versionInfo.date);
         }
       }
-
+      
       console.log('[FileBrowserView] Loaded workspace history', { count: (data.versions || []).length });
     } catch (error) {
       console.error('[FileBrowserView] Failed to load workspace history', error);
@@ -551,10 +556,10 @@ export function FileBrowserView({
       if (!response.ok) {
         throw new Error(`Failed to fetch files at commit: ${response.statusText}`);
       }
-
+      
       const data = await response.json();
       setVersionFiles(data.files || []);
-
+      
       if (showToast && versionDate) {
         toast.success(`Viewing workspace from ${new Date(versionDate).toLocaleDateString()}`);
       }
@@ -646,49 +651,17 @@ export function FileBrowserView({
   }, [revertCommitInfo, sandboxId, session?.access_token, refetchFiles, clearSelectedVersion]);
 
   return (
-    <div className="flex flex-col h-full max-w-full overflow-hidden min-w-0 border-t border-zinc-200 dark:border-zinc-800">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header with Breadcrumb Navigation */}
-      <div className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 flex items-center justify-between flex-shrink-0 max-w-full min-w-0">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-3 overflow-x-auto min-w-0 scrollbar-hide max-w-full">
-          <button
-            onClick={navigateHome}
-            className="relative p-2 rounded-lg border flex-shrink-0 bg-gradient-to-br from-zinc-100 to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 border-zinc-200 dark:border-zinc-700 hover:from-zinc-200 hover:to-zinc-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800 transition-all"
-            title="Home"
-          >
-            <Home className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
-          </button>
-
-          {currentPath === '/workspace' ? (
-            <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-              Files
-            </span>
-          ) : (
-            <div className="flex items-center gap-1.5 min-w-0">
-              {getBreadcrumbSegments(currentPath).map((segment, index) => (
-                <Fragment key={segment.path}>
-                  {index > 0 && (
-                    <span className="text-zinc-400 dark:text-zinc-600">/</span>
-                  )}
-                  <button
-                    onClick={() => navigateToBreadcrumb(segment.path)}
-                    className={cn(
-                      "text-base transition-colors truncate max-w-[150px]",
-                      segment.isLast
-                        ? "text-zinc-900 dark:text-zinc-100 font-medium"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                    )}
-                  >
-                    {segment.name}
-                  </button>
-                </Fragment>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+      <KortixComputerHeader
+        icon={Home}
+        onIconClick={navigateHome}
+        iconTitle="Home"
+        title={currentPath === '/workspace' ? 'Files' : undefined}
+        breadcrumbs={currentPath !== '/workspace' ? getBreadcrumbSegments(currentPath) : undefined}
+        onBreadcrumbClick={navigateToBreadcrumb}
+        actions={
+          <>
           {/* Download progress */}
           {downloadProgress && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-2">
@@ -746,7 +719,7 @@ export function FileBrowserView({
                 {isLoadingVersions ? (
                   <Loader className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3.5 w-3.5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 )}
@@ -845,12 +818,13 @@ export function FileBrowserView({
             onChange={processUpload}
             disabled={isUploading}
           />
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Version viewing banner */}
       {selectedVersion && (
-        <VersionBanner
+        <VersionBanner 
           versionDate={selectedVersionDate || undefined}
           onReturnToCurrent={() => loadFilesAtVersion(null)}
         />
@@ -921,14 +895,14 @@ export function FileBrowserView({
                 >
                   {/* Presentation badge */}
                   {isPresentationFolder(file) && (
-                    <Badge
-                      variant="secondary"
+                    <Badge 
+                      variant="secondary" 
                       className="absolute top-1 right-1 text-[10px] px-1.5 py-0 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
                     >
                       Presentation
                     </Badge>
                   )}
-
+                  
                   <div className="w-12 h-12 flex items-center justify-center mb-1 flex-shrink-0">
                     {getFileIcon(file)}
                   </div>
@@ -1031,3 +1005,4 @@ export function FileBrowserView({
     </div>
   );
 }
+

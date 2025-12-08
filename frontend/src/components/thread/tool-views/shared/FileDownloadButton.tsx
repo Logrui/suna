@@ -31,7 +31,7 @@ interface FileDownloadButtonProps {
  * A reusable file download button that:
  * - For markdown files: Shows a dropdown with PDF, Word, HTML, Markdown export options
  * - For other files: Shows a simple download button
- *
+ * 
  * This component is used in both FileOperationToolView and FileViewerView
  * to ensure consistent download/export behavior.
  */
@@ -43,7 +43,7 @@ export function FileDownloadButton({
   getHtmlContent,
 }: FileDownloadButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
-
+  
   // Download restriction for free tier users
   const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
     featureName: 'files',
@@ -92,7 +92,7 @@ export function FileDownloadButton({
     setIsExporting(true);
     try {
       const baseFileName = fileName.replace(/\.(md|markdown)$/i, '');
-
+      
       if (format === 'markdown') {
         // For markdown format, just download the raw content
         const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -109,7 +109,7 @@ export function FileDownloadButton({
         // For PDF, Word, HTML - get HTML content
         // If getHtmlContent is provided (from editor), use it; otherwise convert markdown to HTML
         const htmlContent = getHtmlContent ? getHtmlContent() : await marked(content);
-
+        
         await exportDocument({
           content: htmlContent,
           fileName: baseFileName,

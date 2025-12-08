@@ -31,18 +31,18 @@ export function useProjectRealtime(projectId?: string) {
           filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
-          
+
           // Check if sandbox data was updated
           const newData = payload.new as Project;
           const oldData = payload.old as Project;
-          if (newData?.sandbox && (!oldData?.sandbox || 
-              JSON.stringify(newData.sandbox) !== JSON.stringify(oldData.sandbox))) {
-            
+          if (newData?.sandbox && (!oldData?.sandbox ||
+            JSON.stringify(newData.sandbox) !== JSON.stringify(oldData.sandbox))) {
+
             // Invalidate specific project query
             queryClient.invalidateQueries({
               queryKey: threadKeys.project(projectId)
             });
-            
+
           }
         }
       )

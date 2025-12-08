@@ -1,5 +1,6 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, memo, useMemo } from 'react';
 import { CircleDashed, CheckCircle, AlertTriangle, Info, CheckCircle2, Clock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { UnifiedMessage, ParsedContent, ParsedMetadata } from '@/components/thread/types';
 import { FileAttachmentGrid } from '@/components/thread/file-attachment';
 import { useFilePreloader } from '@/hooks/files';
@@ -19,7 +20,7 @@ import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
 import { TaskCompletedFeedback } from '@/components/thread/tool-views/shared/TaskCompletedFeedback';
 import { PromptExamples } from '@/components/shared/prompt-examples';
-import {
+import { 
     renderAssistantMessage,
     extractTextFromPartialJson,
     extractTextFromStreamingAskComplete,
@@ -31,8 +32,8 @@ import {
 
 // Configuration for prompt/answer rendering
 const PROMPT_SAMPLES_CONFIG = {
-    enableAskSamples: true,
-    enableCompleteSamples: true,
+  enableAskSamples: true,
+  enableCompleteSamples: true,
 } as const;
 
 // Helper function to render attachments (keeping original implementation for now)
@@ -72,7 +73,6 @@ export interface ThreadContentProps {
     streamHookStatus?: string; // Add this prop
     sandboxId?: string; // Add sandboxId prop
     project?: Project; // Add project prop
-    debugMode?: boolean; // Add debug mode parameter
     isPreviewMode?: boolean;
     agentName?: string;
     agentAvatar?: React.ReactNode;
@@ -83,7 +83,7 @@ export interface ThreadContentProps {
     onPromptFill?: (message: string) => void; // Handler for filling ChatInput with prompt text from samples
 }
 
-export const ThreadContent: React.FC<ThreadContentProps> = ({
+export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadContent({
     messages,
     streamingTextContent = "",
     streamingToolCall,
@@ -98,21 +98,21 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     streamHookStatus = "idle",
     sandboxId,
     project,
-    debugMode = false,
     isPreviewMode = false,
     agentName = 'Suna',
-    agentAvatar = <KortixLogo size={16} />,
+    agentAvatar = <KortixLogo size={14} />,
     emptyStateComponent,
     threadMetadata,
     scrollContainerRef,
     threadId,
     onPromptFill,
-}) => {
+}) {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const latestMessageRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const [shouldJustifyToTop, setShouldJustifyToTop] = useState(false);
     const { session } = useAuth();
+    const t = useTranslations();
 
     // React Query file preloader
     const { preloadFiles } = useFilePreloader();
@@ -124,8 +124,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
     // In playback mode, we use visibleMessages instead of messages
     const displayMessages = readOnly && visibleMessages ? visibleMessages : messages;
 
-    // Helper function to get agent info robustly
-    const getAgentInfo = useCallback(() => {
+    // Memoized agent info - computed once when dependencies change
+    const agentInfo = useMemo(() => {
         // First check thread metadata for is_agent_builder flag
         if (threadMetadata?.is_agent_builder) {
             return {
@@ -159,7 +159,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                 name: recentAssistantWithAgent.agents.name,
                 avatar: (
                     <div className="h-5 w-5 flex items-center justify-center rounded text-xs">
-                        <KortixLogo size={16} />
+                        <KortixLogo size={14} />
                     </div>
                 )
             };
@@ -450,21 +450,6 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                             }
                                         })();
 
-                                        // In debug mode, display raw message content
-                                        if (debugMode) {
-                                            return (
-                                                <div key={group.key} className="flex justify-end">
-                                                    <div className="flex max-w-[85%] rounded-2xl bg-card px-4 py-3 break-words overflow-hidden">
-                                                        <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto min-w-0 flex-1">
-                                                            {typeof message.content === 'string'
-                                                                ? message.content
-                                                                : JSON.stringify(message.content, null, 2)}
-                                                        </pre>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-
                                         // Extract attachments from the message content
                                         const attachmentsMatch = messageContent.match(/\[Uploaded File: (.*?)\]/g);
                                         const attachments = attachmentsMatch
@@ -479,10 +464,10 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                         return (
                                             <div key={group.key} className="flex justify-end">
-                                                <div className="flex max-w-[85%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
-                                                    <div className="space-y-3 min-w-0 flex-1">
+                                                <div className="flex max-w-[90%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
+                                                    <div className="space-y-2 min-w-0 flex-1">
                                                         {cleanContent && (
-                                                            <ComposioUrlDetector content={cleanContent} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
+                                                            <ComposioUrlDetector content={cleanContent} />
                                                         )}
 
                                                         {/* Use the helper function to render user attachments */}
@@ -497,44 +482,17 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center">
                                                         <div className="rounded-md flex items-center justify-center relative">
-                                                            {getAgentInfo().avatar}
+                                                            {agentInfo.avatar}
                                                         </div>
                                                         <p className='ml-2 text-sm text-muted-foreground'>
-                                                            {getAgentInfo().name}
+                                                            {agentInfo.name}
                                                         </p>
                                                     </div>
 
                                                     {/* Message content - ALL messages in the group */}
-                                                    <div className="flex max-w-[90%] text-sm break-words overflow-hidden">
+                                                    <div className="flex max-w-[90%] break-words overflow-hidden">
                                                         <div className="space-y-2 min-w-0 flex-1">
                                                             {(() => {
-                                                                // In debug mode, just show raw messages content
-                                                                if (debugMode) {
-                                                                    return group.messages.map((message, msgIndex) => {
-                                                                        const msgKey = message.message_id || `raw-msg-${msgIndex}`;
-                                                                        return (
-                                                                            <div key={msgKey} className="mb-4">
-                                                                                <div className="text-xs font-medium text-muted-foreground mb-1">
-                                                                                    Type: {message.type} | ID: {message.message_id || 'no-id'}
-                                                                                </div>
-                                                                                <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto p-2 border border-border rounded-md bg-muted/30">
-                                                                                    {JSON.stringify(message.content, null, 2)}
-                                                                                </pre>
-                                                                                {message.metadata && message.metadata !== '{}' && (
-                                                                                    <div className="mt-2">
-                                                                                        <div className="text-xs font-medium text-muted-foreground mb-1">
-                                                                                            Metadata:
-                                                                                        </div>
-                                                                                        <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto p-2 border border-border rounded-md bg-muted/30">
-                                                                                            {JSON.stringify(message.metadata, null, 2)}
-                                                                                        </pre>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                        );
-                                                                    });
-                                                                }
-
                                                                 const toolResultsMap = new Map<string | null, UnifiedMessage[]>();
                                                                 group.messages.forEach(msg => {
                                                                     if (msg.type === 'tool') {
@@ -552,11 +510,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                 // Check if this is the last group
                                                                 const isLastGroup = groupIndex === finalGroupedMessages.length - 1;
-
+                                                                
                                                                 // Find the last assistant message in this group
                                                                 const assistantMessages = group.messages.filter(m => m.type === 'assistant');
-                                                                const lastAssistantMessageId = assistantMessages.length > 0
-                                                                    ? assistantMessages[assistantMessages.length - 1].message_id
+                                                                const lastAssistantMessageId = assistantMessages.length > 0 
+                                                                    ? assistantMessages[assistantMessages.length - 1].message_id 
                                                                     : null;
 
                                                                 group.messages.forEach((message, msgIndex) => {
@@ -574,16 +532,17 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                             sandboxId,
                                                                             project,
                                                                             isLatestMessage,
+                                                                            t,
                                                                             threadId,
                                                                             onPromptFill,
                                                                         });
-
+                                                                        
                                                                         // Skip if no content rendered
                                                                         if (!renderedContent) return;
 
                                                                         elements.push(
                                                                             <div key={msgKey} className={assistantMessageCount > 0 ? "mt-4" : ""}>
-                                                                                <div className="prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden">
+                                                                                <div className="break-words overflow-hidden">
                                                                                     {renderedContent}
                                                                                 </div>
                                                                             </div>
@@ -603,7 +562,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         // Detect XML tags in streaming content
                                                                         let detectedTag: string | null = null;
                                                                         let tagStartIndex = -1;
-
+                                                                        
                                                                         // Check for ask/complete tags (XML format)
                                                                         const askIndex = streamingTextContent.indexOf('<ask');
                                                                         const completeIndex = streamingTextContent.indexOf('<complete');
@@ -650,7 +609,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         return (
                                                                             <>
                                                                                 {textBeforeTag && (
-                                                                                    <ComposioUrlDetector content={textBeforeTag} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
+                                                                                    <ComposioUrlDetector content={textBeforeTag} />
                                                                                 )}
 
                                                                                 {detectedTag && isAskOrComplete ? (
@@ -659,9 +618,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                         const streamingContent = textToRender.substring(tagStartIndex);
                                                                                         const extractedText = extractTextFromStreamingAskComplete(streamingContent, detectedTag as 'ask' | 'complete');
                                                                                         return (
-                                                                                            <ComposioUrlDetector
-                                                                                                content={extractedText}
-                                                                                                className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
+                                                                                            <ComposioUrlDetector 
+                                                                                                content={extractedText} 
                                                                                             />
                                                                                         );
                                                                                     })()
@@ -730,37 +688,36 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                         const textToRender = streamingText || '';
                                                                         const textBeforeTag = detectedTag ? textToRender.substring(0, tagStartIndex) : textToRender;
-
+                                                                        
                                                                         // For ask and complete, render as markdown directly (not as tool stream)
                                                                         const isAskOrComplete = detectedTag === 'ask' || detectedTag === 'complete';
 
                                                                         return (
                                                                             <>
                                                                                 {textBeforeTag && (
-                                                                                    <ComposioUrlDetector content={textBeforeTag} className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-wrap-anywhere" />
-                                                                                )}
+                                                                                            <ComposioUrlDetector content={textBeforeTag} />
+                                                                                        )}
 
-                                                                                {detectedTag && isAskOrComplete ? (
-                                                                                    // Extract and render just the text content (strip all XML)
-                                                                                    (() => {
-                                                                                        const streamingContent = textToRender.substring(tagStartIndex);
-                                                                                        const extractedText = extractTextFromStreamingAskComplete(streamingContent, detectedTag as 'ask' | 'complete');
-                                                                                        return (
-                                                                                            <ComposioUrlDetector
-                                                                                                content={extractedText}
-                                                                                                className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
+                                                                                        {detectedTag && isAskOrComplete ? (
+                                                                                            // Extract and render just the text content (strip all XML)
+                                                                                            (() => {
+                                                                                                const streamingContent = textToRender.substring(tagStartIndex);
+                                                                                                const extractedText = extractTextFromStreamingAskComplete(streamingContent, detectedTag as 'ask' | 'complete');
+                                                                                                return (
+                                                                                                    <ComposioUrlDetector 
+                                                                                                        content={extractedText} 
+                                                                                                    />
+                                                                                                );
+                                                                                            })()
+                                                                                        ) : detectedTag ? (
+                                                                                            <ShowToolStream
+                                                                                                content={textToRender.substring(tagStartIndex)}
+                                                                                                messageId="streamingTextContent"
+                                                                                                onToolClick={handleToolClick}
+                                                                                                showExpanded={true}
+                                                                                                startTime={Date.now()} // Tool just started now
                                                                                             />
-                                                                                        );
-                                                                                    })()
-                                                                                ) : detectedTag ? (
-                                                                                    <ShowToolStream
-                                                                                        content={textToRender.substring(tagStartIndex)}
-                                                                                        messageId="streamingTextContent"
-                                                                                        onToolClick={handleToolClick}
-                                                                                        showExpanded={true}
-                                                                                        startTime={Date.now()} // Tool just started now
-                                                                                    />
-                                                                                ) : null}
+                                                                                        ) : null}
                                                                             </>
                                                                         );
                                                                     })()}
@@ -768,25 +725,25 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                             )}
 
                                                             {/* Show streaming tool call indicator OR streaming ask/complete text inside the last assistant group */}
-                                                            {groupIndex === finalGroupedMessages.length - 1 &&
-                                                                !readOnly &&
-                                                                streamingToolCall &&
+                                                            {groupIndex === finalGroupedMessages.length - 1 && 
+                                                                !readOnly && 
+                                                                streamingToolCall && 
                                                                 (() => {
                                                                     // Check if this is ask/complete - render as text instead of tool indicator
                                                                     const parsedMetadata = safeJsonParse<ParsedMetadata>(streamingToolCall.metadata, {});
                                                                     const toolCalls = parsedMetadata.tool_calls || [];
-
+                                                                    
                                                                     const askOrCompleteTool = toolCalls.find(tc => {
                                                                         const toolName = tc.function_name?.replace(/_/g, '-').toLowerCase() || '';
                                                                         return toolName === 'ask' || toolName === 'complete';
                                                                     });
-
+                                                                    
                                                                     // For ask/complete, render the text content directly
                                                                     if (askOrCompleteTool) {
                                                                         // Check if the last assistant message already has completed ask/complete
                                                                         const currentGroupAssistantMessages = group.messages.filter(m => m.type === 'assistant');
-                                                                        const lastAssistantMessage = currentGroupAssistantMessages.length > 0
-                                                                            ? currentGroupAssistantMessages[currentGroupAssistantMessages.length - 1]
+                                                                        const lastAssistantMessage = currentGroupAssistantMessages.length > 0 
+                                                                            ? currentGroupAssistantMessages[currentGroupAssistantMessages.length - 1] 
                                                                             : null;
                                                                         if (lastAssistantMessage) {
                                                                             const lastMsgMetadata = safeJsonParse<ParsedMetadata>(lastAssistantMessage.metadata, {});
@@ -800,7 +757,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                 return null;
                                                                             }
                                                                         }
-
+                                                                        
                                                                         // Extract text from arguments
                                                                         const toolArgs: any = askOrCompleteTool.arguments;
                                                                         let askCompleteText = '';
@@ -816,31 +773,30 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                 askCompleteText = toolArgs?.text || '';
                                                                             }
                                                                         }
-
+                                                                        
                                                                         const toolName = askOrCompleteTool.function_name?.replace(/_/g, '-').toLowerCase() || '';
                                                                         const textToShow = askCompleteText || (toolName === 'ask' ? 'Asking...' : 'Completing...');
-
+                                                                        
                                                                         return (
                                                                             <div className="mt-2">
-                                                                                <ComposioUrlDetector
-                                                                                    content={textToShow}
-                                                                                    className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
+                                                                                <ComposioUrlDetector 
+                                                                                    content={textToShow} 
                                                                                 />
                                                                             </div>
                                                                         );
                                                                     }
-
+                                                                    
                                                                     // For non-ask/complete tools, check if any tool calls exist
                                                                     const isAskOrComplete = toolCalls.some(tc => {
                                                                         const toolName = tc.function_name?.replace(/_/g, '-').toLowerCase() || '';
                                                                         return toolName === 'ask' || toolName === 'complete';
                                                                     });
-
+                                                                    
                                                                     // Don't render tool call indicator for ask/complete - they're handled above
                                                                     if (isAskOrComplete) {
                                                                         return null;
                                                                     }
-
+                                                                    
                                                                     return (
                                                                         <div className="mt-2">
                                                                             <div className="my-1">
@@ -850,21 +806,22 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                         const firstToolCall = toolCalls[0];
                                                                                         const toolName = firstToolCall.function_name?.replace(/_/g, '-') || '';
                                                                                         const IconComponent = getToolIcon(toolName);
-
+                                                                                        
                                                                                         // Extract display parameter (same logic as rendered version)
                                                                                         let paramDisplay = '';
                                                                                         if (firstToolCall.arguments) {
-                                                                                            const args = typeof firstToolCall.arguments === 'string'
+                                                                                            const args = typeof firstToolCall.arguments === 'string' 
                                                                                                 ? safeJsonParse<Record<string, any>>(firstToolCall.arguments, {})
                                                                                                 : firstToolCall.arguments;
                                                                                             paramDisplay = (args as any)?.file_path || (args as any)?.command || (args as any)?.query || (args as any)?.url || '';
                                                                                         }
-
+                                                                                        
                                                                                         return (
-                                                                                            <div className="inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted rounded-lg border border-neutral-200 dark:border-neutral-700/50">
-                                                                                                <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
-                                                                                                    <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
-                                                                                                </div>
+                                                                                            <button
+                                                                                                onClick={() => handleToolClick(streamingToolCall.message_id || null, toolName)}
+                                                                                                className="inline-flex items-center gap-1.5 h-8 p-1.5 text-xs text-muted-foreground bg-card hover:bg-card/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50 whitespace-nowrap"
+                                                                                            >
+                                                                                                <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                                                                                                 <span className="font-mono text-xs text-foreground">
                                                                                                     {getUserFriendlyToolName(toolName)}
                                                                                                 </span>
@@ -873,18 +830,19 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                                                         {paramDisplay}
                                                                                                     </span>
                                                                                                 )}
-                                                                                            </div>
+                                                                                            </button>
                                                                                         );
                                                                                     }
-
+                                                                                    
                                                                                     // Fallback if no tool calls found
                                                                                     return (
-                                                                                        <div className="inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted rounded-lg border border-neutral-200 dark:border-neutral-700/50">
-                                                                                            <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
-                                                                                                <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
-                                                                                            </div>
+                                                                                        <button
+                                                                                            onClick={() => handleToolClick(streamingToolCall.message_id || null, 'unknown')}
+                                                                                            className="inline-flex items-center gap-1.5 h-8 p-1.5 text-xs text-muted-foreground bg-card hover:bg-card/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50 whitespace-nowrap"
+                                                                                        >
+                                                                                            <CircleDashed className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0 animate-spin animation-duration-2000" />
                                                                                             <span className="font-mono text-xs text-foreground">Using Tool</span>
-                                                                                        </div>
+                                                                                        </button>
                                                                                     );
                                                                                 })()}
                                                                             </div>
@@ -893,16 +851,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                 })()}
 
                                                             {/* Show loader when agent is running but not streaming, inside the last assistant group */}
-                                                            {groupIndex === finalGroupedMessages.length - 1 &&
-                                                                !readOnly &&
-                                                                (agentStatus === 'running' || agentStatus === 'connecting') &&
-                                                                !streamingTextContent &&
+                                                            {groupIndex === finalGroupedMessages.length - 1 && 
+                                                                !readOnly && 
+                                                                (agentStatus === 'running' || agentStatus === 'connecting') && 
+                                                                !streamingTextContent && 
                                                                 !streamingToolCall &&
                                                                 (streamHookStatus === 'streaming' || streamHookStatus === 'connecting') && (
-                                                                    <div className="mt-2">
-                                                                        <AgentLoader />
-                                                                    </div>
-                                                                )}
+                                                                <div className="mt-2">
+                                                                    <AgentLoader />
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -923,10 +881,10 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                             {/* Logo positioned above the loader */}
                                             <div className="flex items-center">
                                                 <div className="rounded-md flex items-center justify-center">
-                                                    {getAgentInfo().avatar}
+                                                    {agentInfo.avatar}
                                                 </div>
                                                 <p className='ml-2 text-sm text-muted-foreground'>
-                                                    {getAgentInfo().name}
+                                                    {agentInfo.name}
                                                 </p>
                                             </div>
 
@@ -943,10 +901,10 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         {/* Logo positioned above the tool call */}
                                         <div className="flex justify-start">
                                             <div className="rounded-md flex items-center justify-center">
-                                                {getAgentInfo().avatar}
+                                                {agentInfo.avatar}
                                             </div>
                                             <p className='ml-2 text-sm text-muted-foreground'>
-                                                {getAgentInfo().name}
+                                                {agentInfo.name}
                                             </p>
                                         </div>
 
@@ -970,10 +928,10 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                         {/* Logo positioned above the streaming indicator */}
                                         <div className="flex justify-start">
                                             <div className="rounded-md flex items-center justify-center">
-                                                {getAgentInfo().avatar}
+                                                {agentInfo.avatar}
                                             </div>
                                             <p className='ml-2 text-sm text-muted-foreground'>
-                                                {getAgentInfo().name}
+                                                {agentInfo.name}
                                             </p>
                                         </div>
 
@@ -997,6 +955,6 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
             {/* No scroll button needed with flex-column-reverse */}
         </>
     );
-};
+});
 
 export default ThreadContent; 

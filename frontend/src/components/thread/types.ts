@@ -82,14 +82,6 @@ export interface ApiMessageType extends Omit<BaseApiMessageType, 'type'> {
 }
 
 // Thread page-specific types
-export interface StreamingToolCall {
-  id?: string;
-  name?: string;
-  arguments?: string;
-  index?: number;
-  xml_tag_name?: string;
-}
-
 export type AgentStatus = 'idle' | 'running' | 'connecting' | 'error';
 
 // Re-export existing types

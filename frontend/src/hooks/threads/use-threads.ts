@@ -1,7 +1,8 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseQueryResult, keepPreviousData } from "@tanstack/react-query";
 import { threadKeys } from "./keys";
 import { Thread, updateThread, toggleThreadPublicStatus, deleteThread, getThread } from "./utils";
-import { getThreads } from "@/lib/api/threads";
+import { getThreadsPaginated, type ThreadsResponse } from "@/lib/api/threads";
+import { useMemo } from "react";
 
 export const useThreadQuery = (threadId: string, options?) => {
   return useQuery<Thread>({
@@ -13,16 +14,30 @@ export const useThreadQuery = (threadId: string, options?) => {
   });
 };
 
-export const useThreads = (options?) => {
-  return useQuery<Thread[]>({
-    queryKey: threadKeys.lists(),
+/**
+ * Unified threads hook that uses paginated API.
+ * Uses keepPreviousData to show current page while loading new page.
+ */
+export const useThreads = (options?: {
+  page?: number;
+  limit?: number;
+  enabled?: boolean;
+}) => {
+  const page = options?.page ?? 1;
+  const limit = options?.limit ?? 20;
+  const queryKey = [...threadKeys.lists(), 'paginated', page, limit];
+
+  return useQuery<ThreadsResponse>({
+    queryKey,
     queryFn: async () => {
-      const data = await getThreads();
-      return data as Thread[];
+      return await getThreadsPaginated(undefined, page, limit);
     },
     staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
-    ...options,
+    // Keep showing current page data while loading next page
+    placeholderData: keepPreviousData,
+    enabled: options?.enabled !== false,
   });
 };
 
@@ -57,12 +72,22 @@ export const useDeleteThreadMutation = () => {
 };
 
 export const useThreadsForProject = (projectId: string, options?) => {
-  return useQuery<Thread[]>({
-    queryKey: threadKeys.byProject(projectId),
-    queryFn: () => getThreads(projectId),
-    enabled: !!projectId,
-    retry: 1,
-    ...options,
+  // Use paginated API and filter client-side for project-specific threads
+  const threadsQuery = useThreads({
+    page: 1,
+    limit: 20, // Reduced from 50 to 20 to reduce API response size
+    enabled: !!projectId && (options?.enabled !== false),
   });
+
+  const projectThreads = useMemo(() => {
+    if (!threadsQuery.data?.threads) return [];
+    return threadsQuery.data.threads.filter((thread: Thread) => thread.project_id === projectId);
+  }, [threadsQuery.data, projectId]);
+
+  return {
+    data: projectThreads,
+    isLoading: threadsQuery.isLoading,
+    error: threadsQuery.error,
+  };
 };
 

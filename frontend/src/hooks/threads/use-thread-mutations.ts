@@ -1,9 +1,9 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  createThread, 
-  addUserMessage 
+import {
+  createThread,
+  addUserMessage
 } from '@/lib/api/threads';
 import { toast } from 'sonner';
 import { handleApiError } from '@/lib/error-handler';
@@ -27,7 +27,7 @@ export const useCreateThread = () => {
 
 export const useAddUserMessage = () => {
   return useMutation({
-    mutationFn: ({ threadId, content }: { threadId: string; content: string }) => 
+    mutationFn: ({ threadId, content }: { threadId: string; content: string }) =>
       addUserMessage(threadId, content),
     onError: (error) => {
       handleApiError(error, {
@@ -46,15 +46,15 @@ interface DeleteThreadVariables {
 
 export const useDeleteThread = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<void, Error, DeleteThreadVariables>({
     mutationFn: async ({ threadId, sandboxId }: DeleteThreadVariables) => {
       return await deleteThread(threadId, sandboxId);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: threadKeys.lists() });
-      await queryClient.invalidateQueries({ queryKey: threadKeys.limit() });
-      await queryClient.refetchQueries({ queryKey: threadKeys.limit() });
+      // Invalidate account state to refresh thread limits
+      await queryClient.invalidateQueries({ queryKey: ['account-state'] });
     },
   });
 };
@@ -67,7 +67,7 @@ interface DeleteMultipleThreadsVariables {
 
 export const useDeleteMultipleThreads = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<{ successful: string[]; failed: string[] }, Error, DeleteMultipleThreadsVariables>({
     mutationFn: async ({ threadIds, threadSandboxMap, onProgress }: DeleteMultipleThreadsVariables) => {
       let completedCount = 0;
@@ -84,7 +84,7 @@ export const useDeleteMultipleThreads = () => {
           }
         })
       );
-      
+
       return {
         successful: results.filter(r => r.success).map(r => r.threadId),
         failed: results.filter(r => !r.success).map(r => r.threadId),
@@ -92,8 +92,8 @@ export const useDeleteMultipleThreads = () => {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: threadKeys.lists() });
-      await queryClient.invalidateQueries({ queryKey: threadKeys.limit() });
-      await queryClient.refetchQueries({ queryKey: threadKeys.limit() });
+      // Invalidate account state to refresh thread limits
+      await queryClient.invalidateQueries({ queryKey: ['account-state'] });
     },
   });
 };

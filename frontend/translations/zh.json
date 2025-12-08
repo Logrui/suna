@@ -38,6 +38,7 @@
       "plan": "计划",
       "billing": "账单",
       "usage": "使用情况",
+      "referrals": "推荐",
       "knowledgeBase": "知识库",
       "integrations": "集成",
       "envManager": "环境管理器"
@@ -45,6 +46,14 @@
     "general": {
       "title": "个人资料设置",
       "description": "管理你的账户信息",
+      "profilePicture": {
+        "title": "头像",
+        "upload": "上传头像",
+        "hint": "JPG、PNG或GIF。最大5MB。",
+        "invalidType": "请选择图片文件",
+        "tooLarge": "图片必须小于5MB",
+        "uploadFailed": "上传头像失败"
+      },
       "name": "姓名",
       "email": "邮箱",
       "namePlaceholder": "输入你的姓名",
@@ -76,6 +85,13 @@
         "billingRemoved": "所有账单数据将被移除",
         "scheduled30Days": "你的账户将在30天后安排删除",
         "gracePeriod": "你可以在30天宽限期内随时取消此请求。30天后，你的所有数据将被永久删除且无法恢复。",
+        "chooseDeletionType": "选择删除类型：",
+        "gracePeriodOption": "30天宽限期",
+        "gracePeriodDescription": "你的账户将在30天后安排删除。你可以在宽限期内随时取消此请求。",
+        "immediateOption": "立即删除",
+        "immediateDescription": "你的账户和所有数据将立即永久删除。此操作无法撤销。",
+        "warningImmediate": "此操作无法撤销",
+        "warningGracePeriod": "此操作在30天后无法撤销",
         "confirmText": "输入删除以确认",
         "confirmPlaceholder": "delete",
         "keepAccount": "保留账户",
@@ -84,9 +100,78 @@
         "cancelDeletion": "取消删除"
       }
     },
+    "referrals": {
+      "title": "推荐计划",
+      "description": "与朋友分享您的推荐链接。当他们注册并创建账户时，您将获得",
+      "creditsPerReferral": "100个永久积分",
+      "youEarn": "您获得",
+      "friendGets": "您的朋友获得",
+      "maxEarnable": "通过推荐最多可获得：",
+      "maxCredits": "$100积分",
+      "yourReferralCode": "您的推荐码",
+      "referralLink": "推荐链接",
+      "shareYourLink": "分享您的推荐链接",
+      "yourStats": "您的统计",
+      "enterCodeDescription": "输入推荐码以赚取积分",
+      "enterCode": "输入代码",
+      "refresh": "刷新",
+      "copyCode": "复制代码",
+      "copyLink": "复制链接",
+      "share": "分享",
+      "stats": {
+        "totalReferrals": "总推荐数",
+        "successful": "成功",
+        "creditsEarned": "已获积分"
+      },
+      "recentReferrals": "最近推荐",
+      "signupComplete": "注册完成",
+      "pending": "待处理",
+      "noReferrals": "暂无推荐。分享您的推荐链接开始吧！",
+      "copied": "已复制！",
+      "codeCopied": "推荐码已复制到剪贴板",
+      "linkCopied": "推荐链接已复制到剪贴板",
+      "codeRefreshed": "推荐码刷新成功",
+      "refreshFailed": "刷新推荐码失败",
+      "inviteByEmail": "通过邮箱邀请",
+      "inviteByEmailDescription": "添加最多3个邮箱地址（按回车、空格或逗号）",
+      "emailAddress": "邮箱地址",
+      "emailPlaceholder": "输入邮箱地址（按回车、空格或逗号）",
+      "emailsAdded": "邮箱",
+      "sent": "已发送",
+      "send": "发送",
+      "sending": "发送中...",
+      "sendAllInvites": "发送所有邀请",
+      "allSent": "全部已发送",
+      "emailSent": "推荐邀请发送成功"
+    },
     "billing": {
       "title": "账单和订阅",
       "description": "管理您的积分和订阅",
+      "totalCredits": "总可用积分",
+      "allCredits": "所有积分",
+      "monthlyCredits": "月度积分",
+      "renewalIn": "在 {days} {days, plural, one {天} other {天}} 后续费",
+      "noRenewal": "未安排续费",
+      "extraCredits": "额外积分",
+      "nonExpiring": "不过期",
+      "renews": "在 {date} 续费",
+      "manageSubscription": "管理订阅",
+      "getAdditionalCredits": "获取额外积分",
+      "changePlan": "更改计划",
+      "annualCommitment": "年度承诺",
+      "activeUntil": "有效期至 {date}",
+      "subscriptionCancelled": "您的订阅将在 {date} 取消",
+      "reactivate": "重新激活",
+      "creditsExplained": "积分说明",
+      "cancelPlan": "取消计划",
+      "reactivateSubscription": "重新激活订阅",
+      "reactivating": "正在重新激活...",
+      "cancelDialogTitle": "取消订阅",
+      "cancelDialogDescription": "您确定要取消订阅吗？您将继续拥有访问权限直到 {date}。",
+      "keepSubscription": "保留订阅",
+      "cancelling": "正在取消...",
+      "localMode": "本地模式已激活",
+      "localModeDescription": "此环境中所有高级功能均可用",
       "insufficientCredits": "积分不足",
       "insufficientCreditsMessage": "账单检查失败：积分不足。您的余额为 {balance}。请添加积分以继续。",
       "creditsExhausted": "您的积分已用完。立即升级。",
@@ -100,7 +185,10 @@
       "opening": "正在打开知识库",
       "redirecting": "正在重定向到知识库页面..."
     },
-    "integrations": "集成"
+    "integrations": {
+      "opening": "正在打开集成",
+      "redirecting": "正在重定向到集成页面..."
+    }
   },
   "triggers": {
     "getStarted": "通过添加触发器开始",
@@ -156,6 +244,11 @@
     "monthlyOn1st": "每月1号"
   },
   "sidebar": {
+    "referAndEarn": "推荐赚取",
+    "referralShareTitle": "推荐好友",
+    "referralShareSubtitle": "获得 400 积分",
+    "new": "新",
+    "upgrade": "升级",
     "chats": "聊天",
     "agents": "智能体",
     "workers": "工作器",
@@ -220,9 +313,42 @@
     "customWorkers": "自定义 Workers",
     "scheduledTriggers": "计划触发器",
     "appTriggers": "应用触发器",
-    "limitsExceeded": "你已达到聊天限制（{current}/{limit}）。升级你的计划以创建更多聊天。",
+    "limitsExceeded": "你已达到聊天限制。升级你的计划以创建更多聊天。",
     "agentInitiatedSuccessfully": "智能体启动成功",
-    "aiAssistantReady": "你的 AI 助手已准备好帮助"
+    "aiAssistantReady": "你的 AI 助手已准备好帮助",
+    "greetings": {
+      "morning": [
+        "早上好！今天有什么计划？",
+        "早安！今天想做什么？",
+        "早上好！准备好大干一场了吗？"
+      ],
+      "afternoon": [
+        "下午好！需要什么帮助？",
+        "下午好！接下来做什么？"
+      ],
+      "evening": [
+        "晚上好！还在加班吗？",
+        "晚上好！今晚在做什么？",
+        "晚上好！开始吧。"
+      ],
+      "random": [
+        "欢迎回来！",
+        "嘿！Kortix能为你做什么？",
+        "你想完成什么？",
+        "让我们创造点厉害的东西",
+        "随时准备好！",
+        "有什么新鲜事？",
+        "随时待命！任务是什么？",
+        "让我们创造奇迹",
+        "今天挑战什么？",
+        "你的愿望就是我的命令",
+        "有什么计划？",
+        "系好安全带！去哪里？",
+        "新的一天，新的项目",
+        "在想什么？",
+        "出发吧！"
+      ]
+    }
   },
   "thread": {
     "integrations": "集成",
@@ -374,6 +500,7 @@
     "credits": "积分",
     "popular": "热门",
     "creditsExplained": "积分说明",
+    "creditsExhausted": "+200积分将在{time}后到账。立即升级即可使用。",
     "creditsExhaustedRefreshIn": "您的积分已用完。将在{time}后刷新",
     "trialActive": "试用激活",
     "trialBadge": "7天试用",
@@ -469,6 +596,9 @@
     "downgradePending": "降级待处理",
     "downgrade": "降级",
     "switchToLegacyYearly": "切换到旧版年付",
+    "confirmDowngradeTitle": "您确定要降级吗？",
+    "confirmDowngradeDescription": "您即将切换到{planName}计划。此更改将在您当前计费周期结束时生效。",
+    "confirmDowngrade": "是的，降级",
     "pickPlan": "选择适合你的计划。",
     "reachedLimit": "你已达到限制。",
     "projectLimit": "项目限制 ({current}/{limit})",
@@ -489,9 +619,35 @@
       "integrations": "100+ 集成",
       "premiumAIModels": "高级 AI 模型",
       "prioritySupport": "优先支持"
+    },
+    "downgradeDialog": {
+      "confirmTitle": "确认计划变更",
+      "confirmSubtitle": "很遗憾看到您离开",
+      "confirmDescription": "您即将切换到{planName}计划。此更改将在您当前计费周期结束时生效。届时您将保留当前的权益。",
+      "continue": "继续",
+      "keepCurrentPlan": "保留我的当前计划",
+      "feedbackTitle": "帮助我们改进",
+      "feedbackSubtitle": "您的反馈塑造Kortix的未来",
+      "whatWouldMakeYouStay": "什么会让您留下来？",
+      "feedbackPlaceholder": "如果我们可以改变或添加一件事来让Kortix对您有价值，那会是什么？",
+      "feedbackFooter": "我们的团队会阅读每一条回复。您的反馈直接影响我们接下来构建什么。",
+      "confirmDowngrade": "确认降级",
+      "processing": "处理中...",
+      "pleaseSelectReason": "请选择一个原因",
+      "reasons": {
+        "tooExpensive": "对我的需求来说太贵了",
+        "notUsingOften": "我使用Kortix不够频繁",
+        "foundAlternative": "我找到了其他解决方案",
+        "technicalIssues": "我遇到了技术问题",
+        "resultsNotGood": "结果没有达到我的期望",
+        "other": "其他原因"
+      }
     }
   },
   "auth": {
+    "haveReferralCode": "有推荐码吗？",
+    "referralCode": "推荐码",
+    "enterCode": "输入代码",
     "logIntoAccount": "登录你的账户",
     "createAccount": "创建账号",
     "signInOrCreateAccount": "登录或创建您的Kortix账户",
@@ -528,7 +684,16 @@
     "magicLinkSent": "我们已向以下地址发送魔法链接",
     "magicLinkDescription": "点击邮件中的链接以登录。链接将在1小时后过期。",
     "magicLinkExplanation": "我们将向您发送一个安全的登录链接。无需密码。",
-    "byContinuingYouAgree": "继续即表示您同意我们的<privacyPolicy>隐私政策</privacyPolicy>和<termsOfService>服务条款</termsOfService>"
+    "magicLinkExpired": "此链接已过期",
+    "magicLinkExpiredDescription": "您点击的魔法链接已过期。出于安全原因，魔法链接会在1小时后过期。",
+    "resendMagicLink": "重新发送魔法链接",
+    "resending": "重新发送中...",
+    "byContinuingYouAgree": "继续即表示您同意我们的<privacyPolicy>隐私政策</privacyPolicy>和<termsOfService>服务条款</termsOfService>",
+    "openProvider": "打开 {provider}",
+    "didntReceiveEmail": "没有收到邮件？",
+    "resend": "重新发送",
+    "alreadySignedIn": "您已登录，无需任何操作。",
+    "goToDashboard": "前往控制台"
   },
   "onboarding": {
     "welcome": "欢迎",
@@ -664,6 +829,25 @@
     "pt": "Português",
     "fr": "Français",
     "es": "Español"
+  },
+  "notifications": {
+    "title": "通知",
+    "description": "管理您接收通知的方式",
+    "preferences": "通知偏好设置",
+    "channels": "通知渠道",
+    "emailNotifications": "邮件通知",
+    "emailDescription": "通过邮件接收通知",
+    "pushNotifications": "推送通知",
+    "pushDescription": "在您的设备上接收推送通知",
+    "inAppNotifications": "应用内通知",
+    "inAppDescription": "在应用内查看通知",
+    "deviceTokens": "已注册设备",
+    "noDevices": "未注册设备",
+    "settingsUpdated": "通知偏好设置更新成功",
+    "settingsFailed": "更新通知偏好设置失败",
+    "enableAll": "全部启用",
+    "disableAll": "全部禁用",
+    "saveChanges": "保存更改"
   },
   "suna": {
     "samplePrompts": "示例提示",
