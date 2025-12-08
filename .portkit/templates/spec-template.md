@@ -18,28 +18,28 @@ We are not just copying files; we are adapting them to our **Local Architecture*
 
 ### B. Bridge Adapters (Morph/Replace)
 **Upstream Dependency** -> **Local Replacement**
-*   `Supabase Auth (Upstream)` -> `Local Auth (Clerk/Custom)`
-*   `Stripe Billing` -> `[Mock / Exclude / LemonSqueezy]`
-*   `Drizzle ORM` -> `Prisma`
+*   `[Upstream Auth]` -> `[Local Auth]`
+*   `[Upstream DB]` -> `[Local DB]`
 
 ### C. Omissions (Nuke)
 **Intentionally excluded components:**
-*   [e.g., `Enterprise` folder, `Tracking` scripts]
+*   (Refer to `.portkit/ecosystem-rules.json` for global rules)
+*   [e.g. Specific sub-feature X]
 
 ## 3. Verification Scenarios (The "Proof")
 After the port is complete, these scenarios must pass locally.
 
 ### Scenario 1: [Core Workflow]
-*   **Given**: User is logged in (Local Auth).
-*   **When**: User navigates to [New Page].
-*   **Then**: The page loads without crashing.
+*   **Given**: User is logged in.
+*   **When**: User performs action X.
+*   **Then**: Result Y happens using local architecture.
 
 ### Scenario 2: [Data Persistence]
-*   **Given**: User modifies [Setting].
+*   **Given**: User modifies data.
 *   **When**: User saves.
-*   **Then**: Data is persisted to [Local DB].
+*   **Then**: Data is persisted to locally configured database.
 
 ## 4. Success Criteria
-*   [ ] Feature compiles with `npm run build`.
+*   [ ] Feature compiles successfully.
 *   [ ] No regressions in existing features (Blast Radius check).
-*   [ ] All "Poison Imports" (e.g. `next-intl`) are cleanly removed or shimmed.
+*   [ ] All Denied Dependencies (per `ecosystem-rules.json`) are removed.

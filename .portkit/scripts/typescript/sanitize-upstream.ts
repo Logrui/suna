@@ -12,16 +12,33 @@ function sanitizeUpstream(targetFile: string) {
         process.exit(1);
     }
 
-    // We can use simple regex for speed and robustness against broken syntax
-    // (sometimes upstream files might not fully parse if deps are missing)
+    // Load Rules
+    const rulesPath = path.resolve(".portkit/ecosystem-rules.json");
+    let deniedDeps: any[] = [];
+    if (fs.existsSync(rulesPath)) {
+        try {
+            const rules = JSON.parse(fs.readFileSync(rulesPath, "utf-8"));
+            deniedDeps = rules.denied_dependencies || [];
+        } catch (e) {
+            console.warn("Failed to load ecosystem rules", e);
+        }
+    }
+
     let content = fs.readFileSync(targetFile, "utf-8");
 
-    // 1. Remove Next-Intl
-    content = content.replace(/import\s+.*?from\s+['"]next-intl['"];?/gm, "");
-    content = content.replace(/useTranslations\(.*?\);?/gm, "() => (key: string) => key; // Shimmed");
+    // Dynamic Sanitization
+    for (const dep of deniedDeps) {
+        if (dep.action === "strip") {
+            const pkg = dep.package;
+            // import ... from "pkg"
+            const regexImport = new RegExp(`import\\s+.*?from\\s+['"]${pkg}['"];?`, "gm");
+            content = content.replace(regexImport, "");
 
-    // 2. Remove Billing Hooks
-    content = content.replace(/import\s+.*?from\s+['"]@\/hooks\/billing['"];?/gm, "");
+            // import "pkg"
+            const regexSideEffect = new RegExp(`import\\s+['"]${pkg}['"];?`, "gm");
+            content = content.replace(regexSideEffect, "");
+        }
+    }
 
     // Write back
     fs.writeFileSync(targetFile, content, "utf-8");

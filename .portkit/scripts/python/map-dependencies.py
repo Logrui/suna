@@ -55,16 +55,41 @@ def main():
         # Fallback regex
         deps = parse_ts_imports(target)
 
-    # Classify dependencies (Internal vs External) determines 'Blast Radius'
-    # Simplified logic: starts with '.' or '@/' is internal.
+    # Load Ecosystem Rules
+    rules_path = Path('.portkit/ecosystem-rules.json')
+    denied_rules = []
+    if rules_path.exists():
+        try:
+            with open(rules_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                denied_rules = config.get('denied_dependencies', [])
+        except Exception as e:
+            print(f"Warning: Could not load ecosystem rules: {e}")
+
+    # Classify dependencies (Internal vs External)
     internal = sorted(list(set([d for d in deps if d.startswith('.') or d.startswith('@/')])))
-    external = sorted(list(set([d for d in deps if d not in internal])))
+    external_candidates = sorted(list(set([d for d in deps if d not in internal])))
+    
+    external = []
+    denied = []
+    
+    for dep in external_candidates:
+        is_denied = False
+        for rule in denied_rules:
+            # Simple substring match or exact match
+            if rule['package'] in dep:
+                denied.append({"dependency": dep, "rule": rule})
+                is_denied = True
+                break
+        if not is_denied:
+            external.append(dep)
 
     report = {
         "file": str(target),
         "dependencies": {
             "internal": internal,
-            "external": external
+            "external": external,
+            "denied": denied
         }
     }
     

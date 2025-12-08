@@ -33,6 +33,7 @@ Use the provided scripts to handle large files. Avoid manual reading of massive 
         *   `smart-diff`: Semantic comparison of Upstream vs Local.
     *   **Recommended Action**:
         *   Run `fetch-upstream` to get source code.
+        *   **Locate Entry Point**: If exact path is unknown, use `git grep` or `find` on the `.portkit-cache` directory (e.g. `grep -r "class KortixComputer" .portkit-cache`) or similar semantic variations to find target components and elements.
         *   Use `map-dependencies` on the entry file to build a blast radius graph efficiently.
         *   Use `smart-diff` only if checking against existing local files.
 

@@ -303,7 +303,7 @@ Sections: `safety_check_report`, `sync_feature_report`, `verify_build`, `registr
     *   [x] `update-registry.py` (Registry Management + Audit).
     *   [x] `fetch-upstream.py` (Cache Management).
     *   [x] `map-dependencies` (Polyglot AST - Python/TypeScipt).
-    *   [x] `init-registry.ps1` (Safe Bootstrap).
+    *   [x] `init-portkit.ps1` (Safe Bootstrap).
     *   [x] `smart-diff-feature` (Blast Radius Analysis).
     *   [x] `pack-context` (Context Optimization).
     *   [ ] `extract-region` (Component Morphing helper).
@@ -346,8 +346,9 @@ Sections: `safety_check_report`, `sync_feature_report`, `verify_build`, `registr
 
 This implementation is likely potentially to be successful eventually, but it would be a lot of work to potentially implement a fully automated systems. Intead it is probably a better idea to make this system semi-automated, where the AI agents can complete most of the work, but the developer can still review and approve the changes. We should follow the github speckit model with human in the loop, memory, document templates, and scripts.
 
-This should essentially be a highly modified version of github speckit used only for this repo and this specific workflow of porting features from upstream to this local fork and shouldnt be generalized to other workflows or projects. 
 
-If using Gemini CLI, we will likely need to refactor this system to be compatible with the gemini cli as it does not support subagents - but this is fine as Gemini models tend to have very large context windows and can handle the complexity of this system. 
-
-Alternative idea, we could simply just modify the exist github speckit system to be compatible with this idea or concept .upstream-syncing system.
+**Performance Note on TypeScript Scripts**:
+Currently, executing TypeScript scripts via `npx tsx` or `npx ts-node` incurs significant startup latency due to the `npx` resolution step and JIT compilation.
+*   **Optimization Plan**: If Portkit becomes an official `npm install portkit` package, we should include functionality to "eject" or install optional dependencies (like `tsx` or `ts-node`) directly into the user's `package.json` devDependencies. 
+*   This would allow running `node --loader tsx .portkit/script.ts` directly, bypassing the `npx` network/cache overhead and significantly speeding up repetitive agent tooling calls.
+```

@@ -1,5 +1,5 @@
 {
-    "upstream_url": "https://github.com/placeholder/repo.git",
+    "upstream_url": "https://github.com/kortix-ai/suna",
     "mappings": {
         "frontend": "frontend",
         "backend": "backend"

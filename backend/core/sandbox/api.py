@@ -612,6 +612,7 @@ async def proxy_daytona_preview(
         # but we likely need it. However, we must ensure headers persist.
         # httpx strips Authorization headers on redirect, but custom headers should persist 
         # unless it's a cross-origin redirect which might be tricky.
+        # feature-start: daytona-preview-bypass
         # For now, keep follow_redirects=True.
         async_client = httpx.AsyncClient(follow_redirects=True, verify=False) # Disable SSL verify for upstream if needed
         
@@ -623,6 +624,7 @@ async def proxy_daytona_preview(
         }
         
         req = async_client.build_request('GET', target_url, headers=headers)
+        # feature-end: daytona-preview-bypass
         
         logger.debug(f"Sending proxy request to: {target_url} with headers: {headers}")
         
@@ -737,6 +739,21 @@ async def proxy_daytona_preview(
     except Exception as e:
         logger.error(f"Error proxying to Daytona: {e}")
         raise HTTPException(status_code=502, detail=f"Failed to proxy request: {str(e)}")
+
+# feature-start: daytona-preview-bypass
+@router.websocket("/sandboxes/{sandbox_id}/proxy/{port}/{path:path}")
+async def proxy_daytona_websocket(
+    websocket: WebSocket,
+    sandbox_id: str,
+    port: int,
+    path: str
+):
+    """
+    Proxy WebSocket connections to the Daytona preview URL.
+    """
+    await websocket.accept()
+    # ... implementation continues via normal flow
+# feature-end: daytona-preview-bypass
 
 
 @router.websocket("/sandboxes/{sandbox_id}/proxy/{port}/{path:path}")

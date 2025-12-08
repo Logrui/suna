@@ -69,9 +69,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
+        // feature-start: daytona-preview-bypass
         // Sync auth token to cookie for backend proxy access
         if (currentSession?.access_token) {
           document.cookie = `suna-auth-token=${currentSession.access_token}; path=/; max-age=${currentSession.expires_in}; SameSite=Lax; Secure`;
+          // feature-end: daytona-preview-bypass
 
           // Ensure account is initialized (idempotent check)
           ensureAccountInitialized(currentSession);
@@ -99,6 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
+        // feature-start: daytona-preview-bypass
         // Sync auth token to cookie for backend proxy access (e.g. Daytona previews)
         if (newSession?.access_token) {
           document.cookie = `suna-auth-token=${newSession.access_token}; path=/; max-age=${newSession.expires_in}; SameSite=Lax; Secure`;
@@ -106,6 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (event === 'SIGNED_OUT') {
           document.cookie = 'suna-auth-token=; path=/; max-age=0; SameSite=Lax; Secure';
         }
+        // feature-end: daytona-preview-bypass
 
         if (isLoading) setIsLoading(false);
         switch (event) {

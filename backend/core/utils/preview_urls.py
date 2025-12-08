@@ -6,6 +6,8 @@ Daytona preview warning by routing requests through our backend proxy, which inj
 the X-Daytona-Skip-Preview-Warning header.
 """
 
+# feature-start: daytona-preview-bypass
+
 from core.utils.config import config
 
 
@@ -66,3 +68,5 @@ def get_website_preview_url(sandbox_id: str) -> str:
         Proxy URL for website access on configured web port (default 8080)
     """
     return get_proxy_preview_url(sandbox_id, config.DAYTONA_WEB_PORT)
+
+# feature-end: daytona-preview-bypass

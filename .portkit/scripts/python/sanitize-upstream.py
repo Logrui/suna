@@ -1,19 +1,40 @@
 import argparse
 import re
 import sys
+import json
 from pathlib import Path
 
-# Hardcoded Poison Patterns (in lieu of config for V1)
-POISON_PATTERNS = [
-    (r"import\s+.*?from\s+['\"]next-intl['\"];?", ""), # Remove next-intl imports
-    (r"useTranslations\(.*?\);?", "() => (key: string) => key; // Shimmed"), # Shim hooks
-    (r"import\s+.*?from\s+['\"]@/hooks/billing['\"];?", ""), # Remove billing
-]
+def load_patterns():
+    patterns = []
+    rules_path = Path('.portkit/ecosystem-rules.json')
+    if rules_path.exists():
+        try:
+            with open(rules_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                for dep in data.get('denied_dependencies', []):
+                    pkg = dep.get('package')
+                    action = dep.get('action')
+                    
+                    if action == 'strip':
+                        # Generalized Import Removal
+                        # import ... from "pkg"
+                        # import "pkg"
+                        pat = rf"import\s+.*?from\s+['\"]{pkg}['\"];?"
+                        patterns.append((pat, ""))
+                        pat_side_effect = rf"import\s+['\"]{pkg}['\"];?"
+                        patterns.append((pat_side_effect, ""))
+                        
+        except Exception as e:
+            print(f"Warning: Failed to load ecosystem rules: {e}")
+    return patterns
 
 def sanitize(content):
     modified = content
-    for pattern, replacement in POISON_PATTERNS:
+    patterns = load_patterns()
+    
+    for pattern, replacement in patterns:
         modified = re.sub(pattern, replacement, modified, flags=re.MULTILINE)
+    
     return modified
 
 def main():

@@ -1,5 +1,7 @@
 'use client';
 
+// feature-start: daytona-preview-bypass
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -18,7 +20,7 @@ interface HealthCheckedVncIframeProps {
 export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncIframeProps) {
   const [iframeKey, setIframeKey] = useState(0);
   const [isBrowserLoading, setIsBrowserLoading] = useState(true);
-  
+
   // Use the enhanced VNC preloader hook
   const { status, retryCount, retry, isPreloaded } = useVncPreloader(sandbox, {
     maxRetries: 5,
@@ -122,3 +124,4 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
   // Should not reach here
   return null;
 }
+// feature-end: daytona-preview-bypass

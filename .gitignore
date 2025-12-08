@@ -253,3 +253,5 @@ frontend/.next/
 
 .n8n-examples/
 .txt
+# Portkit Cache
+.portkit-cache/

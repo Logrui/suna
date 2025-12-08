@@ -1,4 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+
+// feature-start: daytona-preview-bypass
 import { Project } from '@/lib/api/projects';
 
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -194,3 +196,5 @@ export function useVncPreloader(
     accessToken
   };
 }
+
+// feature-end: daytona-preview-bypass

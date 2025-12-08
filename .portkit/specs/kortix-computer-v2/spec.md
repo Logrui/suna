@@ -7,7 +7,10 @@
 
 ## 1. Port Scope (The "Target")
 **What are we pulling?**
-*   **Upstream Entry Points**: `[NEEDS CLARIFICATION]` (Likely `backend/core/sandbox/*`, `frontend/src/components/Sandbox/*` - to be confirmed in Research phase)
+*   **Upstream Entry Points**: 
+    *   Backend: `backend/core/sandbox/api.py`
+    *   Frontend: `frontend/src/components/thread/kortix-computer/*`
+    *   Common: `frontend/src/components/thread/HealthCheckedVncIframe.tsx`
 *   **Feature Description**: Port the latest "computer use" / sandbox capabilities from the upstream PRODUCTION branch, enabling the agent to interact with a virtual desktop/environment.
 
 ## 2. Adaptation Strategy (The "Bridge")
@@ -17,6 +20,7 @@ We are not just copying files; we are adapting them to our **Local Architecture*
 *   Sandbox orchestration logic.
 *   Computer interaction tools (screenshot, mouse, keyboard).
 *   Live stream viewing components.
+*   **UI Location**: Thread/Chat Stream (Parity with Upstream). The component `KortixComputer.tsx` will be rendered as a Tool Output within the conversation.
 
 ### B. Bridge Adapters (Morph/Replace)
 **Upstream Dependency** -> **Local Replacement**

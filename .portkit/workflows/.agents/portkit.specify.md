@@ -67,4 +67,6 @@ The text the user provided in `$ARGUMENTS` is the feature description.
 
 7.  **Completion**:
     *   Output: "Spec created at `.portkit/specs/[feature-name]/spec.md`".
-    *   **Recommendation**: Recommend to the user to run `/portkit.research` next to begin the technical analysis.
+    *   **Recommendation**: 
+        *   If the spec contains `[NEEDS CLARIFICATION]`: Recommend the user to run `/portkit.clarify` to resolve ambiguities interactively.
+        *   Otherwise: Recommend the user to run `/portkit.research` to begin technical analysis.
