@@ -30,7 +30,7 @@ Use this reference to understand where components live:
 .portkit/
 ├── README.md                       # (This File) The Master Blueprint.
 ├── addon-features-registry/
-│   └── addon-features-registry.json # The "Source of Truth" for custom features.
+│   └── feature-registry.json # The "Source of Truth" for custom features.
 ├── scripts/
 │   ├── powershell/                 # Legacy/Windows-specific automation.
 │   ├── typescript/                 # Node.js AST parsers & tools.
@@ -42,6 +42,37 @@ Use this reference to understand where components live:
 *   `.claude/commands/` (Claude Desktop/CLI specific commands).
 *   `.gemini/commands/` (Gemini specific commands - TOML format).
 *   `.cursor/rules/` (Cursor IDE specific rules).
+
+## 1.7. Feature Registry Schema (`feature-registry.json`)
+The registry is the single source of truth for all ported features. It acts as a lockfile to prevent agents from inadvertently overwriting custom features.
+
+**File Path**: `.portkit/addon-features-registry/feature-registry.json`
+
+**JSON Structure**:
+```json
+{
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "YYYY-MM-DDTHH:MM:SSZ"
+  },
+  "features": {
+    "feature-name-kebab-case": {
+      "status": "active | deprecated | partial",
+      "version": "0.1.0",
+      "files": [
+        "src/components/MyFeature/index.tsx",
+        "backend/api/feature_routes.py"
+      ],
+      "dependencies": ["auth-system", "ui-kit"],
+      "last_synced": "YYYY-MM-DD"
+    }
+  }
+}
+```
+
+**Key Concepts**:
+*   **files**: The "Blast Radius" of a feature. The Guardian Agent uses this list to "lock" files. If an agent wants to edit a file owned by Feature A, it must check if it breaks Feature A.
+*   **dependencies**: Enables topological sorting for updates (e.g., update `auth-system` before `user-profile`).
 
 ## 2. Architecture: Portkit Flow
 ```mermaid
@@ -195,7 +226,7 @@ These high-level workflows consolidate the previous granular commands.
     *   *Goal*: Create the "Hard Tooling" required for Phase 4 (Verify).
 
 4.  **`portkit-update-registry.md`**: (**/portkit.update.registry**)
-    *   *Action*: Updates `addon-features-registry.json`.
+    *   *Action*: Updates `feature-registry.json`.
     *   *Timing*: Strongly recommended after verification, or before starting a new port.
 
 5.  **`portkit-tag-features.md`**: (**/portkit.tag.features**)

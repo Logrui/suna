@@ -13,6 +13,14 @@ handoffs:
 $ARGUMENTS
 ```
 
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Define a clear, unambiguous specification for the feature to be ported, including scope and initial assumptions.
+
+## Note
+Ambiguity here leads to failure later. Ensure checking for existing registry conflicts before proceeding.
+
 ## Outline
 The text the user provided in `$ARGUMENTS` is the feature description.
 
@@ -54,9 +62,9 @@ The text the user provided in `$ARGUMENTS` is the feature description.
     *   **Self-Correction**: If validation fails, attempt to fix the `spec.md` immediately using context.
 
 6.  **Registry Check**:
-    *   Read `.portkit/addon-features-registry/addon-features-registry.json`.
+    *   Read `.portkit/addon-features-registry/feature-registry.json`.
     *   Warn if `[feature-name]` conflicts with an existing registry key.
 
 7.  **Completion**:
     *   Output: "Spec created at `.portkit/specs/[feature-name]/spec.md`".
-    *   Handoff: Trigger `/portkit.research`.
+    *   **Recommendation**: Run `/portkit.research` to begin the technical analysis.

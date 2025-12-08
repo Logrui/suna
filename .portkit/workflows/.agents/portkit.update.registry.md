@@ -1,5 +1,5 @@
 ---
-description: Update `addon-features-registry.json` with the latest feature details.
+description: Update `feature-registry.json` with the latest feature details or an existing feature's details based on user description
 ---
 
 //turbo-all
@@ -9,9 +9,17 @@ description: Update `addon-features-registry.json` with the latest feature detai
 $ARGUMENTS
 ```
 
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Scan the codebase for feature tags and update the `feature-registry.json` source of truth.
+
+## Note
+This acts as the "Commit" step for Portkit. Until this runs, the system is unaware of the new feature boundaries.
+
 ## Outline
 1.  **Parse Input**: Identify Feature Name (optional) or "Scan All".
-2.  **Context**: Read `.portkit/addon-features-registry/addon-features-registry.json`.
+2.  **Context**: Read `.portkit/addon-features-registry/feature-registry.json`.
 
 3.  **Execution (Deep Scan)**:
     *   **Goal**: Lock the current state of feature files.
@@ -22,9 +30,10 @@ $ARGUMENTS
         *   Updates the JSON registry file entries.
 
 4.  **Verification**:
-    *   Reload `addon-features-registry.json`.
+    *   Reload `feature-registry.json`.
     *   Confirm the entry for `[feature-name]` has updated `last_sync` timestamp and file list.
 
-5.  **Completion**:
+6.  **Completion**:
     *   Output: "Registry updated for [Feature]. Lockfile is current."
     *   Stats: "Tracking X files, Y lines of code."
+    *   **Recommendation**: Porting process complete. Suggest the user runs `/portkit.specify` if they wish to start a new feature port.

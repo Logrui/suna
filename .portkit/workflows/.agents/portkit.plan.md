@@ -13,6 +13,14 @@ handoffs:
 $ARGUMENTS
 ```
 
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Create a detailed Component Morphing strategy and Implementation Plan based on the Research artifacts.
+
+## Note
+This is the "Architect" phase. Critical decisions about "Poison" code removal and Shim creation happen here.
+
 ## Outline
 1.  **Parse Input**: Identify Feature Name.
 2.  **Verify Context**: Ensure `research.md` (and `spec.md`) exists.
@@ -44,4 +52,6 @@ $ARGUMENTS
     *   Ask user to review the Morph Strategy.
     *   *Critical*: If a "Complex Merge" is identified, confirm the strategy is feasible.
 
-7.  **Completion**: Output plan location and handoff to `/portkit.tasks`.
+7.  **Completion**:
+    *   Output plan location.
+    *   **Recommendation**: Suggest the user runs `/portkit.tasks` to decompose this plan into actionable steps.

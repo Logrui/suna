@@ -9,6 +9,14 @@ description: Retroactively add `// feature-start` tags to existing code.
 $ARGUMENTS
 ```
 
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Retroactively apply Portkit tracking tags (`// feature-start`) to existing code to bring it under registry control.
+
+## Note
+Essential for "locking" pre-existing features so they aren't accidentally overwritten by future ports.
+
 ## Outline
 1.  **Parse Input**: Identify Feature Name and Target Files (or directory scope).
 2.  **Context**: Read `spec.md` or `research.md` if available to understand file scope.
@@ -24,6 +32,6 @@ $ARGUMENTS
         *   Apply the edits.
 
 4.  **Registry Sync**:
-    *   After tagging, auto-trigger `/portkit.update.registry` to index the new tags.
+    *   After tagging, **Recommendation**: Suggest the user runs `/portkit.update.registry` to index the new tags.
 
 5.  **Completion**: Output list of tagged files.

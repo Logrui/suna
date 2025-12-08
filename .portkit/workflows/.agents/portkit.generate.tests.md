@@ -9,6 +9,14 @@ description: Create repo-specific testing scripts to enable behavioral verificat
 $ARGUMENTS
 ```
 
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Create repo-specific testing scripts to enable behavioral verification of the feature.
+
+## Note
+These tests are crucial for Phase 4 (Verification). Without them, verification relies solely on build checks, which may miss runtime issues.
+
 ## Outline
 1.  **Parse Input**: Identify Feature Name and Technology (e.g., Next.js, Python).
 2.  **Analyze Context**:

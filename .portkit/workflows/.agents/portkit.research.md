@@ -13,17 +13,28 @@ handoffs:
 $ARGUMENTS
 ```
 
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Perform deep technical analysis of the upstream feature and its dependencies ("Blast Radius") to inform creation of the implementation plan at later stages.
+
+## Note
+Use the provided scripts to handle large files. Avoid manual reading of massive upstream directories to conserve context.
+
 ## Outline
 1.  **Parse Input**: Identify Feature Name/Spec from `$ARGUMENTS`.
 2.  **Verify Context**: Ensure `specs/[feature]/spec.md` exists.
 
-3.  **Phase 1: Hard Tooling (Script Execution)**:
-    *   **Fetch**: `uv run scripts/python/fetch-upstream.py --ref [TargetRef]`
-        *   (If Ref unknown, ask user or infer from spec).
-    *   **Map Dependencies**: `uv run scripts/python/map-dependencies-py.py --target [UpstreamEntryFile]`
-    *   **Diff Analysis**: `uv run scripts/python/smart-diff.py [UpstreamEntry] [LocalEntry]`
-    *   **Registry Scan**: `uv run scripts/python/scan-registry.py` (To see what we already have).
-    *   *Action*: Parse the JSON outputs from these scripts.
+3.  **Phase 1: Tooling Selection (Context Management)**:
+    *   **Principle**: Use scripts to process large files outside of the context window.
+    *   **Available Tools** (Located in `.portkit/scripts/`):
+        *   `fetch-upstream.py`: Clone/Fetch remote repo to `.portkit-cache`.
+        *   `map-dependencies`: Analyze file imports/exports (Choose TS or PY version).
+        *   `smart-diff`: Semantic comparison of Upstream vs Local.
+    *   **Recommended Action**:
+        *   Run `fetch-upstream` to get source code.
+        *   Use `map-dependencies` on the entry file to build a blast radius graph efficiently.
+        *   Use `smart-diff` only if checking against existing local files.
 
 4.  **Phase 2: Semantic Analysis (The "Codemap")**:
     *   **Goal**: Create a deep technical map of the feature *before* we touch it.
@@ -43,4 +54,6 @@ $ARGUMENTS
             *   "Upstream uses `Tailwind v4`. We use `v3`. (Shim needed)."
     *   Write to: `.portkit/specs/[feature]/research.md`.
 
-6.  **Completion**: Output summary and handoff to `/portkit.plan`.
+6.  **Completion**:
+    *   Output summary of the Research.
+    *   **Recommendation**: Suggest the user runs `/portkit.plan` to proceed with the implementation strategy.

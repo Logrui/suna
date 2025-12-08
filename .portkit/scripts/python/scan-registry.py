@@ -4,7 +4,7 @@ import json
 import argparse
 from pathlib import Path
 
-REGISTRY_PATH = Path(".portkit/addon-features-registry/addon-features-registry.json")
+REGISTRY_PATH = Path(".portkit/addon-features-registry/feature-registry.json")
 
 def scan_file(path, feature_map):
     try:
@@ -45,15 +45,22 @@ def main():
             with open(REGISTRY_PATH, 'r') as f:
                 registry = json.load(f)
         else:
-            registry = {}
+            registry = {"features": {}, "metadata": {"version": "1.0"}}
         
         # Merge scan results
         for feature, files in feature_map.items():
-            if feature not in registry:
-                registry[feature] = {"files": [], "status": "active"}
-            registry[feature]["files"] = sorted(list(set(registry[feature].get("files", []) + files)))
-            registry[feature]["last_sync"] = "manual_scan_timestamp" # simplified
-        
+            if feature not in registry["features"]:
+                registry["features"][feature] = {"status": "active", "version": "0.1.0", "files": [], "dependencies": []}
+            
+            # Simple merge: add new files to the list
+            current_files = set([f["path"] if isinstance(f, dict) else f for f in registry["features"][feature].get("files", [])])
+            for file_path in files:
+                current_files.add(file_path)
+            
+            # Reconstruct detailed file objects (simplified for now)
+            registry["features"][feature]["files"] = sorted(list(current_files))
+            registry["features"][feature]["last_synced"] = "manual_scan_timestamp"
+
         with open(REGISTRY_PATH, 'w') as f:
             json.dump(registry, f, indent=2)
         print("Registry Updated.")

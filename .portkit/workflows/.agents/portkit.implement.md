@@ -13,6 +13,14 @@ handoffs:
 $ARGUMENTS
 ```
 
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Execute the atomic tasks defined in `tasks.md` to implement the feature, including sanitation, morphing, and integration.
+
+## Note
+Strict adherence to `tasks.md` is required. Do not improvise new architecture during implementation without updating the plan.
+
 ## Outline
 1.  **Parse Input**: Identify Feature Name.
 2.  **Verify Context**: Ensure `tasks.md` and `implementation_plan.md` exist.
@@ -38,5 +46,5 @@ $ARGUMENTS
         *   If still failing, **Stop** and ask User for intervention. Do not blindly leverage hallucinations.
 
 6.  **Completion**:
-    *   When all tasks are `[x]`, run a quick `verify-project` check.
-    *   Handoff to `/portkit.verify`.
+    *   When all tasks are `[x]`, run a quick `verify-project` check (optional).
+    *   **Recommendation**: Suggest the user runs `/portkit.verify` to audit the changes.
