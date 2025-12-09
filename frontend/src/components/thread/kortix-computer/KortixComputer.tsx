@@ -154,8 +154,8 @@ const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFil
             size="sm"
             onClick={() => onViewChange('tools')}
             className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'tools'
-                ? 'text-black dark:text-white'
-                : 'text-gray-500 dark:text-gray-400'
+              ? 'text-black dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
               }`}
           >
             <Zap className="h-3.5 w-3.5" />
@@ -173,8 +173,8 @@ const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFil
               size="sm"
               onClick={() => onViewChange('files')}
               className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'files'
-                  ? 'text-black dark:text-white'
-                  : 'text-gray-500 dark:text-gray-400'
+                ? 'text-black dark:text-white'
+                : 'text-gray-500 dark:text-gray-400'
                 }`}
             >
               <FolderOpen className="h-3.5 w-3.5" />
@@ -192,8 +192,8 @@ const ViewToggle = memo(function ViewToggle({ currentView, onViewChange, showFil
             size="sm"
             onClick={() => onViewChange('browser')}
             className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'browser'
-                ? 'text-black dark:text-white'
-                : 'text-gray-500 dark:text-gray-400'
+              ? 'text-black dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
               }`}
           >
             <Globe className="h-3.5 w-3.5" />
@@ -630,6 +630,7 @@ export const KortixComputer = memo(function KortixComputer({
 
     return (
       <div>
+        {/* feature-start: bugfix/49. kortix-computer-panel-height-overflow */}
         <HealthCheckedVncIframe
           key={vncRefreshKey}
           sandbox={{
@@ -638,10 +639,12 @@ export const KortixComputer = memo(function KortixComputer({
             pass: sandbox.pass,
             token: (sandbox as any).token
           }}
+          agentName={agentName}
         />
+        {/* feature-end: bugfix/49. kortix-computer-panel-height-overflow */}
       </div>
     );
-  }, [sandbox, vncRefreshKey]);
+  }, [sandbox, vncRefreshKey, agentName]);
 
   const isBrowserTool = useCallback((toolName: string | undefined): boolean => {
     if (!toolName) return false;
@@ -654,6 +657,7 @@ export const KortixComputer = memo(function KortixComputer({
     ].includes(lowerName);
   }, []);
 
+  // feature-start: actions-tab-view-switching
   // Initialize view to browser if browser action is in progress when panel opens
   useEffect(() => {
     if (!isInitialized && toolCallSnapshots.length > 0) {
@@ -669,18 +673,22 @@ export const KortixComputer = memo(function KortixComputer({
           setActiveView('browser');
         }
       } else if (agentStatus === 'running') {
-        const hasBrowserTool = toolCallSnapshots.some(snapshot => {
-          const toolName = snapshot.toolCall.toolCall?.function_name?.replace(/_/g, '-');
-          return isBrowserTool(toolName);
-        });
+        // Only switch if the LATEST tool is a browser tool
+        const latestSnapshot = toolCallSnapshots[toolCallSnapshots.length - 1];
+        const toolName = latestSnapshot?.toolCall.toolCall?.function_name?.replace(/_/g, '-');
 
-        if (hasBrowserTool) {
+        if (isBrowserTool(toolName)) {
           setActiveView('browser');
         }
       }
     }
   }, [toolCallSnapshots, isInitialized, isBrowserTool, agentStatus, setActiveView]);
+  // feature-end: actions-tab-view-switching
 
+  // DISABLED: This auto-switch logic was overriding user's explicit tab clicks
+  // When user clicks "Actions" tab, this would immediately switch back to Browser
+  // if the latest tool happened to be a browser tool, which is not desired UX
+  /*
   // Handle view toggle visibility and auto-switching logic
   useEffect(() => {
     // Only auto-switch when viewing tools
@@ -709,6 +717,7 @@ export const KortixComputer = memo(function KortixComputer({
       }
     }
   }, [toolCallSnapshots, internalIndex, isBrowserTool, agentStatus, activeView, setActiveView]);
+  */
 
   const handleClose = useCallback(() => {
     onClose();

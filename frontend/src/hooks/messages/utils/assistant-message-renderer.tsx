@@ -34,7 +34,7 @@ function normalizeArrayValue(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
   }
-  
+
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
@@ -46,7 +46,7 @@ function normalizeArrayValue(value: unknown): string[] {
       return value.split(',').map(a => a.trim()).filter(a => a.length > 0);
     }
   }
-  
+
   return [];
 }
 
@@ -57,11 +57,11 @@ function normalizeAttachments(attachments: unknown): string[] {
   if (Array.isArray(attachments)) {
     return attachments;
   }
-  
+
   if (typeof attachments === 'string') {
     return attachments.split(',').map(a => a.trim()).filter(a => a.length > 0);
   }
-  
+
   return [];
 }
 
@@ -88,9 +88,9 @@ function renderAskToolCall(
 
   return (
     <div key={`ask-${index}`} className="space-y-3">
-      <ComposioUrlDetector 
-        content={askText} 
-        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" 
+      <ComposioUrlDetector
+        content={askText}
+        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
       />
       {renderAttachments(attachments, onFileClick, sandboxId, project)}
       {isLatestMessage && (
@@ -129,9 +129,9 @@ function renderCompleteToolCall(
 
   return (
     <div key={`complete-${index}`} className="space-y-3">
-      <ComposioUrlDetector 
-        content={completeText} 
-        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" 
+      <ComposioUrlDetector
+        content={completeText}
+        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
       />
       {renderAttachments(attachments, onFileClick, sandboxId, project)}
       <TaskCompletedFeedback
@@ -163,9 +163,9 @@ function renderRegularToolCall(
     <div key={`tool-${index}`} className="my-1">
       <button
         onClick={() => onToolClick(message.message_id, toolName)}
-        className="inline-flex items-center gap-1.5 py-1 px-1 pr-1.5 text-xs text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50"
+        className="inline-flex items-center gap-1.5 h-8 p-1.5 text-xs text-muted-foreground bg-card hover:bg-card/80 rounded-lg transition-colors cursor-pointer border border-neutral-200 dark:border-neutral-700/50 whitespace-nowrap"
       >
-        <div className='border-2 bg-gradient-to-br from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 flex items-center justify-center p-0.5 rounded-sm border-neutral-400/20 dark:border-neutral-600'>
+        <div className='flex items-center justify-center'>
           <IconComponent className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
         </div>
         <span className="font-mono text-xs text-foreground">{getUserFriendlyToolName(toolName)}</span>
@@ -188,27 +188,27 @@ function renderRegularToolCall(
 export function renderAssistantMessage(props: AssistantMessageRendererProps): React.ReactNode {
   const { message } = props;
   const metadata = safeJsonParse<ParsedMetadata>(message.metadata, {});
-  
+
   const toolCalls = metadata.tool_calls || [];
   const textContent = metadata.text_content || '';
-  
+
   const contentParts: React.ReactNode[] = [];
-  
+
   // Render text content first (if any)
   if (textContent.trim()) {
     contentParts.push(
-      <ComposioUrlDetector 
-        key="text-content" 
-        content={textContent} 
-        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" 
+      <ComposioUrlDetector
+        key="text-content"
+        content={textContent}
+        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words"
       />
     );
   }
-  
+
   // Render tool calls
   toolCalls.forEach((toolCall, index) => {
     const toolName = toolCall.function_name.replace(/_/g, '-');
-    
+
     // Normalize arguments - handle both string and object types
     let normalizedArguments: Record<string, any> = {};
     if (toolCall.arguments) {
@@ -222,12 +222,12 @@ export function renderAssistantMessage(props: AssistantMessageRendererProps): Re
         }
       }
     }
-    
+
     const normalizedToolCall = {
       ...toolCall,
       arguments: normalizedArguments
     };
-    
+
     if (toolName === 'ask') {
       contentParts.push(renderAskToolCall(normalizedToolCall, index, props));
     } else if (toolName === 'complete') {
@@ -236,7 +236,7 @@ export function renderAssistantMessage(props: AssistantMessageRendererProps): Re
       contentParts.push(renderRegularToolCall(normalizedToolCall, index, toolName, props));
     }
   });
-  
+
   return contentParts.length > 0 ? contentParts : null;
 }
 

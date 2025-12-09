@@ -112,7 +112,8 @@ class TriggerTool(AgentBuilderBaseTool):
         name: str,
         cron_expression: str,
         agent_prompt: str,
-        description: Optional[str] = None
+        description: Optional[str] = None,
+        model: Optional[str] = None
     ) -> ToolResult:
         try:
             if not agent_prompt:

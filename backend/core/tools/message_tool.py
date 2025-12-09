@@ -36,18 +36,24 @@ class MessageTool(Tool):
                             {"items": {"type": "string"}, "type": "array"}
                         ],
                         "description": "(Optional) List of files or URLs to attach to the question. Include when: 1) Question relates to specific files or configurations, 2) User needs to review content before answering, 3) Options or choices are documented in files, 4) Supporting evidence or context is needed. Always use relative paths to /workspace directory."
+                    },
+                    "follow_up_answers": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "(Optional) List of suggested follow-up answers or responses the user can click to respond quickly. CRITICAL GUIDELINES: 1) Make answers SPECIFIC to the question being asked - reference the actual options, files, or choices presented, 2) Include the actual option/choice in the answer (e.g., 'Use Python with FastAPI for the backend' not just 'Option A'), 3) Add brief reasoning when helpful (e.g., 'Yes, deploy to production - the tests are passing' not just 'Yes'), 4) For yes/no questions, include context (e.g., 'Yes, proceed with the dark theme' not just 'Yes'), 5) For multiple choice, reference the specific choice (e.g., 'Go with the PostgreSQL approach for better scalability'), 6) Avoid generic responses like 'Yes', 'No', 'Option A' - make them descriptive and contextual. GOOD EXAMPLES: 'Yes, create the React component with TypeScript', 'Skip the tests for now and deploy', 'Use the existing API endpoint instead', 'Let me provide more details about the requirements'. BAD EXAMPLES: 'Yes', 'No', 'Option 1', 'Proceed'. Maximum 4 suggestions, each should be self-explanatory when read standalone."
                     }
                 },
                 "required": ["text"]
             }
         }
     })
-    async def ask(self, text: str, attachments: Optional[Union[str, List[str]]] = None) -> ToolResult:
+    async def ask(self, text: str, attachments: Optional[Union[str, List[str]]] = None, follow_up_answers: Optional[List[str]] = None) -> ToolResult:
         """Ask the user a question and wait for a response.
 
         Args:
             text: The question to present to the user
             attachments: Optional file paths or URLs to attach to the question
+            follow_up_answers: Optional list of suggested follow-up answers
 
         Returns:
             ToolResult indicating the question was successfully sent
@@ -153,19 +159,25 @@ class MessageTool(Tool):
                             {"type": "string"},
                             {"items": {"type": "string"}, "type": "array"}
                         ],
-                        "description": "(Optional) List of files or URLs to attach to the completion message. Include when: 1) Completion relates to specific files or configurations, 2) User needs to review final outputs, 3) Deliverables are documented in files, 4) Supporting evidence or context is needed. Always use relative paths to /workspace directory."
+                        "description": "(Optional) List of files or URLs to attach to the completion message. Include when: 1) Completion relates to specific files or configurations, 2) User needs to review final outputs, 3) Deliverables are documented in files, 4) Supporting evidence or context is needed. Always use relative paths to /workspace directory. **For presentations**: When attaching presentation files, only attach the first slide (e.g., `presentations/[name]/slide_01.html`) to keep the UI tidy - the presentation card will automatically show the full presentation. You can also attach `presentations/[name]/metadata.json` if needed."
+                    },
+                    "follow_up_prompts": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "(Optional) List of suggested follow-up prompts the user can click to continue working. CRITICAL GUIDELINES: 1) Make prompts SPECIFIC to what was just completed - reference actual file names, components, features, or deliverables created, 2) Suggest logical NEXT STEPS that build on the completed work (e.g., 'Add unit tests for the UserService class' not 'Write tests'), 3) Include specific details from the task (e.g., 'Deploy the dashboard to production' not 'Deploy the app'), 4) Think about what the user would NATURALLY want to do next with this specific output, 5) Reference created files/features by name (e.g., 'Add authentication to the /api/users endpoint' not 'Add auth'), 6) Avoid generic prompts - make them actionable and task-aware. GOOD EXAMPLES for a completed API: 'Add rate limiting to the new /api/orders endpoint', 'Create a Postman collection for testing the order API', 'Add error handling for the payment processing flow'. GOOD EXAMPLES for a completed UI: 'Make the dashboard mobile-responsive', 'Add loading states to the data tables', 'Implement dark mode for the settings page'. BAD EXAMPLES: 'Improve the code', 'Add more features', 'Test the application', 'Make it better'. Maximum 4 suggestions, each should clearly describe a specific actionable task."
                     }
                 },
                 "required": []
             }
         }
     })
-    async def complete(self, text: Optional[str] = None, attachments: Optional[Union[str, List[str]]] = None) -> ToolResult:
+    async def complete(self, text: Optional[str] = None, attachments: Optional[Union[str, List[str]]] = None, follow_up_prompts: Optional[List[str]] = None) -> ToolResult:
         """Indicate that the agent has completed all tasks and is entering complete state.
 
         Args:
             text: Optional completion message or summary to present to the user
             attachments: Optional file paths or URLs to attach to the completion message
+            follow_up_prompts: Optional list of suggested follow-up prompts
 
         Returns:
             ToolResult indicating successful transition to complete state

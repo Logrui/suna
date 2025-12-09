@@ -54,11 +54,12 @@ export function useAgentStream(
     { content: string; sequence?: number }[]
   >([]);
 
-  // Throttled state updates for smoother streaming
-  const throttleRef = useRef<NodeJS.Timeout | null>(null);
+  // Optimized streaming with requestAnimationFrame for smooth rendering
+  const rafRef = useRef<number | null>(null);
   const pendingContentRef = useRef<{ content: string; sequence?: number }[]>([]);
+  const lastFlushTimeRef = useRef<number>(0);
 
-  // Throttled content update function for smoother streaming
+  // Flush pending content using requestAnimationFrame for optimal rendering
   const flushPendingContent = useCallback(() => {
     if (pendingContentRef.current.length > 0) {
       // Sort chunks by sequence before adding to state
@@ -80,19 +81,27 @@ export function useAgentStream(
           });
         });
       });
+      lastFlushTimeRef.current = performance.now();
     }
+    rafRef.current = null;
   }, []);
 
   const addContentThrottled = useCallback((content: { content: string; sequence?: number }) => {
     pendingContentRef.current.push(content);
 
-    // Clear existing throttle
-    if (throttleRef.current) {
-      clearTimeout(throttleRef.current);
+    // Use requestAnimationFrame for optimal rendering timing
+    // This syncs updates with the browser's render cycle for smoothest display
+    if (!rafRef.current) {
+      // If we have many pending chunks or it's been a while, flush immediately
+      const timeSinceLastFlush = performance.now() - lastFlushTimeRef.current;
+      if (pendingContentRef.current.length > 10 || timeSinceLastFlush > 50) {
+        // Immediate flush for responsiveness
+        rafRef.current = requestAnimationFrame(flushPendingContent);
+      } else {
+        // Schedule on next animation frame for smooth batching
+        rafRef.current = requestAnimationFrame(flushPendingContent);
+      }
     }
-
-    // Set new throttle for smooth updates (16ms ≈ 60fps)
-    throttleRef.current = setTimeout(flushPendingContent, 16);
   }, [flushPendingContent]);
 
   const [toolCall, setToolCall] = useState<UnifiedMessage | null>(null);
@@ -104,6 +113,12 @@ export function useAgentStream(
   const currentRunIdRef = useRef<string | null>(null);
   const threadIdRef = useRef(threadId);
   const setMessagesRef = useRef(setMessages);
+
+  // Store callbacks in ref to prevent handler recreation on every parent render
+  const callbacksRef = useRef(callbacks);
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
 
   const orderedTextContent = useMemo(() => {
     if (textContent.length === 0) return '';
@@ -141,6 +156,7 @@ export function useAgentStream(
   const statusRef = useRef(status);
   const agentRunIdRef = useRef(agentRunId);
   const textContentRef = useRef(textContent);
+  const toolCallRef = useRef(toolCall);
 
   // Update refs whenever state changes
   useEffect(() => {
@@ -154,6 +170,10 @@ export function useAgentStream(
   useEffect(() => {
     textContentRef.current = textContent;
   }, [textContent]);
+
+  useEffect(() => {
+    toolCallRef.current = toolCall;
+  }, [toolCall]);
 
   // On thread change, ensure any existing stream is cleaned up
   useEffect(() => {
@@ -193,13 +213,14 @@ export function useAgentStream(
   };
 
   // Internal function to update status and notify consumer
+  // Uses callbacksRef to avoid recreating this function when callbacks change
   const updateStatus = useCallback(
     (newStatus: string) => {
       if (isMountedRef.current) {
         setStatus(newStatus);
-        callbacks.onStatusChange?.(newStatus);
+        callbacksRef.current.onStatusChange?.(newStatus);
         if (newStatus === 'error' && error) {
-          callbacks.onError?.(error);
+          callbacksRef.current.onError?.(error);
         }
         if (
           [
@@ -210,11 +231,11 @@ export function useAgentStream(
             'agent_not_running',
           ].includes(newStatus)
         ) {
-          callbacks.onClose?.(newStatus);
+          callbacksRef.current.onClose?.(newStatus);
         }
       }
     },
-    [callbacks, error],
+    [error],
   );
 
   // Function to handle finalization of a stream
@@ -407,10 +428,12 @@ export function useAgentStream(
             // Handle tool call chunks - extract from metadata.tool_calls
             const toolCalls = parsedMetadata.tool_calls || [];
             if (toolCalls.length > 0) {
-              // Set toolCall state with the UnifiedMessage
-              setToolCall(message);
+              // Set toolCall state with the UnifiedMessage (non-urgent update)
+              React.startTransition(() => {
+                setToolCall(message);
+              });
               // Call the callback with the full message (includes all tool calls in metadata)
-              callbacks.onToolCallChunk?.(message);
+              callbacksRef.current.onToolCallChunk?.(message);
             }
           } else if (
             parsedMetadata.stream_status === 'chunk' &&
@@ -421,7 +444,7 @@ export function useAgentStream(
               sequence: message.sequence,
               content: parsedContent.content,
             });
-            callbacks.onAssistantChunk?.({ content: parsedContent.content });
+            callbacksRef.current.onAssistantChunk?.({ content: parsedContent.content });
           } else if (parsedMetadata.stream_status === 'complete') {
             // Flush any pending content before completing
             flushPendingContent();
@@ -430,18 +453,18 @@ export function useAgentStream(
               setTextContent([]);
               setToolCall(null);
             });
-            if (message.message_id) callbacks.onMessage(message);
+            if (message.message_id) callbacksRef.current.onMessage(message);
           } else if (!parsedMetadata.stream_status) {
             // Handle non-chunked assistant messages if needed
-            callbacks.onAssistantStart?.();
-            if (message.message_id) callbacks.onMessage(message);
+            callbacksRef.current.onAssistantStart?.();
+            if (message.message_id) callbacksRef.current.onMessage(message);
           }
           break;
         case 'tool':
           React.startTransition(() => {
             setToolCall(null); // Clear any streaming tool call
           });
-          if (message.message_id) callbacks.onMessage(message);
+          if (message.message_id) callbacksRef.current.onMessage(message);
           break;
         case 'status':
           switch (parsedContent.status_type) {
@@ -498,12 +521,12 @@ export function useAgentStream(
           }
           break;
         case 'llm_response_start':
-          // llm_response_start messages are ignored (metadata only)
+          // llm_response_end and llm_response_start messages are ignored (metadata only)
           break;
         case 'user':
         case 'system':
           // Handle other message types if necessary
-          if (message.message_id) callbacks.onMessage(message);
+          if (message.message_id) callbacksRef.current.onMessage(message);
           break;
         default:
           console.warn(
@@ -632,10 +655,10 @@ export function useAgentStream(
     return () => {
       isMountedRef.current = false;
 
-      // Clean up throttle timeout
-      if (throttleRef.current) {
-        clearTimeout(throttleRef.current);
-        throttleRef.current = null;
+      // Clean up requestAnimationFrame
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
 
       // Flush any remaining pending content

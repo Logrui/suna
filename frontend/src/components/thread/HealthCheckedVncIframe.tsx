@@ -9,6 +9,7 @@ import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useVncPreloader } from '@/hooks/files';
 import { getVncLiteUrl, getVncWebSocketUrl } from '@/lib/daytona/preview-client';
 
+// feature-start: bugfix/49. kortix-computer-panel-height-overflow
 interface HealthCheckedVncIframeProps {
   sandbox: {
     id: string;
@@ -17,9 +18,13 @@ interface HealthCheckedVncIframeProps {
     token?: string;
   };
   className?: string;
+  agentName?: string; // Added for personalized VNC connection messages
 }
+// feature-end: bugfix/49. kortix-computer-panel-height-overflow
 
-export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncIframeProps) {
+// feature-start: bugfix/49. kortix-computer-panel-height-overflow
+export function HealthCheckedVncIframe({ sandbox, className, agentName }: HealthCheckedVncIframeProps) {
+  // feature-end: bugfix/49. kortix-computer-panel-height-overflow
   const [iframeKey, setIframeKey] = useState(0);
   const [isBrowserLoading, setIsBrowserLoading] = useState(true);
 
@@ -54,20 +59,18 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     setIsBrowserLoading(true);
   }, [sandbox?.id]);
 
-
-
-
   // VNC URL received but preloading in progress
   if (status === 'loading') {
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
-          <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-background flex flex-col items-center justify-center'>
+          {/* feature-start: bugfix/49. kortix-computer-panel-height-overflow */}
+          <div className='relative w-full max-h-[calc(100vh-16rem)] aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-background flex flex-col items-center justify-center'>
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-            <p className="text-sm font-medium text-center mb-2 text-foreground">Connecting to browser...</p>
-            <p className="text-xs text-muted-foreground mb-2 text-center">
-              Testing VNC connection
+            <p className="text-sm font-medium text-center mb-2 text-foreground">
+              Connecting to {agentName ? `${agentName}'s browser` : 'browser'}...
             </p>
+            {/* feature-end: bugfix/49. kortix-computer-panel-height-overflow */}
             {retryCount > 0 && (
               <p className="text-xs text-muted-foreground text-center">
                 🔄 Attempt {retryCount + 1}/5
@@ -84,7 +87,9 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
-          <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-destructive/10 flex flex-col items-center justify-center'>
+          {/* feature-start: bugfix/49. kortix-computer-panel-height-overflow */}
+          <div className='relative w-full max-h-[calc(100vh-16rem)] aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-destructive/10 flex flex-col items-center justify-center'>
+            {/* feature-end: bugfix/49. kortix-computer-panel-height-overflow */}
             <AlertCircle className="h-8 w-8 text-destructive mb-3" />
             <p className="text-sm font-medium text-center mb-2">Connection Failed</p>
             <p className="text-xs text-muted-foreground mb-4 text-center">
@@ -108,7 +113,9 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
     return (
       <div className={`overflow-hidden m-2 sm:m-4 relative ${className || ''}`}>
         <Card className="p-0 overflow-hidden border">
-          <div className='relative w-full aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-gray-100 dark:bg-gray-800'>
+          {/* feature-start: bugfix/49. kortix-computer-panel-height-overflow */}
+          <div className='relative w-full max-h-[calc(100vh-16rem)] aspect-[4/3] sm:aspect-[5/3] md:aspect-[16/11] overflow-hidden bg-gray-100 dark:bg-gray-800'>
+            {/* feature-end: bugfix/49. kortix-computer-panel-height-overflow */}
             <iframe
               key={iframeKey}
               src={vncUrl}
