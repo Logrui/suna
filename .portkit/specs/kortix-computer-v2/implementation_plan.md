@@ -47,3 +47,23 @@ We are dealing with a "Partial Manual Port" state that led to API mismatches.
 *   [ ] Frontend calls to `/files/content` return 200 (not 404).
 *   [ ] `KortixComputer.tsx` renders without `NextIntlClientProvider` error.
 *   [ ] No `next-intl` imports remain in the target directory.
+
+## 6. Emergency Fixes Phase (Post-Research)
+**Updated based on user feedback (2025-12-09)**
+
+### A. Files Tab (500 Error)
+*   **Symptoms**: `GET /sandboxes/.../files` returns 500.
+*   **Cause**: `backend/core/sandbox/api.py` uses `sandbox.fs.list_files(path)`.
+*   **Hypothesis**: The Daytona SDK method is likely `list_dir` or similar, not `list_files`.
+*   **Action**: 
+    1.  Research `daytona_sdk` filesystem methods (create a `debug_sdk.py` script if needed).
+    2.  Patch `api.py` to use the correct method (e.g., `list_dir` or `ls`).
+
+### B. Actions Tab (Non-Functional)
+*   **Symptoms**: User reports "non functional", possibly empty or crashing.
+*   **Cause**: Potential missing exports in `frontend/src/components/thread/tool-views/wrapper.tsx` or missing dependencies for `ToolView`.
+*   **Action**:
+    1.  Verify `ToolView` import in `KortixComputer.tsx`.
+    2.  Check `frontend/src/components/thread/tool-views/wrapper.tsx` for correct exports.
+    3.  Ensure `BrowserToolView` and other components are correctly registered.
+

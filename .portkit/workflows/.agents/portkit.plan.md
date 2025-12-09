@@ -19,15 +19,17 @@ You **MUST** consider the user input before proceeding (if not empty).
 Create a detailed Component Morphing strategy and Implementation Plan based on the Research artifacts.
 
 ## Note
-This is the "Architect" phase. Critical decisions about "Poison" code removal and Shim creation happen here.
+This is the "Architect and Research and Reiterate Planning" phase. Critical decisions about "Poison" code removal and Shim creation happen here.
+
+Additionally when /portkit.plan is run multiple times, follow a Plan ---> Research ---> Reinterate Plan cycle until user is satisfied with the plan.
 
 ## Outline
 1.  **Parse Input**: Identify Feature Name.
 2.  **Verify Context**: Ensure `research.md` (and `spec.md`) exists.
 3.  **Constitution Check**:
     *   Review `research.md` against project constraints.
-    *   *Rule*: "No Direct Upstream Overwrites without `sanitize-upstream`."
-    *   *Rule*: "All Custom Logic must be preserved via `extract-region`."
+    *   *Example Rule*: "No Direct Upstream Overwrites without `sanitize-upstream`."
+    *   *Example Rule*: "All Custom Logic must be preserved via `extract-region`."
 
 4.  **Strategy Formulation (The Core)**:
     *   **Component Morphing**: For each UI component in the Blast Radius:
@@ -48,10 +50,12 @@ This is the "Architect" phase. Critical decisions about "Poison" code removal an
             *   Example: "- [ ] Styling matches Local Theme (Dark Mode)."
     *   Write to: `.portkit/specs/[feature]/implementation_plan.md`.
 
+
 6.  **Review & Refine**:
     *   Ask user to review the Morph Strategy.
-    *   *Critical*: If a "Complex Merge" is identified, confirm the strategy is feasible.
+    *   *Example*: If a "Complex Merge" is identified, confirm the strategy is feasible.
+    *   **Requirement**: Review plan.md document and append utilize [NEEDS CLARIFICATION] tags for plan steps that require more information and research.
 
 7.  **Completion**:
-    *   Output plan location.
-    *   **Recommendation**: Suggest the user runs `/portkit.tasks` to decompose this plan into actionable steps.
+    *   Output plan location and ask user to review it.
+    *   **Recommendation**: Only suggest the user runs `/portkit.tasks` to decompose this plan into actionable steps if the plan is complete and ready to be executed.

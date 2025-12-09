@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { ToolCallInput } from '@/components/thread/tool-call-side-panel';
+import { ToolCallInput } from '@/components/thread/kortix-computer';
 import { UnifiedMessage, ParsedMetadata, AgentStatus } from '@/components/thread/types';
 import { safeJsonParse } from '@/components/thread/utils';
 import { useIsMobile } from '@/hooks/utils';
 import { isAskOrCompleteTool } from './utils';
+import { useKortixComputerStore } from '@/stores/kortix-computer-store';
 
 interface UseThreadToolCallsReturn {
   toolCalls: ToolCallInput[];
@@ -46,6 +47,9 @@ export function useThreadToolCalls(
   const userNavigatedRef = useRef(false);
   const isMobile = useIsMobile();
 
+  // Store action for navigating to a tool call
+  const navigateToToolCall = useKortixComputerStore((state) => state.navigateToToolCall);
+
   const toggleSidePanel = useCallback(() => {
     setIsSidePanelOpen((prevIsOpen) => {
       const newState = !prevIsOpen;
@@ -68,9 +72,14 @@ export function useThreadToolCalls(
   // Key format: `${assistantMessageId}:${toolName}` -> toolIndex
   const assistantMessageToToolIndex = useRef<Map<string, number>>(new Map());
 
-  useEffect(() => {
-    const historicalToolPairs: ToolCallInput[] = [];
-    const messageIdAndToolNameToIndex = new Map<string, number>();
+  // Track previous tool calls count to detect actual changes
+  const prevToolCallsCountRef = useRef(0);
+
+  // Memoize the computation of historical tool calls from messages
+  // This avoids recomputing on unrelated state changes
+  const { historicalToolPairs, messageIdAndToolNameToIndex } = useMemo(() => {
+    const pairs: ToolCallInput[] = [];
+    const indexMap = new Map<string, number>();
     const assistantMessages = messages.filter(m => m.type === 'assistant' && m.message_id);
 
     assistantMessages.forEach(assistantMsg => {
@@ -87,7 +96,7 @@ export function useThreadToolCalls(
 
       // Get tool calls from assistant message metadata
       const assistantMetadata = safeJsonParse<ParsedMetadata>(assistantMsg.metadata, {});
-      const toolCalls = assistantMetadata.tool_calls || [];
+      const msgToolCalls = assistantMetadata.tool_calls || [];
 
       // Match each tool result to its corresponding tool call using tool_call_id
       resultMessages.forEach(resultMessage => {
@@ -95,15 +104,15 @@ export function useThreadToolCalls(
         const toolResult = toolMetadata.result;
         const functionName = toolMetadata.function_name;
         const toolCallId = toolMetadata.tool_call_id;
-        
+
         // Must have all required fields from metadata
         if (!toolResult || !functionName || !toolCallId) {
           return;
         }
-        
+
         // Find matching tool call by tool_call_id
-        const matchingToolCall = toolCalls.find(tc => tc.tool_call_id === toolCallId);
-        
+        const matchingToolCall = msgToolCalls.find(tc => tc.tool_call_id === toolCallId);
+
         if (!matchingToolCall) {
           return;
         }
@@ -116,7 +125,7 @@ export function useThreadToolCalls(
           return;
         }
 
-        const toolIndex = historicalToolPairs.length;
+        const toolIndex = pairs.length;
         // Normalize arguments - handle both string and object types
         let normalizedArguments: Record<string, any> = {};
         if (matchingToolCall.arguments) {
@@ -130,7 +139,7 @@ export function useThreadToolCalls(
             }
           }
         }
-        historicalToolPairs.push({
+        pairs.push({
           toolCall: {
             tool_call_id: matchingToolCall.tool_call_id,
             function_name: matchingToolCall.function_name,
@@ -151,14 +160,28 @@ export function useThreadToolCalls(
         // This allows multiple tool calls per assistant message to be uniquely identified
         if (assistantMsg.message_id) {
           const key = `${assistantMsg.message_id}:${toolName}`;
-          messageIdAndToolNameToIndex.set(key, toolIndex);
+          indexMap.set(key, toolIndex);
         }
       });
     });
 
-    assistantMessageToToolIndex.current = messageIdAndToolNameToIndex;
-    setToolCalls(historicalToolPairs);
+    return { historicalToolPairs: pairs, messageIdAndToolNameToIndex: indexMap };
+  }, [messages]);
 
+  // Update state only when computed tool calls actually change
+  useEffect(() => {
+    assistantMessageToToolIndex.current = messageIdAndToolNameToIndex;
+    console.log('[useThreadToolCalls] Updated Tool Pairs:', { count: historicalToolPairs.length, pairs: historicalToolPairs });
+    // Only update toolCalls state if the count changed (simple heuristic to avoid deep comparison)
+    if (historicalToolPairs.length !== prevToolCallsCountRef.current) {
+      prevToolCallsCountRef.current = historicalToolPairs.length;
+      setToolCalls(historicalToolPairs);
+    }
+  }, [historicalToolPairs, messageIdAndToolNameToIndex]);
+
+  // Separate effect for UI state management (side panel, current index)
+  // This prevents recomputation of tool calls when UI state changes
+  useEffect(() => {
     if (historicalToolPairs.length > 0) {
       if (agentStatus === 'running' && !userNavigatedRef.current) {
         setCurrentToolIndex(historicalToolPairs.length - 1);
@@ -170,7 +193,7 @@ export function useThreadToolCalls(
         setAutoOpenedPanel(true);
       }
     }
-  }, [messages, isSidePanelOpen, autoOpenedPanel, agentStatus, isMobile, compact]);
+  }, [historicalToolPairs.length, isSidePanelOpen, autoOpenedPanel, agentStatus, isMobile, compact]);
 
   // Reset user navigation flag when agent stops
   useEffect(() => {
@@ -197,58 +220,61 @@ export function useThreadToolCalls(
 
     // Normalize tool name to match the format used in the mapping (lowercase, with dashes)
     const normalizedToolName = clickedToolName.replace(/_/g, '-').toLowerCase();
-    
+
     // Use the pre-computed mapping with composite key: assistantMessageId:toolName
     const compositeKey = `${clickedAssistantMessageId}:${normalizedToolName}`;
     const toolIndex = assistantMessageToToolIndex.current.get(compositeKey);
 
-    if (toolIndex !== undefined) {
-      setExternalNavIndex(toolIndex);
-      setCurrentToolIndex(toolIndex);
+    // Helper function to navigate to a tool index
+    const navigateToIndex = (index: number) => {
+      setExternalNavIndex(index);
+      setCurrentToolIndex(index);
       setIsSidePanelOpen(true);
-
+      // Use store action to ensure KortixComputer switches to tools view
+      navigateToToolCall(index);
       setTimeout(() => setExternalNavIndex(undefined), 100);
+    };
+
+    if (toolIndex !== undefined) {
+      navigateToIndex(toolIndex);
     } else {
       console.warn(
         `[PAGE] Could not find matching tool call in toolCalls array for assistant message ID: ${clickedAssistantMessageId}, tool name: ${clickedToolName}`,
       );
-      
+
       // Fallback: Try to find by searching through toolCalls array
       // Find the assistant message and match by tool name
       const assistantMessage = messages.find(
         m => m.message_id === clickedAssistantMessageId && m.type === 'assistant'
       );
-      
+
       if (assistantMessage) {
         // Get tool calls from assistant message metadata
         const assistantMetadata = safeJsonParse<ParsedMetadata>(assistantMessage.metadata, {});
         const toolCallsFromMetadata = assistantMetadata.tool_calls || [];
-        
+
         // Find the matching tool call by function name
         const matchingToolCall = toolCallsFromMetadata.find(tc => {
           const tcToolName = tc.function_name.replace(/_/g, '-').toLowerCase();
           return tcToolName === normalizedToolName;
         });
-        
+
         if (matchingToolCall) {
           // Find the tool call in the toolCalls array by tool_call_id
           const foundIndex = toolCalls.findIndex(
             tc => tc.toolCall.tool_call_id === matchingToolCall.tool_call_id
           );
-          
+
           if (foundIndex !== -1) {
-            setExternalNavIndex(foundIndex);
-            setCurrentToolIndex(foundIndex);
-            setIsSidePanelOpen(true);
-            setTimeout(() => setExternalNavIndex(undefined), 100);
+            navigateToIndex(foundIndex);
             return;
           }
         }
       }
-      
+
       toast.info('Could not find details for this tool call.');
     }
-  }, [messages, toolCalls]);
+  }, [messages, toolCalls, navigateToToolCall]);
 
   const handleStreamingToolCall = useCallback(
     (toolCall: UnifiedMessage | null) => {
@@ -273,7 +299,7 @@ export function useThreadToolCalls(
       // Process each tool call from metadata
       setToolCalls((prev) => {
         let updated = [...prev];
-        
+
         // Update or add each tool call from metadata
         filteredToolCalls.forEach((metadataToolCall) => {
           const existingIndex = updated.findIndex(
@@ -342,7 +368,7 @@ export function useThreadToolCalls(
           return newLength - 1;
         });
       }
-      
+
       if (!compact) {
         setIsSidePanelOpen(true);
       }

@@ -472,6 +472,7 @@ class ThreadManager:
             
             # Always fetch messages (needed for LLM call)
             # Fast path just skips compression, not fetching!
+            import time
             fetch_start = time.time()
             messages = await self.get_llm_messages(thread_id)
             logger.info(f"⏱️ [TIMING] get_llm_messages(): {(time.time() - fetch_start) * 1000:.1f}ms ({len(messages)} messages)")
@@ -576,6 +577,7 @@ class ThreadManager:
 
             # Note: We don't log token count here because cached blocks give inaccurate counts
             # The LLM's usage.prompt_tokens (reported after the call) is the accurate source of truth
+            import time
             
             # CRITICAL: Validate tool call pairing before sending to LLM
             # This catches any orphaned tool results that would cause Bedrock errors
@@ -620,7 +622,8 @@ class ThreadManager:
                     max_tokens=llm_max_tokens,
                     tools=openapi_tool_schemas,
                     tool_choice=tool_choice if config.native_tool_calling else "none",
-                    stream=stream
+                    stream=stream,
+                    stop=stop_sequences if stop_sequences else None
                 )
                 
                 # For streaming, the call returns immediately with a generator

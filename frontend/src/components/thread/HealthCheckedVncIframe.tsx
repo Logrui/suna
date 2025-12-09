@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useVncPreloader } from '@/hooks/files';
-import { getVncLiteUrl } from '@/lib/daytona/preview-client';
+import { getVncLiteUrl, getVncWebSocketUrl } from '@/lib/daytona/preview-client';
 
 interface HealthCheckedVncIframeProps {
   sandbox: {
@@ -23,13 +23,13 @@ export function HealthCheckedVncIframe({ sandbox, className }: HealthCheckedVncI
   const [iframeKey, setIframeKey] = useState(0);
   const [isBrowserLoading, setIsBrowserLoading] = useState(true);
 
-  // Use direct Daytona connection (bypasses Next.js rewrites)
+  // Use direct Daytona connection (bypasses Next.js rewrites) Frontend ---> Backend ---> Daytona
   const vncUrl = getVncLiteUrl(sandbox);
 
   // Log for debugging
-  // console.log('[VNC Component] Using direct Daytona connection');
-  // console.log('[VNC Component] VNC URL:', vncUrl);
-  // console.log('[VNC Component] WebSocket will connect to:', getVncWebSocketUrl(sandbox));
+  console.log('[VNC Component] Using direct Daytona connection');
+  console.log('[VNC Component] VNC URL:', vncUrl);
+  console.log('[VNC Component] WebSocket will connect to:', getVncWebSocketUrl(sandbox));
 
   // Use the enhanced VNC preloader hook
   const { status, retryCount, retry, isPreloaded } = useVncPreloader(sandbox, {
