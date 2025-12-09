@@ -82,7 +82,9 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     const isAdmin = adminData?.isAdmin || false;
 
     const [isMobile, setIsMobile] = useState(false);
-    const [mobileSection, setMobileSection] = useState<'main' | 'agents'>('main');
+    // feature-start: mobile-model-sheet
+    const [mobileSection, setMobileSection] = useState<'main' | 'agents' | 'models'>('main');
+    // feature-end: mobile-model-sheet
 
     // Detect mobile view
     useEffect(() => {
@@ -323,6 +325,98 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
         </div>
     ), []);
 
+    // feature-start: mobile-model-sheet
+    const ModelsList = useCallback(({ compact = false }: { compact?: boolean }) => (
+        <>
+            <div className={cn(
+                "overflow-y-auto space-y-0.5",
+                compact ? "max-h-[340px] px-2" : "max-h-[50vh] px-3",
+                "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+            )}>
+                {modelOptions.map((model) => {
+                    const isActive = selectedModel === model.id;
+                    const canAccess = canAccessModel(model.id);
+
+                    return (
+                        <div
+                            key={model.id}
+                            className={cn(
+                                "flex items-center gap-3 text-sm cursor-pointer rounded-xl sm:rounded-2xl transition-colors",
+                                compact ? "px-2 py-2" : "px-3 py-3 sm:py-2",
+                                isActive ? "bg-primary/5" : "hover:bg-muted/50 active:bg-muted/70"
+                            )}
+                            onClick={() => {
+                                // Check if it's a local model (Ollama/LM Studio) and if user is admin
+                                if (isLocalModel(model.id)) {
+                                    // If still loading admin role, show a loading toast
+                                    if (isLoadingAdminRole) {
+                                        toast.info('Checking permissions...', {
+                                            description: 'Please wait while we verify your access.',
+                                            duration: 2000,
+                                        });
+                                        return;
+                                    }
+
+                                    // If not admin, block with clear error message
+                                    if (!isAdmin) {
+                                        toast.error('Admin Access Restriction', {
+                                            description: 'Local models (Ollama, LM Studio) require admin privileges.',
+                                            duration: 5000,
+                                        });
+                                        setIsOpen(false);
+                                        return;
+                                    }
+                                }
+
+                                if (canAccess) {
+                                    onModelChange(model.id);
+                                    setIsOpen(false);
+                                } else {
+                                    setIsOpen(false);
+                                    usePricingModalStore.getState().openPricingModal({
+                                        isAlert: true,
+                                        alertTitle: 'Upgrade to access this AI model'
+                                    });
+                                }
+                            }}
+                        >
+                            <div className={cn(
+                                "flex items-center justify-center flex-shrink-0",
+                                compact ? "w-8 h-8" : "w-10 h-10 sm:w-8 sm:h-8"
+                            )}>
+                                <ModelProviderIcon
+                                    modelId={model.id}
+                                    size={compact ? 32 : (isMobile ? 40 : 32)}
+                                    className="flex-shrink-0"
+                                />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <span className={cn(
+                                    "font-medium block truncate",
+                                    compact ? "text-sm" : "text-base sm:text-sm"
+                                )}>
+                                    {model.label}
+                                </span>
+                                {model.variant && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {model.variant}
+                                    </span>
+                                )}
+                            </div>
+                            {isActive && (
+                                <Check className={cn(
+                                    "text-primary flex-shrink-0",
+                                    compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
+                                )} />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </>
+    ), [modelOptions, selectedModel, canAccessModel, onModelChange, isAdmin, isLoadingAdminRole, isMobile]);
+    // feature-end: mobile-model-sheet
+
     const WorkerSettingsButtons = useCallback(({ compact = false }: { compact?: boolean }) => (
         onAgentSelect && (selectedAgentId || displayAgent?.agent_id) ? (
             <div className={compact ? "px-3" : "px-4 sm:px-3"}>
@@ -412,6 +506,33 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
             );
         }
 
+        // feature-start: mobile-model-sheet
+        if (mobileSection === 'models') {
+            return (
+                <div className="flex flex-col h-full">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                        <button
+                            onClick={() => setMobileSection('main')}
+                            className="p-2 -ml-2 hover:bg-muted/50 rounded-2xl transition-colors"
+                        >
+                            <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                        <span className="text-base font-semibold">Select Model</span>
+                    </div>
+
+                    {/* List */}
+                    <div className="flex-1 overflow-hidden">
+                        <div className="px-4 pb-2 pt-3">
+                            <span className="text-xs font-medium text-muted-foreground">Available Models</span>
+                        </div>
+                        <ModelsList compact={false} />
+                    </div>
+                </div>
+            );
+        }
+        // feature-end: mobile-model-sheet
+
         // Main section
         return (
             <div className="flex flex-col">
@@ -429,9 +550,9 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                         <div className="px-4 pb-2">
                             <button
                                 onClick={() => setMobileSection('agents')}
-                                className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border bg-card hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                                className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border bg-card dark:bg-card/50 hover:bg-muted/50 active:bg-muted/70 transition-colors"
                             >
-                                <div className="flex items-center justify-center w-10 h-10 bg-card border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
+                                <div className="flex items-center justify-center w-10 h-10 bg-card dark:bg-card/50 border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
                                     {renderAgentIcon(isLoading && !displayAgent ? placeholderSunaAgent : displayAgent, 40)}
                                 </div>
                                 <span className="flex-1 truncate text-base font-medium text-left min-w-0">
@@ -443,6 +564,33 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                     </>
                 )}
 
+                {/* Model selector */}
+                {/* feature-start: mobile-model-sheet */}
+                <>
+                    <div className="px-4 pt-1 pb-1">
+                        <span className="text-xs font-medium text-muted-foreground">Model</span>
+                    </div>
+                    <div className="px-4 pb-2">
+                        <button
+                            onClick={() => setMobileSection('models')}
+                            className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border bg-card hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                        >
+                            <div className="flex items-center justify-center w-10 h-10 flex-shrink-0">
+                                <ModelProviderIcon
+                                    modelId={selectedModel}
+                                    size={40}
+                                    className="flex-shrink-0"
+                                />
+                            </div>
+                            <span className="flex-1 truncate text-base font-medium text-left min-w-0">
+                                {modelOptions.find(m => m.id === selectedModel)?.label || 'Select Model'}
+                            </span>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground rotate-[-90deg] flex-shrink-0" />
+                        </button>
+                    </div>
+                </>
+                {/* feature-end: mobile-model-sheet */}
+
                 {/* Worker settings */}
                 {onAgentSelect && (selectedAgentId || displayAgent?.agent_id) && (
                     <div className="py-3">
@@ -451,7 +599,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                 )}
             </div>
         );
-    }, [mobileSection, searchQuery, onAgentSelect, displayAgent, isLoading, placeholderSunaAgent, renderAgentIcon, selectedAgentId, AgentsList, CreateWorkerButton, WorkerSettingsButtons]);
+    }, [mobileSection, searchQuery, onAgentSelect, displayAgent, isLoading, placeholderSunaAgent, renderAgentIcon, selectedAgentId, selectedModel, modelOptions, AgentsList, CreateWorkerButton, WorkerSettingsButtons, ModelsList]);
 
     // Trigger button
     const TriggerButton = (

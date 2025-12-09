@@ -707,7 +707,7 @@ class ModelRegistry:
         
         # Check if Ollama integration is enabled
         if not config.OLLAMA_ENABLED:
-            logger.info("OLLAMA_ENABLED is False, using generic OpenAI-compatible registration")
+            logger.debug("OLLAMA_ENABLED is False, using generic OpenAI-compatible registration")
             self._register_generic_openai_compatible()
             return
         
@@ -719,7 +719,7 @@ class ModelRegistry:
         try:
             from .ollama_client import OllamaClient
             
-            logger.info("Starting Ollama model discovery...")
+            logger.debug("Starting Ollama model discovery...")
             client = OllamaClient()
             
             # List all models
@@ -812,7 +812,8 @@ class ModelRegistry:
                             api_base=config.OLLAMA_API_BASE,
                         ),
                         fallback_models=[
-                            "vertex_ai/claude-haiku-4-5@20251001" if SHOULD_USE_ANTHROPIC else "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash",
+                            "anthropic/claude-haiku-4-5",
+                            "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash" if config.GEMINI_API_KEY else "vertex_ai/claude-sonnet-4-5@20250929",
                         ]
                     ))
                     
@@ -824,14 +825,14 @@ class ModelRegistry:
                     continue
             
             if registered_count > 0:
-                logger.info(f"Successfully registered {registered_count} Ollama models")
+                logger.debug(f"Successfully registered {registered_count} Ollama models")
             else:
                 logger.warning("No Ollama models were registered, using generic registration as fallback")
                 self._register_generic_openai_compatible()
                 
         except Exception as e:
             logger.error(f"Ollama model discovery failed: {e}")
-            logger.info("Falling back to generic OpenAI-compatible registration")
+            logger.debug("Falling back to generic OpenAI-compatible registration")
             self._register_generic_openai_compatible()
 
     async def initialize_lm_studio_models(self):
@@ -846,14 +847,14 @@ class ModelRegistry:
         try:
             from .lmstudio_client import LMStudioClient
             
-            logger.info("Starting LM Studio model discovery...")
+            logger.debug("Starting LM Studio model discovery...")
             client = LMStudioClient()
             
             # List all models
             models_data = await client.list_models()
             
             if not models_data:
-                logger.warning("No LM Studio models found")
+                logger.debug("No LM Studio models found")
                 return
             
             # Track registered count

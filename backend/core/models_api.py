@@ -293,7 +293,7 @@ async def list_local_models():
                 )
             )
         
-        logger.info(f"Listed {len(lmstudio_models)} LM Studio models (after filtering excluded models)")
+        logger.debug(f"Listed {len(lmstudio_models)} LM Studio models (after filtering excluded models)")
         
     except Exception as e:
         logger.warning(f"Could not list LM Studio models: {e}")
@@ -332,7 +332,7 @@ async def list_local_models():
                 )
             )
         
-        logger.info(f"Listed {len(ollama_models)} Ollama models (after filtering excluded models)")
+        logger.debug(f"Listed {len(ollama_models)} Ollama models (after filtering excluded models)")
         
     except Exception as e:
         logger.warning(f"Could not list Ollama models: {e}")

@@ -53,7 +53,7 @@ class LMStudioClient:
                 data = response.json()
                 
                 models = data.get("data", [])
-                logger.info(f"Found {len(models)} LM Studio models")
+                logger.debug(f"Found {len(models)} LM Studio models")
                 return models
                 
         except httpx.HTTPError as e:
