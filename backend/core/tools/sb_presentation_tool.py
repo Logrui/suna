@@ -1058,42 +1058,42 @@ print(json.dumps(result))
                 
                 if store_locally:
                     result = convert_response.json()
-                filename = result.get("filename")
-                downloads_path = f"/workspace/downloads/{filename}"
-                presentation_file_path = f"{presentation_path}/{safe_name}.{format_type}"
+                    filename = result.get("filename")
+                    downloads_path = f"/workspace/downloads/{filename}"
+                    presentation_file_path = f"{presentation_path}/{safe_name}.{format_type}"
                     
                     try:
-                    file_content = await self.sandbox.fs.download_file(downloads_path)
-                    await self.sandbox.fs.upload_file(file_content, presentation_file_path)
-                except Exception:
-                    pass
-                
-                return {
-                    "success": True,
-                    "format": format_type,
-                    "file": f"{self.presentations_dir}/{safe_name}/{safe_name}.{format_type}",
-                    "download_url": f"/workspace/downloads/{filename}",
+                        file_content = await self.sandbox.fs.download_file(downloads_path)
+                        await self.sandbox.fs.upload_file(file_content, presentation_file_path)
+                    except Exception:
+                        pass
+                    
+                    return {
+                        "success": True,
+                        "format": format_type,
+                        "file": f"{self.presentations_dir}/{safe_name}/{safe_name}.{format_type}",
+                        "download_url": f"/workspace/downloads/{filename}",
                         "total_slides": result.get("total_slides"),
-                    "stored_locally": True
-                }
+                        "stored_locally": True
+                    }
                 else:
-                file_content = convert_response.content
-                filename = f"{safe_name}.{format_type}"
+                    file_content = convert_response.content
+                    filename = f"{safe_name}.{format_type}"
                     
                     content_disposition = convert_response.headers.get("Content-Disposition", "")
-                if "filename*=UTF-8''" in content_disposition:
-                    encoded_name = content_disposition.split("filename*=UTF-8''")[1].split(';')[0]
-                    filename = unquote(encoded_name)
-                elif 'filename="' in content_disposition:
+                    if "filename*=UTF-8''" in content_disposition:
+                        encoded_name = content_disposition.split("filename*=UTF-8''")[1].split(';')[0]
+                        filename = unquote(encoded_name)
+                    elif 'filename="' in content_disposition:
                         filename = content_disposition.split('filename="')[1].split('"')[0]
                     
-                return {
-                    "success": True,
-                    "format": format_type,
+                    return {
+                        "success": True,
+                        "format": format_type,
                         "filename": filename,
-                    "file_size": len(file_content),
-                    "stored_locally": False
-                }
+                        "file_size": len(file_content),
+                        "stored_locally": False
+                    }
         except Exception as e:
             return {"success": False, "format": format_type, "error": str(e)}
 
@@ -1177,7 +1177,7 @@ print(json.dumps(result))
                     "stored_locally": pdf_result.get("stored_locally")
                 }
                 successes.append("PDF")
-                else:
+            else:
                 errors.append(f"PDF: {pdf_result.get('error')}")
             
             # Set message based on results

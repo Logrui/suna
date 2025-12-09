@@ -59,7 +59,7 @@ export const useModelSelection = () => {
   const availableModels = useMemo<ModelOption[]>(() => {
     if (!modelsData?.models) return [];
 
-    console.log('Available Models Data:', modelsData.models);
+
 
     return modelsData.models.map(model => ({
       id: model.id, // Always use the actual model ID

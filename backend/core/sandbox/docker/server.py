@@ -289,8 +289,8 @@ async def serve_file(file_path: str):
     # Serve HTML files with HTMLResponse
     if file_path.endswith('.html'):
         with open(full_file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    return HTMLResponse(content=content)
+            content = f.read()
+        return HTMLResponse(content=content)
 
     # Serve all other files (CSS, JS, images, etc.) as static files
     # FileResponse automatically sets the correct content-type based on file extension

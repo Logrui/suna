@@ -1,4 +1,4 @@
-﻿"""
+"""
 Sanitized API endpoints for formatted/frontend-ready messages.
 
 These endpoints return messages in a clean, parsed format ready for rendering,

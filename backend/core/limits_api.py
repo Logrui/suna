@@ -1,4 +1,4 @@
-﻿from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
