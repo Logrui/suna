@@ -1,3 +1,4 @@
+// feature-start: daytona-preview-bypass
 /**
  * Daytona Preview Client
  *
@@ -83,3 +84,4 @@ export function getVncWebSocketUrl(sandbox: DaytonaSandbox): string {
     const wsBase = backend.replace(/^http/, 'ws');
     return `${wsBase}/api/sandboxes/${sandbox.id}/proxy/6080/websockify`;
 }
+// feature-end: daytona-preview-bypass

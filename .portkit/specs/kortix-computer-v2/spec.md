@@ -11,7 +11,7 @@
     *   Backend: `backend/core/sandbox/api.py` (Merge Strategy: Append/Integrate, do not overwrite)
     *   Frontend: `frontend/src/components/thread/kortix-computer/*`
     *   Common: `frontend/src/components/thread/HealthCheckedVncIframe.tsx`
-*   **Feature Description**: Port the latest "computer use" / sandbox capabilities from the upstream PRODUCTION branch, enabling the agent to interact with a virtual desktop/environment.
+*   **Feature Description**: Port the latest "computer use" / sandbox capabilities from the upstream PRODUCTION branch, enabling `the agent to interact with a virtual desktop/environment.
 
 ## 2. Adaptation Strategy (The "Bridge")
 We are not just copying files; we are adapting them to our **Local Architecture**.
@@ -61,6 +61,10 @@ After the port is complete, these scenarios must pass locally.
 *   [ ] Existing Slash Commands function without regression.
 *   [ ] No "Poison Imports" (e.g. `next-intl`) remain.
 
+## Research Keywords
+*   **Scan Keywords**: `sandboxes`, `files/content`, `KortixComputer`, `useTranslations`, `credits`, `billing`
+*   **API Verification**: Locate the definition of `/sandboxes/{id}/files/content` in upstream `api.py`.
+
 ## Clarifications
 *   **Q**: How should we handle UI elements related to Billing/Credits?
     *   **A**: **Strip** - Completely remove the relevant DOM elements and logic.
@@ -68,3 +72,7 @@ After the port is complete, these scenarios must pass locally.
     *   **A**: **Inline English** - Look up the key in the upstream `en.json` file and hardcode the English string.
 *   **Q**: How should we apply upstream changes to `backend/core/sandbox/api.py`?
     *   **A**: **Merge & Append** - Carefully add new endpoints/functions to the existing file; preserve existing logic.
+*   **Q**: What is the primary "Network Dependency" concern?
+    *   **A**: **API Endpoint Mismatch (404)** - Frontend is calling `/api/sandboxes/{id}/files/content` but receiving 404. This implies the backend endpoint is missing or the route prefix is incorrect. Research must verify the `api.py` merge actually included this endpoint.
+*   **Q**: What is the strategy for fixing the Backend API?
+    *   **A**: **Safe to Edit (Patch)** - We will identify the missing endpoints in upstream and strictly append/insert them into the existing `api.py` without overwriting custom auth logic.

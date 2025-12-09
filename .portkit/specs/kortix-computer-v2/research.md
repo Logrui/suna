@@ -1,59 +1,82 @@
-# Portkit - Research: Kortix Computer v2
+# Research Report: Kortix Computer v2
+Date: 2025-12-08
+Target: Upstream `kortix-computer-v2` Feature
 
-## Codemap
-The "Kortix Computer" feature spans frontend interactions and backend sandbox control.
+## 1. Codemap & Architecture
 
-### Component Tree
-```mermaid
-graph TD
-    A[Thread/Message] -->|Render Tool| B[KortixComputer.tsx]
-    B --> C[FileBrowserView.tsx]
-    B --> D[FileViewerView.tsx]
-    B --> E[HealthCheckedVncIframe.tsx]
-    B --> F[VersionBanner.tsx]
-    
-    B -->|API: /sandboxes/{id}/files| G[Backend: api.py]
-    B -->|API: /sandboxes/{id}/proxy| G
-    
-    G --> H[Daytona SDK]
-    G --> I[Supabase Auth]
+The feature consists of a **Frontend** interface for interacting with a remote virtual desktop and a **Backend** API for file management and proxying.
+
+### File Topology
+```
+frontend/src/components/thread/kortix-computer/
+├── KortixComputer.tsx          # Main Container (Entry Point)
+├── FileBrowserView.tsx         # File Manager UI
+├── FileViewerView.tsx          # File Editor/Viewer
+├── KortixComputerHeader.tsx    # Shared Header (Tabs)
+├── VersionBanner.tsx           # Update Notifications
+└── index.ts                    # Exports
+
+backend/core/sandbox/
+├── api.py                      # REST Endpoints (NEEDS MERGE)
+└── sandbox.py                  # Core Logic (Daytona SDK wrapper)
 ```
 
-### Critical Paths
-1.  **VNC Stream**: `HealthCheckedVncIframe` -> Backend Proxy -> Daytona container.
-2.  **File Operations**: Frontend -> `api.py` -> Daytona `fs` operations.
-3.  **Git History**: New endpoints in `api.py` allow viewing file history/diffs.
+### Data Flow
+1.  **Launch**: `KortixComputer.tsx` requests sandbox status via `useKortixComputer`.
+2.  **View**: `HealthCheckedVncIframe` connects to VNC stream.
+3.  **File Ops**: `FileBrowserView` calls `/api/sandboxes/{id}/files/*`.
+4.  **Edit**: `FileViewerView` reads/writes content via API.
 
-## Semantic Diff (Upstream vs Local)
+## 2. Semantic Diff Analysis
+**Tool Used**: `smart-diff.py` (Recursive)
 
 ### Backend (`backend/core/sandbox/api.py`)
-*   **Upstream Status**: significantly larger (~1350 lines vs ~870 lines).
-*   **New Endpoints** (Missing Locally):
-    *   `GET /sandboxes/{id}/files/history`: Lists git commit history for files.
-    *   `GET /sandboxes/{id}/files/content-by-hash`: Reads file content at specific commit.
-    *   `Retry Logic`: `retry_with_backoff` wrapper introduced for transient Daytona errors.
-*   **Action**: **Merge Required**. We must append the new endpoints and helper functions (`retry_with_backoff`) to our local file, carefully preserving our custom `ensure_project_sandbox` logic.
+*   **Status**: `[DIFF DETECTED]` (High Divergence)
+*   **Changes**:
+    *   **New Imports**: `aiohttp` (Local), `websockets` (Local) vs `shlex` (Upstream).
+    *   **New Logic (Upstream)**: `retry_with_backoff` decorator for transient errors.
+    *   **New Endpoints (Upstream)**:
+        *   `/sandboxes/{id}/files/history`: Git commit history.
+        *   `/sandboxes/{id}/files/content-by-hash`: Content at specific commit.
+        *   `/sandboxes/{id}/files/content`: **CRITICAL MISSING ENDPOINT** (Current cause of 404).
 
-### Frontend (`frontend/src/components/thread/kortix-computer/`)
-*   **Upstream Status**: New components.
-*   **Dependencies**:
-    *   `next-intl` (POISON): Used in `KortixComputer.tsx` (`useTranslations`).
-    *   `sonner`, `framer-motion`: Standard deps (likely available).
-*   **Action**: **Port & Strip**.
-    *   Replace `useTranslations` with hardcoded English strings.
-    *   Copy mostly as-is, removing localization hooks.
+### Frontend (`frontend/.../kortix-computer`)
+*   **Status**: `[DIFF]` on `KortixComputer.tsx`.
+*   **Changes**:
+    *   Upstream uses `next-intl` (Denied).
+    *   Upstream has stricter types for file operations.
 
-## Specifications & Limitations
-1.  **Billing**: No explicit billing logic found in `kortix-computer` components or `api.py`.
-    *   *Risk*: Low.
-2.  **Localization**: `next-intl` removal is the primary modification task.
-    *   *Strategy*: "Inline English" (replace `t('key')` with actual text).
-3.  **Auth**: Upstream uses `VerifyUser`, we use `Supabase/Basejump`.
-    *   *Strategy*: Ensure `api.py` merge uses `core.utils.auth_utils` (already present locally).
+## 3. Specifications & Limitations (Blast Radius)
 
-## Blast Radius
-*   **High**: `backend/core/sandbox/api.py` (Merge conflict potential).
-*   **Low**: New Frontend components (Additive).
+### A. Denied Components
+*   **`next-intl`**: Detected in `KortixComputer.tsx`.
+    *   *Action*: Strip import, replace `t('key')` with hardcoded strings.
+*   **Billing**: User explicitly requested removal.
+    *   *Action*: Ensure no `credits` or `subscription` hooks are imported.
 
-## Conclusion
-The port is feasible. The main complexity lies in merging `api.py` to gain the new Git/History capabilities without breaking our custom sandbox orchestration.
+### B. Missing Endpoints (The 404 Fix)
+The local `api.py` is missing crucial file management endpoints present in upstream.
+*   **Missing**: `GET /sandboxes/{id}/files/content`
+*   **Missing**: `GET /sandboxes/{id}/files/history`
+
+### C. Dependency Graph
+```json
+{
+  "dependencies": {
+    "internal": [
+      "@/components/thread/HealthCheckedVncIframe", 
+      "@/lib/api/threads"
+    ],
+    "denied": [
+      "next-intl"
+    ]
+  }
+}
+```
+
+## 4. Recommendations
+1.  **Backend**: Patch `api.py` to include the missing `/files/content` and `/files/history` endpoints from upstream. **DO NOT OVERWRITE** the file; use `smart-diff` reference to copy only the new functions.
+2.  **Frontend**: Re-port `KortixComputer.tsx` from upstream, but:
+    *   Strip `next-intl`.
+    *   Keep local `HealthCheckedVncIframe` integration.
+3.  **Sanity Check**: Verify `sandbox.py` matches upstream expectations for `read_file`.

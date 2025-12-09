@@ -7,7 +7,7 @@ def read_clean(file_path):
     """Read file, strip whitespace, ignore comments (basic)."""
     lines = []
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             for line in f:
                 stripped = line.strip()
                 if not stripped:
@@ -48,6 +48,7 @@ def main():
     parser.add_argument("upstream", help="Path to upstream file/directory")
     parser.add_argument("local", help="Path to local file/directory")
     parser.add_argument("-r", "--recursive", action="store_true", help="Enable recursive directory comparison")
+    parser.add_argument("--full", action="store_true", help="Show full diff output")
     args = parser.parse_args()
 
     up_path = Path(args.upstream)
@@ -108,10 +109,14 @@ def main():
              print("MATCH: Files are semantically identical.")
         elif status == "DIFF":
             print(f"DIFF DETECTED: {len(lines)} changes.")
-            for line in lines[:50]:
-                print(line)
-            if len(lines) > 50:
-                print("... (truncated)")
+            if args.full:
+                for line in lines:
+                    print(line)
+            else:
+                for line in lines[:50]:
+                    print(line)
+                if len(lines) > 50:
+                    print("... (truncated)")
 
 if __name__ == "__main__":
     main()

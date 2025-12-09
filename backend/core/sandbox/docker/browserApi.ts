@@ -35,15 +35,15 @@ class BrowserAutomation {
 
     }
 
-    async init(apiKey: string): Promise<{status: string, message: string}> {
-        try{
+    async init(apiKey: string): Promise<{ status: string, message: string }> {
+        try {
             if (!this.browserInitialized) {
                 // Clean up any existing browser before initializing new one
                 if (this.stagehand && this.page) {
                     console.log("Cleaning up existing browser before init");
                     await this.shutdown();
                 }
-                
+
                 console.log("Initializing browser with api key");
                 this.stagehand = new Stagehand({
                     env: "LOCAL",
@@ -59,8 +59,8 @@ class BrowserAutomation {
                     localBrowserLaunchOptions: {
                         headless: false,
                         viewport: {
-                            width: 1024,
-                            height: 768
+                            width: 1440,
+                            height: 900
                         },
                         downloadsPath: '/workspace/downloads',
                         acceptDownloads: true,
@@ -97,7 +97,12 @@ class BrowserAutomation {
                     }
                 }
 
-                await this.page.goto('https://www.google.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+                await this.page.goto('https://kortix.com', { waitUntil: 'networkidle', timeout: 30000 });
+                // Wait a bit more for page to fully render and be visible
+                await this.page.waitForTimeout(2000);
+                // Verify page loaded successfully
+                const currentUrl = await this.page.url();
+                console.log(`Browser initialized and navigated to: ${currentUrl}`);
                 return {
                     status: "healthy",
                     message: "Browser initialized"
@@ -116,7 +121,7 @@ class BrowserAutomation {
         }
     }
 
-    health(): {status: string} {
+    health(): { status: string } {
         if (this.browserInitialized && this.page && !this.page.isClosed()) {
             return {
                 status: "healthy"
@@ -146,7 +151,7 @@ class BrowserAutomation {
     }
 
     async get_stagehand_state() {
-        try{
+        try {
             const health = this.health();
             if (this.page && health.status === "healthy") {
                 const screenshot_base64 = await this.page.screenshot({ fullPage: false }).then(buffer => buffer.toString('base64'));
@@ -252,7 +257,7 @@ class BrowserAutomation {
                 const { action, iframes, variables, filePath } = req.body;
 
                 const fileChooseHandler = async (fileChooser: FileChooser) => {
-                    if(filePath){
+                    if (filePath) {
                         await fileChooser.setFiles(filePath);
                     } else {
                         await fileChooser.setFiles([]);
@@ -261,7 +266,7 @@ class BrowserAutomation {
 
                 this.page.on('filechooser', fileChooseHandler);
 
-                const result = await this.page.act({action, iframes: iframes || true, variables});
+                const result = await this.page.act({ action, iframes: iframes || true, variables });
                 const page_info = await this.get_stagehand_state();
                 const response: BrowserActionResult = {
                     success: result.success,
@@ -340,7 +345,7 @@ class BrowserAutomation {
 
     async convertSvg(req: express.Request, res: express.Response) {
         console.log(`Converting SVG to PNG: ${JSON.stringify(req.body)}`);
-        
+
         try {
             if (!this.browserInitialized || !this.page) {
                 res.status(500).json({
@@ -354,7 +359,7 @@ class BrowserAutomation {
             }
 
             const { svg_file_path } = req.body;
-            
+
             if (!svg_file_path) {
                 res.status(400).json({
                     success: false,
@@ -369,20 +374,20 @@ class BrowserAutomation {
             // Navigate to the SVG file
             const fileUrl = `file://${svg_file_path}`;
             await this.page.goto(fileUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
-            
+
             // Wait for any potential loading/animations
             await this.page.waitForTimeout(500);
 
             let screenshot_base64: string;
-            
+
             // Try to get the SVG element and take a screenshot of just that element
             const svgElement = await this.page.locator('svg').first();
             const svgCount = await this.page.locator('svg').count();
-            
+
             if (svgCount > 0) {
                 // Get bounding box to check if element is visible
                 const bbox = await svgElement.boundingBox();
-                
+
                 if (bbox && bbox.width > 0 && bbox.height > 0) {
                     // Take screenshot of just the SVG element
                     const screenshotBuffer = await svgElement.screenshot({ type: 'png' });
@@ -399,7 +404,7 @@ class BrowserAutomation {
             }
 
             const page_info = await this.get_stagehand_state();
-            
+
             res.json({
                 success: true,
                 message: `Successfully converted SVG to PNG: ${svg_file_path}`,
@@ -411,7 +416,7 @@ class BrowserAutomation {
         } catch (error) {
             console.error("Error converting SVG:", error);
             const page_info = await this.get_stagehand_state();
-            
+
             res.status(500).json({
                 success: false,
                 message: "Failed to convert SVG",
@@ -447,9 +452,9 @@ app.get('/api', (req, res) => {
 
 app.post('/api/init', async (req, res) => {
     console.log("Initializing browser");
-    const {api_key} = req.body;
+    const { api_key } = req.body;
     const result = await browserAutomation.init(api_key);
-    
+
     if (result.status === "initialized" || result.status === "healthy") {
         res.status(200).json({
             "status": "healthy",

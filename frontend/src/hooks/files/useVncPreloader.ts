@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+// feature-start: daytona-preview-bypass
 import { getVncLiteUrl } from '@/lib/daytona/preview-client';
 
-// feature-start: daytona-preview-bypass
 export type VncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface VncPreloaderOptions {
