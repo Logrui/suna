@@ -136,12 +136,12 @@ class MCPToolWrapper(Tool):
     async def _ensure_initialized(self):
         if not self._initialized:
             try:
-            await self._initialize_servers()
+                await self._initialize_servers()
             except Exception as e:
                 logger.error(f"Error during MCP server initialization: {e} (continuing with available servers)")
             
             try:
-            await self._create_dynamic_tools()
+                await self._create_dynamic_tools()
             except Exception as e:
                 logger.error(f"Error creating dynamic MCP tools: {e} (continuing with available tools)")
             
@@ -215,9 +215,9 @@ class MCPToolWrapper(Tool):
                     logger.error(f"Failed to initialize MCP server '{config_name}': {result}")
                 elif isinstance(result, dict):
                     if result.get('success', False):
-                    successful += 1
-                    if self.use_cache and result:
-                        await _redis_cache.set(config, result)
+                        successful += 1
+                        if self.use_cache and result:
+                            await _redis_cache.set(config, result)
                     else:
                         failed += 1
                         error_msg = result.get('error', 'Unknown error')
@@ -383,7 +383,7 @@ class MCPToolWrapper(Tool):
             if method:
                 # Bind the method to this instance if it's not already bound
                 if callable(method):
-                return method
+                    return method
         
         # Try to find in dynamic_tools by method_name
         if hasattr(self, '_dynamic_tools') and self._dynamic_tools:

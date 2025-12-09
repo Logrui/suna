@@ -174,19 +174,18 @@ class SandboxWebSearchTool(SandboxToolsBase):
                     return self.fail_response("A valid search query is required.")
                 
             logging.info(f"Executing web search for query: '{query}' with {num_results} results")
-                result = await self._execute_single_search(query, num_results)
-                
-                if result.get("success", False):
-                    return ToolResult(
-                        success=True,
-                        output=json.dumps(result.get("response", {}), ensure_ascii=False)
-                    )
-                else:
-                    logging.warning(f"No search results or answer found for query: '{query}'")
-                    return ToolResult(
-                        success=False,
-                        output=json.dumps(result.get("response", {}), ensure_ascii=False)
-                    )
+            result = await self._execute_single_search(query, num_results)
+            if result.get("success", False):
+                return ToolResult(
+                    success=True,
+                    output=json.dumps(result.get("response", {}), ensure_ascii=False)
+                )
+            else:
+                logging.warning(f"No search results or answer found for query: '{query}'")
+                return ToolResult(
+                    success=False,
+                    output=json.dumps(result.get("response", {}), ensure_ascii=False)
+                )
         
         except Exception as e:
             error_message = str(e)
