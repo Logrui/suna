@@ -70,15 +70,14 @@
   --exitToRight: exitToRight 250ms ease;
   --animate-elliptical-orbit: elliptical-orbit 20s linear infinite;
   --animate-shiny-text: shiny-text 8s infinite;
+
   @keyframes orbit {
     0% {
-      transform: rotate(calc(var(--angle) * 1deg))
-        translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+      transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
     }
+
     100% {
-      transform: rotate(calc(var(--angle) * 1deg + 360deg))
-        translateY(calc(var(--radius) * 1px))
-        rotate(calc((var(--angle) * -1deg) - 360deg));
+      transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * 1px)) rotate(calc((var(--angle) * -1deg) - 360deg));
     }
   }
 
@@ -86,6 +85,7 @@
     from {
       height: 0;
     }
+
     to {
       height: var(--radix-accordion-content-height);
     }
@@ -95,6 +95,7 @@
     from {
       height: var(--radix-accordion-content-height);
     }
+
     to {
       height: 0;
     }
@@ -104,6 +105,7 @@
     from {
       transform: translateX(0);
     }
+
     to {
       transform: translateX(calc(-100% - var(--gap)));
     }
@@ -113,14 +115,17 @@
     from {
       transform: translateY(0);
     }
+
     to {
       transform: translateY(calc(-100% - var(--gap)));
     }
   }
+
   @keyframes slide-down {
     from {
       height: 0px;
     }
+
     to {
       height: var(--radix-accordion-content-height);
     }
@@ -130,6 +135,7 @@
     from {
       height: var(--radix-accordion-content-height);
     }
+
     to {
       height: 0px;
     }
@@ -141,6 +147,7 @@
       opacity: 0;
       transform: translateX(200px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -152,6 +159,7 @@
       opacity: 0;
       transform: translateX(-200px);
     }
+
     to {
       opacity: 1;
       transform: translateX(0);
@@ -163,6 +171,7 @@
       opacity: 1;
       transform: translateX(0);
     }
+
     to {
       opacity: 0;
       transform: translateX(200px);
@@ -174,6 +183,7 @@
       opacity: 1;
       transform: translateX(0);
     }
+
     to {
       opacity: 0;
       transform: translateX(-200px);
@@ -185,6 +195,7 @@
       opacity: 0;
       transform: rotateX(-30deg) scale(0.9);
     }
+
     to {
       opacity: 1;
       transform: rotateX(0deg) scale(1);
@@ -196,6 +207,7 @@
       opacity: 1;
       transform: rotateX(0deg) scale(1);
     }
+
     to {
       opacity: 0;
       transform: rotateX(-10deg) scale(0.95);
@@ -206,6 +218,7 @@
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
@@ -215,6 +228,7 @@
     from {
       opacity: 1;
     }
+
     to {
       opacity: 0;
     }
@@ -222,23 +236,22 @@
 
   @keyframes elliptical-orbit {
     from {
-      transform: rotate(var(--angle, 0) deg)
-        translate(var(--h-radius, 160px), 0)
-        rotate(calc(var(--angle, 0) deg * -1));
+      transform: rotate(var(--angle, 0) deg) translate(var(--h-radius, 160px), 0) rotate(calc(var(--angle, 0) deg * -1));
     }
+
     to {
-      transform: rotate(calc(var(--angle, 0) deg + 360deg))
-        translate(var(--h-radius, 160px), 0)
-        rotate(calc((var(--angle, 0) deg + 360deg) * -1));
+      transform: rotate(calc(var(--angle, 0) deg + 360deg)) translate(var(--h-radius, 160px), 0) rotate(calc((var(--angle, 0) deg + 360deg) * -1));
     }
   }
 
   @keyframes shiny-text {
+
     0%,
     90%,
     100% {
       background-position: calc(-100% - var(--shiny-width)) 0;
     }
+
     30%,
     60% {
       background-position: calc(100% + var(--shiny-width)) 0;
@@ -296,8 +309,7 @@
   --muted: oklch(0.31 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(98.46% 0.002 247.84)
-    --destructive: oklch(0.396 0.141 25.723);
+  --accent-foreground: oklch(98.46% 0.002 247.84) --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
   --border: oklch(0.2565 0.0019 286.27);
   --input: oklch(0.28 0 0);
@@ -322,6 +334,7 @@
     /* stylelint-disable-next-line at-rule-no-unknown */
     @apply border-border outline-ring/50;
   }
+
   html {
     scroll-behavior: smooth;
     zoom: 100%;
@@ -330,6 +343,7 @@
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: 'salt' on, 'ss10' on, 'ss09' on, 'ss01' on, 'ss02' on, 'ss03' on, 'ss04' on, 'ss14' on, 'palt';
   }
+
   body {
     /* stylelint-disable-next-line at-rule-no-unknown */
     @apply bg-background text-foreground;
@@ -369,14 +383,14 @@
 /* Legacy chat-markdown styles removed - use UnifiedMarkdown component instead */
 
 .bg-pattern-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
 .dark .bg-pattern-grid {
-  background-image: 
+  background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 20px 20px;
@@ -403,15 +417,60 @@
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 @keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
+
+/* ========== Stat Card Border Animations ========== */
+
+/* Border Shimmer - horizontal sweep (for simple left-right effect) */
+@keyframes border-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Border Rotate - shimmer rotates around all 4 sides using @property */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-rotate {
+  0% {
+    --border-angle: 0deg;
+  }
+
+  100% {
+    --border-angle: 360deg;
+  }
+}
+
+/* ========== End Stat Card Animations ========== */
 
 /* stylelint-disable-next-line at-rule-no-unknown */
 @theme {
@@ -432,12 +491,10 @@
   content: '';
   /* stylelint-disable-next-line at-rule-no-unknown */
   @apply absolute top-0 left-0 w-full h-full;
-  background: linear-gradient(
-    140deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.3) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: linear-gradient(140deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0) 100%);
   animation: var(--animate-shimmer);
   width: 100%;
   transform: translateX(-100%);
@@ -456,12 +513,10 @@
   content: '';
   /* stylelint-disable-next-line at-rule-no-unknown */
   @apply absolute top-0 left-0 w-full h-full;
-  background: linear-gradient(
-    140deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.8) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: linear-gradient(140deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0) 100%);
   animation: var(--animate-shimmer);
   width: 100%;
   transform: translateX(-100%);
@@ -472,17 +527,19 @@
   --animate-shiny-text: shiny-text 5s infinite;
 
   @keyframes shiny-text {
+
     0%,
     90%,
     100% {
       background-position: calc(-100% - var(--shiny-width)) 0;
     }
+
     30%,
     60% {
       background-position: calc(100% + var(--shiny-width)) 0;
     }
   }
-  }
+}
 
 .react-colorful {
   width: 100% !important;
@@ -509,7 +566,7 @@
   width: 20px !important;
   height: 20px !important;
   border: 2px solid white !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
 }
 
 .react-colorful__interactive:focus .react-colorful__pointer {

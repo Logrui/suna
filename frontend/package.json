@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.2",
@@ -22,6 +26,7 @@
     "@hookform/resolvers": "^5.2.1",
     "@icons-pack/react-simple-icons": "^13.7.0",
     "@liquidglass/react": "^0.1.3",
+    "@lexical/react": "^0.21.0",
     "@next/third-parties": "^15.3.1",
     "@novu/nextjs": "^3.11.0",
     "@novu/notification-center": "^2.0.0",
@@ -101,6 +106,7 @@
     "@tiptap/react": "^3.3.0",
     "@tiptap/starter-kit": "^3.3.0",
     "@tiptap/suggestion": "^3.13.0",
+    "@types/dagre": "^0.7.53",
     "@types/jszip": "^3.4.0",
     "@types/papaparse": "^5.3.15",
     "@uiw/codemirror-extensions-langs": "^4.23.10",
@@ -114,6 +120,7 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
+    "@xyflow/react": "^12.0.0",
     "autoprefixer": "10.4.17",
     "canvas": "^3.1.0",
     "canvas-confetti": "^1.9.4",
@@ -126,6 +133,7 @@
     "color-bits": "^1.1.0",
     "colorthief": "^2.6.0",
     "comment-json": "^4.2.5",
+    "dagre": "^0.8.5",
     "date-fns": "^3.6.0",
     "diff": "^7.0.0",
     "extract-colors": "^4.2.0",
@@ -143,6 +151,7 @@
     "jszip": "^3.10.1",
     "katex": "^0.16.22",
     "konva": "^9.3.16",
+    "lexical": "^0.21.0",
     "libphonenumber-js": "^1.12.10",
     "liquid-glass-react": "^1.1.1",
     "lodash": "^4.17.21",
@@ -204,6 +213,9 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/color": "^4.2.0",
     "@types/colorthief": "^2.6.0",
@@ -214,13 +226,17 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/turndown": "^5.0.5",
+    "@vitejs/plugin-react": "^5.1.2",
     "encoding": "^0.1.13",
     "eslint": "^9",
     "eslint-config-next": "15.2.2",
+    "jsdom": "^27.3.0",
     "prettier": "^3.5.3",
     "shiki": "^3.12.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.0.3",
+    "vitest": "^4.0.16"
   }
 }

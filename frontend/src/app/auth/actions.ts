@@ -46,8 +46,8 @@ export async function signIn(prevState: any, formData: FormData) {
   }
 
   // Return success message - user needs to check email
-  return { 
-    success: true, 
+  return {
+    success: true,
     message: 'Check your email for a magic link to sign in',
     email: email.trim().toLowerCase(),
   };
@@ -102,11 +102,11 @@ export async function signUp(prevState: any, formData: FormData) {
   }
 
   // Return success message - user needs to check email
-    return {
-    success: true, 
+  return {
+    success: true,
     message: 'Check your email for a magic link to complete sign up',
     email: email.trim().toLowerCase(),
-    };
+  };
 }
 
 export async function forgotPassword(prevState: any, formData: FormData) {
@@ -202,8 +202,8 @@ export async function resendMagicLink(prevState: any, formData: FormData) {
   }
 
   // Return success message - user needs to check email
-  return { 
-    success: true, 
+  return {
+    success: true,
     message: 'Check your email for a magic link to sign in',
     email: email.trim().toLowerCase(),
   };
@@ -234,8 +234,7 @@ export async function signInWithPassword(prevState: any, formData: FormData) {
   }
 
   // Return success - client will handle redirect
-  const finalReturnUrl = returnUrl || '/dashboard';
-  redirect(finalReturnUrl);
+  return { success: true };
 }
 
 export async function signUpWithPassword(prevState: any, formData: FormData) {
@@ -275,8 +274,7 @@ export async function signUpWithPassword(prevState: any, formData: FormData) {
   }
 
   // Return success - client will handle redirect
-  const finalReturnUrl = returnUrl || '/dashboard';
-  redirect(finalReturnUrl);
+  return { success: true };
 }
 
 export async function signOut() {

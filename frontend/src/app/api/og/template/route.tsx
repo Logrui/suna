@@ -3,6 +3,9 @@ import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+// Production API for public templates - always fetch from production
+const PRODUCTION_API_URL = 'https://api.kortix.com/v1';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -12,8 +15,9 @@ export async function GET(request: NextRequest) {
       return new Response('Missing shareId parameter', { status: 400 });
     }
 
+    // Fetch from production API for OG image generation
     const templateResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000/v1'}/templates/public/${shareId}`
+      `${PRODUCTION_API_URL}/templates/public/${shareId}`
     );
 
     if (!templateResponse.ok) {

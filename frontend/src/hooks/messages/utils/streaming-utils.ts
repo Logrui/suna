@@ -32,7 +32,7 @@ export interface StreamingMetadata {
  */
 export function extractTextFromPartialJson(jsonString: string): string {
   if (!jsonString || typeof jsonString !== 'string') return '';
-  
+
   // First, try to parse as complete JSON
   try {
     const parsed = JSON.parse(jsonString);
@@ -47,18 +47,18 @@ export function extractTextFromPartialJson(jsonString: string): string {
     if (!textKeyMatch) {
       textKeyMatch = jsonString.match(/\\"text\\"\s*:\s*\\"/);
     }
-    
+
     if (!textKeyMatch) return '';
-    
+
     const startIndex = textKeyMatch.index! + textKeyMatch[0].length;
     let result = '';
     let i = startIndex;
     let escaped = false;
-    
+
     // Extract string value handling escaped characters
     while (i < jsonString.length) {
       const char = jsonString[i];
-      
+
       if (escaped) {
         // Handle escape sequences
         if (char === 'n') {
@@ -88,10 +88,10 @@ export function extractTextFromPartialJson(jsonString: string): string {
         escaped = true;
       } else if (char === '"' && !escaped) {
         // Check if we've hit the end of the string value
-        if (i + 1 >= jsonString.length || 
-            jsonString[i + 1] === ',' || 
-            jsonString[i + 1] === '}' ||
-            jsonString[i + 1] === ']') {
+        if (i + 1 >= jsonString.length ||
+          jsonString[i + 1] === ',' ||
+          jsonString[i + 1] === '}' ||
+          jsonString[i + 1] === ']') {
           break;
         }
         result += char;
@@ -100,7 +100,7 @@ export function extractTextFromPartialJson(jsonString: string): string {
       }
       i++;
     }
-    
+
     return result;
   }
 }
@@ -115,10 +115,11 @@ export function extractTextFromPartialJson(jsonString: string): string {
  */
 export function extractTextFromStreamingAskComplete(content: string, toolName: 'ask' | 'complete'): string {
   if (!content) return '';
-  
+
   // Remove function_calls wrapper if present
-  const cleaned = content.replace(/<function_calls[^>]*>/gi, '').replace(/<\/function_calls>/gi, '');
-  
+
+  let cleaned = content.replace(/<function_calls[^>]*>/gi, '').replace(/<\/function_calls>/gi, '');
+
   // Try to extract from new format: <invoke name="complete"> <parameter name="text">content</parameter> </invoke>
   const invokeMatch = cleaned.match(new RegExp(`<invoke[^>]*name=["']${toolName}["'][^>]*>([\\s\\S]*?)<\\/invoke>`, 'i'));
   if (invokeMatch) {
@@ -129,7 +130,7 @@ export function extractTextFromStreamingAskComplete(content: string, toolName: '
       return textParamMatch[1].trim();
     }
   }
-  
+
   // Fall back to old format: <ask>content</ask> or <complete>content</complete>
   const oldFormatMatch = cleaned.match(new RegExp(`<${toolName}[^>]*>([\\s\\S]*?)(?:<\\/${toolName}>|$)`, 'i'));
   if (oldFormatMatch) {
@@ -139,7 +140,7 @@ export function extractTextFromStreamingAskComplete(content: string, toolName: '
     text = text.replace(/<[^>]+>/g, ''); // Remove any remaining tags
     return text.trim();
   }
-  
+
   return '';
 }
 
@@ -179,7 +180,7 @@ export function getAskCompleteToolType(functionName: string | undefined): 'ask' 
  */
 export function extractTextFromArguments(args: string | Record<string, any> | undefined | null): string {
   if (!args) return '';
-  
+
   if (typeof args === 'string') {
     // Try to parse as complete JSON first
     try {
@@ -192,7 +193,7 @@ export function extractTextFromArguments(args: string | Record<string, any> | un
   } else if (typeof args === 'object' && args !== null) {
     return args.text || '';
   }
-  
+
   return '';
 }
 
@@ -204,7 +205,7 @@ export function extractTextFromArguments(args: string | Record<string, any> | un
  */
 export function findAskOrCompleteTool(toolCalls: StreamingToolCall[] | undefined): StreamingToolCall | undefined {
   if (!toolCalls || !Array.isArray(toolCalls)) return undefined;
-  
+
   return toolCalls.find(tc => isAskOrCompleteTool(tc.function_name));
 }
 
@@ -220,12 +221,12 @@ export function extractStreamingAskCompleteContent(
 ): { toolType: 'ask' | 'complete'; text: string } | null {
   const askOrCompleteTool = findAskOrCompleteTool(toolCalls);
   if (!askOrCompleteTool) return null;
-  
+
   const toolType = getAskCompleteToolType(askOrCompleteTool.function_name);
   if (!toolType) return null;
-  
+
   const text = extractTextFromArguments(askOrCompleteTool.arguments);
-  
+
   return { toolType, text };
 }
 
@@ -238,11 +239,11 @@ export function extractStreamingAskCompleteContent(
  */
 export function shouldSkipStreamingRender(lastMessageMetadata: StreamingMetadata | undefined): boolean {
   if (!lastMessageMetadata) return false;
-  
+
   const toolCalls = lastMessageMetadata.tool_calls || [];
   const hasAskOrComplete = toolCalls.some(tc => isAskOrCompleteTool(tc.function_name));
   const isComplete = lastMessageMetadata.stream_status === 'complete';
-  
+
   return hasAskOrComplete && isComplete;
 }
 

@@ -8,31 +8,31 @@ import { ThreadsResponse } from '@/lib/api/threads';
 
 export const useProjectQuery = (projectId: string | undefined, options?) => {
   const queryClient = useQueryClient();
-  
+
   // Try to get project from cached threads ONLY (don't fetch threads list!)
   const threadsQueryKey = [...threadKeys.lists(), 'paginated', 1, 50];
   const cachedThreads = queryClient.getQueryData<ThreadsResponse>(threadsQueryKey);
-  
+
   // Derive project from cached threads ONLY (no API call to threads list!)
   const project = useMemo(() => {
     const cachedThreadsData = cachedThreads?.threads || [];
-    
+
     if (!projectId || !cachedThreadsData.length) return undefined;
-    
+
     const threadWithProject = cachedThreadsData.find(
       (thread: any) => thread.project_id === projectId && thread.project
     );
-    
+
     if (!threadWithProject?.project) return undefined;
-    
+
     const projectData = threadWithProject.project;
-    
+
     // Check if we have valid sandbox data (not just an empty object)
     // Note: sandbox may be undefined in list view (optimized response)
-    const hasSandboxData = projectData.sandbox && 
-                          typeof projectData.sandbox === 'object' && 
-                          projectData.sandbox.id;
-    
+    const hasSandboxData = projectData.sandbox &&
+      typeof projectData.sandbox === 'object' &&
+      projectData.sandbox.id;
+
     return {
       id: projectData.project_id,
       name: projectData.name || '',
@@ -49,7 +49,7 @@ export const useProjectQuery = (projectId: string | undefined, options?) => {
       icon_name: projectData.icon_name,
     } as Project;
   }, [projectId, cachedThreads]);
-  
+
   return useQuery<Project>({
     queryKey: threadKeys.project(projectId || ""),
     queryFn: async () => {
@@ -58,7 +58,7 @@ export const useProjectQuery = (projectId: string | undefined, options?) => {
       if (project && project.sandbox && typeof project.sandbox === 'object' && project.sandbox.id) {
         return project;
       }
-      
+
       // Fetch full project data (includes sandbox, description, etc.)
       return await getProject(projectId!);
     },
@@ -74,27 +74,27 @@ export const useProjectQuery = (projectId: string | undefined, options?) => {
 
 export const useProjects = (options?) => {
   const queryClient = useQueryClient();
-  
+
   // Derive projects from cached threads data ONLY (no API call!)
   const projects = useMemo(() => {
     // Get threads from React Query cache ONLY (don't fetch!)
     const threadsQueryKey = [...threadKeys.lists(), 'paginated', 1, 50];
     const cachedThreads = queryClient.getQueryData<ThreadsResponse>(threadsQueryKey);
     const threads = cachedThreads?.threads || [];
-    
+
     if (!threads.length) return [];
-    
+
     const projectsMap = new Map<string, Project>();
-    
+
     threads.forEach((thread: any) => {
       if (thread.project && thread.project_id) {
         const project = thread.project;
         if (!projectsMap.has(project.project_id)) {
           // Check if we have valid sandbox data (not just an empty object)
-          const hasSandboxData = project.sandbox && 
-                                typeof project.sandbox === 'object' && 
-                                project.sandbox.id;
-          
+          const hasSandboxData = project.sandbox &&
+            typeof project.sandbox === 'object' &&
+            project.sandbox.id;
+
           projectsMap.set(project.project_id, {
             id: project.project_id,
             name: project.name || '',
@@ -112,10 +112,10 @@ export const useProjects = (options?) => {
         }
       }
     });
-    
+
     return Array.from(projectsMap.values());
   }, [queryClient]);
-  
+
   return {
     data: projects,
     isLoading: false, // Not loading since we're only using cache
@@ -125,18 +125,18 @@ export const useProjects = (options?) => {
 
 export const usePublicProjectsQuery = (options?) => {
   const queryClient = useQueryClient();
-  
+
   // Derive public projects from cached threads data ONLY (no API call!)
   const publicProjects = useMemo(() => {
     // Get threads from React Query cache ONLY (don't fetch!)
     const threadsQueryKey = [...threadKeys.lists(), 'paginated', 1, 50];
     const cachedThreads = queryClient.getQueryData<ThreadsResponse>(threadsQueryKey);
     const threads = cachedThreads?.threads || [];
-    
+
     if (!threads.length) return [];
-    
+
     const projectsMap = new Map<string, Project>();
-    
+
     threads.forEach((thread: any) => {
       if (thread.is_public && thread.project_id && thread.project) {
         const project = thread.project;
@@ -159,10 +159,10 @@ export const usePublicProjectsQuery = (options?) => {
         }
       }
     });
-    
+
     return Array.from(projectsMap.values());
   }, [queryClient]);
-  
+
   return {
     data: publicProjects,
     isLoading: false, // Not loading since we're only using cache
@@ -173,7 +173,7 @@ export const usePublicProjectsQuery = (options?) => {
 // Project Mutations
 export const useUpdateProjectMutation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<Project, Error, { projectId: string; data: Partial<Project> }>({
     mutationFn: ({
       projectId,
@@ -197,7 +197,7 @@ export const useUpdateProject = useUpdateProjectMutation;
 
 export const useDeleteProject = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<void, Error, { projectId: string }>({
     mutationFn: ({ projectId }: { projectId: string }) => deleteProject(projectId),
     onSuccess: () => {

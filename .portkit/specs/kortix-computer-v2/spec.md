@@ -1,0 +1,78 @@
+# Portkit - Feature Specification: Kortix Computer v2 from Remote Repository Upstream PRODUCTION
+
+**Feature Branch**: `kortix-computer-v2`  
+**Created**: 2025-12-08  
+**Status**: Draft  
+**Input**: User description: "I want to port and continue porting the new Kortix Computer feature from upstream/PRODUCTION. I dont want any billing features to be ported, translation features, or anything that overrides my current slash commands features or any existing ported features"
+
+## 1. Port Scope (The "Target")
+**What are we pulling?**
+*   **Upstream Entry Points**: 
+    *   Backend: `backend/core/sandbox/api.py` (Merge Strategy: Append/Integrate, do not overwrite)
+    *   Frontend: `frontend/src/components/thread/kortix-computer/*`
+    *   Common: `frontend/src/components/thread/HealthCheckedVncIframe.tsx`
+*   **Feature Description**: Port the latest "computer use" / sandbox capabilities from the upstream PRODUCTION branch, enabling `the agent to interact with a virtual desktop/environment.
+
+## 2. Adaptation Strategy (The "Bridge")
+We are not just copying files; we are adapting them to our **Local Architecture**.
+
+### A. Core Logic (Keep 1:1)
+*   Sandbox orchestration logic.
+*   Computer interaction tools (screenshot, mouse, keyboard).
+*   Live stream viewing components.
+*   **UI Location**: Thread/Chat Stream (Parity with Upstream). The component `KortixComputer.tsx` will be rendered as a Tool Output within the conversation.
+
+### B. Bridge Adapters (Morph/Replace)
+**Upstream Dependency** -> **Local Replacement**
+*   `Upstream Billing/Credits` -> `[Omitted/Mocked]` (Strict Requirement: No Billing)
+*   **Billing UI Elements** -> **Strip** (Remove DOM elements/logic completely)
+*   `Upstream Auth` -> `Local Auth (Supabase/Basejump)`
+*   `Translations (next-intl)` -> `[Omitted]` (Use raw strings)
+*   **Translation Handling** -> **Inline English** (Replace `t('key')` with hardcoded English text from upstream JSON)
+
+### C. Omissions (Nuke)
+**Intentionally excluded components:**
+*   **Billing Features**: Any code charging for computer use minutes.
+*   **Translations**: `next-intl` or similar localization overhead.
+*   **Slash Commands Overwrites**: Explicitly identifying and PRESERVING local slash command implementations if upstream attempts to modify `Thread` or `CommandParser` logic.
+
+## 3. Verification Scenarios (The "Proof")
+After the port is complete, these scenarios must pass locally.
+
+### Scenario 1: Launch Computer
+*   **Given**: User is in a "Computer Use" enabled agent thread.
+*   **When**: User asks "Open the browser".
+*   **Then**: The agent successfully launches a Daytona sandbox (or equivalent) and connects.
+
+### Scenario 2: Visual Feedback
+*   **Given**: Sandbox is running.
+*   **When**: Agent performs an action (click/type).
+*   **Then**: The frontend displays the live view/screenshot of the action.
+
+### Scenario 3: No Regressions
+*   **Given**: User runs a slash command (e.g., `/help` or custom).
+*   **When**: The command executes.
+*   **Then**: It behaves exactly as it did locally before the port (no upstream override).
+
+## 4. Success Criteria
+*   [ ] Feature compiles with `npm run build` / `uv run verify-project`.
+*   [ ] Kortix Computer capabilities function in the local sandbox.
+*   [ ] No billing code is present.
+*   [ ] Existing Slash Commands function without regression.
+*   [ ] No "Poison Imports" (e.g. `next-intl`) remain.
+
+## Research Keywords
+*   **Scan Keywords**: `sandboxes`, `files/content`, `KortixComputer`, `useTranslations`, `credits`, `billing`
+*   **API Verification**: Locate the definition of `/sandboxes/{id}/files/content` in upstream `api.py`.
+
+## Clarifications
+*   **Q**: How should we handle UI elements related to Billing/Credits?
+    *   **A**: **Strip** - Completely remove the relevant DOM elements and logic.
+*   **Q**: How should we resolve text strings for `next-intl`?
+    *   **A**: **Inline English** - Look up the key in the upstream `en.json` file and hardcode the English string.
+*   **Q**: How should we apply upstream changes to `backend/core/sandbox/api.py`?
+    *   **A**: **Merge & Append** - Carefully add new endpoints/functions to the existing file; preserve existing logic.
+*   **Q**: What is the primary "Network Dependency" concern?
+    *   **A**: **API Endpoint Mismatch (404)** - Frontend is calling `/api/sandboxes/{id}/files/content` but receiving 404. This implies the backend endpoint is missing or the route prefix is incorrect. Research must verify the `api.py` merge actually included this endpoint.
+*   **Q**: What is the strategy for fixing the Backend API?
+    *   **A**: **Safe to Edit (Patch)** - We will identify the missing endpoints in upstream and strictly append/insert them into the existing `api.py` without overwriting custom auth logic.

@@ -229,8 +229,23 @@ apps/mobile/*.pem
 apps/mobile/.env
 apps/mobile/.env*.local
 apps/mobile/app-example
+
 # Docker-specific env files
 *.env.docker
 
 # Infra (separate repository)
 infra/
+
+.credentials/
+.github/
+.vscode/
+.windsurf/
+
+#Ignore Mobile Apps folder for ease of use for Desktop
+apps/mobile/
+
+# Documentation and Environments variables (separate repository)
+.docs/
+.env
+.env.local
+.docs

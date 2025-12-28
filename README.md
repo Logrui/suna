@@ -1,13 +1,128 @@
+﻿<div align="center">
+
+# Self Hosted Build - Kortix – Open Source Platform to Build, Manage and Train AI Agents
+
+![Kortix Screenshot](frontend/public/banner.png)
+
+<div align="left">
+
+## **Soft Fork of kortix-ai/suna for railway builds and self hosted cloudflare tunnel self hosted servers. - Last Updated: <!-- DATE_START -->2025-12-13<!-- DATE_END -->**
+**This is a railway or docker container build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker and/or Railway with some networking fixes and additional features. Networking is the primary issue with self-hosting Kortix AI - see set up instructions below and disclaimers to avoid issues. Railway is the recommended method for self-hosting Kortix AI - it is the most cost effective and easiest to set up.**
+
+## **Current Implemented Features:**
+
+| Category | Feature/Bugfix | Description |
+| :--- | :--- | :--- |
+
+| **Feature** | Custom Notifications System | Customizable notifications for users and admins for use in workflows and more. |
+| **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
+| **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
+| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
+| **Feature** | Extended Model Support | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
+| **Feature** | Dev Mode + New Dev Mode Button Toggle | Fixes and adds a toggle button for the Development Mode. |
+| **Feature** | New getAPI module | Updated all network calls to support localhost and cloudflare tunnel configurations. |
+| **Feature** | Admin + User based Notifications/Inbox System | Centralized system for notifications and user-specific inboxes. |
+| **Feature** | Auto Continue Prompting System (MVP) | Minimal viable product for automatically continuing prompts/conversations. |
+| **Feature** | Library Implementation | Allows access to files and resources across different projects. |
+
+## **Planned Features/WIP:**
+
+| Feature Category | Item | Dependencies/Notes |
+| :--- | :--- | :--- |
+| **Teams of Agents** | Teams of Agents collaborating for | Currently a Work In Progress (WIP). |
+| **Advanced Workflows** | Advanceed Visual Workflow builder with Lexical, ReactFlow, and more | Currently a Work In Progress (WIP). |
+| **Core Workflow** | Restored Workflow/Playbooks System | Currently a Work In Progress (WIP). |
+| **Native Tool** | Subagent System | Depends on the Wide Research System being implemented. |
+| **Native Tool** | Manus like Wide Research System | Depends on the Subagent System being implemented. |
+| **Native Tool** | Gemini ComputerUse + BrowserUse Support | Depends on the Subagent System being implemented. |
+| **Data/Files** | RAG System Support/Embeddings/RAG as a Service module support | Likely depends on Google Drive/OneDrive Native File Support and Syncing. |
+| **Data/Files** | Google Drive/OneDrive Native File Support and Syncing | Direct integration for cloud file management. |
+| **Core Workflow** | Native Support for continuous prompting | For custom budget models. |
+| **Core Workflow** | Structured Output Workflows/Playbooks System | Depends on a working Restored Workflow/Playbooks System. |
+| **Platform Expansion** | Plugin System | Modularized code architecture for future expansion. |
+
+## **Setup Instructions for Self Hosted: (Recommended only for Experienced Devs/Homelab Users)**
+
+**Note:** Self-hosting Kortix AI can be a bit of a process that requires a good understanding of Docker, Cloudflare Tunnels, and Supabase. If you are not comfortable with these technologies, it is recommended to use the cloud-hosted version of Kortix AI. After going through the setup process personally, I highly recommend using the cloud-hosted version of Kortix AI - its a really good deal compared to Manus. Self hosting w/ Cloudflare has a base cost of $10/mo minimum - Tunnel is free but you need TLS Total
+
+**Git Clone + Docker Compose: (Recommended)**
+-Clone the repository to your local machine
+-From root /suna/
+```
+docker compose up -d --build
+```
+## **Configuration Self Hosted Architecture:**
+**Cloudflare Tunnels: (Optional, Recommended for Secure Remote Access)** 
+```
+-Cloudflare Tunnels are recommended for secure remote access to your self-hosted Kortix AI instance
+-Required: Automatic HTTPS encryption is also provided by Cloudflare w/ TLS Total + subdomain - Needed for Realtime Websocket Streaming/HTTPS
+-SSL/TLS Setting: Flexible
+-Your domain: yourdomain.com
+-Backend: kong.yourdomain.com ---> supabase-kong
+-Frontend: kortix.yourdomain.com ---> suna-frontend
+-Supabase: supabase.yourdomain.com ---> supabase-kong
+```
+**Note:** Ensure your domain and subdomains are covered by Cloudflare TLS Total otherwise you will get errors with realtime streaming/HTTPS
+
+**Docker Container (Suna):**
+```
+-suna-backend 8000:8000
+-suna-frontend 9990:3000
+-suna-redis 6380:6379
+-suna-worker
+```
+**Docker Container (Supabase):**
+```
+-realtime-dev.supabase-realtime 8002:4000
+-supabase-db 5434:5432
+-supabase-auth 8100:9999
+-supabase-kong 8888:8000
+```
+**Docker Container (Daytona):**
+```
+-Optional (highly recommend not running Daytona in Docker)
+-Have tried this and it is not recommended - difficult to set up docker in docker correctly
+-Recommend using Cloud based Daytona even while self hosted
+-Even on powerful homelab or compute centers - Cloud Daytona is still much faster and more reliable
+```
+**Supabase Setup/Configuration:**
+```
+-WIP - git clone supabase/supabase 
+-Ensure to run migrations in Supabase once it is set up correctly
+-Will try to add a guide for the below items in the future
+```
+**Env Configuration:** 
+```
+-WIP
+```
+**Google/Github OAuth Configuration:**
+```
+-WIP
+```
+**Composio Configuration:**
+```
+-WIP
+```
+**Daytona Configuration:**
+```
+-WIP
+```
+
+</div>
+
 <div align="center">
 
-# Kortix
+# Kortix – Open Source Platform to Build, Manage and Train AI Agents
+
+![Kortix Screenshot](frontend/public/banner.png)
 
 **The complete platform for creating autonomous AI agents that work for you**
 
-Build, manage, and train sophisticated AI agents for any use case. Create powerful agents that act autonomously on your behalf.
+Kortix is a comprehensive open source platform that empowers you to build, manage, and train sophisticated AI agents for any use case. Create powerful agents that act autonomously on your behalf, from general-purpose assistants to specialized automation tools.
 
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./license)
 [![Discord Follow](https://dcbadge.limes.pink/api/server/Py6pCBUUPw?style=flat)](https://discord.gg/RvFhXUdZ9H)
-[![Twitter Follow](https://img.shields.io/twitter/follow/kortix)](https://x.com/korti)
+[![Twitter Follow](https://img.shields.io/twitter/follow/kortixai)](https://x.com/kortixai)
 [![GitHub Repo stars](https://img.shields.io/github/stars/kortix-ai/suna)](https://github.com/kortix-ai/suna)
 [![Issues](https://img.shields.io/github/issues/kortix-ai/suna)](https://github.com/kortix-ai/suna/labels/bug)
 
@@ -21,18 +136,16 @@ Build, manage, and train sophisticated AI agents for any use case. Create powerf
 [Русский](https://www.readme-i18n.com/kortix-ai/suna?lang=ru) | 
 [中文](https://www.readme-i18n.com/kortix-ai/suna?lang=zh)
 
-![Kortix Screenshot](frontend/public/banner.png)
 </div>
 
-
-
+<div align="left">
 
 ## 🌟 What Makes Kortix Special
 
-### 🤖 Includes Kortix Super Worker – Flagship Generalist AI Worker
-Meet Kortix Super Worker, our showcase agent that demonstrates the full power of the Kortix platform. Through natural conversation, Kortix Super Worker handles research, data analysis, browser automation, file management, and complex workflows – showing you what's possible when you build with Kortix.
+### 🤖 Includes Suna – Flagship Generalist AI Worker
+Meet Suna, our showcase agent that demonstrates the full power of the Kortix platform. Through natural conversation, Suna handles research, data analysis, browser automation, file management, and complex workflows – showing you what's possible when you build with Kortix.
 
-### 🔧 Build Custom Kortix Super Worker-Type Agents
+### 🔧 Build Custom Suna-Type Agents
 Create your own specialized agents tailored to specific domains, workflows, or business needs. Whether you need agents for customer service, data processing, content creation, or industry-specific tasks, Kortix provides the infrastructure and tools to build, deploy, and scale them.
 
 ### 🚀 Complete Platform Capabilities
@@ -51,13 +164,13 @@ Create your own specialized agents tailored to specific domains, workflows, or b
 - [🚀 Quick Start](#-quick-start)
 - [🏠 Self-Hosting](#-self-hosting)
 - [🤝 Contributing](#-contributing)
-- [📄 License](LICENSE)
+- [📄 License](#-license)
 
 ## 🎯 Agent Examples & Use Cases
 
-### Kortix Super Worker - Your Generalist AI Worker
+### Suna - Your Generalist AI Worker
 
-Kortix Super Worker demonstrates the full capabilities of the Kortix platform as a versatile AI worker that can:
+Suna demonstrates the full capabilities of the Kortix platform as a versatile AI worker that can:
 
 **🔍 Research & Analysis**
 - Conduct comprehensive web research across multiple sources
@@ -164,14 +277,18 @@ The wizard will guide you through 14 steps with progress saving, so you can resu
 python start.py
 ```
 
-That's it! Your Kortix platform will be running with Kortix Super Worker ready to assist you.
+That's it! Your Kortix platform will be running with Suna ready to assist you.
 
 ## 🏠 Self-Hosting
 
 Just use "setup.py". Ty mate.
 
+## 📄 License
+
+Kortix is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for the full license text.
 
 ---
+</div>
 
 <div align="center">
 

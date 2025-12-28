@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-interface SpotlightCardProps {
+interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
     children: React.ReactNode;
     className?: string;
     spotlightColor?: string;
@@ -13,6 +13,7 @@ export function SpotlightCard({
     children,
     className,
     spotlightColor,
+    ...props
 }: SpotlightCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -40,14 +41,22 @@ export function SpotlightCard({
         <div
             ref={cardRef}
             onMouseMove={handleMouseMove}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            onMouseEnter={(e) => {
+                setIsHovered(true);
+                props.onMouseEnter?.(e);
+            }}
+            onMouseLeave={(e) => {
+                setIsHovered(false);
+                props.onMouseLeave?.(e);
+            }}
             className={cn('relative overflow-hidden rounded-2xl', className)}
             style={{
                 // @ts-expect-error - CSS custom properties are not in CSSProperties type
                 '--mouse-x': `${mousePosition.x}px`,
                 '--mouse-y': `${mousePosition.y}px`,
+                ...props.style
             }}
+            {...props}
         >
             {/* Spotlight effect */}
             {isHovered && (

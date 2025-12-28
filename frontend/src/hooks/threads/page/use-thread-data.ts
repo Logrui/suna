@@ -32,8 +32,8 @@ interface UseThreadDataOptions {
 }
 
 export function useThreadData(
-  threadId: string, 
-  projectId: string, 
+  threadId: string,
+  projectId: string,
   isShared: boolean = false,
   options?: UseThreadDataOptions
 ): UseThreadDataReturn {
@@ -43,24 +43,24 @@ export function useThreadData(
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const initialLoadCompleted = useRef<boolean>(false);
   const messagesLoadedRef = useRef(false);
   const foundRunningAgentRef = useRef(false);
   const hasInitiallyScrolled = useRef<boolean>(false);
   const lastDetectedRunIdRef = useRef<string | null>(null);
-  
+
   // Retry counter for exponential backoff when waiting for agent
   const retryCountRef = useRef(0);
 
   const threadQuery = useThreadQuery(threadId);
-  
+
   // Messages: NO polling - stream will provide real-time updates
   const messagesQuery = useMessagesQuery(threadId, {
     refetchInterval: false,
     staleTime: 5000,
   });
-  
+
   const effectiveProjectId = threadQuery.data?.project_id || projectId || '';
   const hasThreadData = !!threadQuery.data;
   const projectQuery = useProjectQuery(effectiveProjectId, {
@@ -69,11 +69,11 @@ export function useThreadData(
     refetchInterval: 30000,
     staleTime: 10000,
   });
-  
+
   // Agent runs: Smart polling only when waiting for agent, stops once found
   const shouldPollAgentRuns = waitingForAgent && !foundRunningAgentRef.current && !agentRunId;
-  
-  const agentRunsQuery = useAgentRunsQuery(threadId, { 
+
+  const agentRunsQuery = useAgentRunsQuery(threadId, {
     enabled: !isShared,
     // Only poll when actively waiting for an agent to start
     // Use 2s interval - fast enough for good UX, not too aggressive
@@ -126,12 +126,12 @@ export function useThreadData(
   // Detect running agent from query data
   useEffect(() => {
     if (isShared || !agentRunsQuery.data) return;
-    
+
     const runningRuns = agentRunsQuery.data.filter(r => r.status === 'running');
-    
+
     if (runningRuns.length > 0) {
       const latestRunning = runningRuns[0];
-      
+
       if (lastDetectedRunIdRef.current !== latestRunning.id) {
         console.log('[useThreadData] Detected running agent:', latestRunning.id);
         lastDetectedRunIdRef.current = latestRunning.id;
@@ -201,10 +201,10 @@ export function useThreadData(
           }
         }
 
-        const requiredDataLoaded = isShared 
+        const requiredDataLoaded = isShared
           ? (threadQuery.data && messagesQuery.data)
           : (threadQuery.data && messagesQuery.data && agentRunsQuery.data);
-          
+
         if (requiredDataLoaded) {
           initialLoadCompleted.current = true;
           setIsLoading(false);
@@ -215,8 +215,8 @@ export function useThreadData(
         if (isMounted) {
           const errorMessage =
             err instanceof Error ? err.message : 'Failed to load thread';
-          const is404Error = errorMessage.toLowerCase().includes('404') || 
-                            errorMessage.toLowerCase().includes('not found');
+          const is404Error = errorMessage.toLowerCase().includes('404') ||
+            errorMessage.toLowerCase().includes('not found');
           if (!is404Error) {
             setError(errorMessage);
             toast.error(errorMessage);
@@ -249,7 +249,7 @@ export function useThreadData(
   useEffect(() => {
     if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
       const shouldReload = messages.length === 0 || messagesQuery.data.length > messages.length + 50;
-      
+
       if (shouldReload) {
         const unifiedMessages = (messagesQuery.data || [])
           .map((msg: ApiMessageType) => ({
@@ -280,7 +280,7 @@ export function useThreadData(
             const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
             return aTime - bTime;
           });
-          
+
           return merged;
         });
       }

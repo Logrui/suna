@@ -75,4 +75,13 @@ export function truncateString(str?: string, maxLength = 50) {
   return str.slice(0, maxLength) + '...';
 }
 
-
+/**
+ * Converts a string to Title Case for display purposes. Used for Composio Profiles and more.
+ * Handles patterns like "gmail" -> "Gmail", "google_drive" -> "Google Drive"
+ */
+export function titleCase(str: string): string {
+  if (!str) return str;
+  return str
+    .replace(/_/g, ' ') // Replace underscores with spaces
+    .replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+}

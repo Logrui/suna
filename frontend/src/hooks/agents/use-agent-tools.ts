@@ -11,6 +11,10 @@ export interface AgentTool {
   enabled: boolean;
   icon?: string;
   color?: string;
+  // Composio integration fields
+  icon_url?: string;
+  toolkit_slug?: string;
+  toolkit_name?: string;
 }
 
 interface AgentToolsResponse {

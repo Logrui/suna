@@ -36,14 +36,10 @@ async def update_presence(
             logger.error("session_id is missing from request")
             raise HTTPException(status_code=400, detail="session_id is required")
         
-        # Ensure platform has a default value
-        platform = payload.platform or "web"
-        
-        logger.debug(
-            f"Presence update request: account={account_id}, session={payload.session_id}, "
-            f"thread={payload.active_thread_id}, platform={platform}, timestamp={payload.client_timestamp}"
-        )
-        
+        #logger.debug(
+        #    f"Presence update request: account={account_id}, session={payload.session_id}, "
+        #    f"thread={payload.active_thread_id}, timestamp={payload.client_timestamp}"
+        #)
         success = await presence_service.update_presence(
             session_id=payload.session_id,
             account_id=account_id,
@@ -62,8 +58,8 @@ async def update_presence(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in update_presence endpoint: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        #logger.error(f"Error in update_presence endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/clear")
@@ -81,7 +77,7 @@ async def clear_presence(
         if not session_id:
             raise HTTPException(status_code=400, detail="session_id is required")
         
-        logger.debug(f"Presence clear request: account={account_id}, session={session_id}")
+        #logger.debug(f"Presence clear request: account={account_id}, session={session_id}")
         
         success = await presence_service.clear_presence(session_id, account_id)
         
@@ -93,7 +89,7 @@ async def clear_presence(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in clear_presence endpoint: {str(e)}")
+        #logger.error(f"Error in clear_presence endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -113,7 +109,7 @@ async def get_thread_viewers(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting thread viewers: {str(e)}")
+        #logger.error(f"Error getting thread viewers: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -132,7 +128,7 @@ async def get_account_active_threads(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting account active threads: {str(e)}")
+        #logger.error(f"Error getting account active threads: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -151,5 +147,5 @@ async def cleanup_stale_sessions(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error cleaning up stale sessions: {str(e)}")
+        #logger.error(f"Error cleaning up stale sessions: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

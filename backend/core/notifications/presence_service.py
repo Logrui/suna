@@ -75,7 +75,6 @@ class PresenceService:
             'client_timestamp': client_timestamp or now,
             'updated_at': now
         }
-        
         try:
             # Attempt upsert - service role client should bypass RLS, but handle errors gracefully
             result = await client.table('user_presence_sessions').upsert(payload).execute()
@@ -96,6 +95,7 @@ class PresenceService:
                 logger.error(f"Payload: {payload}")
                 raise
 
+
     async def _delete_session(self, session_id: str):
         client = await self.db.client
         await client.table('user_presence_sessions').delete().eq(
@@ -109,8 +109,7 @@ class PresenceService:
             existing_dt = datetime.fromisoformat(existing_timestamp.replace('Z', '+00:00'))
             client_dt = datetime.fromisoformat(client_timestamp.replace('Z', '+00:00'))
             return client_dt < existing_dt
-        except Exception as e:
-            logger.error(f"Presence timestamp compare error: {str(e)}")
+        except Exception:
             return False
 
     async def update_presence(
@@ -132,13 +131,9 @@ class PresenceService:
             is_new_session = not existing_data
 
             if existing_data and self._is_stale(client_timestamp, existing_data.get('client_timestamp')):
-                logger.warning(
-                    f"Rejecting stale presence update for session {session_id}: "
-                    f"client={client_timestamp}, existing={existing_data.get('client_timestamp')}"
-                )
                 return True
 
-            result, last_seen = await self._upsert_session(
+            await self._upsert_session(
                 session_id=session_id,
                 account_id=account_id,
                 active_thread_id=active_thread_id,
@@ -146,17 +141,13 @@ class PresenceService:
                 client_timestamp=client_timestamp,
                 device_info=device_info
             )
-
-            logger.debug(
-                f"Presence upserted for session {session_id}, "
-                f"account {account_id}, thread {active_thread_id}"
-            )
             
             if is_new_session:
                 await self.cleanup_stale_sessions(account_id)
 
             return True
             
+
         except ValueError as e:
             # Validation errors - log but don't fail silently
             logger.error(f"Validation error updating presence for session {session_id}: {str(e)}")
@@ -168,6 +159,7 @@ class PresenceService:
                 logger.error(f"Permission/validation error updating presence for session {session_id}, account {account_id}: {str(e)}")
             else:
                 logger.error(f"Error updating presence for session {session_id}: {str(e)}", exc_info=True)
+
             return False
     
     async def clear_presence(self, session_id: str, account_id: str) -> bool:
@@ -176,10 +168,8 @@ class PresenceService:
         
         try:
             await self._delete_session(session_id)
-            logger.debug(f"Presence cleared for session {session_id}, account {account_id}")
             return True
-        except Exception as e:
-            logger.error(f"Error clearing presence for session {session_id}: {str(e)}")
+        except Exception:
             return False
     
     async def cleanup_stale_sessions(self, account_id: Optional[str] = None) -> int:
@@ -194,20 +184,12 @@ class PresenceService:
             
             if account_id:
                 query = query.eq('account_id', account_id)
-                logger.debug(f"Cleaning up stale sessions for account {account_id}")
-            else:
-                logger.debug("Cleaning up all stale sessions")
             
             result = await query.execute()
             count = len(result.data) if result.data else 0
-            
-            if count > 0:
-                logger.info(f"Cleaned up {count} stale presence sessions")
-            
             return count
             
-        except Exception as e:
-            logger.error(f"Error cleaning up stale sessions: {str(e)}")
+        except Exception:
             return 0
     
     async def is_account_viewing_thread(self, account_id: str, thread_id: str) -> bool:
@@ -228,8 +210,7 @@ class PresenceService:
                 datetime.fromisoformat(session['last_seen'].replace('Z', '+00:00')) > threshold
                 for session in result.data
             )
-        except Exception as e:
-            logger.error(f"Error checking account presence: {str(e)}")
+        except Exception:
             return False
     
     async def get_thread_viewers(self, thread_id: str) -> List[Dict[str, Any]]:
@@ -240,8 +221,7 @@ class PresenceService:
             client = await self.db.client
             result = await client.rpc('get_thread_viewers', {'thread_id_param': thread_id}).execute()
             return result.data if result.data else []
-        except Exception as e:
-            logger.error(f"Error getting thread viewers: {str(e)}")
+        except Exception:
             return []
     
     async def get_account_active_threads(self, account_id: str) -> List[Dict[str, Any]]:
@@ -252,8 +232,7 @@ class PresenceService:
             client = await self.db.client
             result = await client.rpc('get_account_active_threads', {'account_id_param': account_id}).execute()
             return result.data if result.data else []
-        except Exception as e:
-            logger.error(f"Error getting account active threads: {str(e)}")
+        except Exception:
             return []
     
     async def should_send_notification(
@@ -272,16 +251,7 @@ class PresenceService:
             return True
         
         is_viewing = await self.is_account_viewing_thread(account_id, thread_id)
-        
-        should_send = not is_viewing
-        
-        logger.info(
-            f"Notification decision for account {account_id}, thread {thread_id}, "
-            f"channel {channel}: {'SEND' if should_send else 'SUPPRESS'} "
-            f"(account_viewing: {is_viewing})"
-        )
-        
-        return should_send
+        return not is_viewing
 
 
 presence_service = PresenceService()

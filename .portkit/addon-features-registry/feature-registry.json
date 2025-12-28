@@ -1,0 +1,125 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2025-12-09T03:00:00Z"
+  },
+  "features": {
+    "actions-tab-view-switching": {
+      "status": "active",
+      "version": "1.0.0",
+      "description": "Intelligent view switching logic for Actions tab - prevents auto-switch to Browser MODIFICATION",
+      "files": [
+        "frontend/src/components/thread/kortix-computer/KortixComputer.tsx",
+        "frontend\\src\\components\\thread\\kortix-computer\\KortixComputer.tsx"
+      ],
+      "dependencies": [],
+      "tags": {
+        "start_line": 657,
+        "end_line": 682
+      },
+      "last_synced": "manual_scan_timestamp"
+    },
+    "daytona-preview-bypass": {
+      "status": "active",
+      "version": "1.0.0",
+      "files": [
+        "backend/core/sandbox/api.py",
+        "backend/core/utils/preview_urls.py",
+        "backend\\core\\sandbox\\api.py",
+        "backend\\core\\sandbox\\apiv1.py",
+        "backend\\core\\utils\\preview_urls.py",
+        "frontend/src/components/AuthProvider.tsx",
+        "frontend/src/components/thread/HealthCheckedVncIframe.tsx",
+        "frontend/src/hooks/files/useVncPreloader.ts",
+        "frontend\\src\\components\\AuthProvider.tsx",
+        "frontend\\src\\components\\thread\\HealthCheckedVncIframe.tsx",
+        "frontend\\src\\hooks\\files\\useVncPreloader.ts",
+        "frontend\\src\\lib\\daytona\\preview-client.ts"
+      ],
+      "dependencies": [
+        "httpx",
+        "daytona-sdk"
+      ],
+      "last_synced": "manual_scan_timestamp"
+    },
+    "kortix-computer-v2": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        ".portkit\\specs\\kortix-computer-v2\\review.md",
+        "frontend/src/components/thread/kortix-computer/FileBrowserView.tsx",
+        "frontend/src/components/thread/kortix-computer/FileViewerView.tsx",
+        "frontend/src/components/thread/kortix-computer/KortixComputer.tsx",
+        "frontend\\src\\components\\thread\\kortix-computer\\FileBrowserView.tsx",
+        "frontend\\src\\components\\thread\\kortix-computer\\FileViewerView.tsx",
+        "frontend\\src\\components\\thread\\kortix-computer\\KortixComputer.tsx"
+      ],
+      "dependencies": [
+        "next-intl (removed)"
+      ],
+      "last_synced": "manual_scan_timestamp"
+    },
+    "slash-commands": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        ".portkit\\README.md"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
+    },
+    "name": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        ".portkit\\scripts\\python\\extract-region.py"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
+    },
+    "frontend-getapiurl-implementation": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        "frontend\\src\\hooks\\secure-mcp\\use-secure-mcp.ts",
+        "frontend\\src\\hooks\\threads\\utils.ts",
+        "frontend\\src\\hooks\\triggers\\use-agent-triggers.ts",
+        "frontend\\src\\hooks\\triggers\\use-all-triggers.ts",
+        "frontend\\src\\hooks\\triggers\\use-oauth-integrations.ts",
+        "frontend\\src\\hooks\\triggers\\use-trigger-providers.ts",
+        "frontend\\src\\hooks\\use-cached-file.ts",
+        "frontend\\src\\hooks\\use-image-content.ts",
+        "frontend\\src\\hooks\\use-kb-handlers.ts",
+        "frontend\\src\\hooks\\useSlashCommands.ts",
+        "frontend\\src\\lib\\api-client.ts",
+        "frontend\\src\\lib\\api.ts",
+        "frontend\\src\\lib\\api\\agents.ts",
+        "frontend\\src\\lib\\api\\projects.ts",
+        "frontend\\src\\lib\\api\\threads.ts",
+        "frontend\\src\\lib\\email.ts",
+        "frontend\\src\\lib\\get-api-url.ts",
+        "frontend\\src\\lib\\kb-download-utils.ts"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
+    },
+    "bugfix": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        "frontend\\src\\components\\thread\\HealthCheckedVncIframe.tsx"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
+    },
+    "legacy-feature": {
+      "status": "active",
+      "version": "0.1.0",
+      "files": [
+        "frontend\\src\\components\\thread\\tool-views\\BrowserToolView.tsx"
+      ],
+      "dependencies": [],
+      "last_synced": "manual_scan_timestamp"
+    }
+  }
+}

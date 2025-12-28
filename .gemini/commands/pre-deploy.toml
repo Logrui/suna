@@ -1,0 +1,22 @@
+description = "Run comprehensive pre-deployment checks for the backend"
+prompt = """ 
+1. Run syntax checks to catch indentation and basic errors
+```powershell
+uv run pytest backend/tests/test_syntax.py
+```
+
+2. Run pre-deployment verification (imports, env vars, core class instantiation)
+```powershell
+uv run pytest backend/tests/test_pre_deployment.py -v
+```
+
+3. (Optional) Run all unit tests
+```powershell
+cd backend
+./test --unit
+```
+
+## Context
+
+{{args}}
+""" 

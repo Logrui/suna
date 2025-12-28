@@ -263,8 +263,8 @@ export function usePlaybackController({
 
                         // Parse metadata to get text_content
                         try {
-                            const metadata = typeof currentMessage.metadata === 'string' 
-                                ? JSON.parse(currentMessage.metadata) 
+                            const metadata = typeof currentMessage.metadata === 'string'
+                                ? JSON.parse(currentMessage.metadata)
                                 : currentMessage.metadata;
                             textToStream = metadata?.text_content || '';
                         } catch (e) {

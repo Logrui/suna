@@ -181,6 +181,43 @@ app = FastAPI(
 # Configure OpenAPI docs with API Key and Bearer token auth
 configure_openapi(app)
 
+
+# ============================================================================
+# Global Exception Handler (Suna Community Modification)
+# ============================================================================
+# This catches ALL unhandled exceptions and returns a proper JSON response.
+# Without this, raw 500 errors don't include CORS headers, causing the browser
+# to show misleading "CORS policy blocked" errors instead of the real error.
+# ============================================================================
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global handler for unhandled exceptions.
+    
+    Returns a JSON response with error details so:
+    1. CORS headers are properly included (via middleware)
+    2. Browser can see the actual error message in the response
+    3. Developers can debug issues without checking server logs
+    """
+    import traceback
+    
+    # Log the full traceback for debugging
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    
+    # Return a structured JSON error response
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": str(exc),
+            "type": type(exc).__name__,
+            "path": str(request.url.path),
+            # Include hint about checking backend logs
+            "hint": "Check backend logs for full traceback: docker logs suna-backend-1 --tail 100"
+        }
+    )
+
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """Apply rate limiting to sensitive endpoints."""
@@ -235,13 +272,26 @@ async def log_requests_middleware(request: Request, call_next):
         query_params=query_params
     )
 
-    # Log the incoming request
-    logger.debug(f"Request started: {method} {path} from {client_ip} | Query: {query_params}")
+    # Skip debug logging for noisy endpoints (presence, health checks)
+    # These endpoints are called frequently and clutter the logs
+    skip_logging = any(skip_path in path for skip_path in [
+        "/presence",
+        "/health",
+        "/health-docker",
+        "/v1/presence",
+        "/v1/health",
+    ])
+
+    # Log the incoming request (unless it's a noisy endpoint)
+    if not skip_logging:
+        logger.debug(f"Request started: {method} {path} from {client_ip} | Query: {query_params}")
     
     try:
         response = await call_next(request)
         process_time = time.time() - start_time
-        logger.debug(f"Request completed: {method} {path} | Status: {response.status_code} | Time: {process_time:.2f}s")
+        # Only log completion for non-noisy endpoints, or if there was an error
+        if not skip_logging or response.status_code >= 400:
+            logger.debug(f"Request completed: {method} {path} | Status: {response.status_code} | Time: {process_time:.2f}s")
         return response
     except Exception as e:
         process_time = time.time() - start_time
@@ -252,29 +302,69 @@ async def log_requests_middleware(request: Request, call_next):
         logger.error(f"Request failed: {method} {path} | Error: {error_str} | Time: {process_time:.2f}s")
         raise
 
+
 # Define allowed origins based on environment
-allowed_origins = ["https://www.kortix.com", "https://kortix.com"]
+allowed_origins = [
+    "https://www.kortix.com",
+    "https://kortix.com",
+    "https://www.suna.syhc.dev",
+    "https://suna.syhc.dev",
+    "https://api.suna.syhc.dev",
+    "https://api.kortix.railway.syhc.dev",
+    "https://kortix.railway.syhc.dev",
+    # Advanced Workflows (Langflow) - needed for External Composio Profiles
+    # The Langflow iframe calls Suna's API to fetch Composio profiles
+    "https://advanced-workflows.suna.syhc.dev",
+    # Local development origins (always allowed for self-hosted setups)
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:9990",
+    "http://127.0.0.1:9990",
+]
 allow_origin_regex = None
 
-# Add staging-specific origins
+# Support dynamic FRONTEND_URL from environment (Railway/Docker)
+frontend_url = config.FRONTEND_URL
+if frontend_url and frontend_url not in allowed_origins:
+    allowed_origins.append(frontend_url)
+    logger.info(f"Added dynamic origin via config: FRONTEND_URL={frontend_url}")
+
 if config.ENV_MODE == EnvMode.LOCAL:
-    allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://127.0.0.1:3000")
+    allowed_origins.extend([
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:9990",
+        "http://127.0.0.1:9990",
+    ])
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.suna.so")
-    allowed_origins.append("http://localhost:3000")
     # Allow Vercel preview deployments
     allow_origin_regex = r"https://.*-kortixai\.vercel\.app"
+
+# Allow Railway internal networking and preview apps
+# Matches: *.railway.app, *.up.railway.app, *.railway.internal
+railway_regex = r"https?://.*\.railway\.app|https?://.*\.railway\.internal"
+
+if allow_origin_regex:
+    allow_origin_regex += f"|{railway_regex}"
+else:
+    allow_origin_regex = railway_regex
+
+# Deduplicate origins
+allowed_origins = list(set(allowed_origins))
+
+logger.info(f"DEBUG: CORS Config - Origins: {allowed_origins}")
+logger.info(f"DEBUG: CORS Config - Regex: {allow_origin_regex}")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Project-Id", "X-MCP-URL", "X-MCP-Type", "X-MCP-Headers", "X-API-Key"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Create a main API router
@@ -337,6 +427,17 @@ api_router.include_router(staged_files_router, prefix="/files")
 
 from core.sandbox.canvas_ai_api import router as canvas_ai_router
 api_router.include_router(canvas_ai_router)
+
+from core.workflows import api as workflows_api
+api_router.include_router(workflows_api.router)
+
+# Advanced Workflows integration bridge
+from core.advanced_workflows_bridge import router as advanced_workflows_router
+api_router.include_router(advanced_workflows_router)
+
+# Dev auth API (for local development only)
+from core.dev_auth_api import router as dev_auth_router
+api_router.include_router(dev_auth_router)
 
 @api_router.get("/health", summary="Health Check", operation_id="health_check", tags=["system"])
 async def health_check():

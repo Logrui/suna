@@ -18,7 +18,7 @@ function PasswordAuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl') || searchParams.get('redirect');
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, supabase } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
 
@@ -36,33 +36,72 @@ function PasswordAuthContent() {
 
   const handleAuth = async (prevState: any, formData: FormData) => {
     setErrorMessage(null);
-    
-    try {
-      const result = isSignUp 
-        ? await signUpWithPassword(prevState, formData)
-        : await signInWithPassword(prevState, formData);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
-      // If we get here, there was an error (redirect would have happened server-side)
-      if (result && typeof result === 'object' && 'message' in result) {
-        setErrorMessage(result.message as string);
-        toast.error(result.message as string);
-        return result;
+    if (!email || !email.includes('@')) {
+      const msg = 'Please enter a valid email address';
+      setErrorMessage(msg);
+      toast.error(msg);
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      const msg = 'Password must be at least 6 characters';
+      setErrorMessage(msg);
+      toast.error(msg);
+      return;
+    }
+
+    try {
+      let result;
+      if (isSignUp) {
+        if (password !== confirmPassword) {
+          const msg = 'Passwords do not match';
+          setErrorMessage(msg);
+          toast.error(msg);
+          return;
+        }
+
+        const baseUrl = origin || 'http://localhost:3000';
+        const emailRedirectTo = `${baseUrl}/auth/callback?returnUrl=${encodeURIComponent(returnUrl || '/dashboard')}`;
+
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            emailRedirectTo,
+          },
+        });
+
+        if (error) throw error;
+        // Sign up success often needs email verification, but if auto-confirm is on, we might be logged in.
+        // For now, treat as success.
+        result = { success: true };
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+
+        if (error) throw error;
+        result = { success: true };
       }
 
-      // If no error, redirect manually (fallback in case server redirect didn't work)
+      // If no error, redirect manually
       const finalReturnUrl = returnUrl || '/dashboard';
       router.push(finalReturnUrl);
       router.refresh();
+      return result;
+
     } catch (error: any) {
-      // Next.js redirect() throws a special error - this is expected on success
-      if (error?.digest?.startsWith('NEXT_REDIRECT')) {
-        // Server-side redirect happened, client will follow
-        return;
-      }
-      
       const errorMsg = error?.message || 'An unexpected error occurred';
       setErrorMessage(errorMsg);
       toast.error(errorMsg);
+      // Return error object if expected by form state
+      return { message: errorMsg };
     }
   };
 
@@ -133,7 +172,7 @@ function PasswordAuthContent() {
                 {isSignUp ? 'Create Account' : 'Sign in'}
               </h1>
               <p className="text-base md:text-lg text-center text-muted-foreground font-medium text-balance leading-relaxed tracking-tight mt-2 mb-6">
-                {isSignUp 
+                {isSignUp
                   ? 'Enter your email and password to create your account'
                   : 'Enter your email and password to access your account'
                 }

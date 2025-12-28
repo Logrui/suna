@@ -2,16 +2,20 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Zap, MessageCircle, PanelLeftOpen, PanelLeftClose, Search } from 'lucide-react';
+import { Bot, Menu, Plus, Zap, MessageCircle, PanelLeftOpen, PanelLeftClose, Search, Bell, Folder, Database, Workflow, ChevronRight, BookOpen, Code, Star, Package, Sparkle, Sparkles, X, Settings, LogOut, User, CreditCard, Key, Plug, Shield, DollarSign, KeyRound, Sun, Moon, Book } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavAgentsView } from '@/components/sidebar/nav-agents-view';
 import { NavGlobalConfig } from '@/components/sidebar/nav-global-config';
 import { NavTriggerRuns } from '@/components/sidebar/nav-trigger-runs';
+import { NavKnowledgeBase } from '@/components/sidebar/nav-knowledge-base';
+import { NavWorkflows } from '@/components/sidebar/nav-workflows';
+// import { NavLibrary } from '@/components/sidebar/nav-library'; // DISABLED: Requires refactor
 import { NavUserWithTeams } from '@/components/sidebar/nav-user-with-teams';
+import { NavInbox } from '@/components/sidebar/nav-inbox';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
-import { siteConfig } from '@/lib/site-config';
+// import { CTACard } from '@/components/sidebar/cta'; // DISABLED: Self-hosted deployment
 import {
   Sidebar,
   SidebarContent,
@@ -37,14 +41,16 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useAdminRole } from '@/hooks/admin';
 import posthog from 'posthog-js';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
+//import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+//import Image from 'next/image';
 import { isLocalMode } from '@/lib/config';
 import { useAccountState, accountStateSelectors } from '@/hooks/billing';
 
 import { getPlanIcon } from '@/components/billing/plan-utils';
-import { Kbd } from '../ui/kbd';
+import { Kbd, KbdGroup } from '../ui/kbd';
 import { useTranslations } from 'next-intl';
-import { KbdGroup } from '../ui/kbd';
-import { NotificationDropdown } from '../notifications/notification-dropdown';
+// import { NotificationDropdown } from '../notifications/notification-dropdown'; // DISABLED: Pending Novu integration
+import { useNotifications } from '@novu/nextjs';
 
 
 function UserProfileSection({ user }: { user: any }) {
@@ -62,6 +68,17 @@ function UserProfileSection({ user }: { user: any }) {
 
   return <NavUserWithTeams user={enhancedUser} />;
 }
+
+// Route to view mapping
+const routeMap: Record<string, string> = {
+  '/chats': '/dashboard',
+  '/agents': '/agents',
+  '/triggers': '/triggers',
+  '/library': '/library',
+  '/knowledge': '/knowledge',
+  '/inbox': '/notifications',
+  '/workflows': '/workflows'
+};
 
 function FloatingMobileMenuButton() {
   const { setOpenMobile, openMobile, setOpen } = useSidebar();
@@ -93,6 +110,18 @@ function FloatingMobileMenuButton() {
   );
 }
 
+// Component for inbox button with unread badge
+const InboxButton: React.FC<{ unreadCount: number }> = ({ unreadCount }) => {
+  return (
+    <div className="relative inline-flex">
+      <Bell className="!h-4 !w-4" />
+      {unreadCount > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500" />
+      )}
+    </div>
+  );
+};
+
 export function SidebarLeft({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -101,8 +130,21 @@ export function SidebarLeft({
   const isMobile = useIsMobile();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const [activeView, setActiveView] = useState<'chats' | 'agents' | 'starred'>('chats');
+  const [activeView, setActiveView] = useState<'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox' | 'workflows'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
+
+  // TODO: Integrate with Novu notifications when ready
+  const unreadCount = 0;
+
+  //console.log('SidebarLeft rendering:', { state, isMobile, openMobile, activeView });
+
+  // Fetch unread notification count for inbox badge
+  //const { data: notificationData } = useNotifications({
+  //  page: 1,
+  //  page_size: 1,
+  //  is_read: false,
+  //});
+  //const unreadCount = notificationData?.unread_count || 0;
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -123,8 +165,10 @@ export function SidebarLeft({
 
   // Update active view based on pathname
   useEffect(() => {
-    if (pathname?.includes('/triggers') || pathname?.includes('/knowledge')) {
-      setActiveView('starred');
+    if (pathname?.includes('/triggers')) {
+      setActiveView('triggers');
+    } else if (pathname?.includes('/knowledge')) {
+      setActiveView('knowledge');
     }
   }, [pathname]);
 
@@ -151,6 +195,13 @@ export function SidebarLeft({
       const supabase = createClient();
       const { data } = await supabase.auth.getUser();
       if (data.user) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user.id)
+          .in('role', ['admin', 'super_admin']);
+        const isAdmin = roleData && roleData.length > 0;
+
         setUser({
           name:
             data.user.user_metadata?.name ||
@@ -304,27 +355,51 @@ export function SidebarLeft({
                   </Link>
                 </Button>
               </div>
+
+              {/* State buttons vertically */}
               <div className="w-full flex flex-col items-center space-y-3">
                 {[
-                  { view: 'chats' as const, icon: MessageCircle },
-                  { view: 'agents' as const, icon: Bot },
-                  { view: 'starred' as const, icon: Zap },
-                ].map(({ view, icon: Icon }) => (
-                  <Button
-                    key={view}
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-10 w-10 p-0 cursor-pointer hover:bg-card hover:border-[1.5px] hover:border-border",
-                      activeView === view ? 'bg-card border-[1.5px] border-border' : ''
-                    )}
-                    onClick={() => {
-                      setActiveView(view);
-                      setOpen(true); // Expand sidebar when clicking state button
-                    }}
-                  >
-                    <Icon className="!h-4 !w-4" />
-                  </Button>
+                  { view: 'chats' as const, icon: MessageCircle, label: 'Chats' },
+                  { view: 'agents' as const, icon: Bot, label: 'Workers' },
+                  { view: 'triggers' as const, icon: Zap, label: 'Triggers' },
+                  { view: 'workflows' as const, icon: Workflow, label: 'Workflows' },
+                  { view: 'knowledge' as const, icon: Database, label: 'Knowledge' },
+                  { view: 'inbox' as const, icon: Bell, label: 'Inbox' },
+                ].map(({ view, icon: Icon, label }) => (
+                  <Tooltip key={view}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={routeMap[`/${view}` as keyof typeof routeMap] || `/${view}`}
+                        prefetch={view === 'inbox' ? false : undefined}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setActiveView(view);
+                          setOpen(true); // Expand sidebar when clicking state button
+                        }}
+                      >
+                        <Button
+                          key={view}
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-10 w-10 p-0 cursor-pointer hover:bg-card hover:border-[1.5px] hover:border-border",
+                            activeView === view ? 'bg-card border-[1.5px] border-border' : ''
+                          )}
+                          onClick={() => {
+                            setActiveView(view);
+                            setOpen(true); // Expand sidebar when clicking state button
+                          }}
+                        >
+                          {view === 'inbox' ? (
+                            <InboxButton unreadCount={unreadCount} />
+                          ) : (
+                            <Icon className="!h-4 !w-4" />
+                          )}
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{label}</TooltipContent>
+                  </Tooltip>
                 ))}
               </div>
             </motion.div>
@@ -359,10 +434,10 @@ export function SidebarLeft({
                         {t('newChat')}
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover/new-chat:opacity-100 transition-opacity">
-                      <KbdGroup>
-                        <Kbd>⌘</Kbd>
-                        <Kbd>J</Kbd>
-                      </KbdGroup>
+                        <KbdGroup>
+                          <Kbd>⌘</Kbd>
+                          <Kbd>J</Kbd>
+                        </KbdGroup>
                       </div>
                     </Link>
                   </Button>
@@ -371,24 +446,68 @@ export function SidebarLeft({
                 {/* State buttons horizontally */}
                 <div className="flex justify-between items-center gap-2">
                   {[
-                    { view: 'chats' as const, icon: MessageCircle, label: t('chats') },
-                    { view: 'agents' as const, icon: Bot, label: t('workers') },
-                    { view: 'starred' as const, icon: Zap, label: t('triggers') }
+                    { view: 'chats' as const, icon: MessageCircle, label: 'Chats' },
+                    { view: 'agents' as const, icon: Bot, label: 'Workers' },
+                    { view: 'triggers' as const, icon: Zap, label: 'Triggers' }
                   ].map(({ view, icon: Icon, label }) => (
-                    <button
+                    <Link
                       key={view}
-                      className={cn(
-                        "flex flex-col items-center justify-center gap-1.5 p-1.5 rounded-2xl cursor-pointer transition-colors w-[64px] h-[64px]",
-                        "hover:bg-muted/60 hover:border-[1.5px] hover:border-border",
-                        activeView === view ? 'bg-card border-[1.5px] border-border' : 'border-[1.5px] border-transparent'
-                      )}
-                      onClick={() => setActiveView(view)}
+                      href={routeMap[`/${view}` as keyof typeof routeMap] || `/${view}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveView(view);
+                      }}
                     >
-                      <Icon className="!h-4 !w-4" />
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {label}
-                      </span>
-                    </button>
+                      <button
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-1.5 p-1.5 rounded-2xl cursor-pointer transition-colors w-[64px] h-[64px]",
+                          "hover:bg-muted/60 hover:border-[1.5px] hover:border-border",
+                          activeView === view ? 'bg-card border-[1.5px] border-border' : 'border-[1.5px] border-transparent'
+                        )}
+                        onClick={() => setActiveView(view)}
+                      >
+                        <Icon className="!h-4 !w-4" />
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {label}
+                        </span>
+                      </button>
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Additional buttons row - Knowledge, Workflows, Inbox */}
+                <div className="flex justify-between items-center gap-2">
+                  {[
+                    { view: 'knowledge' as const, icon: Database, label: 'Knowledge' },
+                    { view: 'workflows' as const, icon: Workflow, label: 'Workflows' },
+                    { view: 'inbox' as const, icon: Bell, label: 'Inbox' }
+                  ].map(({ view, icon: Icon, label }) => (
+                    <Link
+                      key={view}
+                      href={routeMap[`/${view}` as keyof typeof routeMap] || `/${view}`}
+                      prefetch={view === 'inbox' ? false : undefined}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveView(view);
+                      }}
+                    >
+                      <button
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-1.5 p-1.5 rounded-2xl cursor-pointer transition-colors w-[64px] h-[64px]",
+                          "hover:bg-muted/60 hover:border-[1.5px] hover:border-border",
+                          activeView === view ? 'bg-card border-[1.5px] border-border' : 'border-[1.5px] border-transparent'
+                        )}
+                      >
+                        {view === 'inbox' ? (
+                          <InboxButton unreadCount={unreadCount} />
+                        ) : (
+                          <Icon className="!h-4 !w-4" />
+                        )}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {label}
+                        </span>
+                      </button>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -397,12 +516,18 @@ export function SidebarLeft({
               <div className="px-6 flex-1 overflow-hidden">
                 {activeView === 'chats' && <NavAgents />}
                 {activeView === 'agents' && <NavAgentsView />}
-                {activeView === 'starred' && (
+                {activeView === 'triggers' && (
                   <>
                     <NavGlobalConfig />
                     <NavTriggerRuns />
                   </>
                 )}
+                {/* {activeView === 'library' && <NavLibrary />} DISABLED WHILE LIBRARY REQUIRES REFACTOR*/}
+                {activeView === 'knowledge' && (
+                  <NavKnowledgeBase />
+                )}
+                {activeView === 'inbox' && <NavInbox />}
+                {activeView === 'workflows' && <NavWorkflows />}
               </div>
             </motion.div>
           )}
@@ -410,7 +535,8 @@ export function SidebarLeft({
       </SidebarContent>
 
       {/* Enterprise Demo Card - Only show when expanded */}
-      {/* {
+      {/* COMMENTED OUT FOR SELF-HOSTED DEPLOYMENT
+      {
         state !== 'collapsed' && showEnterpriseCard && (
           <div className="absolute bottom-[86px] left-6 right-6 z-10">
             <div className="rounded-2xl p-5 backdrop-blur-[12px] border-[1.5px] bg-gradient-to-br from-white/25 to-gray-300/25 dark:from-gray-600/25 dark:to-gray-800/25 border-gray-300/50 dark:border-gray-600/50">
@@ -438,7 +564,8 @@ export function SidebarLeft({
             </div>
           </div>
         )
-      } */}
+      }
+      */}
 
       <div className={cn("pb-4", state === 'collapsed' ? "px-6" : "px-6")}>
         <UserProfileSection user={user} />
@@ -452,7 +579,7 @@ export function SidebarLeft({
         open={showSearchModal}
         onOpenChange={setShowSearchModal}
       />
-    </Sidebar>
+    </Sidebar >
   );
 }
 

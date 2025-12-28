@@ -1,0 +1,73 @@
+---
+description: Research upstream feature structure and dependencies. Generates `research.md`.
+handoffs:
+  - label: Plan Implementation
+    agent: portkit.plan
+    prompt: Research complete. Blast radius defined in `specs/[feature]/research.md`. Start planning.
+---
+
+//turbo-all
+
+## User Input
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Perform deep technical analysis of the upstream feature and its dependencies ("Blast Radius") to inform creation of the implementation plan at later stages.
+
+## Note
+Use the provided scripts to handle large files. Avoid manual reading of massive upstream directories to conserve context.
+
+## Outline
+1.  **Parse Input**: Identify Feature Name/Spec from `$ARGUMENTS`.
+2.  **Verify Context**: Ensure `specs/[feature]/spec.md` exists.
+
+3.  **Phase 1: Research and Discovery**:
+    *   **Goals**:
+        *   You are mandated to begin comprehensive discovery and research of the upstream codebase and identify the entry points, code modules, and dependencies.Use scripts and commands to research the codebase in `.portkit-cache` to locate the feature code and its modules in the upstream codebase.
+        *   Identify "Risk Zones" immediately utilizing portkit scripts and 'ecosystem-rules.json'.
+    *   **Available Tools** (Located in `.portkit/scripts/`):
+        *   `fetch-upstream.py`: Clone/Fetch remote repo to `.portkit-cache`.
+        *   `scan-risk.py`: Detects banned dependencies and risky keywords using `ecosystem-rules.json`.
+        *   `map-dependencies`: Analyze file imports/exports (Choose TS or PY version).
+        *   `smart-diff`: Semantic comparison of Upstream vs Local.
+    *   **Recommended Action**:
+        *   Run `fetch-upstream` to get source code.
+
+4.  **Phase 2: Initial Scan & Discovery**:
+    *   **Goal**: Locate the feature code and identify "Risk Zones" immediately.
+    *   **Mandate**: Use `inspect-upstream.py` to navigate and list out files in the upstream repo to locate the feature code and identify "Risk Zones" immediately. **DO INSPECT FILES MANUALLY** by reading the files to identify the feature code and its modules in the upstream codebase.
+    *   **Keyword Sources**: Check `specs/[feature]/spec.md` for `## Research Keywords`.
+    *   **Actions**:
+        *   **Locate Components**: Use `uv run .portkit/scripts/python/inspect-upstream.py search "keyword1,keyword2" [path]` to find files containing key terms.
+            *   *Hint*: Start with root path `.` or a broad folder like `backend` or `frontend`.
+        *   **Visualize Structure**: Use `uv run .portkit/scripts/python/inspect-upstream.py ls -r [folder]` to see the file tree of identified components.
+        *   **Risk Scan**: Run `uv run .portkit/scripts/python/scan-risk.py --target [feature_folder]` to check for banned dependencies.
+        *   **Blast Radius**: Run `uv run .portkit/scripts/python/map-dependencies.py` on the entry file(s) to see what else it touches.
+
+5.  **Phase 3: Semantic Analysis (The "Codemap")**:
+    *   **Goal**: Generate a comprehensive codemap of the feature *before* we touch it.
+    *   **Mandate**: Use `smart-diff.py` for all difference checking. **DO NOT** read files manually to diff them.
+    *   **Constraint**: **NEVER** run `smart-diff` on the root directory. You **MUST** target specific feature folders or subdirectories identified in Phase 2 (e.g. `backend/core/sandbox` or `frontend/src/features/computer`). Use `-r` for recursive folder comparison.
+    *   **Analyze**:
+        *   **File Structure**: Tree of upstream files involved.
+        *   **Critical Paths**: Identify "Load Bearing" components (Auth, Database, State).
+        *   **Data Flow**: How does data move? (Mermaid Diagram required).
+    *   **Blast Radius**: Identify local files that will be touched/broken if the upstream feature is directly implemented without adaptation.
+
+6.  **Phase 4: Synthesize Report**:
+    *   Read template: `.portkit/templates/research.md`.
+    *   **Populate Sections**:
+        *   `## Codemap`: The detailed tree and Mermaid flow.
+        *   `## Semantic Diff`: Summary of script output (e.g. "Signature changed for `User`").
+        *   `## Specifications & Limitations`:
+        *   "Upstream uses `NextAuth`. We use `Supabase`. (Conflict)"
+        *   "Upstream uses `Tailwind v4`. We use `v3`. (Shim needed)."
+    *   Write to: `.portkit/specs/[feature]/research.md`.
+
+7.  **Completion**:
+    *   Output summary of the Research.
+    *   **Recommendation**: Suggest the user runs `/portkit.plan` to proceed with planning the implementation strategy.

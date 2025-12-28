@@ -9,15 +9,15 @@ from .models import NotificationChannel, NotificationEvent, NotificationPayload
 
 class NovuService:
     def __init__(self):
-        self.enabled = config.ENV_MODE in [EnvMode.STAGING, EnvMode.PRODUCTION]
+        # Enable if in staging/production OR if secret key is present in local
         self.api_key = os.getenv('NOVU_SECRET_KEY')
         self.backend_url = os.getenv('NOVU_BACKEND_URL', 'https://api.novu.co')
         
+        is_prod_or_staging = config.ENV_MODE in [EnvMode.STAGING, EnvMode.PRODUCTION]
+        self.enabled = is_prod_or_staging or (self.api_key is not None)
+        
         if not self.enabled:
-            if self.api_key:
-                logger.warning(f"Novu service disabled (ENV_MODE: {config.ENV_MODE.value}) but NOVU_SECRET_KEY is present. Set ENV_MODE to 'staging' or 'production' to enable.")
-            else:
-                logger.info(f"Novu service disabled (ENV_MODE: {config.ENV_MODE.value})")
+            logger.info(f"Novu service disabled (ENV_MODE: {config.ENV_MODE.value}, no key found)")
         elif not self.api_key:
             logger.warning("NOVU_SECRET_KEY not found in environment variables")
         else:

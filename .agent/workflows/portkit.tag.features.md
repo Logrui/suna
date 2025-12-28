@@ -1,0 +1,46 @@
+---
+description: Retroactively add `// feature-start` tags to existing code.
+---
+
+//turbo-all
+
+## User Input
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Retroactively apply Portkit tracking tags (`// feature-start`) to existing code to bring it under registry control.
+
+## Note
+Essential for "locking" pre-existing features so they aren't accidentally overwritten by future ports.
+
+## Outline
+1.  **Parse Input**: Identify Feature Name and Target Files (or directory scope).
+2.  **Context**: Read `spec.md` or `research.md` if available to understand file scope.
+
+3.  **Tagging Logic**:
+    *   **Goal**: Wrap specific code blocks or whole files with Portkit tracking tags.
+    *   **Format**: `// feature-start: [name]` ... `// feature-end: [name]`.
+    *   **Action**:
+        *   For **Whole Files**: Add tags at top/bottom of file.
+        *   For **Partial Blocks**:
+            *   Ask user to identify line ranges or functions.
+            *   *OR* Use `grep` to find specific function definitions mentioned in input.
+        *   Apply the edits.
+
+4.  **Blast Radius Tagging (Recursive Protection)**:
+    *   **Goal**: A feature is not just its definition; it is also its *usage*.
+    *   **Action**: 
+        *   If the user specified a specific function or class (e.g., `getApiUrl`):
+            *   Run `grep` or `smart-diff-feature` to find ALL files that import/call this function.
+            *   **Interactive Decision**: Ask user "Found X files using [Function]. Tag these usages too? (y/n)".
+            *   If 'y': Go to those files and wrap the *specific call lines* with `// feature-start: [name]` tags.
+    *   **Why?**: This prevents "Spooky Action at a Distance" where a port overwrites a file that *uses* your critical feature, breaking the link.
+
+4.  **Registry Sync**:
+    *   After tagging, **Recommendation**: Suggest the user runs `/portkit.update.registry` to index the new tags.
+
+5.  **Completion**: Output list of tagged files.

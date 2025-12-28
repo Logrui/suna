@@ -1,0 +1,42 @@
+# ast-grep rule to replace hardcoded API URLs with getApiUrl helper
+# File: patches/001-replace-api-url.yml
+
+rules:
+  - id: replace-api-url-pattern
+    language: TypeScript
+    severity: warning
+    
+    # Pattern: const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+    pattern: |
+      const $VAR = process.env.$ENV || $DEFAULT
+    
+    # Only match specific variable names
+    constraints:
+      VAR:
+        regex: '^(API_URL|BACKEND_URL|SUPABASE_URL)$'
+      ENV:
+        regex: '^NEXT_PUBLIC_'
+    
+    # Replace with: const API_URL = getApiUrl();
+    fix: |
+      const $VAR = getApiUrl()
+    
+    message: |
+      Replace hardcoded environment variable with getApiUrl() helper.
+      
+      This ensures:
+      - Browser uses relative URLs (window.location.origin/api)
+      - Server uses Docker internal URLs (http://backend:8000/api)
+      - Works with both localhost and Cloudflare Tunnel
+
+# Second rule: Add import if missing (you'll need to add this manually after)
+  - id: ensure-getapiurl-import
+    language: TypeScript
+    severity: info
+    
+    # Files that use getApiUrl() should import it
+    pattern: getApiUrl()
+    
+    message: |
+      Ensure you have this import at the top:
+      import { getApiUrl } from '@/lib/get-api-url';

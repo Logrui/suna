@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useAllTriggers, type TriggerWithAgent } from '@/hooks/triggers/use-all-triggers';
+import { useComposioAppsWithTriggers } from '@/hooks/composio/use-composio-triggers';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -28,13 +29,42 @@ import {
   PlugZap,
   Webhook,
   Repeat,
-  Search
+  Search,
+  Pause,
+  Play,
+  Settings,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { TriggerCreationDialog } from './trigger-creation-dialog';
 import { SimplifiedTriggerDetailPanel } from './simplified-trigger-detail-panel';
 import { TriggersPageHeader } from './triggers-page-header';
+import { useToggleTrigger, useDeleteTrigger } from '@/hooks/triggers';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+// Extract toolkit slug from Composio trigger config
+const getToolkitSlug = (trigger: TriggerWithAgent): string | null => {
+  const qualifiedName = trigger.config?.qualified_name;
+  if (qualifiedName?.startsWith('composio.')) {
+    return qualifiedName.replace('composio.', '').toLowerCase();
+  }
+  // Also check provider_id for event-based triggers
+  if (trigger.provider_id === 'composio' && trigger.config?.toolkit_slug) {
+    return trigger.config.toolkit_slug.toLowerCase();
+  }
+  return null;
+};
 
 const getTriggerIcon = (triggerType: string) => {
   switch (triggerType.toLowerCase()) {
@@ -91,11 +121,19 @@ const formatCronExpression = (cron?: string) => {
 const TriggerListItem = ({
   trigger,
   onClick,
-  isSelected
+  isSelected,
+  composioAppLogo,
+  onToggle,
+  onEdit,
+  onDelete
 }: {
   trigger: TriggerWithAgent;
   onClick: () => void;
   isSelected: boolean;
+  composioAppLogo?: string;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) => {
   const Icon = getTriggerIcon(trigger.trigger_type);
   const isScheduled = getTriggerCategory(trigger.trigger_type) === 'scheduled';
@@ -113,18 +151,28 @@ const TriggerListItem = ({
       >
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-card border border-border/50 shrink-0">
-            <Icon className="h-5 w-5 text-foreground" />
+            {composioAppLogo ? (
+              <img src={composioAppLogo} alt="" className="w-6 h-6 object-contain" />
+            ) : (
+              <Icon className="h-5 w-5 text-foreground" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <h3 className="font-medium text-foreground truncate">{trigger.name}</h3>
-              <Badge
-                variant={trigger.is_active ? "highlight" : "secondary"}
-                className="text-xs"
-              >
-                {trigger.is_active ? "Active" : "Inactive"}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {trigger.agent_name && (
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] font-normal px-1.5 h-4 bg-muted/40 text-muted-foreground border-none truncate max-w-[200px]"
+                    title={`Assigned to ${trigger.agent_name}`}
+                  >
+                    Worker: {trigger.agent_name}
+                  </Badge>
+                )}
+              </div>
             </div>
+
             {trigger.description && (
               <p className="text-sm text-muted-foreground truncate">
                 {trigger.description}
@@ -132,11 +180,45 @@ const TriggerListItem = ({
             )}
           </div>
         </div>
-        {isScheduled && trigger.config?.cron_expression && (
-          <div className="ml-4 text-xs text-muted-foreground hidden sm:block">
-            {formatCronExpression(trigger.config.cron_expression)}
-          </div>
-        )}
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+          {isScheduled && trigger.config?.cron_expression && (
+            <div className="text-xs text-muted-foreground hidden sm:block mr-2">
+              {formatCronExpression(trigger.config.cron_expression)}
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+            className="h-12 w-12 bg-primary border border-border hover:bg-muted text-background hover:text-foreground"
+          >
+            {trigger.is_active ? (
+              <Pause className="h-7 w-7" />
+            ) : (
+              <Play className="h-5 w-5 ml-0.5" />
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="h-12 w-12 bg-card border border-border hover:bg-muted"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="h-12 w-12 bg-card border border-border hover:bg-muted text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
     </SpotlightCard>
   );
@@ -173,11 +255,18 @@ const LoadingSkeleton = () => (
 
 export function TriggersPage() {
   const { data: triggers = [], isLoading, error } = useAllTriggers();
+  const { data: composioAppsData } = useComposioAppsWithTriggers();
   const [selectedTrigger, setSelectedTrigger] = useState<TriggerWithAgent | null>(null);
   const [triggerDialogType, setTriggerDialogType] = useState<'schedule' | 'event' | null>(null);
   const [pendingTriggerId, setPendingTriggerId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [triggerToDelete, setTriggerToDelete] = useState<TriggerWithAgent | null>(null);
+  const [editingTrigger, setEditingTrigger] = useState<TriggerWithAgent | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const toggleTriggerMutation = useToggleTrigger();
+  const deleteTriggerMutation = useDeleteTrigger();
 
   const sortedTriggers = useMemo(() => {
     return [...triggers].sort((a, b) => {
@@ -187,6 +276,19 @@ export function TriggersPage() {
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
   }, [triggers]);
+
+  // Build a lookup map from toolkit slug to logo URL for Composio apps
+  const composioAppsLogoMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (composioAppsData?.items) {
+      for (const app of composioAppsData.items) {
+        if (app.slug && app.logo) {
+          map.set(app.slug.toLowerCase(), app.logo);
+        }
+      }
+    }
+    return map;
+  }, [composioAppsData]);
 
   // Handle trigger_id from URL
   useEffect(() => {
@@ -245,7 +347,50 @@ export function TriggersPage() {
 
   const handleTriggerCreated = (triggerId: string) => {
     setTriggerDialogType(null);
+    setEditingTrigger(null);
     setPendingTriggerId(triggerId);
+  };
+
+  const handleToggleTrigger = async (trigger: TriggerWithAgent) => {
+    try {
+      await toggleTriggerMutation.mutateAsync({
+        triggerId: trigger.trigger_id,
+        isActive: !trigger.is_active,
+      });
+      toast.success(`Trigger ${!trigger.is_active ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      toast.error('Failed to toggle trigger');
+    }
+  };
+
+  const handleEditTrigger = (trigger: TriggerWithAgent) => {
+    setEditingTrigger(trigger);
+    const isSchedule = trigger.provider_id === 'schedule' || trigger.trigger_type === 'schedule';
+    setTriggerDialogType(isSchedule ? 'schedule' : 'event');
+  };
+
+  const handleDeleteClick = (trigger: TriggerWithAgent) => {
+    setTriggerToDelete(trigger);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!triggerToDelete) return;
+    try {
+      await deleteTriggerMutation.mutateAsync({
+        triggerId: triggerToDelete.trigger_id,
+        agentId: triggerToDelete.agent_id
+      });
+      toast.success('Trigger deleted successfully');
+      if (selectedTrigger?.trigger_id === triggerToDelete.trigger_id) {
+        setSelectedTrigger(null);
+      }
+    } catch (error) {
+      toast.error('Failed to delete trigger');
+    } finally {
+      setTriggerToDelete(null);
+      setDeleteDialogOpen(false);
+    }
   };
 
   if (error) {
@@ -264,131 +409,169 @@ export function TriggersPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto max-w-7xl px-4 py-8">
-        <TriggersPageHeader />
-      </div>
-      <div className="h-screen 2xl:flex overflow-hidden">
-        {/* Backdrop overlay - shows when sidebar is open on screens < 2xl (1536px) */}
-        {selectedTrigger && (
-          <div
-            className="block 2xl:hidden fixed inset-0 bg-black/70 z-30"
-            onClick={handleClosePanel}
-          />
-        )}
+    <div className="h-screen overflow-hidden 2xl:flex">
+      {/* Backdrop overlay - shows when sidebar is open on screens < 2xl (1536px) */}
+      {selectedTrigger && (
+        <div
+          className="block 2xl:hidden fixed inset-0 bg-black/70 z-30"
+          onClick={handleClosePanel}
+        />
+      )}
 
-        {/* Main Content - Lower z-index so sidebar overlays it */}
-        <div className="h-full flex flex-col overflow-hidden 2xl:flex-1 relative z-0">
-          {/* Search Bar and Create Button */}
-          <div className="container mx-auto max-w-7xl px-4">
-            <div className="flex items-center justify-between pb-4 pt-3">
-              <div className="max-w-md w-md">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search"
-                    className="h-10 w-full rounded-xl border border-input bg-background px-10 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  />
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    <Search className="h-4 w-4" />
-                  </div>
+      {/* Main Content - Contains header + list, flex-1 on 2xl+ */}
+      <div className="h-full flex flex-col overflow-hidden 2xl:flex-1 relative z-0">
+        {/* Animated Header */}
+        <div className="container mx-auto max-w-7xl px-4 py-8">
+          <TriggersPageHeader />
+        </div>
+
+        {/* Search Bar and Create Button */}
+        <div className="container mx-auto max-w-7xl px-4">
+          <div className="flex items-center justify-between pb-4 pt-3">
+            <div className="max-w-md w-md">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search"
+                  className="h-10 w-full rounded-xl border border-input bg-background px-10 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
                 </div>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="h-10 px-4 rounded-xl gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create new
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72">
-                  <DropdownMenuItem onClick={() => setTriggerDialogType('schedule')} className='rounded-lg'>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-col">
-                      <span>Scheduled Trigger</span>
-                      <span className="text-xs text-muted-foreground">
-                        Schedule a trigger to run at a specific time
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTriggerDialogType('event')} className='rounded-lg'>
-                    <PlugZap className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-col">
-                      <span>Event-based Trigger</span>
-                      <span className="text-xs text-muted-foreground">
-                        Make a trigger to run when an event occurs
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-10 px-4 rounded-xl gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create new
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuItem onClick={() => setTriggerDialogType('schedule')} className='rounded-lg'>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span>Scheduled Trigger</span>
+                    <span className="text-xs text-muted-foreground">
+                      Schedule a trigger to run at a specific time
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTriggerDialogType('event')} className='rounded-lg'>
+                  <PlugZap className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span>Event-based Trigger</span>
+                    <span className="text-xs text-muted-foreground">
+                      Make a trigger to run when an event occurs
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+        </div>
 
-          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-            <div className="container mx-auto max-w-7xl px-4 pb-8">
+        {/* Trigger List Container - padding wrapper controls scrollbar position */}
+        <div className="flex-1 overflow-hidden pt-4 pb-2">
+          {/* Content Container - affects the scrollbar and the trigger list height */}
+          <div className="h-full mx-auto max-w-7xl overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+            <div className="px-4 pb-4">
               {isLoading ? (
                 <LoadingSkeleton />
               ) : sortedTriggers.length === 0 ? (
                 <EmptyState />
               ) : (
                 <div className="space-y-4">
-                  {sortedTriggers.map(trigger => (
-                    <TriggerListItem
-                      key={trigger.trigger_id}
-                      trigger={trigger}
-                      isSelected={selectedTrigger?.trigger_id === trigger.trigger_id}
-                      onClick={() => handleTriggerClick(trigger)}
-                    />
-                  ))}
+                  {sortedTriggers.map(trigger => {
+                    const toolkitSlug = getToolkitSlug(trigger);
+                    const composioLogo = toolkitSlug ? composioAppsLogoMap.get(toolkitSlug) : undefined;
+                    return (
+                      <TriggerListItem
+                        key={trigger.trigger_id}
+                        trigger={trigger}
+                        isSelected={selectedTrigger?.trigger_id === trigger.trigger_id}
+                        onClick={() => handleTriggerClick(trigger)}
+                        composioAppLogo={composioLogo}
+                        onToggle={() => handleToggleTrigger(trigger)}
+                        onEdit={() => handleEditTrigger(trigger)}
+                        onDelete={() => handleDeleteClick(trigger)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Sidebar Panel - Fixed overlay until 2XL breakpoint (1536px) */}
-        <div className={cn(
-          "h-screen transition-all duration-300 ease-in-out bg-background",
-          // Fixed overlay on < 2xl screens, relative positioning on 2xl+
-          "fixed 2xl:relative top-0 right-0",
-          // Z-index: high on mobile/tablet/desktop, auto on 2xl+
-          "z-40 2xl:z-auto",
-          // Overflow handling - allow scrolling when open, hide when closed
-          selectedTrigger ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden",
-          // Border
-          selectedTrigger && "border-l",
-          // Aggressive width breakpoints - wider for better content display
-          selectedTrigger
-            ? "w-full min-[400px]:w-[90vw] min-[500px]:w-[85vw] sm:w-[480px] md:w-[540px] lg:w-[600px] xl:w-[640px] 2xl:w-[580px]"
-            : "w-0 border-none"
-        )}>
-          {selectedTrigger && (
-            <SimplifiedTriggerDetailPanel
-              trigger={selectedTrigger}
-              onClose={handleClosePanel}
-            />
-          )}
-        </div>
-
-        {/* Trigger Creation Dialog */}
-        {triggerDialogType && (
-          <TriggerCreationDialog
-            open={!!triggerDialogType}
-            onOpenChange={(open) => {
-              if (!open) {
-                setTriggerDialogType(null);
-              }
-            }}
-            type={triggerDialogType}
-            onTriggerCreated={handleTriggerCreated}
+      {/* Sidebar Panel - Fixed overlay until 2XL breakpoint (1536px) */}
+      <div className={cn(
+        "h-full transition-all duration-300 ease-in-out bg-background",
+        // Fixed overlay on < 2xl screens, relative positioning on 2xl+
+        "fixed 2xl:relative top-0 right-0",
+        // Z-index: high on mobile/tablet/desktop, auto on 2xl+
+        "z-40 2xl:z-auto",
+        // Overflow handling - allow scrolling when open, hide when closed
+        selectedTrigger ? "overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent" : "overflow-hidden",
+        // Border
+        selectedTrigger && "border-l",
+        // Aggressive width breakpoints - wider for better content display
+        selectedTrigger
+          ? "w-full min-[400px]:w-[90vw] min-[500px]:w-[85vw] sm:w-[480px] md:w-[540px] lg:w-[600px] xl:w-[640px] 2xl:w-[580px]"
+          : "w-0 border-none"
+      )}>
+        {selectedTrigger && (
+          <SimplifiedTriggerDetailPanel
+            trigger={selectedTrigger}
+            onClose={handleClosePanel}
           />
         )}
       </div>
+
+      {/* Trigger Creation Dialog */}
+      {triggerDialogType && (
+        <TriggerCreationDialog
+          open={!!triggerDialogType}
+          onOpenChange={(open) => {
+            if (!open) {
+              setTriggerDialogType(null);
+              setEditingTrigger(null);
+            }
+          }}
+          type={triggerDialogType}
+          agentId={editingTrigger?.agent_id}
+          isEditMode={!!editingTrigger}
+          existingTrigger={editingTrigger}
+          onTriggerCreated={handleTriggerCreated}
+          onTriggerUpdated={handleTriggerCreated}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Trigger</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{triggerToDelete?.name}"? This action cannot be undone and will stop all automated runs from this trigger.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90 text-white"
+            >
+              Delete Trigger
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

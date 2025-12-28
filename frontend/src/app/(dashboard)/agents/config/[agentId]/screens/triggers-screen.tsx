@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Zap, Search, Plus, Play, Pause, Settings, Trash2, Clock, PlugZap } from 'lucide-react';
+import { Zap, Search, Plus, Play, Pause, Settings, Trash2, Clock, PlugZap, Webhook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -30,7 +30,9 @@ import {
     useToggleTrigger,
     useTriggerProviders
 } from '@/hooks/triggers';
+import { useComposioAppsWithTriggers } from '@/hooks/composio/use-composio-triggers';
 import { TriggerCreationDialog } from '@/components/triggers/trigger-creation-dialog';
+import { WebhookTriggerDialog } from '@/components/agents/triggers/webhook-trigger-dialog';
 
 interface TriggersScreenProps {
     agentId: string;
@@ -39,15 +41,30 @@ interface TriggersScreenProps {
 export function TriggersScreen({ agentId }: TriggersScreenProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [triggerDialogType, setTriggerDialogType] = useState<'schedule' | 'event' | null>(null);
+    const [showWebhookDialog, setShowWebhookDialog] = useState(false);
     const [editingTrigger, setEditingTrigger] = useState<any>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [triggerToDelete, setTriggerToDelete] = useState<any>(null);
 
     const { data: triggers = [], isLoading } = useAgentTriggers(agentId);
+    const { data: composioAppsData } = useComposioAppsWithTriggers();
     const createTriggerMutation = useCreateTrigger();
     const updateTriggerMutation = useUpdateTrigger();
     const deleteTriggerMutation = useDeleteTrigger();
     const toggleTriggerMutation = useToggleTrigger();
+
+    // Build a lookup map from toolkit slug to logo URL for Composio apps
+    const composioAppsLogoMap = useMemo(() => {
+        const map = new Map<string, string>();
+        if (composioAppsData?.items) {
+            for (const app of composioAppsData.items) {
+                if (app.slug && app.logo) {
+                    map.set(app.slug.toLowerCase(), app.logo);
+                }
+            }
+        }
+        return map;
+    }, [composioAppsData]);
 
     const runningTriggers = useMemo(
         () => triggers.filter((trigger) => trigger.is_active),
@@ -160,6 +177,15 @@ export function TriggersScreen({ agentId }: TriggersScreenProps) {
                                 </span>
                             </div>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowWebhookDialog(true)} className='rounded-lg'>
+                            <Webhook className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex flex-col">
+                                <span>Custom Webhook</span>
+                                <span className="text-xs text-muted-foreground">
+                                    Trigger from external services via HTTP
+                                </span>
+                            </div>
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -192,6 +218,7 @@ export function TriggersScreen({ agentId }: TriggersScreenProps) {
                                             onToggle={() => handleToggleTrigger(trigger)}
                                             onEdit={() => handleEditTrigger(trigger)}
                                             onDelete={() => handleDeleteClick(trigger)}
+                                            composioAppsLogoMap={composioAppsLogoMap}
                                         />
                                     ))}
                                 </div>
@@ -210,6 +237,7 @@ export function TriggersScreen({ agentId }: TriggersScreenProps) {
                                             onToggle={() => handleToggleTrigger(trigger)}
                                             onEdit={() => handleEditTrigger(trigger)}
                                             onDelete={() => handleDeleteClick(trigger)}
+                                            composioAppsLogoMap={composioAppsLogoMap}
                                         />
                                     ))}
                                 </div>
@@ -237,6 +265,14 @@ export function TriggersScreen({ agentId }: TriggersScreenProps) {
                     onTriggerUpdated={handleTriggerUpdated}
                 />
             )}
+
+            {/* Webhook Trigger Dialog */}
+            <WebhookTriggerDialog
+                open={showWebhookDialog}
+                onOpenChange={setShowWebhookDialog}
+                agentId={agentId}
+                onTriggerCreated={handleTriggerCreated}
+            />
 
             {/* Delete Confirmation Dialog */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -267,15 +303,50 @@ interface TriggerCardProps {
     onToggle: () => void;
     onEdit: () => void;
     onDelete: () => void;
+    composioAppsLogoMap?: Map<string, string>;
 }
 
-function TriggerCard({ trigger, onToggle, onEdit, onDelete }: TriggerCardProps) {
+// Extract toolkit slug from Composio trigger config
+const getToolkitSlug = (trigger: any): string | null => {
+    const config = trigger.config;
+    if (!config) return null;
+
+    // Check qualified_name first (e.g., 'composio.gmail')
+    const qualifiedName = config.qualified_name;
+    if (qualifiedName?.startsWith('composio.')) {
+        return qualifiedName.replace('composio.', '').toLowerCase();
+    }
+
+    // Check toolkit_slug
+    if (config.toolkit_slug) {
+        return config.toolkit_slug.toLowerCase();
+    }
+
+    // Check trigger_slug for event-based triggers (e.g., 'GMAIL_NEW_MESSAGE')
+    if (trigger.provider_id === 'composio' && config.trigger_slug) {
+        const slugParts = config.trigger_slug.toLowerCase().split('_');
+        if (slugParts.length > 0) {
+            return slugParts[0];
+        }
+    }
+
+    return null;
+};
+
+function TriggerCard({ trigger, onToggle, onEdit, onDelete, composioAppsLogoMap }: TriggerCardProps) {
+    const toolkitSlug = getToolkitSlug(trigger);
+    const composioLogo = toolkitSlug && composioAppsLogoMap?.get(toolkitSlug);
+
     return (
         <SpotlightCard className="bg-card border border-border">
             <div className="flex items-center justify-between p-5">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-card border border-border/50 flex-shrink-0">
-                        <Zap className="h-5 w-5 text-foreground" />
+                        {composioLogo ? (
+                            <img src={composioLogo} alt="" className="h-5 w-5 object-contain" />
+                        ) : (
+                            <Zap className="h-5 w-5 text-foreground" />
+                        )}
                     </div>
 
                     <div className="flex-1 min-w-0">

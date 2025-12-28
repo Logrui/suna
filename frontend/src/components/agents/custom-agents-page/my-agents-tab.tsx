@@ -150,10 +150,10 @@ export const MyAgentsTab = ({
                       isActioning: isActioning,
                     }}
                     actions={{
-                      onPrimaryAction: template.is_public 
+                      onPrimaryAction: template.is_public
                         ? () => onUnpublish(template.template_id, template.name)
                         : () => onPublish(template),
-                      onSecondaryAction: template.is_public ? () => {} : undefined,
+                      onSecondaryAction: template.is_public ? () => { } : undefined,
                     }}
                   />
                 );
@@ -227,7 +227,7 @@ export const MyAgentsTab = ({
                 publishingId={publishingAgentId}
               />
             )}
-            
+
             {agentsPagination && (
               <Pagination
                 currentPage={agentsPagination.current_page}

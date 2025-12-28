@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Zap, BookOpen, ChevronRight, Plus, Clock, PlugZap, Loader2 } from 'lucide-react';
+import { Zap, BookOpen, ChevronRight, Plus, Clock, PlugZap, Loader2, Webhook, ExternalLink } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -14,7 +14,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TriggerCreationDialog } from '@/components/triggers/trigger-creation-dialog';
-import { useAllTriggers } from '@/hooks/triggers/use-all-triggers';
+import { WebhookTriggerDialog } from '@/components/agents/triggers/webhook-trigger-dialog';
+import { useAllTriggers, type TriggerWithAgent } from '@/hooks/triggers/use-all-triggers';
+import { useComposioAppsWithTriggers } from '@/hooks/composio/use-composio-triggers';
 import Link from 'next/link';
 
 export function NavGlobalConfig() {
@@ -23,11 +25,38 @@ export function NavGlobalConfig() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [triggerDialogType, setTriggerDialogType] = useState<'schedule' | 'event' | null>(null);
+    const [showWebhookDialog, setShowWebhookDialog] = useState(false);
     const { data: triggers = [], isLoading } = useAllTriggers();
 
     const isTriggersActive = pathname?.includes('/triggers');
     const activeTriggerIdFromUrl = searchParams.get('trigger_id');
     const isKnowledgeBaseActive = pathname?.includes('/knowledge');
+
+    // Fetch Composio apps for icons
+    const { data: composioAppsData } = useComposioAppsWithTriggers();
+
+    // Build lookup map: toolkit slug -> logo URL
+    const composioAppsLogoMap = useMemo(() => {
+        const map = new Map<string, string>();
+        if (composioAppsData?.items) {
+            for (const app of composioAppsData.items) {
+                if (app.slug && app.logo) {
+                    map.set(app.slug.toLowerCase(), app.logo);
+                }
+            }
+        }
+        return map;
+    }, [composioAppsData]);
+
+    // Helper to get Composio app logo for a trigger
+    const getComposioLogo = (trigger: TriggerWithAgent): string | undefined => {
+        const qualifiedName = trigger.config?.qualified_name;
+        if (qualifiedName?.startsWith('composio.')) {
+            const slug = qualifiedName.replace('composio.', '').toLowerCase();
+            return composioAppsLogoMap.get(slug);
+        }
+        return undefined;
+    };
 
     const handleNavigation = (path: string) => {
         router.push(path);
@@ -39,9 +68,19 @@ export function NavGlobalConfig() {
     return (
         <div className="space-y-1">
             {/* Section Header */}
-            <div className="py-2 mt-4 first:mt-2">
-                <div className="text-xs font-medium text-muted-foreground pl-2.5">
-                    Trigger Config
+            <div className="px-2.5 py-3 border-b border-transparent">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Trigger Config</h3>
+                    <Link href="/triggers">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                            aria-label="View all triggers"
+                        >
+                            <ExternalLink className="h-3 w-3" />
+                        </Button>
+                    </Link>
                 </div>
             </div>
 
@@ -78,6 +117,7 @@ export function NavGlobalConfig() {
                 <div className="space-y-1 mt-2">
                     {triggers.slice(0, 5).map((trigger) => {
                         const isActive = activeTriggerIdFromUrl === trigger.trigger_id;
+                        const composioLogo = getComposioLogo(trigger);
                         return (
                             <SpotlightCard
                                 key={trigger.trigger_id}
@@ -94,7 +134,11 @@ export function NavGlobalConfig() {
                                     }}
                                 >
                                     <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-card border-[1.5px] border-border flex-shrink-0">
-                                        <Zap className="h-4 w-4 text-muted-foreground" />
+                                        {composioLogo ? (
+                                            <img src={composioLogo} alt="" className="w-5 h-5 object-contain" />
+                                        ) : (
+                                            <Zap className="h-4 w-4 text-muted-foreground" />
+                                        )}
                                     </div>
                                     <span className="flex-1 truncate text-muted-foreground">{trigger.name}</span>
                                 </div>
@@ -109,7 +153,7 @@ export function NavGlobalConfig() {
                     <Button
                         variant="outline"
                         size="sm"
-                        className="w-full shadow-none justify-start items-center h-10 px-4 bg-background mt-3"
+                        className="w-full shadow-none justify-center items-center h-10 px-4 bg-background mt-3"
                     >
                         <Plus className="h-4 w-4" />
                         Add Trigger
@@ -131,6 +175,15 @@ export function NavGlobalConfig() {
                             <span>Event-based Trigger</span>
                             <span className="text-xs text-muted-foreground">
                                 Make a trigger to run when an event occurs
+                            </span>
+                        </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowWebhookDialog(true)} className='rounded-lg'>
+                        <Webhook className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-col">
+                            <span>Custom Webhook</span>
+                            <span className="text-xs text-muted-foreground">
+                                Trigger from external services via HTTP
                             </span>
                         </div>
                     </DropdownMenuItem>
@@ -157,6 +210,20 @@ export function NavGlobalConfig() {
                     }}
                 />
             )}
+
+            {/* Webhook Trigger Dialog */}
+            <WebhookTriggerDialog
+                open={showWebhookDialog}
+                onOpenChange={setShowWebhookDialog}
+                agentId="" // Will prompt user to select agent
+                onTriggerCreated={(triggerId) => {
+                    setShowWebhookDialog(false);
+                    router.push('/triggers');
+                    if (isMobile) {
+                        setOpenMobile(false);
+                    }
+                }}
+            />
 
         </div>
     );

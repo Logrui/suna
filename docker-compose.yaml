@@ -1,5 +1,5 @@
 # ============================================================================
-# KORTIX SUPER WORKER DOCKER COMPOSE - LOCAL DEVELOPMENT
+# KORTIX DOCKER COMPOSE - LOCAL DEVELOPMENT
 # ============================================================================
 # This Docker Compose file runs Kortix Super Worker services (Backend, Worker, Frontend, Redis)
 #
@@ -20,7 +20,7 @@
 #   docker compose logs -f        # View all logs
 #
 # Access:
-#   - Kortix Super Worker Frontend:     http://localhost:3000
+#   - Kortix Super Worker Frontend:     http://localhost:9090
 #   - Kortix Super Worker Backend API:  http://localhost:8000
 # ============================================================================
 
@@ -42,6 +42,8 @@ services:
   backend:
     image: ghcr.io/suna-ai/suna-backend:latest
     platform: linux/amd64
+    env_file:
+      - ./backend/.env
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -63,6 +65,8 @@ services:
   worker:
     image: ghcr.io/suna-ai/suna-backend:latest
     platform: linux/amd64
+    env_file:
+      - ./backend/.env
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -80,15 +84,31 @@ services:
 
   frontend:
     init: true
+    env_file:
+      - ./frontend/.env.local
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000/v1}
-        NEXT_PUBLIC_URL: ${NEXT_PUBLIC_URL:-http://localhost:3000}
-        NEXT_PUBLIC_ENV_MODE: ${NEXT_PUBLIC_ENV_MODE:-LOCAL}
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000/v1}
+        - NEXT_PUBLIC_URL=${NEXT_PUBLIC_URL:-http://localhost:9990}
+        - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+        - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
+        - NEXT_PUBLIC_ENV_MODE=${NEXT_PUBLIC_ENV_MODE:-staging}
+        - BACKEND_INTERNAL_URL=http://backend:8000
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000/v1}
+      - BACKEND_INTERNAL_URL=http://backend:8000
+      - NEXT_PUBLIC_URL=${NEXT_PUBLIC_URL:-http://localhost:9990}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
+      - NEXT_PUBLIC_ENV_MODE=${NEXT_PUBLIC_ENV_MODE:-staging}
     ports:
-      - "3000:3000"
+      - "9990:3000"
     depends_on:
       - backend
 

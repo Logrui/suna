@@ -1,0 +1,32 @@
+# ============================================================================
+# RAILWAY WORKER SERVICE CONFIGURATION
+# ============================================================================
+# This is NOT a separate Dockerfile - it's a reference document.
+# Both backend and worker services use the SAME Dockerfile.railway
+#
+# SETUP IN RAILWAY:
+# 1. Create TWO services from the same Dockerfile.railway:
+#    - Service 1: "suna-backend" (API server)
+#    - Service 2: "suna-worker" (Task queue)
+#
+# 2. For the WORKER service, override the start command:
+#    Railway Dashboard → Service Settings → Deploy → Start Command:
+#    uv run dramatiq --skip-logging --processes 4 --threads 4 run_agent_background
+#
+# 3. Environment variables needed for BOTH services:
+#    - REDIS_HOST (Railway Redis service hostname)
+#    - REDIS_PORT (Railway Redis service port)
+#    - REDIS_PASSWORD (Railway Redis password)
+#    - REDIS_SSL=True (Railway Redis uses SSL)
+#    - All your Supabase/Auth/API keys
+#
+# WORKER SCALING RECOMMENDATIONS:
+# - processes: Number of worker processes (4 = good for Railway's standard plan)
+# - threads: Number of threads per process (4 = balanced)
+# - Adjust based on your Railway plan's vCPU allocation
+#
+# Railway Resource Estimates:
+# - Hobby Plan (0.5 vCPU): --processes 1 --threads 2
+# - Pro Plan (2 vCPU): --processes 2 --threads 4
+# - Pro+ Plan (4+ vCPU): --processes 4 --threads 4
+# ============================================================================

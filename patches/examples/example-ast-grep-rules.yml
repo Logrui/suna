@@ -1,0 +1,59 @@
+# ast-grep rules for replacing API_URL pattern
+# Save as: .ast-grep-rules.yml
+#
+# Usage:
+#   ast-grep scan --rule .ast-grep-rules.yml
+#   ast-grep scan --rule .ast-grep-rules.yml --update-all
+
+rules:
+  - id: replace-api-url-with-helper
+    language: TypeScript
+    
+    # Pattern to match
+    pattern: |
+      const $VAR = process.env.$ENV || $DEFAULT
+    
+    # Constraints
+    constraints:
+      VAR:
+        regex: '^(API_URL|SUPABASE_URL)$'
+      ENV:
+        regex: '^NEXT_PUBLIC_'
+    
+    # Transformation
+    fix: |
+      const $VAR = getApiUrl()
+    
+    # Auto-add import if file doesn't have it
+    utils:
+      has-import:
+        pattern: |
+          import { getApiUrl } from '@/lib/get-api-url'
+    
+    # Message for reviewers
+    message: |
+      Replace hardcoded environment variable with getApiUrl() helper
+      
+      This ensures:
+      - Browser uses relative URLs (window.location.origin/api)
+      - Server uses Docker internal URLs (http://backend:8000/api)
+      - Works with both localhost and Cloudflare Tunnel
+
+# Second rule: Add import if missing
+  - id: add-getapiurl-import
+    language: TypeScript
+    
+    # Only trigger if file uses getApiUrl but doesn't import it
+    pattern: getApiUrl()
+    
+    not:
+      kind: import_statement
+      pattern: |
+        import { getApiUrl } from '@/lib/get-api-url'
+    
+    fix: |
+      // Add this import at the top of the file:
+      // import { getApiUrl } from '@/lib/get-api-url';
+      getApiUrl()
+    
+    message: "Missing import for getApiUrl()"

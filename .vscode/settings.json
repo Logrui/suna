@@ -4,5 +4,6 @@
   "python.defaultInterpreterPath": "./backend/.venv/bin/python",
   "editor.fontFamily": "Monocraft",
   "terminal.integrated.fontFamily": "Monocraft",
-  "debug.console.fontFamily": "Monocraft"
+  "debug.console.fontFamily": "Monocraft",
+  "git.enabled": true
 }

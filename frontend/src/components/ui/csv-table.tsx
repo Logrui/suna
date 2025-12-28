@@ -43,10 +43,10 @@ export function CsvTable({
 
     // Theme-aware grid colors with subtle monochrome grays
     const getGridColors = () => {
-        const isDark = resolvedTheme === 'dark';
+        const isdark = resolvedTheme === 'dark';
         return {
-            vertical: isDark ? 'rgb(64 64 64)' : 'rgb(229 229 229)', // Subtle gray for each theme
-            horizontal: isDark ? 'rgb(64 64 64)' : 'rgb(229 229 229)', // Same for consistency
+            vertical: isdark ? 'rgb(64 64 64)' : 'rgb(229 229 229)', // Subtle gray for each theme
+            horizontal: isdark ? 'rgb(64 64 64)' : 'rgb(229 229 229)', // Same for consistency
             background: 'hsl(var(--muted))'
         };
     };

@@ -1,0 +1,20 @@
+diff --git a/frontend/src/app/layout.tsx b/frontend/src/app/layout.tsx
+index 1111111..2222222 100644
+--- a/frontend/src/app/layout.tsx
++++ b/frontend/src/app/layout.tsx
+@@ -1,6 +1,7 @@
+ import type { Metadata } from 'next';
+ import { Inter } from 'next/font/google';
+ import './globals.css';
++import { Analytics } from '@vercel/analytics/react';
+ 
+ const inter = Inter({ subsets: ['latin'] });
+ 
+@@ -15,6 +16,7 @@ export default function RootLayout({
+   return (
+     <html lang="en">
+       <body className={inter.className}>{children}</body>
++      <Analytics />
+     </html>
+   );
+ }

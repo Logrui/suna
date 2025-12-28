@@ -194,7 +194,87 @@ class InstallationService:
     async def _get_template(self, template_id: str) -> Optional[AgentTemplate]:
         from .template_service import get_template_service
         template_service = get_template_service(self._db)
-        return await template_service.get_template(template_id)
+        template = await template_service.get_template(template_id)
+        
+        # If template not found locally, try to fetch from production API
+        if not template:
+            template = await self._fetch_template_from_production(template_id)
+        
+        return template
+    
+    async def _fetch_template_from_production(self, template_id: str) -> Optional[AgentTemplate]:
+        """Fetch a public template from the production API (kortix.com) for self-hosted installations."""
+        production_api_url = os.getenv("PRODUCTION_API_URL", "https://api.kortix.com/v1")
+        
+        try:
+            logger.debug(f"Template {template_id} not found locally, fetching from production API: {production_api_url}")
+            
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(f"{production_api_url}/templates/public/{template_id}")
+                
+                if response.status_code == 404:
+                    logger.debug(f"Template {template_id} not found in production API")
+                    return None
+                
+                response.raise_for_status()
+                data = response.json()
+                
+                # Map the API response to an AgentTemplate object
+                from datetime import datetime
+                
+                marketplace_published_at = None
+                if data.get('marketplace_published_at'):
+                    try:
+                        marketplace_published_at = datetime.fromisoformat(
+                            data['marketplace_published_at'].replace('Z', '+00:00')
+                        )
+                    except (ValueError, AttributeError):
+                        pass
+                
+                created_at = datetime.now()
+                if data.get('created_at'):
+                    try:
+                        created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+                    except (ValueError, AttributeError):
+                        pass
+                
+                updated_at = datetime.now()
+                if data.get('updated_at'):
+                    try:
+                        updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+                    except (ValueError, AttributeError):
+                        pass
+                
+                template = AgentTemplate(
+                    template_id=data['template_id'],
+                    creator_id=data['creator_id'],
+                    name=data['name'],
+                    config=data.get('config', {}),
+                    tags=data.get('tags', []),
+                    categories=data.get('categories', []),
+                    is_public=data.get('is_public', True),
+                    is_kortix_team=data.get('is_kortix_team', False),
+                    marketplace_published_at=marketplace_published_at,
+                    download_count=data.get('download_count', 0),
+                    created_at=created_at,
+                    updated_at=updated_at,
+                    icon_name=data.get('icon_name'),
+                    icon_color=data.get('icon_color'),
+                    icon_background=data.get('icon_background'),
+                    metadata=data.get('metadata', {}),
+                    creator_name=data.get('creator_name'),
+                    usage_examples=data.get('usage_examples', [])
+                )
+                
+                logger.info(f"Successfully fetched template {template_id} from production API: {template.name}")
+                return template
+                
+        except httpx.HTTPError as e:
+            logger.warning(f"Failed to fetch template {template_id} from production API: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching template {template_id} from production API: {e}")
+            return None
     
     async def _validate_access(self, template: AgentTemplate, user_id: str) -> None:
         if template.creator_id != user_id and not template.is_public:

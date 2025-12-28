@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Clock, PlugZap } from 'lucide-react';
 import { EventBasedTriggerDialog } from '@/components/agents/triggers/event-based-trigger-dialog';
+import { WebhookTriggerDialog } from '@/components/agents/triggers/webhook-trigger-dialog';
 import { SimplifiedScheduleConfig } from '@/components/agents/triggers/providers/simplified-schedule-config';
 import { ScheduleTriggerConfig } from '@/components/agents/triggers/types';
 import { useCreateTrigger, useUpdateTrigger } from '@/hooks/triggers';
@@ -23,7 +24,7 @@ import { useTranslations } from 'next-intl';
 interface TriggerCreationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: 'schedule' | 'event';
+  type: 'schedule' | 'event' | 'webhook';
   onTriggerCreated?: (triggerId: string) => void;
   isEditMode?: boolean;
   existingTrigger?: any; // TriggerConfiguration for edit mode
@@ -121,9 +122,9 @@ export function TriggerCreationDialog({
       handleClose();
     } catch (error: any) {
       if (error instanceof TriggerLimitError) {
-        pricingModalStore.openPricingModal({ 
-          isAlert: true, 
-          alertTitle: `${tBilling('reachedLimit')} ${tBilling('triggerLimit', { current: error.detail.current_count, limit: error.detail.limit })}` 
+        pricingModalStore.openPricingModal({
+          isAlert: true,
+          alertTitle: `${tBilling('reachedLimit')} ${tBilling('triggerLimit', { current: error.detail.current_count, limit: error.detail.limit })}`
         });
         handleClose();
         return;
@@ -218,6 +219,17 @@ export function TriggerCreationDialog({
         onOpenChange={onOpenChange}
         onSave={handleScheduleSave}
         isEditMode={isEditMode}
+      />
+    );
+  }
+
+  if (type === 'webhook') {
+    return (
+      <WebhookTriggerDialog
+        open={open}
+        onOpenChange={handleClose}
+        agentId={selectedAgent}
+        onTriggerCreated={onTriggerCreated}
       />
     );
   }

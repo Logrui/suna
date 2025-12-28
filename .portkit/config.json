@@ -1,0 +1,7 @@
+{
+    "upstream_url": "https://github.com/kortix-ai/suna",
+    "mappings": {
+        "frontend": "frontend",
+        "backend": "backend"
+    }
+}

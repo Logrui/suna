@@ -1,0 +1,8 @@
+{
+  "track_id": "railway_fix_20251226",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2025-12-26T15:48:00Z",
+  "updated_at": "2025-12-26T15:48:00Z",
+  "description": "Investigate and resolve networking misconfigurations in the Railway deployment, focusing on cross-service communication (Backend <-> Supabase, Frontend <-> Backend), environment variable mapping, and successful synchronization with the upstream repository using jj."
+}

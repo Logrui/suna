@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAgent, useUpdateAgent } from '@/hooks/agents/use-agents';
-import { GranularToolConfiguration } from '@/components/agents/tools/granular-tool-configuration';
-import { toast } from 'sonner';
+import React from 'react';
+import { useAgent } from '@/hooks/agents/use-agents';
+import { AgentWorkflowsConfiguration } from '@/components/workflows/simple/workflows-list';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 
 interface WorkflowsScreenProps {
     agentId: string;
@@ -12,50 +12,41 @@ interface WorkflowsScreenProps {
 
 export function WorkflowsScreen({ agentId }: WorkflowsScreenProps) {
     const { data: agent, isLoading } = useAgent(agentId);
-    const updateAgentMutation = useUpdateAgent();
-    const [tools, setTools] = useState<Record<string, any>>({});
-
-    useEffect(() => {
-        if (agent?.agentpress_tools) {
-            setTools(agent.agentpress_tools);
-        }
-    }, [agent?.agentpress_tools]);
-
-    const isSunaAgent = agent?.metadata?.is_suna_default || false;
-    const restrictions = agent?.metadata?.restrictions || {};
-    const areToolsEditable = (restrictions.tools_editable !== false) && !isSunaAgent;
-
-    const handleToolsChange = async (newTools: Record<string, boolean | { enabled: boolean; description: string }>) => {
-        if (!areToolsEditable) {
-            if (isSunaAgent) {
-                toast.error("Tools cannot be edited", {
-                    description: "Kortix's tools are managed centrally.",
-                });
-            }
-            return;
-        }
-
-        try {
-            await updateAgentMutation.mutateAsync({
-                agentId,
-                agentpress_tools: newTools,
-            });
-            setTools(newTools);
-            toast.success('Tools updated successfully');
-        } catch (error) {
-            console.error('Failed to update tools:', error);
-            toast.error('Failed to update tools');
-        }
-    };
 
     if (isLoading) {
         return (
-            <div className="flex-1 overflow-auto pb-6">
-                <div className="px-1 pt-1 space-y-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
+            <div className="flex-1 flex flex-col overflow-hidden pb-6">
+                <div className="px-1 pt-1 flex flex-col flex-1 min-h-0 h-full">
+                    {/* Button skeleton */}
+                    <div className="flex-shrink-0 mb-4">
+                        <Skeleton className="h-10 w-40" />
+                    </div>
+                    {/* Workflow cards skeleton */}
+                    <div className="flex-1 overflow-y-auto space-y-4">
+                        {[1, 2, 3].map((index) => (
+                            <Card key={index} className="p-6 rounded-xl">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 space-y-3">
+                                        <Skeleton className="h-6 w-48" />
+                                        <div className="flex items-center space-x-2">
+                                            <Skeleton className="h-5 w-16 rounded-full" />
+                                            <Skeleton className="h-5 w-14 rounded-full" />
+                                        </div>
+                                        <Skeleton className="h-4 w-full max-w-md" />
+                                        <Skeleton className="h-4 w-3/4 max-w-sm" />
+                                        <div className="flex items-center pt-1">
+                                            <Skeleton className="h-4 w-4 mr-2 rounded" />
+                                            <Skeleton className="h-3 w-32" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-shrink-0 flex items-center gap-2">
+                                        <Skeleton className="h-8 w-20 rounded-md" />
+                                        <Skeleton className="h-8 w-8 rounded-md" />
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -64,12 +55,9 @@ export function WorkflowsScreen({ agentId }: WorkflowsScreenProps) {
     return (
         <div className="flex-1 flex flex-col overflow-hidden pb-6">
             <div className="px-1 pt-1 flex flex-col flex-1 min-h-0 h-full">
-                <GranularToolConfiguration
-                    tools={tools}
-                    onToolsChange={handleToolsChange}
-                    disabled={!areToolsEditable}
-                    isSunaAgent={isSunaAgent}
-                    isLoading={updateAgentMutation.isPending}
+                <AgentWorkflowsConfiguration
+                    agentId={agentId}
+                    agentName={agent?.name || 'Agent'}
                 />
             </div>
         </div>

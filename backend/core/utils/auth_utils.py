@@ -183,7 +183,7 @@ async def verify_and_get_user_id_from_jwt(request: Request) -> str:
                     return user_id
                 else:
                     # Log detailed error for debugging but return generic message
-                    logger.warning(f"API key valid but account not found: {public_key[:8]}...")
+                    #logger.warning(f"API key valid but account not found: {public_key[:8]}...")
                     raise HTTPException(
                         status_code=401,
                         detail="Invalid API key",
@@ -191,7 +191,7 @@ async def verify_and_get_user_id_from_jwt(request: Request) -> str:
                     )
             else:
                 # Log detailed error for debugging but return generic message to prevent enumeration
-                logger.debug(f"API key validation failed: {validation_result.error_message}")
+                #logger.debug(f"API key validation failed: {validation_result.error_message}")
                 raise HTTPException(
                     status_code=401,
                     detail="Invalid API key",
@@ -263,13 +263,13 @@ async def get_user_id_from_stream_auth(
     Authenticate user for streaming endpoints.
     Supports JWT via Authorization header or token query param.
     """
-    logger.debug(f"🔐 get_user_id_from_stream_auth called - has_token: {bool(token)}")
+    #logger.debug(f"🔐 get_user_id_from_stream_auth called - has_token: {bool(token)}")
     
     try:
         # Try JWT header first
         try:
             user_id = await verify_and_get_user_id_from_jwt(request)
-            logger.debug(f"✅ Authenticated via JWT header: {user_id[:8]}...")
+            #logger.debug(f"✅ Authenticated via JWT header: {user_id[:8]}...")
             return user_id
         except HTTPException:
             pass
@@ -285,12 +285,12 @@ async def get_user_id_from_stream_auth(
                         user_id=user_id,
                         auth_method="jwt_query"
                     )
-                    logger.debug(f"✅ Authenticated via token param: {user_id[:8]}...")
+                    #logger.debug(f"✅ Authenticated via token param: {user_id[:8]}...")
                     return user_id
             except HTTPException:
-                logger.debug("❌ Token param auth failed: invalid token")
+                logger.error("❌ Token param auth failed: invalid token")
             except Exception as e:
-                logger.debug(f"❌ Token param auth failed: {str(e)}")
+                logger.error(f"❌ Token param auth failed: {str(e)}")
         
         raise HTTPException(
             status_code=401,

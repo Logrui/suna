@@ -191,16 +191,38 @@ class ComposioProfileService:
             if config.get('type') != 'composio':
                 raise ValueError(f"Profile {profile_id} is not a Composio profile")
             
-            return {
-                "name": config['toolkit_name'],
+            toolkit_slug = config.get('toolkit_slug', '')
+            toolkit_name = config.get('toolkit_name', '')
+            
+            # Try to fetch toolkit icon URL
+            icon_url = None
+            if toolkit_slug:
+                try:
+                    from core.composio_integration.toolkit_service import ComposioToolkitService
+                    toolkit_service = ComposioToolkitService()
+                    icon_url = await toolkit_service.get_toolkit_icon(toolkit_slug)
+                except Exception as e:
+                    logger.debug(f"Failed to fetch toolkit icon for {toolkit_slug}: {e}")
+            
+            mcp_config = {
+                "name": toolkit_name,
                 "type": "composio",
                 "mcp_qualified_name": profile_data['mcp_qualified_name'],
-                "toolkit_slug": config.get('toolkit_slug', ''),
+                "toolkit_slug": toolkit_slug,
+                "toolkit_name": toolkit_name,
                 "config": {
-                    "profile_id": profile_id
+                    "profile_id": profile_id,
+                    "toolkit_slug": toolkit_slug,
                 },
                 "enabledTools": []
             }
+            
+            # Include icon_url if available
+            if icon_url:
+                mcp_config["icon_url"] = icon_url
+                mcp_config["config"]["icon_url"] = icon_url
+            
+            return mcp_config
             
         except Exception as e:
             logger.error(f"Failed to get MCP config for profile {profile_id}: {e}", exc_info=True)

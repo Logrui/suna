@@ -366,6 +366,58 @@ class WebhookProvider(TriggerProvider):
             )
 
 
+class GenericWebhookProvider(TriggerProvider):
+    """Provider for user-created generic webhook triggers.
+    
+    Allows external systems (Zapier, IFTTT, n8n, etc.) to trigger agents/workflows
+    via HTTP POST to /v1/triggers/{trigger_id}/webhook
+    """
+    
+    def __init__(self):
+        super().__init__("generic_webhook", TriggerType.WEBHOOK)
+    
+    async def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        # agent_prompt is optional - only needed for agent execution, not workflows
+        return config
+    
+    async def setup_trigger(self, trigger: Trigger) -> bool:
+        return True
+    
+    async def teardown_trigger(self, trigger: Trigger) -> bool:
+        return True
+    
+    async def process_event(self, trigger: Trigger, event: TriggerEvent) -> TriggerResult:
+        try:
+            raw_data = event.raw_data or {}
+            
+            execution_variables = {
+                'webhook_data': raw_data,
+                'trigger_id': event.trigger_id,
+                'agent_id': event.agent_id,
+                'received_at': datetime.now(timezone.utc).isoformat(),
+            }
+            
+            agent_prompt = trigger.config.get('agent_prompt')
+            if not agent_prompt:
+                agent_prompt = f"Process incoming webhook data: {json.dumps(raw_data)[:800]}"
+            
+            model = trigger.config.get('model') if trigger.config else None
+            
+            return TriggerResult(
+                success=True,
+                should_execute_agent=True,
+                agent_prompt=agent_prompt,
+                execution_variables=execution_variables,
+                model=model
+            )
+            
+        except Exception as e:
+            return TriggerResult(
+                success=False,
+                error_message=f"Error processing generic webhook event: {str(e)}"
+            )
+
+
 class ProviderService:
     
     def __init__(self, db_connection: DBConnection):
@@ -376,6 +428,7 @@ class ProviderService:
     def _initialize_providers(self):
         self._providers["schedule"] = ScheduleProvider()
         self._providers["webhook"] = WebhookProvider()
+        self._providers["generic_webhook"] = GenericWebhookProvider()
         composio_provider = ComposioEventProvider()
         composio_provider.set_db(self._db)
         self._providers["composio"] = composio_provider
@@ -445,6 +498,21 @@ class ProviderService:
                     }
                 },
                 "required": ["composio_trigger_id", "agent_prompt"]
+            }
+        elif provider_id == "generic_webhook":
+            return {
+                "type": "object",
+                "properties": {
+                    "agent_prompt": {
+                        "type": "string",
+                        "description": "Instructions for processing incoming webhook data"
+                    },
+                    "model": {
+                        "type": "string",
+                        "description": "Model to use for agent execution (optional)"
+                    }
+                },
+                "required": []
             }
         
         return {"type": "object", "properties": {}, "required": []}

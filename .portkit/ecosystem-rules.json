@@ -1,0 +1,45 @@
+{
+    "metadata": {
+        "version": "1.0",
+        "doc": "Defines the Laws of Adaptation for Portkit. Agents must enforce these rules during Specify, Research, and Impact phases."
+    },
+    "denied_dependencies": [
+        {
+            "package": "next-intl",
+            "action": "strip",
+            "replacement": "raw strings",
+            "reason": "Localization is out of scope for self-hosted fork."
+        },
+        {
+            "package": "stripe",
+            "action": "strip",
+            "replacement": "mock/omission",
+            "reason": "Self-hosted fork allows unlimited use; billing logic must be removed."
+        },
+        {
+            "package": "mixpanel",
+            "action": "strip",
+            "replacement": "PostHog (optional) or remove",
+            "reason": "We use PostHog for telemetry if enabled."
+        },
+        {
+            "package": "@sentry/nextjs",
+            "action": "strip",
+            "replacement": "console.error",
+            "reason": "Sentry not configured for local instances."
+        }
+    ],
+    "forced_adapters": [
+        {
+            "upstream_pattern": "@/lib/stripe",
+            "local_replacement": "NONE",
+            "description": "Do not adapt Stripe utilities."
+        }
+    ],
+    "architectural_invariants": [
+        "Backend must rely on Supabase for data persistence.",
+        "No direct calls to external paid APIs (unless user-configured via secrets).",
+        "Frontend must use 'useSlashCommands' for command handling overrides.",
+        "Code must be compatible with Docker Compose deployment (no Vercel specific headers)."
+    ]
+}

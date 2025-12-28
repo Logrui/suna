@@ -42,7 +42,7 @@ interface ConnectedApp {
 }
 
 interface ComposioRegistryProps {
-  onToolsSelected?: (profileId: string, selectedTools: string[], appName: string, appSlug: string) => void;
+  onToolsSelected?: (profileId: string, selectedTools: string[], appName: string, appSlug: string, appIconUrl?: string) => void;
   onAppSelected?: (app: ComposioToolkit) => void;
   mode?: 'full' | 'profile-only';
   onClose?: () => void;
@@ -438,7 +438,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
     }
 
     if (onToolsSelected) {
-      onToolsSelected(profileId, [], appName, appSlug);
+      onToolsSelected(profileId, [], appName, appSlug, selectedApp?.logo);
     }
   };
 
@@ -750,8 +750,18 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
             toolkit_slug: selectedConnectedApp.toolkit.slug,
           }}
           appLogo={selectedConnectedApp.toolkit.logo}
-          onToolsUpdate={() => {
+          onToolsUpdate={(tools?: string[]) => {
             queryClient.invalidateQueries({ queryKey: ['agents', 'detail', currentAgentId] });
+
+            if (onToolsSelected && tools && tools.length > 0 && selectedConnectedApp) {
+              onToolsSelected(
+                selectedConnectedApp.profile.profile_id,
+                tools,
+                selectedConnectedApp.toolkit.name,
+                selectedConnectedApp.toolkit.slug,
+                selectedConnectedApp.toolkit.logo
+              );
+            }
           }}
         />
       )}

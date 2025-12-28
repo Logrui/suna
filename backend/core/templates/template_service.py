@@ -265,8 +265,9 @@ class TemplateService:
                 error_str = str(e)
             except Exception:
                 error_str = f"Error of type {type(e).__name__}"
-            logger.error(f"Error in get_template for {template_id}: {error_str}")
-            raise
+            logger.warning(f"Error in get_template for {template_id}: {error_str}")
+            # Return None instead of raising to allow fallback to production API
+            return None
     
     async def get_user_templates(self, creator_id: str) -> List[AgentTemplate]:
         client = await self._db.client

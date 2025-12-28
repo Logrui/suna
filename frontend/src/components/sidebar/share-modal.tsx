@@ -46,12 +46,12 @@ const LinkedInIcon = () => (
 )
 
 // Shared content component
-function SharePopoverContent({ 
-  threadId, 
-  isOpen 
-}: { 
+function SharePopoverContent({
+  threadId,
+  isOpen
+}: {
   threadId?: string
-  isOpen: boolean 
+  isOpen: boolean
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -59,8 +59,8 @@ function SharePopoverContent({
   const { data: threadData, isLoading, refetch } = useThreadQuery(threadId || "")
 
   const isPublic = Boolean(threadData?.is_public)
-  
-  const shareLink = threadId 
+
+  const shareLink = threadId
     ? `${process.env.NEXT_PUBLIC_URL || (typeof window !== 'undefined' ? window.location.origin : '')}/share/${threadId}`
     : ""
 
@@ -97,7 +97,7 @@ function SharePopoverContent({
   }
 
   const handleOpen = () => window.open(shareLink, "_blank", "noopener,noreferrer")
-  
+
   const handleShareX = () => {
     const text = encodeURIComponent("Check out this conversation")
     const url = encodeURIComponent(shareLink)
@@ -124,8 +124,8 @@ function SharePopoverContent({
         <div className="flex items-center gap-2.5 min-w-0">
           <div className={cn(
             "flex items-center justify-center h-7 w-7 rounded-lg shrink-0 transition-all duration-200",
-            isPublic 
-              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" 
+            isPublic
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
               : "bg-muted text-muted-foreground"
           )}>
             {isPublic ? <Globe className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
@@ -203,9 +203,9 @@ function SharePopoverContent({
   )
 }
 
-export function SharePopover({ 
-  threadId, 
-  projectId, 
+export function SharePopover({
+  threadId,
+  projectId,
   children,
   side = "bottom",
   align = "end",
@@ -213,11 +213,11 @@ export function SharePopover({
   onOpenChange: controlledOnOpenChange
 }: SharePopoverProps) {
   const [internalOpen, setInternalOpen] = useState(false)
-  
+
   // Support both controlled and uncontrolled modes
   const isControlled = controlledOpen !== undefined
   const isOpen = isControlled ? controlledOpen : internalOpen
-  const setOpen = isControlled ? (controlledOnOpenChange || (() => {})) : setInternalOpen
+  const setOpen = isControlled ? (controlledOnOpenChange || (() => { })) : setInternalOpen
 
   return (
     <Popover open={isOpen} onOpenChange={setOpen}>
@@ -228,9 +228,9 @@ export function SharePopover({
       ) : (
         <PopoverAnchor className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
       )}
-      <PopoverContent 
-        side={children ? side : "bottom"} 
-        align={children ? align : "center"} 
+      <PopoverContent
+        side={children ? side : "bottom"}
+        align={children ? align : "center"}
         className="w-[280px] p-0 overflow-hidden"
         sideOffset={8}
       >

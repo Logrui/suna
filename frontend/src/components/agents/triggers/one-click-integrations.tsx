@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Clock, PlugZap, Lock, Zap } from 'lucide-react';
+import { Loader2, AlertCircle, Clock, PlugZap, Lock, Zap, Webhook } from 'lucide-react';
 import { SimplifiedScheduleConfig } from './providers/simplified-schedule-config';
 import { TriggerProvider, ScheduleTriggerConfig } from './types';
 
@@ -18,6 +18,7 @@ import {
 } from '@/hooks/triggers';
 import { toast } from 'sonner';
 import { EventBasedTriggerDialog } from './event-based-trigger-dialog';
+import { WebhookTriggerDialog } from './webhook-trigger-dialog';
 import { config, EnvMode, isLocalMode } from '@/lib/config';
 import { useAccountState } from '@/hooks/billing';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
@@ -47,14 +48,15 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
 }) => {
   const [configuringSchedule, setConfiguringSchedule] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
+  const [showWebhookDialog, setShowWebhookDialog] = useState(false);
   const { data: accountState } = useAccountState();
   const { openPricingModal } = usePricingModalStore();
-  
+
   const isFreeTier = accountState && (
     accountState.subscription?.tier_key === 'free' ||
     accountState.tier?.name === 'free'
   ) && !isLocalMode();
-  
+
   // Schedule trigger form state
   const [scheduleConfig, setScheduleConfig] = useState<ScheduleTriggerConfig>({
     cron_expression: '',
@@ -265,9 +267,19 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
               <PlugZap className="h-4 w-4" /> App-based Trigger
             </Button>
           )}
+
+          {/* Custom Webhook Button */}
+          <Button
+            variant="outline"
+            size='sm'
+            onClick={() => setShowWebhookDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <Webhook className="h-4 w-4" /> Custom Webhook
+          </Button>
         </div>
         {isFreeTier && (
-          <div 
+          <div
             className="relative overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 cursor-pointer hover:border-primary/50 hover:from-primary/15 transition-all group"
             onClick={() => openPricingModal()}
           >
@@ -289,6 +301,7 @@ export const OneClickIntegrations: React.FC<OneClickIntegrationsProps> = ({
           </div>
         )}
         <EventBasedTriggerDialog open={showEventDialog} onOpenChange={setShowEventDialog} agentId={agentId} />
+        <WebhookTriggerDialog open={showWebhookDialog} onOpenChange={setShowWebhookDialog} agentId={agentId} />
         <SimplifiedScheduleConfig
           provider={scheduleProvider}
           config={scheduleConfig}

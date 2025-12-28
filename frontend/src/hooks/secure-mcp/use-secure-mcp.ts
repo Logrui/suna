@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/client';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
+// Use local proxy routes to fetch from production API (bypasses CORS)
+// These proxy routes forward requests to https://api.kortix.com/v1
+
 export interface MCPCredential {
   credential_id: string;
   mcp_qualified_name: string;
@@ -261,7 +264,8 @@ export function useMarketplaceTemplates(params?: {
       if (params?.sort_by) searchParams.set('sort_by', params.sort_by);
       if (params?.sort_order) searchParams.set('sort_order', params.sort_order);
 
-      const response = await fetch(`${API_URL}/templates/marketplace?${searchParams}`, {
+      // Fetch via local proxy to avoid CORS issues (proxy forwards to production API)
+      const response = await fetch(`/api/proxy/templates/marketplace?${searchParams}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -383,12 +387,12 @@ export function usePublishTemplate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      template_id, 
+    mutationFn: async ({
+      template_id,
       tags,
-      usage_examples 
-    }: { 
-      template_id: string; 
+      usage_examples
+    }: {
+      template_id: string;
       tags?: string[];
       usage_examples?: UsageExampleMessage[];
     }): Promise<{ message: string }> => {
@@ -501,7 +505,8 @@ export function useKortixTeamTemplates(options?: { enabled?: boolean }) {
         throw new Error('You must be logged in to view Kortix templates');
       }
 
-      const response = await fetch(`${API_URL}/templates/kortix-all`, {
+      // Fetch via local proxy to avoid CORS issues (proxy forwards to production API)
+      const response = await fetch(`/api/proxy/templates/kortix-all`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -511,7 +516,7 @@ export function useKortixTeamTemplates(options?: { enabled?: boolean }) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       return response.json();
     },
     enabled: options?.enabled !== false,
@@ -541,16 +546,16 @@ export function useInstallTemplate() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         const isAgentLimitError = (response.status === 402) && (
-          errorData.error_code === 'AGENT_LIMIT_EXCEEDED' || 
+          errorData.error_code === 'AGENT_LIMIT_EXCEEDED' ||
           errorData.detail?.error_code === 'AGENT_LIMIT_EXCEEDED'
         );
-        
+
         if (isAgentLimitError) {
           const { AgentCountLimitError } = await import('@/lib/api/errors');
           const errorDetail = errorData.detail || errorData;
           throw new AgentCountLimitError(response.status, errorDetail);
         }
-        
+
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 

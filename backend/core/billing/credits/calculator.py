@@ -38,7 +38,7 @@ def calculate_token_cost(prompt_tokens: int, completion_tokens: int, model: str)
             return total_cost
         
         # Log which model ID failed to resolve - helpful for debugging
-        logger.warning(f"[COST_CALC] No pricing found for model '{model}'. Check if model is registered in ai_models/registry.py")
+        logger.warning(f"[COST_CALC] No pricing found for model '{model}'. Check if model is registered in models/registry.py")
         return Decimal('0.01')
     except Exception as e:
         logger.error(f"[COST_CALC] Error calculating token cost for model '{model}': {e}")

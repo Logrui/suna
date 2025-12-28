@@ -15,9 +15,9 @@ import { I18nProvider } from '@/components/i18n-provider';
 import { featureFlags } from '@/lib/feature-flags';
 
 // Lazy load non-critical analytics and global components
-// Note: Analytics scripts will be automatically blocked by cookie consent service until consent is given
-const Analytics = lazy(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })));
-const SpeedInsights = lazy(() => import('@vercel/speed-insights/next').then(mod => ({ default: mod.SpeedInsights })));
+// DISABLED: Vercel Analytics/SpeedInsights - not available in self-hosted deployment
+// const Analytics = lazy(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })));
+// const SpeedInsights = lazy(() => import('@vercel/speed-insights/next').then(mod => ({ default: mod.SpeedInsights })));
 const GoogleAnalytics = lazy(() => import('@next/third-parties/google').then(mod => ({ default: mod.GoogleAnalytics })));
 const GoogleTagManager = lazy(() => import('@next/third-parties/google').then(mod => ({ default: mod.GoogleTagManager })));
 const PostHogIdentify = lazy(() => import('@/components/posthog-identify').then(mod => ({ default: mod.PostHogIdentify })));
@@ -112,16 +112,16 @@ export default function RootLayout({
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        
+
         {/* DNS prefetch for analytics (loaded later but resolve DNS early) */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://connect.facebook.net" />
         <link rel="dns-prefetch" href="https://eu.i.posthog.com" />
-        
-        {/* React Scan - development only */}
-        
+
+        {/* React Scan removed - causing initialization errors */}
+        {/* rest of your scripts go under */}
         {/* Static SEO meta tags - rendered in initial HTML */}
-        <title>Kortix: Your Autonomous AI Worker</title>
+        < title > Kortix: Your Autonomous AI Worker</title >
         <meta name="description" content="Built for complex tasks, designed for everything. The ultimate AI assistant that handles it all—from simple requests to mega-complex projects." />
         <meta name="keywords" content="Kortix, AI Worker, Agentic AI, Autonomous AI Worker, AI Automation, AI Workflow Automation, AI Assistant, Task Automation" />
         <meta property="og:title" content="Kortix: Your Autonomous AI Worker" />
@@ -136,11 +136,13 @@ export default function RootLayout({
         <meta name="twitter:image" content="https://kortix.com/banner.png" />
         <meta name="twitter:site" content="@kortix" />
         <link rel="canonical" href="https://kortix.com" />
-        
+
         {/* iOS Smart App Banner - shows native install banner in Safari */}
-        {!featureFlags.disableMobileAdvertising ? (
-          <meta name="apple-itunes-app" content="app-id=6754448524, app-argument=kortix://" />
-        ) : null}
+        {
+          !featureFlags.disableMobileAdvertising ? (
+            <meta name="apple-itunes-app" content="app-id=6754448524, app-argument=kortix://" />
+          ) : null
+        }
 
         {/* Facebook Pixel - Will be blocked by cookie consent service until marketing consent is given */}
         <Script id="facebook-pixel" strategy="lazyOnload" data-cookieconsent="marketing">
@@ -218,7 +220,7 @@ export default function RootLayout({
             }),
           }}
         />
-      </head>
+      </head >
 
       <body className="antialiased font-sans bg-background">
         <ThemeProvider
@@ -230,30 +232,34 @@ export default function RootLayout({
           <AuthProvider>
             <I18nProvider>
               <PresenceProvider>
-              <ReactQueryProvider>
-                {children}
-                <Toaster />
-                <Suspense fallback={null}>
-                  <PlanSelectionModal />
-                </Suspense>
-              </ReactQueryProvider>
+                <ReactQueryProvider>
+                  {children}
+                  <Toaster />
+                  <Suspense fallback={null}>
+                    <PlanSelectionModal />
+                  </Suspense>
+                </ReactQueryProvider>
               </PresenceProvider>
             </I18nProvider>
           </AuthProvider>
           {/* Analytics - lazy loaded to not block FCP */}
+          {/* DISABLED: Vercel Analytics - not available in self-hosted deployment
           <Suspense fallback={null}>
             <Analytics />
           </Suspense>
+          */}
           <Suspense fallback={null}>
             <GoogleAnalytics gaId="G-QSCBD7F1SD" />
             <GoogleAnalytics gaId="G-6ETJFB3PT3" />
           </Suspense>
+          {/* DISABLED: Vercel SpeedInsights - not available in self-hosted deployment
           <Suspense fallback={null}>
             <GoogleTagManager gtmId="GTM-PKFG3JCX" />
           </Suspense>
           <Suspense fallback={null}>
             <SpeedInsights />
           </Suspense>
+          */}
           <Suspense fallback={null}>
             <PostHogIdentify />
           </Suspense>
@@ -266,6 +272,6 @@ export default function RootLayout({
           </Suspense>
         </ThemeProvider>
       </body>
-    </html>
+    </html >
   );
 }

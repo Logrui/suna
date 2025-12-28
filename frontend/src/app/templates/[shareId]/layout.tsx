@@ -1,11 +1,14 @@
-import { backendApi } from '@/lib/api-client';
 import { Metadata } from 'next';
+
+// Production API for public templates - always fetch from production
+const PRODUCTION_API_URL = 'https://api.kortix.com/v1';
 
 export async function generateMetadata({ params }: { params: Promise<{ shareId: string }> }): Promise<Metadata> {
   const { shareId: templateId } = await params;
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000/v1'}/templates/public/${templateId}`);
+    // Fetch from production API for public template metadata
+    const response = await fetch(`${PRODUCTION_API_URL}/templates/public/${templateId}`);
 
     if (!response.ok) {
       throw new Error('Template not found');
@@ -70,4 +73,4 @@ export default function TemplateLayout({
   children: React.ReactNode;
 }) {
   return <>{children}</>;
-} 
+}

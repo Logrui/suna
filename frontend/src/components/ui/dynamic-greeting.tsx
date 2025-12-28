@@ -4,9 +4,60 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
+
 // Generate stable random indices on module load (persists until page refresh)
 const greetingTypeRandom = Math.random(); // 0-1, determines time-based vs random
 const greetingIndexRandom = Math.random(); // 0-1, determines which greeting in array
+
+// Module-level cache - computed once per session on client only
+let cachedGreeting: string | null = null;
+
+function generateGreeting(t: ReturnType<typeof useTranslations<'dashboard'>>): string {
+  const hour = new Date().getHours();
+
+  const morningGreetings = [
+    t('greetings.morning.0'),
+    t('greetings.morning.1'),
+    t('greetings.morning.2'),
+  ];
+
+  const afternoonGreetings = [
+    t('greetings.afternoon.0'),
+    t('greetings.afternoon.1'),
+  ];
+
+  const eveningGreetings = [
+    t('greetings.evening.0'),
+    t('greetings.evening.1'),
+    t('greetings.evening.2'),
+  ];
+
+  const randomGreetings = [
+    t('greetings.random.0'),
+    t('greetings.random.1'),
+    t('greetings.random.2'),
+    t('greetings.random.3'),
+    t('greetings.random.4'),
+    t('greetings.random.5'),
+    t('greetings.random.6'),
+    t('greetings.random.7'),
+  ];
+
+  // 40% chance of time-based greeting, 60% chance of random
+  const useTimeBased = Math.random() < 0.4;
+
+  if (useTimeBased) {
+    if (hour >= 5 && hour < 12) {
+      return morningGreetings[Math.floor(Math.random() * morningGreetings.length)];
+    } else if (hour >= 12 && hour < 17) {
+      return afternoonGreetings[Math.floor(Math.random() * afternoonGreetings.length)];
+    } else {
+      return eveningGreetings[Math.floor(Math.random() * eveningGreetings.length)];
+    }
+  }
+
+  return randomGreetings[Math.floor(Math.random() * randomGreetings.length)];
+}
 
 interface DynamicGreetingProps {
   className?: string;
@@ -29,7 +80,7 @@ export function DynamicGreeting({ className }: DynamicGreetingProps) {
   // Compute greeting - recalculates when t changes (i.e., when language changes)
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    
+
     // 40% chance time-based, 60% random
     const useTimeBased = greetingTypeRandom < 0.4;
 
@@ -68,11 +119,6 @@ export function DynamicGreeting({ className }: DynamicGreetingProps) {
       t('greetings.random.7'),
       t('greetings.random.8'),
       t('greetings.random.9'),
-      t('greetings.random.10'),
-      t('greetings.random.11'),
-      t('greetings.random.12'),
-      t('greetings.random.13'),
-      t('greetings.random.14'),
     ];
     return greetings[Math.floor(greetingIndexRandom * greetings.length)];
   }, [t]);
@@ -80,7 +126,9 @@ export function DynamicGreeting({ className }: DynamicGreetingProps) {
   // Calculate lift amount based on distance from hovered letter
   const getLiftAmount = (index: number): number => {
     if (hoveredIndex === null) return 0;
+
     const distance = Math.abs(index - hoveredIndex);
+
     if (distance === 0) return -6;
     if (distance === 1) return -5;
     if (distance === 2) return -4;

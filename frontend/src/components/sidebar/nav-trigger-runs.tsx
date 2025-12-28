@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { ThreadIcon } from './thread-icon';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -11,6 +13,8 @@ import { processThreadsWithProjects, useProjects, useThreads, groupThreadsByDate
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { formatDateForList } from '@/lib/utils/date-formatting';
+import { useAllTriggers, type TriggerWithAgent } from '@/hooks/triggers/use-all-triggers';
+import { useComposioAppsWithTriggers } from '@/hooks/composio/use-composio-triggers';
 
 // Component for date group headers
 const DateGroupHeader: React.FC<{ dateGroup: string; count: number }> = ({ dateGroup, count }) => {
@@ -31,7 +35,8 @@ const TriggerRunItem: React.FC<{
     pathname: string | null;
     isMobile: boolean;
     handleThreadClick: (e: React.MouseEvent<HTMLAnchorElement>, threadId: string, url: string) => void;
-}> = ({ thread, isActive, isThreadLoading, handleThreadClick, isMobile }) => {
+    composioAppLogo?: string;
+}> = ({ thread, isActive, isThreadLoading, handleThreadClick, isMobile, composioAppLogo }) => {
     return (
         <SpotlightCard
             className={cn(
@@ -48,6 +53,8 @@ const TriggerRunItem: React.FC<{
                     <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-card border-[1.5px] border-border flex-shrink-0">
                         {isThreadLoading ? (
                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        ) : composioAppLogo ? (
+                            <img src={composioAppLogo} alt="" className="w-5 h-5 object-contain" />
                         ) : (
                             <ThreadIcon
                                 iconName={thread.iconName}
@@ -95,6 +102,77 @@ export function NavTriggerRuns() {
     );
 
     const groupedTriggerThreads: GroupedThreads = groupThreadsByDate(triggerThreads);
+
+    // Fetch triggers and Composio apps data for icons
+    const { data: triggersData = [] } = useAllTriggers();
+    const { data: composioAppsData } = useComposioAppsWithTriggers();
+
+    // Build lookup map: trigger name -> toolkit slug from qualified_name
+    const triggerNameToToolkitSlug = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const trigger of triggersData) {
+            const qualifiedName = trigger.config?.qualified_name;
+            if (qualifiedName?.startsWith('composio.')) {
+                const slug = qualifiedName.replace('composio.', '').toLowerCase();
+                // Map trigger name (lowercased) to slug
+                map.set(trigger.name.toLowerCase(), slug);
+            }
+        }
+        return map;
+    }, [triggersData]);
+
+    // Build lookup map: toolkit slug -> logo URL
+    const composioAppsLogoMap = useMemo(() => {
+        const map = new Map<string, string>();
+        if (composioAppsData?.items) {
+            for (const app of composioAppsData.items) {
+                if (app.slug && app.logo) {
+                    map.set(app.slug.toLowerCase(), app.logo);
+                }
+            }
+        }
+        return map;
+    }, [composioAppsData]);
+
+    // Get all known toolkit slugs for fallback matching
+    const knownToolkitSlugs = useMemo(() => {
+        return Array.from(composioAppsLogoMap.keys());
+    }, [composioAppsLogoMap]);
+
+    // Helper to get Composio logo for a thread
+    const getComposioLogoForThread = (thread: ThreadWithProject): string | undefined => {
+        // projectName format: "Trigger: Gmail → Agent" or "Trigger: TriggerName"
+        const projectName = thread.projectName;
+        if (!projectName.startsWith('Trigger: ')) return undefined;
+
+        // Extract trigger name (everything after "Trigger: ")
+        const triggerNamePart = projectName.replace('Trigger: ', '').toLowerCase();
+
+        // Strategy 1: Try exact match by trigger name
+        let toolkitSlug = triggerNameToToolkitSlug.get(triggerNamePart);
+
+        // Strategy 2: Try partial match - check if any trigger name is contained in project name
+        if (!toolkitSlug) {
+            for (const [name, slug] of triggerNameToToolkitSlug.entries()) {
+                if (triggerNamePart.includes(name) || name.includes(triggerNamePart)) {
+                    toolkitSlug = slug;
+                    break;
+                }
+            }
+        }
+
+        // Strategy 3: Look for known toolkit slugs directly in the project name (e.g., "gmail" in "Gmail Trigger")
+        if (!toolkitSlug) {
+            for (const slug of knownToolkitSlugs) {
+                if (triggerNamePart.includes(slug)) {
+                    toolkitSlug = slug;
+                    break;
+                }
+            }
+        }
+
+        return toolkitSlug ? composioAppsLogoMap.get(toolkitSlug) : undefined;
+    };
 
     useEffect(() => {
         setLoadingThreadId(null);
@@ -147,9 +225,19 @@ export function NavTriggerRuns() {
     return (
         <div>
             {/* Section Header */}
-            <div className="py-2 mt-4 first:mt-2">
-                <div className="text-xs font-medium text-muted-foreground pl-2.5">
-                    Trigger Runs
+            <div className="px-2.5 py-3 border-b border-transparent">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Trigger Runs</h3>
+                    <Link href="/triggers">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                            aria-label="View all triggers"
+                        >
+                            <ExternalLink className="h-3 w-3" />
+                        </Button>
+                    </Link>
                 </div>
             </div>
 
@@ -186,6 +274,7 @@ export function NavTriggerRuns() {
                                                     pathname={pathname}
                                                     isMobile={isMobile}
                                                     handleThreadClick={handleThreadClick}
+                                                    composioAppLogo={getComposioLogoForThread(thread)}
                                                 />
                                             );
                                         })}

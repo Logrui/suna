@@ -12,7 +12,7 @@ export function KnowledgeScreen({ agentId }: KnowledgeScreenProps) {
     const { data: agent } = useAgent(agentId);
 
     return (
-        <div className="flex-1 overflow-auto pb-6">
+        <div className="flex-1 overflow-auto pb-6 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent">
             <div className="px-1 pt-1">
                 <KnowledgeBaseManager
                     agentId={agentId}

@@ -38,6 +38,7 @@ interface ConfiguredTriggersListProps {
   onRemove: (trigger: TriggerConfiguration) => void;
   onToggle: (trigger: TriggerConfiguration) => void;
   isLoading?: boolean;
+  composioAppsLogoMap?: Map<string, string>;
 }
 
 const copyToClipboard = async (text: string) => {
@@ -68,12 +69,40 @@ const getCronDescription = (cron: string): string => {
   return cronDescriptions[cron] || cron;
 };
 
+// Extract toolkit slug from Composio trigger config
+const getToolkitSlug = (trigger: TriggerConfiguration): string | null => {
+  const config = trigger.config;
+  if (!config) return null;
+
+  // Check qualified_name first (e.g., 'composio.gmail')
+  const qualifiedName = config.qualified_name;
+  if (qualifiedName?.startsWith('composio.')) {
+    return qualifiedName.replace('composio.', '').toLowerCase();
+  }
+
+  // Check toolkit_slug
+  if (config.toolkit_slug) {
+    return config.toolkit_slug.toLowerCase();
+  }
+
+  // Check provider_id for event-based triggers
+  if (trigger.provider_id === 'composio' && config.trigger_slug) {
+    const slugParts = config.trigger_slug.toLowerCase().split('_');
+    if (slugParts.length > 0) {
+      return slugParts[0];
+    }
+  }
+
+  return null;
+};
+
 export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
   triggers,
   onEdit,
   onRemove,
   onToggle,
   isLoading = false,
+  composioAppsLogoMap,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [triggerToDelete, setTriggerToDelete] = React.useState<TriggerConfiguration | null>(null);
@@ -107,7 +136,14 @@ export const ConfiguredTriggersList: React.FC<ConfiguredTriggersListProps> = ({
                 ? "bg-muted border-border"
                 : "bg-muted/50 border-muted-foreground/20"
                 } ${trigger.is_active ? "" : "opacity-70"}`}>
-                {getTriggerIcon(trigger.trigger_type)}
+                {(() => {
+                  const toolkitSlug = getToolkitSlug(trigger);
+                  const composioLogo = toolkitSlug && composioAppsLogoMap?.get(toolkitSlug);
+                  if (composioLogo) {
+                    return <img src={composioLogo} alt="" className="h-5 w-5 object-contain" />;
+                  }
+                  return getTriggerIcon(trigger.trigger_type);
+                })()}
               </div>
 
               <div className="flex-1 min-w-0 overflow-hidden">

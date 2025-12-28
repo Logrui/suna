@@ -19,6 +19,8 @@ export interface TriggerConfiguration {
   created_at: string;
   updated_at: string;
   config?: Record<string, any>;
+  execution_type?: 'agent' | 'workflow';
+  workflow_id?: string;
 }
 
 export interface TelegramTriggerConfig {
@@ -46,6 +48,9 @@ export interface WebhookTriggerConfig {
   secret?: string;
   headers_validation?: Record<string, string>;
   expected_content_type?: string;
+  // Generic webhook specific fields
+  agent_prompt?: string;
+  model?: string;
 }
 
 export interface GitHubTriggerConfig {

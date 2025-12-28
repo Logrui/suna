@@ -9,19 +9,20 @@ import { useMediaQuery } from '@/hooks/utils';
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { signUp, resendMagicLink } from './actions';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { MailCheck, Clock, ExternalLink } from 'lucide-react';
+import { MailCheck, Clock, ExternalLink, Lock, Gift } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { useAuthMethodTracking } from '@/stores/auth-tracking';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import { ReferralCodeDialog } from '@/components/referrals/referral-code-dialog';
+import { DevLoginDialog } from '@/components/auth/dev-login-dialog';
 import { isElectron, getAuthOrigin } from '@/lib/utils/is-electron';
 import { ExampleShowcase } from '@/components/auth/example-showcase';
 
 // Lazy load heavy components
 const GoogleSignIn = lazy(() => import('@/components/GoogleSignIn'));
-// const GitHubSignIn = lazy(() => import('@/components/GithubSignIn'));
+const GitHubSignIn = lazy(() => import('@/components/GithubSignIn'));
 const AnimatedBg = lazy(() => import('@/components/ui/animated-bg').then(mod => ({ default: mod.AnimatedBg })));
 
 function LoginContent() {
@@ -40,11 +41,59 @@ function LoginContent() {
   const [referralCode, setReferralCode] = useState(referralCodeParam);
   const [showReferralInput, setShowReferralInput] = useState(false);
   const [showReferralDialog, setShowReferralDialog] = useState(false);
+  const [showDevLoginDialog, setShowDevLoginDialog] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [mounted, setMounted] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false); // GDPR requires explicit opt-in
 
+  // Only show dev login on localhost (security measure)
+  const [isLocalhost, setIsLocalhost] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      setIsLocalhost(hostname === 'localhost' || hostname === '127.0.0.1');
+    }
+  }, []);
+
   const { wasLastMethod: wasEmailLastMethod, markAsUsed: markEmailAsUsed } = useAuthMethodTracking('email');
+
+  // Handle hash tokens from implicit OAuth/magic link flow (e.g., #access_token=...)
+  // This is needed for dev login and any other flow that returns tokens in the hash
+  useEffect(() => {
+    const handleHashTokens = async () => {
+      if (typeof window === 'undefined') return;
+
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        // Extract supabase client from auth context and let it handle the hash
+        const supabase = (await import('@/lib/supabase/client')).createClient();
+
+        try {
+          // getSession() will automatically detect and process hash tokens
+          const { data: { session }, error } = await supabase.auth.getSession();
+
+          if (error) {
+            console.error('Error processing hash tokens:', error);
+            return;
+          }
+
+          if (session) {
+            // Clean the URL hash and redirect
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+            // Redirect to dashboard or returnUrl
+            const redirectTo = returnUrl || '/dashboard';
+            router.push(redirectTo);
+          }
+        } catch (err) {
+          console.error('Error handling hash tokens:', err);
+        }
+      }
+    };
+
+    handleHashTokens();
+  }, [router, returnUrl]);
 
   useEffect(() => {
     // Don't auto-redirect if showing expired link state
@@ -399,11 +448,9 @@ function LoginContent() {
               <Suspense fallback={<div className="h-11 bg-muted/20 rounded-full animate-pulse" />}>
                 <GoogleSignIn returnUrl={returnUrl || undefined} referralCode={referralCode} />
               </Suspense>
-              {/* GitHub auth commented out
               <Suspense fallback={<div className="h-11 bg-muted/20 rounded-full animate-pulse" />}>
                 <GitHubSignIn returnUrl={returnUrl || undefined} referralCode={referralCode} />
               </Suspense>
-              */}
             </div>
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
@@ -492,18 +539,45 @@ function LoginContent() {
               </div>
 
               {/* Magic Link Explanation */}
-              <p className="text-xs text-muted-foreground text-center">
-                {t('magicLinkExplanation')}
-              </p>
+              <div className="text-center space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  {t('magicLinkExplanation')}
+                </p>
+                <div className="flex flex-col gap-2 pt-1 border-t border-border/50 mt-4 pt-4">
+                  <Link
+                    href={`/auth/password${window.location.search}`}
+                    className="text-sm text-primary hover:underline font-medium inline-flex items-center justify-center gap-1.5"
+                  >
+                    <Lock className="h-3.5 w-3.5" />
+                    Sign in with password instead
+                  </Link>
+                </div>
+              </div>
 
               {/* Minimal Referral Link */}
               {!referralCodeParam && (
                 <button
                   type="button"
                   onClick={() => setShowReferralDialog(true)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-center mt-1"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-center mt-2 group"
                 >
-                  Have a referral code?
+                  <span className="opacity-70 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                    <Gift className="h-3 w-3" />
+                    Have a referral code?
+                  </span>
+                </button>
+              )}
+
+
+              {/* Secret Developer Login - only visible on localhost */}
+              {isLocalhost && (
+                <button
+                  type="button"
+                  onClick={() => setShowDevLoginDialog(true)}
+                  className="text-[8px] text-transparent hover:text-muted-foreground/30 transition-colors w-full text-center mt-4 select-none cursor-default hover:cursor-pointer"
+                  aria-label="Developer Login"
+                >
+                  Developer Login
                 </button>
               )}
             </form>
@@ -518,6 +592,14 @@ function LoginContent() {
                 setShowReferralDialog(false);
               }}
             />
+
+            {/* Developer Login Dialog - only on localhost */}
+            {isLocalhost && (
+              <DevLoginDialog
+                open={showDevLoginDialog}
+                onOpenChange={setShowDevLoginDialog}
+              />
+            )}
           </div>
         </div>
         <div className="hidden lg:flex flex-1 items-center justify-center relative overflow-hidden">

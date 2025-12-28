@@ -245,8 +245,8 @@ export default function TemplateSharePage() {
   const { data: template, isLoading, error } = useQuery({
     queryKey: ['template-public', templateId],
     queryFn: async () => {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000/v1';
-      const response = await fetch(`${backendUrl}/templates/public/${templateId}`);
+      // Fetch via local proxy to avoid CORS issues (proxy forwards to production API)
+      const response = await fetch(`/api/proxy/templates/public/${templateId}`);
       if (!response.ok) {
         throw new Error('Template not found');
       }
@@ -573,9 +573,9 @@ export default function TemplateSharePage() {
                       "transition-all duration-300 overflow-hidden",
                       !isPromptExpanded && "max-h-[600px]"
                     )}>
-                      <UnifiedMarkdown 
-                        content={template.system_prompt || 'No system prompt available'} 
-                        className="prose prose-sm dark:prose-invert max-w-none" 
+                      <UnifiedMarkdown
+                        content={template.system_prompt || 'No system prompt available'}
+                        className="prose prose-sm dark:prose-invert max-w-none"
                       />
                       {!isPromptExpanded && template.system_prompt && template.system_prompt.length > 10000 && (
                         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-muted/10 to-transparent pointer-events-none" />

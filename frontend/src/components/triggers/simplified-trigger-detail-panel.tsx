@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -29,9 +30,11 @@ import { TriggerWithAgent } from '@/hooks/triggers/use-all-triggers';
 import { useDeleteTrigger, useToggleTrigger, useUpdateTrigger } from '@/hooks/triggers';
 import { useTriggerExecutions, type TriggerExecution } from '@/hooks/triggers/use-trigger-executions';
 import { TriggerCreationDialog } from './trigger-creation-dialog';
+import { ExpandableMarkdownEditor } from '@/components/ui/expandable-markdown-editor';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
+import { useAgents } from '@/hooks/agents/use-agents';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,6 +152,22 @@ const ExecutionsSkeleton = () => (
 export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTriggerDetailPanelProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [localName, setLocalName] = useState(trigger.name);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync local name with trigger name
+  useEffect(() => {
+    setLocalName(trigger.name);
+  }, [trigger.name]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [isEditingName]);
 
   const deleteMutation = useDeleteTrigger();
   const toggleMutation = useToggleTrigger();
@@ -156,6 +175,15 @@ export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTri
 
   // Fetch trigger execution history
   const { data: executionHistory, isLoading: isLoadingExecutions } = useTriggerExecutions(trigger.trigger_id);
+
+  // Fetch agent data for proper AgentAvatar display
+  // NOTE: Using useAgents (list endpoint) instead of useAgent (detail endpoint) because
+  // the detail endpoint returns 401 - this is a backend API bug to be fixed separately.
+  const { data: agentsData } = useAgents();
+  const agent = useMemo(() => {
+    if (!agentsData?.agents || !trigger.agent_id) return undefined;
+    return agentsData.agents.find(a => a.agent_id === trigger.agent_id);
+  }, [agentsData?.agents, trigger.agent_id]);
 
   const isScheduled = trigger.trigger_type.toLowerCase() === 'schedule' || trigger.trigger_type.toLowerCase() === 'scheduled';
   const scheduleDisplay = getScheduleDisplay(trigger.config?.cron_expression);
@@ -205,6 +233,52 @@ export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTri
     }
   };
 
+  const handlePromptSave = async (newValue: string) => {
+    try {
+      await updateMutation.mutateAsync({
+        triggerId: trigger.trigger_id,
+        config: {
+          ...trigger.config,
+          agent_prompt: newValue,
+        },
+      });
+      toast.success('Agent instructions updated');
+    } catch (error) {
+      console.error('Failed to update instructions:', error);
+      toast.error('Failed to update instructions');
+    }
+  };
+
+  const handleNameSave = async () => {
+    setIsEditingName(false);
+    const trimmedName = localName.trim();
+
+    if (trimmedName && trimmedName !== trigger.name) {
+      try {
+        await updateMutation.mutateAsync({
+          triggerId: trigger.trigger_id,
+          name: trimmedName,
+        });
+        toast.success('Trigger name updated');
+      } catch (error) {
+        console.error('Failed to update name:', error);
+        toast.error('Failed to update name');
+        setLocalName(trigger.name);
+      }
+    } else if (!trimmedName) {
+      setLocalName(trigger.name);
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameSave();
+    } else if (e.key === 'Escape') {
+      setIsEditingName(false);
+      setLocalName(trigger.name);
+    }
+  };
+
   const isLoading = deleteMutation.isPending || toggleMutation.isPending || updateMutation.isPending;
 
   const triggerConfig = {
@@ -235,39 +309,33 @@ export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTri
       {/* Header */}
       <div className="px-6 py-6 border-b">
         <div className="flex items-start justify-between mb-6">
-          <div className="flex-1">
+          <div className="flex-1 py-1 space-y-2">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-medium text-foreground">{trigger.name}</h1>
-              <Badge
-                variant={trigger.is_active ? "highlight" : "secondary"}
-                className="text-xs"
-              >
-                {trigger.is_active ? "Active" : "Inactive"}
-              </Badge>
+              {isEditingName ? (
+                <Input
+                  ref={nameInputRef}
+                  value={localName}
+                  onChange={(e) => setLocalName(e.target.value)}
+                  onBlur={handleNameSave}
+                  onKeyDown={handleNameKeyDown}
+                  className="h-9 text-2xl font-medium bg-transparent border-primary/30 focus:border-primary w-full max-w-md px-0 border-none shadow-none focus-visible:ring-0"
+                  placeholder="Enter trigger name"
+                />
+              ) : (
+                <h1
+                  onClick={() => setIsEditingName(true)}
+                  className="text-2xl font-medium text-foreground cursor-pointer hover:text-primary transition-colors truncate"
+                  title="Click to edit name"
+                >
+                  {localName || trigger.name}
+                </h1>
+              )}
             </div>
             {trigger.description && (
               <p className="text-muted-foreground text-sm leading-relaxed">{trigger.description}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowEditDialog(true)}
-              className="hover:bg-muted"
-            >
-              <Edit2 className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDeleteDialog(true)}
-              disabled={isLoading}
-              className="hover:bg-destructive/10 hover:border-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -305,194 +373,220 @@ export function SimplifiedTriggerDetailPanel({ trigger, onClose }: SimplifiedTri
               </>
             )}
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowEditDialog(true)}
+            className="flexhover:bg-muted"
+          >
+            <Edit2 className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={isLoading}
+            className="flex hover:bg-destructive/10 hover:border-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-        {/* Next Run - Only for scheduled triggers */}
-        {isScheduled && trigger.is_active && nextRunDisplay && (
-          <div className="border rounded-lg p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Timer className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-foreground mb-1">Next Run</h3>
-                <p className="text-lg font-semibold text-primary">{nextRunDisplay}</p>
-                <p className="text-sm text-muted-foreground">{nextRunTimeAgo}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Schedule Info */}
-        {isScheduled && (
-          <div className="border rounded-lg p-6 bg-card">
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-lg bg-muted">
-                <Clock className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-foreground mb-1">Schedule</h3>
-                <p className="text-sm text-muted-foreground">
-                  {executionHistory?.human_readable_schedule || scheduleDisplay.name}
-                </p>
-                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                  <Globe className="h-3 w-3" />
-                  <span>{timezone}</span>
+      {/* Content - padding wrapper controls scrollbar position */}
+      <div className="flex-1 overflow-hidden pt-6 pb-4">
+        {/* Scrollbar container */}
+        <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent px-8">
+          {/* Content cards container */}
+          <div className="space-y-6">
+            {/* Next Run - Only for scheduled triggers */}
+            {isScheduled && trigger.is_active && nextRunDisplay && (
+              <div className="border rounded-lg p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Timer className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground mb-1">Next Run</h3>
+                    <p className="text-lg font-semibold text-primary">{nextRunDisplay}</p>
+                    <p className="text-sm text-muted-foreground">{nextRunTimeAgo}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Execution History */}
-        <div className="border rounded-lg p-6 bg-card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-muted">
-                <History className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <h3 className="font-medium text-foreground">Recent Runs</h3>
-                <p className="text-xs text-muted-foreground">
-                  {executionHistory?.total_count || 0} execution{(executionHistory?.total_count || 0) !== 1 ? 's' : ''}
-                </p>
+            {/* Agent Info */}
+            <div className="border rounded-lg p-6 bg-card">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <AgentAvatar
+                    agent={agent}
+                    agentId={trigger.agent_id}
+                    size={40}
+                    fallbackName={trigger.agent_name}
+                  />
+                  <div>
+                    <h3 className="font-medium text-foreground">{trigger.agent_name || 'Unknown Agent'}</h3>
+                    <p className="text-xs text-muted-foreground">Assigned Agent</p>
+                  </div>
+                </div>
+                <Link
+                  href={`/agents/config/${trigger.agent_id}`}
+                  className="p-2 rounded-2xl hover:bg-muted transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </Link>
               </div>
             </div>
-          </div>
 
-          {isLoadingExecutions ? (
-            <ExecutionsSkeleton />
-          ) : executionHistory?.executions && executionHistory.executions.length > 0 ? (
-            <div className="space-y-1 -mx-3">
-              {executionHistory.executions.slice(0, 5).map((execution) => (
-                <ExecutionItem key={execution.execution_id} execution={execution} />
-              ))}
-              {executionHistory.executions.length > 5 && (
-                <div className="text-center pt-2">
-                  <span className="text-xs text-muted-foreground">
-                    Showing 5 of {executionHistory.total_count} runs
-                  </span>
+            {/* Schedule Info */}
+            {isScheduled && (
+              <div className="border rounded-lg p-6 bg-card">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <Clock className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground mb-1">Schedule</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {executionHistory?.human_readable_schedule || scheduleDisplay.name}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                      <Globe className="h-3 w-3" />
+                      <span>{timezone}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Execution History */}
+            <div className="border rounded-lg p-6 bg-card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-muted">
+                    <History className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-foreground">Recent Runs</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {executionHistory?.total_count || 0} execution{(executionHistory?.total_count || 0) !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {isLoadingExecutions ? (
+                <ExecutionsSkeleton />
+              ) : executionHistory?.executions && executionHistory.executions.length > 0 ? (
+                <div className="space-y-1 -mx-3">
+                  {executionHistory.executions.slice(0, 5).map((execution) => (
+                    <ExecutionItem key={execution.execution_id} execution={execution} />
+                  ))}
+                  {executionHistory.executions.length > 5 && (
+                    <div className="text-center pt-2">
+                      <span className="text-xs text-muted-foreground">
+                        Showing 5 of {executionHistory.total_count} runs
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No executions yet</p>
+                  <p className="text-xs mt-1">Runs will appear here when the trigger fires</p>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No executions yet</p>
-              <p className="text-xs mt-1">Runs will appear here when the trigger fires</p>
-            </div>
-          )}
-        </div>
 
-        {/* Execution Details */}
-        <div className="border rounded-lg p-6 bg-card">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="p-2 rounded-lg bg-muted">
-              <Sparkles className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-foreground mb-1">Agent Instructions</h3>
-              <p className="text-sm text-muted-foreground">Custom prompt for the agent</p>
-            </div>
-          </div>
+            {/* Agent Instructions */}
+            <div className="border rounded-lg p-6 bg-card">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Sparkles className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-foreground pt-1">Agent Instructions</h3>
+                </div>
+              </div>
 
-          {trigger.config.agent_prompt && (
-            <div className="mt-4 p-4 rounded-lg bg-muted border">
-              <p className="text-sm font-mono text-foreground whitespace-pre-wrap leading-relaxed">
-                {trigger.config.agent_prompt}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Agent Info */}
-        <div className="border rounded-lg p-6 bg-card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <AgentAvatar
-                agentId={trigger.agent_id}
-                size={40}
-                fallbackName={trigger.agent_name}
-              />
-              <div>
-                <h3 className="font-medium text-foreground">{trigger.agent_name || 'Unknown Worker'}</h3>
-                <p className="text-sm text-muted-foreground">Assigned Agent</p>
+              <div className="mt-4">
+                <ExpandableMarkdownEditor
+                  value={trigger.config.agent_prompt || ''}
+                  onSave={handlePromptSave}
+                  title="Edit Trigger Instructions"
+                  placeholder="Ask the agent to perform specific tasks when this trigger fires..."
+                  className="min-h-[120px]"
+                />
               </div>
             </div>
-            <Link
-              href={`/agents/config/${trigger.agent_id}`}
-              className="p-2 rounded-2xl hover:bg-muted transition-colors"
-            >
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </div>
-        </div>
 
-        {/* Technical Details */}
-        <div className="border rounded-lg p-6 bg-card">
-          <h3 className="font-medium text-foreground mb-4">Technical Details</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-              <span className="text-sm text-muted-foreground">Type</span>
-              <span className="text-sm font-mono text-foreground">{trigger.trigger_type}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-              <span className="text-sm text-muted-foreground">Provider</span>
-              <span className="text-sm font-mono text-foreground">{trigger.provider_id}</span>
-            </div>
-            {isScheduled && trigger.config?.cron_expression && (
-              <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-                <span className="text-sm text-muted-foreground">Cron Expression</span>
-                <span className="text-sm font-mono text-foreground">{trigger.config.cron_expression}</span>
+            {/* Technical Details */}
+            <div className="border rounded-lg p-6 bg-card">
+              <h3 className="font-medium text-foreground mb-4">Technical Details</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+                  <span className="text-sm text-muted-foreground">Type</span>
+                  <span className="text-sm font-mono text-foreground">{trigger.trigger_type}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+                  <span className="text-sm text-muted-foreground">Provider</span>
+                  <span className="text-sm font-mono text-foreground">{trigger.provider_id}</span>
+                </div>
+                {isScheduled && trigger.config?.cron_expression && (
+                  <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+                    <span className="text-sm text-muted-foreground">Cron Expression</span>
+                    <span className="text-sm font-mono text-foreground">{trigger.config.cron_expression}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center py-2 border-b last:border-b-0">
+                  <span className="text-sm text-muted-foreground">Created</span>
+                  <span className="text-sm text-foreground">{new Date(trigger.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-muted-foreground">Last Updated</span>
+                  <span className="text-sm text-foreground">{new Date(trigger.updated_at).toLocaleDateString()}</span>
+                </div>
               </div>
-            )}
-            <div className="flex justify-between items-center py-2 border-b last:border-b-0">
-              <span className="text-sm text-muted-foreground">Created</span>
-              <span className="text-sm text-foreground">{new Date(trigger.created_at).toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-muted-foreground">Last Updated</span>
-              <span className="text-sm text-foreground">{new Date(trigger.updated_at).toLocaleDateString()}</span>
             </div>
           </div>
+
+          {/* Edit Dialog */}
+          {showEditDialog && (
+            <TriggerCreationDialog
+              open={showEditDialog}
+              onOpenChange={setShowEditDialog}
+              type={isScheduled ? 'schedule' : 'event'}
+              isEditMode={true}
+              existingTrigger={triggerConfig}
+              onTriggerUpdated={handleEditSave}
+            />
+          )}
+
+          {/* Delete Dialog */}
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogContent className="bg-background border">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-foreground font-medium">Delete Trigger</AlertDialogTitle>
+                <AlertDialogDescription className="text-muted-foreground">
+                  Are you sure you want to delete "{trigger.name}"? This action cannot be undone and will stop all automated runs from this trigger.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="hover:bg-muted">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  Delete Trigger
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
-
-      {/* Edit Dialog */}
-      {showEditDialog && (
-        <TriggerCreationDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          type={isScheduled ? 'schedule' : 'event'}
-          isEditMode={true}
-          existingTrigger={triggerConfig}
-          onTriggerUpdated={handleEditSave}
-        />
-      )}
-
-      {/* Delete Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-background border">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground font-medium">Delete Task</AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground">
-              Are you sure you want to delete "{trigger.name}"? This action cannot be undone and will stop all automated runs from this task.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="hover:bg-muted">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              Delete Task
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

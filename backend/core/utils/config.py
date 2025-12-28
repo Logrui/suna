@@ -305,8 +305,24 @@ class Configuration:
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
     
-    # AWS Bedrock authentication
+    # AWS Bedrock configuration
+    # Option 1 (Most Common): Standard AWS credentials
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION_NAME: Optional[str] = "us-west-2"
+    # Option 2: Bearer token authentication (alternative)
     AWS_BEARER_TOKEN_BEDROCK: Optional[str] = None
+    
+    # Google Vertex AI configuration
+    # Option 1 (Recommended): Use VERTEX_AI_API_KEY for Express Mode (simplest)
+    #           Get API key from: https://console.cloud.google.com/vertex-ai/generative/language
+    # Option 2: Use VERTEX_AI_CREDENTIALS_JSON with service account JSON string
+    VERTEX_AI_PROJECT: Optional[str] = None
+    VERTEX_AI_LOCATION: Optional[str] = "us-central1"
+    VERTEX_AI_API_KEY: Optional[str] = None  # API key for Vertex AI Express Mode (e.g., "AQ.Ab8RN...")
+    VERTEX_AI_CREDENTIALS_JSON: Optional[str] = None  # Service account JSON as string (alternative)
+
+
     
     # Supabase configuration
     SUPABASE_URL: str
@@ -369,8 +385,8 @@ class Configuration:
     STRIPE_PRODUCT_ID_STAGING: Optional[str] = 'prod_SCgIj3G7yPOAWY'
     
     # Sandbox configuration
-    SANDBOX_IMAGE_NAME = "kortix/suna:0.1.3.26"
-    SANDBOX_SNAPSHOT_NAME = "kortix/suna:0.1.3.26"
+    SANDBOX_IMAGE_NAME = f"{os.getenv('DOCKERHUB_USERNAME', 'kortix')}/suna:0.1.3.25"
+    SANDBOX_SNAPSHOT_NAME = f"{os.getenv('DOCKERHUB_USERNAME', 'kortix')}/suna:0.1.3.25"
     SANDBOX_ENTRYPOINT = "/usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
     
     # Debug configuration
@@ -412,6 +428,12 @@ class Configuration:
     TRIGGER_WEBHOOK_SECRET: Optional[str] = None
     SUPABASE_WEBHOOK_SECRET: Optional[str] = None  # Secret for Supabase database webhook authentication
     
+    # Advanced Workflows integration (Advanced Workflow Editor)
+    # See: suna-advanced-workflows/.docs/integration-planning/Option_A_iframe_implementation_plan.md
+    ADVANCED_WORKFLOWS_BACKEND_URL: Optional[str] = None  # e.g., http://localhost:7860
+    ADVANCED_WORKFLOWS_FRONTEND_URL: Optional[str] = None  # If different from backend URL
+    ADVANCED_WORKFLOWS_INTEGRATION_SECRET: Optional[str] = None  # Shared secret for token exchange
+
     # Email configuration
     
     # Agent execution limits (can be overridden via environment variable)
@@ -594,6 +616,9 @@ class Configuration:
         frontend_url_env = os.getenv("FRONTEND_URL")
         if frontend_url_env is not None:
             self.FRONTEND_URL_ENV = frontend_url_env
+            logger.info(f"Loaded FRONTEND_URL from environment: {frontend_url_env}")
+        else:
+            logger.debug("FRONTEND_URL not set in environment, using defaults")
         
         # Custom handling for DEBUG_SAVE_LLM_IO (always False in production)
         debug_save_llm_io_env = os.getenv("DEBUG_SAVE_LLM_IO")

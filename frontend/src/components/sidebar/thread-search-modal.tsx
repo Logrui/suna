@@ -48,15 +48,15 @@ export function ThreadSearchModal({ open, onOpenChange }: ThreadSearchModalProps
     const combinedThreads = useMemo(() => {
         const threads = threadsResponse?.threads || [];
         if (!threads.length) return [];
-        
+
         const processed: ThreadWithProject[] = [];
-        
+
         for (const thread of threads) {
             const projectId = thread.project_id;
             const project = thread.project;
-            
+
             if (!projectId || !project) continue;
-            
+
             processed.push({
                 threadId: thread.thread_id,
                 projectId: projectId,
@@ -66,8 +66,8 @@ export function ThreadSearchModal({ open, onOpenChange }: ThreadSearchModalProps
                 iconName: project.icon_name,
             });
         }
-        
-        return processed.sort((a, b) => 
+
+        return processed.sort((a, b) =>
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
     }, [threadsResponse]);

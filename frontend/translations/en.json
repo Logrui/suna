@@ -361,34 +361,37 @@
     "aiAssistantReady": "Your AI assistant is ready to help",
     "greetings": {
       "morning": [
-        "Good morning! What's on the agenda?",
-        "Rise and shine! What are we building?",
-        "Morning! Ready to be productive?"
+        "What's our agenda for today?",
+        "What do you want to get done?",
+        "Devour the whale, one bite at a time",
+        "What's our agenda for today?",
+        "What do you want to get done?",
+        "Devour the whale, one bite at a time"
       ],
       "afternoon": [
-        "Good afternoon! What can I help with?",
-        "Hope your day's going well! What's next?"
+        "What do you want to get done?",
+        "What are we working on next?",
+        "What do you want to get done?",
+        "What are we working on next?"
       ],
       "evening": [
-        "Good evening! Burning the midnight oil?",
-        "Evening! What are we working on tonight?",
-        "Good evening! Let's get things done."
+        "Let's burn the midnight oil",
+        "What are we working on tonight?",
+        "Life isn't a knight on horseback, it's a fight for a knife in the mud",
+        "I've always loathed the necessity of sleep.",
+        "Good evening!Burning the midnight oil?",
+        "What are we getting done tonight?",
+        "Life isn't a knight on horseback, it's a fight for a knife in the mud",
+        "I've always loathed the necessity of sleep."
       ],
       "random": [
-        "Guess who's back, back again",
-        "Ahoy! What can Kortix do for you?",
         "What do you want to get done?",
-        "Let's build something awesome",
-        "Ready when you are!",
-        "What's cooking?",
-        "At your service! What's the mission?",
-        "Let's make some magic happen",
         "What challenge shall we tackle?",
         "Your wish is my command",
-        "What's the plan, Stan?",
-        "Buckle up! Where are we headed?",
-        "Another day, another build",
-        "What's on your mind?",
+        "Let's get this show on the road",
+        "What do you want to get done?",
+        "What challenge shall we tackle?",
+        "Your wish is my command",
         "Let's get this show on the road"
       ]
     }
@@ -1210,4 +1213,3 @@
     }
   }
 }
-

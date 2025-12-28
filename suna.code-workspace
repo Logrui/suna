@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+    ],
+    "settings": {
+        "terminal.integrated.fontFamily": "Monocraft",
+        "debug.console.fontFamily": "Monocraft"
+    }
+}

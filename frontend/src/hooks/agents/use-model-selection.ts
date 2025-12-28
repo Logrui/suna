@@ -14,6 +14,7 @@ export interface ModelOption {
   recommended?: boolean;
   capabilities?: string[];
   contextWindow?: number;
+  variant?: string;
 }
 
 // Helper to check if user has a PAID subscription (not free tier)
@@ -91,7 +92,7 @@ export const useModelSelection = () => {
 
     // If no model selected or selected model is not accessible, set a default
     const needsUpdate = !selectedModel ||
-                        !accessibleModels.some(m => m.id === selectedModel);
+      !accessibleModels.some(m => m.id === selectedModel);
 
     if (needsUpdate) {
       const defaultModelId = getDefaultModel(accessibleModels);
@@ -154,10 +155,10 @@ export const useModelSelection = () => {
   const getActualModelId = useCallback((modelId: string) => modelId, []);
 
   // Stable no-op callbacks for custom models (not implemented)
-  const refreshCustomModels = useCallback(() => {}, []);
-  const addCustomModel = useCallback((_model: any) => {}, []);
-  const updateCustomModel = useCallback((_id: string, _model: any) => {}, []);
-  const removeCustomModel = useCallback((_id: string) => {}, []);
+  const refreshCustomModels = useCallback(() => { }, []);
+  const addCustomModel = useCallback((_model: any) => { }, []);
+  const updateCustomModel = useCallback((_id: string, _model: any) => { }, []);
+  const removeCustomModel = useCallback((_id: string) => { }, []);
 
   return {
     selectedModel,

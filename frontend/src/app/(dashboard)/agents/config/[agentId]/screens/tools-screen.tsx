@@ -62,7 +62,7 @@ export function ToolsScreen({ agentId }: ToolsScreenProps) {
     }
 
     return (
-        <div className="flex-1 overflow-auto pb-6 w-full min-w-0">
+        <div className="flex-1 overflow-auto pb-6 w-full min-w-0 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent">
             <div className="px-1 pt-1 w-full">
                 <GranularToolConfiguration
                     tools={tools}

@@ -16,11 +16,15 @@ import { useComposioAppsWithTriggers, useComposioAppTriggers, useCreateComposioE
 import { useUpdateTrigger } from '@/hooks/triggers';
 import { useComposioProfiles } from '@/hooks/composio/use-composio-profiles';
 import { useComposioToolkitDetails } from '@/hooks/composio/use-composio';
+import { useAgent } from '@/hooks/agents/use-agents';
 import { toast } from 'sonner';
-import { cn, truncateString } from '@/lib/utils';
+import { cn, truncateString, titleCase } from '@/lib/utils';
 import { ComposioConnector } from '@/components/agents/composio/composio-connector';
 import { UnifiedMarkdown } from '@/components/markdown';
 import { AgentModelSelector } from '@/components/agents/config/model-selector';
+import { ExecutionTypeSelector } from './execution-type-selector';
+import { WorkflowSelector } from './workflow-selector';
+import { TriggerVariablePreview } from '@/components/triggers/trigger-variable-preview';
 
 interface EventBasedTriggerDialogProps {
     open: boolean;
@@ -300,14 +304,14 @@ const DynamicConfigForm: React.FC<{
     );
 };
 
-export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = ({ 
-    open, 
-    onOpenChange, 
-    agentId, 
-    onTriggerCreated, 
-    isEditMode = false, 
+export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = ({
+    open,
+    onOpenChange,
+    agentId,
+    onTriggerCreated,
+    isEditMode = false,
     existingTrigger,
-    onTriggerUpdated 
+    onTriggerUpdated
 }) => {
     const [step, setStep] = useState<'apps' | 'triggers' | 'config'>(isEditMode ? 'config' : 'apps');
     const [search, setSearch] = useState('');
@@ -318,7 +322,12 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
     const [prompt, setPrompt] = useState('');
     const [profileId, setProfileId] = useState('');
     const [model, setModel] = useState('kortix/basic');
-    const [executionType] = useState<'agent'>('agent');
+    const [executionType, setExecutionType] = useState<'agent' | 'workflow'>(
+        existingTrigger?.execution_type || 'agent'
+    );
+    const [workflowId, setWorkflowId] = useState<string | null>(
+        existingTrigger?.workflow_id || null
+    );
     const [showComposioConnector, setShowComposioConnector] = useState(false);
 
     const { data: appsData, isLoading: loadingApps } = useComposioAppsWithTriggers();
@@ -326,6 +335,7 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
     const { data: profiles, isLoading: loadingProfiles, refetch: refetchProfiles } = useComposioProfiles(selectedApp?.slug ? { toolkit_slug: selectedApp.slug } : undefined);
     const { data: allProfiles } = useComposioProfiles(); // Get all profiles for connection status
     const { data: toolkitDetails } = useComposioToolkitDetails(selectedApp?.slug || '', { enabled: !!selectedApp });
+    const { data: agent } = useAgent(agentId); // Fetch agent details for naming
 
     // Debug logging for trigger data
     useEffect(() => {
@@ -369,11 +379,14 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
         }
     }, [open, isEditMode]);
 
+    // Only set default name for NEW triggers (not edit mode)
     useEffect(() => {
-        if (selectedTrigger) {
-            setName(`${selectedApp?.name || selectedTrigger.toolkit.name} → Worker`);
+        if (selectedTrigger && !isEditMode) {
+            const appName = selectedApp?.name || selectedTrigger.toolkit.name;
+            const targetName = agent?.name || 'Worker';
+            setName(`Untitled ${appName} Trigger → ${targetName}`);
         }
-    }, [selectedTrigger, selectedApp]);
+    }, [selectedTrigger, selectedApp, isEditMode, agent?.name]);
 
     useEffect(() => {
         setProfileId('');
@@ -396,7 +409,11 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
             setProfileId(triggerConfig.profile_id || '');
             setModel(triggerConfig.model || 'kortix/basic');
 
-            const { agent_prompt, profile_id, provider_id, trigger_slug, qualified_name, model: _, ...triggerSpecificConfig } = triggerConfig;
+            // Load execution type and workflow ID
+            setExecutionType(existingTrigger.execution_type || triggerConfig.execution_type || 'agent');
+            setWorkflowId(existingTrigger.workflow_id || triggerConfig.workflow_id || null);
+
+            const { agent_prompt, profile_id, provider_id, trigger_slug, qualified_name, model: _, execution_type: __, workflow_id: ___, ...triggerSpecificConfig } = triggerConfig;
             setConfig(triggerSpecificConfig);
             const isComposioTrigger = triggerConfig.provider_id === 'composio' || existingTrigger.provider_id === 'composio';
 
@@ -406,7 +423,7 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                     toolkitSlug = triggerConfig.qualified_name.replace(/^composio\./, '').toLowerCase();
                     console.log('Edit mode - extracted from qualified_name:', toolkitSlug);
                 }
-                
+
                 if (!toolkitSlug && triggerConfig.trigger_slug) {
                     const slugParts = triggerConfig.trigger_slug.toLowerCase().split('_');
                     if (slugParts.length > 0) {
@@ -478,16 +495,20 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                     trigger_slug: selectedTrigger.slug,
                     qualified_name: `composio.${selectedApp?.slug}`,
                     provider_id: 'composio',
-                    agent_prompt: prompt || 'Read this',
-                    model: model
+                    agent_prompt: executionType === 'agent' ? (prompt || 'Read this') : undefined,
+                    model: model,
+                    execution_type: executionType,
+                    workflow_id: executionType === 'workflow' ? workflowId : undefined,
                 };
 
                 await updateTrigger.mutateAsync({
                     triggerId: existingTrigger.trigger_id,
-                    name: name || `${selectedTrigger.toolkit.name} → Worker`,
+                    name: name || `Untitled ${selectedApp?.name || selectedTrigger.toolkit.name} Trigger → ${agent?.name || 'Agent'}`,
                     description: existingTrigger.description || `Event trigger for ${selectedTrigger.toolkit.name}`,
                     config: updatedConfig,
                     is_active: true,
+                    execution_type: executionType,
+                    workflow_id: executionType === 'workflow' ? workflowId : undefined,
                 });
                 toast.success('Task updated');
 
@@ -501,15 +522,17 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                     profile_id: profileId,
                     slug: selectedTrigger.slug,
                     trigger_config: config,
-                    name: name || `${selectedTrigger.toolkit.name} → Worker`,
+                    name: name || `${selectedTrigger.toolkit.name} → ${executionType === 'workflow' ? 'Workflow' : (agent?.name || 'Agent')}`,
                     connected_account_id: selectedProfile?.connected_account_id,
                     toolkit_slug: selectedApp?.slug,
                     model: model,
+                    execution_type: executionType,
+                    workflow_id: executionType === 'workflow' ? workflowId : undefined,
                 };
                 const payload = executionType === 'agent'
                     ? { ...base, route: 'agent' as const, agent_prompt: (prompt || 'Read this') }
-                    : { ...base, route: 'agent' as const };
-                
+                    : { ...base, route: 'workflow' as const };
+
                 const result = await createTrigger.mutateAsync(payload);
                 toast.success('Task created');
 
@@ -576,7 +599,7 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                                         </div>
                                     </div>
                                     <div
-                                        className="flex-1 overflow-y-auto p-6"
+                                        className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full"
                                         style={{ maxHeight: 'calc(90vh - 200px)' }}
                                     >
                                         {loadingApps ? (
@@ -638,7 +661,7 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                                         </div>
                                     </div>
                                     <div
-                                        className="flex-1 overflow-y-auto p-6"
+                                        className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full"
                                         style={{ maxHeight: 'calc(90vh - 200px)' }}
                                     >
                                         {loadingTriggers ? (
@@ -711,127 +734,155 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                                     ) : selectedTrigger ? (
                                         <>
                                             <div
-                                                className="flex-1 overflow-y-auto p-6"
+                                                className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-300 dark:scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full"
                                                 style={{ maxHeight: 'calc(90vh - 250px)' }}
                                             >
-                                        <div className="max-w-2xl mx-auto space-y-6">
-                                            {selectedTrigger.instructions && (
-                                                <UnifiedMarkdown 
-                                                    content={selectedTrigger.instructions} 
-                                                    className="text-sm w-full text-muted-foreground" 
-                                                />
-                                            )}
+                                                <div className="max-w-2xl mx-auto space-y-6">
+                                                    {selectedTrigger.instructions && (
+                                                        <UnifiedMarkdown
+                                                            content={selectedTrigger.instructions}
+                                                            className="text-sm w-full text-muted-foreground"
+                                                        />
+                                                    )}
 
-                                            {(!loadingProfiles && (profiles || []).filter(p => p.is_connected).length === 0) ? (
-                                                <div className="text-center py-8">
-                                                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mb-3 mx-auto">
-                                                        <Info className="h-6 w-6 text-muted-foreground" />
-                                                    </div>
-                                                    <h3 className="font-medium mb-2">No Connected Profile</h3>
-                                                    <p className="text-sm text-muted-foreground mb-4">
-                                                        Connect {selectedApp?.name} first to create triggers.
-                                                    </p>
-                                                    <Button variant="outline" onClick={() => setStep('apps')}>
-                                                        Back to Apps
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-6">
-                                                    <div className="border rounded-lg p-4 space-y-4">
-                                                        <div>
-                                                            <h3 className="font-medium mb-1">{selectedTrigger.name}</h3>
-                                                            <p className="text-sm text-muted-foreground">Configure this trigger</p>
+                                                    {(!loadingProfiles && (profiles || []).filter(p => p.is_connected).length === 0) ? (
+                                                        <div className="text-center py-8">
+                                                            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mb-3 mx-auto">
+                                                                <Info className="h-6 w-6 text-muted-foreground" />
+                                                            </div>
+                                                            <h3 className="font-medium mb-2">No Connected Profile</h3>
+                                                            <p className="text-sm text-muted-foreground mb-4">
+                                                                Connect {selectedApp?.name} first to create triggers.
+                                                            </p>
+                                                            <Button variant="outline" onClick={() => setStep('apps')}>
+                                                                Back to Apps
+                                                            </Button>
                                                         </div>
-                                                        <DynamicConfigForm schema={selectedTrigger.config as any} value={config} onChange={setConfig} />
-                                                    </div>
+                                                    ) : (
+                                                        <div className="space-y-6">
+                                                            <div className="border rounded-lg p-4 space-y-4">
+                                                                <div>
+                                                                    <h3 className="font-medium mb-1">{selectedTrigger.name}</h3>
+                                                                    <p className="text-sm text-muted-foreground">Configure this trigger</p>
+                                                                </div>
+                                                                <DynamicConfigForm schema={selectedTrigger.config as any} value={config} onChange={setConfig} />
+                                                            </div>
 
-                                                    <div className="border rounded-lg p-4 space-y-4">
-                                                        <div>
-                                                            <h3 className="font-medium mb-1">Execution Settings</h3>
-                                                            <p className="text-sm text-muted-foreground">Choose how to handle this event</p>
-                                                        </div>
+                                                            <div className="border rounded-lg p-4 space-y-4">
+                                                                <div>
+                                                                    <h3 className="font-medium mb-1">Execution Settings</h3>
+                                                                    <p className="text-sm text-muted-foreground">Choose how to handle this event</p>
+                                                                </div>
 
-                                                        <div className="space-y-4">
-                                                            <div className="space-y-2">
-                                                                <Label className="text-sm">Connection Profile</Label>
-                                                                <Select
-                                                                    value={profileId}
-                                                                    onValueChange={(value) => {
-                                                                        if (value === '__create_new__') {
-                                                                            setShowComposioConnector(true);
-                                                                        } else {
-                                                                            setProfileId(value);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <SelectTrigger>
-                                                                        <SelectValue placeholder="Select a profile..." />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {loadingProfiles ? (
-                                                                            <SelectItem value="__loading__" disabled>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                                    <span>Loading...</span>
-                                                                                </div>
-                                                                            </SelectItem>
-                                                                        ) : (
-                                                                            <>
-                                                                                {(profiles || []).filter(p => p.is_connected).map((profile) => (
-                                                                                    <SelectItem key={profile.profile_id} value={profile.profile_id}>
+                                                                <div className="space-y-4">
+                                                                    <div className="space-y-2">
+                                                                        <Label className="text-sm">Connection Profile</Label>
+                                                                        <Select
+                                                                            value={profileId}
+                                                                            onValueChange={(value) => {
+                                                                                if (value === '__create_new__') {
+                                                                                    setShowComposioConnector(true);
+                                                                                } else {
+                                                                                    setProfileId(value);
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Select a profile..." />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                {loadingProfiles ? (
+                                                                                    <SelectItem value="__loading__" disabled>
                                                                                         <div className="flex items-center gap-2">
-                                                                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                                                                            <span>{profile.profile_name}</span>
+                                                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                                                            <span>Loading...</span>
                                                                                         </div>
                                                                                     </SelectItem>
-                                                                                ))}
-                                                                                <Separator className="my-1" />
-                                                                                <SelectItem value="__create_new__">
-                                                                                    <div className="flex items-center gap-2 text-primary">
-                                                                                        <Plus className="h-3 w-3" />
-                                                                                        <span>Create New Connection</span>
-                                                                                    </div>
-                                                                                </SelectItem>
-                                                                            </>
-                                                                        )}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        {(profiles || []).filter(p => p.is_connected).map((profile) => (
+                                                                                            <SelectItem key={profile.profile_id} value={profile.profile_id}>
+                                                                                                <div className="flex items-center gap-2">
+                                                                                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                                                                                    <span>{profile.profile_name}</span>
+                                                                                                </div>
+                                                                                            </SelectItem>
+                                                                                        ))}
+                                                                                        <Separator className="my-1" />
+                                                                                        <SelectItem value="__create_new__">
+                                                                                            <div className="flex items-center gap-2 text-primary">
+                                                                                                <Plus className="h-3 w-3" />
+                                                                                                <span>Create New Connection</span>
+                                                                                            </div>
+                                                                                        </SelectItem>
+                                                                                    </>
+                                                                                )}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </div>
 
-                                                            <div className="space-y-2">
-                                                                <Label className="text-sm">Trigger Name</Label>
-                                                                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Gmail → Worker" />
-                                                            </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label className="text-sm">Trigger Name</Label>
+                                                                        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`Enter a name for this trigger`} />
+                                                                    </div>
 
-                                                            <div className="space-y-2">
-                                                                <Label className="text-sm">Worker Instructions</Label>
-                                                                <Textarea
-                                                                    rows={3}
-                                                                    value={prompt}
-                                                                    onChange={(e) => setPrompt(e.target.value)}
-                                                                    placeholder="What should the agent do when this event occurs?"
-                                                                />
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    Use <code className="text-xs bg-muted px-1 rounded">{'{{variable_name}}'}</code> to add variables to the prompt
-                                                                </p>
-                                                            </div>
+                                                                    {/* Execution Type Selection */}
+                                                                    <Separator className="my-4" />
+                                                                    <ExecutionTypeSelector
+                                                                        value={executionType}
+                                                                        onChange={(type) => {
+                                                                            setExecutionType(type);
+                                                                            // Clear workflow if switching to agent
+                                                                            if (type === 'agent') {
+                                                                                setWorkflowId(null);
+                                                                            }
+                                                                        }}
+                                                                    />
 
-                                                            <div className="space-y-2">
-                                                                <Label className="text-sm">Model</Label>
-                                                                <AgentModelSelector
-                                                                    value={model}
-                                                                    onChange={setModel}
-                                                                />
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    Choose which model to use when this event triggers
-                                                                </p>
+                                                                    {/* Workflow Selector - only shown when execution type is workflow */}
+                                                                    {executionType === 'workflow' && (
+                                                                        <WorkflowSelector
+                                                                            agentId={agentId}
+                                                                            value={workflowId}
+                                                                            onChange={setWorkflowId}
+                                                                        />
+                                                                    )}
+
+                                                                    {/* Agent-specific config - only shown when execution type is agent */}
+                                                                    {executionType === 'agent' && (
+                                                                        <>
+                                                                            <div className="space-y-4">
+                                                                                <Label className="text-sm">Agent Instructions</Label>
+                                                                                <Textarea
+                                                                                    rows={3}
+                                                                                    value={prompt}
+                                                                                    onChange={(e) => setPrompt(e.target.value)}
+                                                                                    placeholder="What should the agent do when this event occurs?"
+                                                                                />
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    Use <code className="text-xs bg-muted px-1 rounded">{'{{variable_name}}'}</code> to add Trigger input variables to the prompt
+                                                                                </p>
+                                                                                <TriggerVariablePreview payload={selectedTrigger?.payload} appName={titleCase(selectedApp?.name || selectedTrigger?.toolkit?.name || '')} />
+                                                                            </div>
+
+                                                                            <div className="space-y-2">
+                                                                                <Label className="text-sm">Model</Label>
+                                                                                <AgentModelSelector
+                                                                                    value={model}
+                                                                                    onChange={setModel}
+                                                                                />
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                    Choose which model to use when this event triggers
+                                                                                </p>
+                                                                            </div>
+                                                                        </>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                            </div>
 
                                             {/* Fixed Footer */}
                                             {(!loadingProfiles && (profiles || []).filter(p => p.is_connected).length > 0) && (
@@ -839,7 +890,14 @@ export const EventBasedTriggerDialog: React.FC<EventBasedTriggerDialogProps> = (
                                                     <div className="flex justify-end">
                                                         <Button
                                                             onClick={handleCreate}
-                                                            disabled={(isEditMode ? updateTrigger.isPending : createTrigger.isPending) || !name.trim() || !profileId || !isConfigValid || !prompt.trim()}
+                                                            disabled={
+                                                                (isEditMode ? updateTrigger.isPending : createTrigger.isPending) ||
+                                                                !name.trim() ||
+                                                                !profileId ||
+                                                                !isConfigValid ||
+                                                                (executionType === 'agent' && !prompt.trim()) ||
+                                                                (executionType === 'workflow' && !workflowId)
+                                                            }
                                                             size="sm"
                                                         >
                                                             {(isEditMode ? updateTrigger.isPending : createTrigger.isPending) ? (

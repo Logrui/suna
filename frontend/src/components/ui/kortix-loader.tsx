@@ -103,7 +103,7 @@ export function KortixLoader({
 }: KortixLoaderProps) {
   const { resolvedTheme } = useTheme();
   const loaderSize = customSize || SIZE_MAP[size];
-  
+
   // Track mounted state to prevent hydration mismatch
   const [mounted, setMounted] = React.useState(false);
 
@@ -114,7 +114,7 @@ export function KortixLoader({
 
   // Determine which variant to use
   let effectiveVariant: 'white' | 'black';
-  
+
   if (variant !== 'auto') {
     // Explicit variant set
     effectiveVariant = variant;
@@ -123,23 +123,23 @@ export function KortixLoader({
     effectiveVariant = forceTheme === 'dark' ? 'white' : 'black';
   } else {
     // Auto-detect from theme
-    const isDark = (resolvedTheme || 'dark') === 'dark';
-    effectiveVariant = isDark ? 'white' : 'black';
+    const isdark = (resolvedTheme || 'dark') === 'dark';
+    effectiveVariant = isdark ? 'white' : 'black';
   }
 
   // Don't render Lottie during SSR - render a simple placeholder instead
   // This prevents any hydration mismatches
   if (!mounted) {
     return (
-      <div 
-        className={cn('flex items-center justify-center', className)} 
+      <div
+        className={cn('flex items-center justify-center', className)}
         style={style}
       >
-        <div 
-          style={{ 
-            width: loaderSize, 
-            height: loaderSize 
-          }} 
+        <div
+          style={{
+            width: loaderSize,
+            height: loaderSize
+          }}
         />
       </div>
     );
@@ -181,7 +181,7 @@ function LottieAnimation({
   React.useEffect(() => {
     // Reset animation data when variant changes
     setAnimationData(null);
-    
+
     Promise.all([
       import('lottie-react'),
       variant === 'white'
@@ -204,11 +204,11 @@ function LottieAnimation({
   // Show placeholder while loading
   if (!Lottie || !animationData) {
     return (
-      <div 
-        style={{ 
-          width: loaderSize, 
-          height: loaderSize 
-        }} 
+      <div
+        style={{
+          width: loaderSize,
+          height: loaderSize
+        }}
       />
     );
   }
@@ -219,8 +219,8 @@ function LottieAnimation({
       animationData={animationData}
       loop={loop}
       autoplay={autoPlay}
-      style={{ 
-        width: loaderSize, 
+      style={{
+        width: loaderSize,
         height: loaderSize
       }}
     />

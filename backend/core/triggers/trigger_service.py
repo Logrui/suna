@@ -46,6 +46,8 @@ class Trigger:
     config: Dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    execution_type: str = "agent"  # "agent" or "workflow"
+    workflow_id: Optional[str] = None  # Required when execution_type is "workflow"
 
 
 class TriggerService:
@@ -58,8 +60,18 @@ class TriggerService:
         provider_id: str,
         name: str,
         config: Dict[str, Any],
-        description: Optional[str] = None
+        description: Optional[str] = None,
+        execution_type: str = "agent",
+        workflow_id: Optional[str] = None
     ) -> Trigger:
+        # Validate execution_type
+        if execution_type not in ("agent", "workflow"):
+            raise ValueError(f"Invalid execution_type: {execution_type}. Must be 'agent' or 'workflow'")
+        
+        # Validate workflow_id is provided when execution_type is 'workflow'
+        if execution_type == "workflow" and not workflow_id:
+            raise ValueError("workflow_id is required when execution_type is 'workflow'")
+        
         trigger_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
         
@@ -79,7 +91,9 @@ class TriggerService:
             is_active=True,
             config=validated_config,
             created_at=now,
-            updated_at=now
+            updated_at=now,
+            execution_type=execution_type,
+            workflow_id=workflow_id
         )
         
         # Skip setup_trigger for Composio since triggers are already enabled when created
@@ -114,7 +128,9 @@ class TriggerService:
         config: Optional[Dict[str, Any]] = None,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
+        execution_type: Optional[str] = None,
+        workflow_id: Optional[str] = None
     ) -> Trigger:
         trigger = await self.get_trigger(trigger_id)
         if not trigger:
@@ -136,6 +152,20 @@ class TriggerService:
             trigger.is_active = is_active
         if config is not None:
             trigger.config = config
+        
+        # Handle execution_type updates
+        if execution_type is not None:
+            if execution_type not in ("agent", "workflow"):
+                raise ValueError(f"Invalid execution_type: {execution_type}. Must be 'agent' or 'workflow'")
+            trigger.execution_type = execution_type
+        
+        # Handle workflow_id updates
+        if workflow_id is not None:
+            trigger.workflow_id = workflow_id
+        
+        # Validate that workflow_id is set when execution_type is 'workflow'
+        if trigger.execution_type == "workflow" and not trigger.workflow_id:
+            raise ValueError("workflow_id is required when execution_type is 'workflow'")
         
         trigger.updated_at = datetime.now(timezone.utc)
         
@@ -238,7 +268,9 @@ class TriggerService:
             'is_active': trigger.is_active,
             'config': config_with_provider,
             'created_at': trigger.created_at.isoformat(),
-            'updated_at': trigger.updated_at.isoformat()
+            'updated_at': trigger.updated_at.isoformat(),
+            'execution_type': trigger.execution_type,
+            'workflow_id': trigger.workflow_id
         }).execute()
     
     async def _update_trigger(self, trigger: Trigger) -> None:
@@ -252,7 +284,9 @@ class TriggerService:
             'description': trigger.description,
             'is_active': trigger.is_active,
             'config': config_with_provider,
-            'updated_at': trigger.updated_at.isoformat()
+            'updated_at': trigger.updated_at.isoformat(),
+            'execution_type': trigger.execution_type,
+            'workflow_id': trigger.workflow_id
         }).eq('trigger_id', trigger.trigger_id).execute()
     
     def _map_to_trigger(self, data: Dict[str, Any]) -> Trigger:
@@ -280,7 +314,9 @@ class TriggerService:
             is_active=data.get('is_active', True),
             config=clean_config,
             created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')),
-            updated_at=datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+            updated_at=datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00')),
+            execution_type=data.get('execution_type', 'agent'),
+            workflow_id=data.get('workflow_id')
         )
     
     async def _log_trigger_event(self, event: TriggerEvent, result: TriggerResult) -> None:

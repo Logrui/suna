@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "agent-command-sync": "^2.1.0"
+  }
+}

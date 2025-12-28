@@ -297,7 +297,8 @@ async def install_template(
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
     try:
-        await validate_template_access_and_get(request.template_id, user_id)
+        # Note: Template access is validated by the installation service
+        # which can also fetch from production API for marketplace templates
         client = await db.client
         from core.core_utils import check_agent_count_limit
         limit_check = await check_agent_count_limit(client, user_id)

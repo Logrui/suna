@@ -41,10 +41,10 @@ export function SidebarSearch() {
   // Use React Query hooks
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useProjects();
   const { data: threadsResponse, isLoading: threadsLoading, error: threadsError } = useThreads();
-  
+
   const allThreads = threadsResponse?.threads || [];
   const isLoading = projectsLoading || threadsLoading;
-  
+
   // Helper to sort threads by updated_at (most recent first)
   const sortThreads = (
     threadsList: ThreadWithProject[],
@@ -60,14 +60,14 @@ export function SidebarSearch() {
     if (isLoading) {
       return;
     }
-    
+
     // If we have no threads, clear everything
     if (!allThreads.length) {
       setThreads([]);
       setFilteredThreads([]);
       return;
     }
-    
+
     // Extract projects from threads if projects array is empty
     // This handles the case where getProjects() might not have extracted projects correctly
     let effectiveProjects = projects;
@@ -96,7 +96,7 @@ export function SidebarSearch() {
       });
       effectiveProjects = Array.from(projectsMap.values());
     }
-    
+
     // Use the utility function that handles project extraction from threads
     const threadsWithProjects = processThreadsWithProjects(allThreads, effectiveProjects);
 

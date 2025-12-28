@@ -401,7 +401,26 @@ async def get_agent_tools(
     for mcp in configured_mcps + custom_mcps:
         server = mcp.get('name')
         enabled_tools = mcp.get('enabledTools') or mcp.get('enabled_tools') or []
+        
+        # Extract Composio-specific metadata if available
+        mcp_config = mcp.get('config', {})
+        toolkit_slug = mcp.get('toolkit_slug') or mcp_config.get('toolkit_slug')
+        toolkit_name = mcp.get('toolkit_name') or mcp_config.get('toolkit_name') or server
+        icon_url = mcp.get('icon_url') or mcp_config.get('icon_url')
+        
         for tool_name in enabled_tools:
-            mcp_tools.append({"name": tool_name, "server": server, "enabled": True})
+            tool_entry = {
+                "name": tool_name, 
+                "server": server, 
+                "enabled": True,
+            }
+            # Include Composio metadata for frontend icon display
+            if toolkit_slug:
+                tool_entry["toolkit_slug"] = toolkit_slug
+            if toolkit_name:
+                tool_entry["toolkit_name"] = toolkit_name
+            if icon_url:
+                tool_entry["icon_url"] = icon_url
+            mcp_tools.append(tool_entry)
     return {"agentpress_tools": agentpress_tools, "mcp_tools": mcp_tools}
 

@@ -1,0 +1,77 @@
+FROM ghcr.io/astral-sh/uv:python3.11-alpine
+
+ENV ENV_MODE production
+WORKDIR /app
+
+ARG RAILWAY_SERVICE_ID
+ENV SERVICE_ID=$RAILWAY_SERVICE_ID
+
+# Install system dependencies
+RUN apk add --no-cache curl git \
+    # Dependencies for Python package compilation
+    freetype-dev \
+    gcc \
+    linux-headers \
+    musl-dev \
+    python3-dev \
+    nodejs \
+    npm
+
+# Install Python dependencies
+# Note: When Railway root is repo root, we need backend/ prefix
+COPY backend/pyproject.toml backend/uv.lock ./
+ENV UV_LINK_MODE=copy
+RUN uv sync --locked --quiet
+
+# Copy application code and patches
+COPY backend/ ./
+COPY patches ./patches
+
+# ============================================================
+# APPLY PATCHES - Before running, apply all patches
+# ============================================================
+RUN echo "🔧 Checking for patches..." && \
+    if [ -d "./patches" ] && [ -f "./patches/apply-patches.js" ]; then \
+      echo "📦 Found patches directory, applying..." && \
+      git init -q && \
+      git add -A && \
+      git config user.email "builder@docker.local" && \
+      git config user.name "Docker Builder" && \
+      git commit -q -m "Initial commit before patches" --allow-empty && \
+      node ./patches/apply-patches.js --verbose && \
+      echo "✅ Patches applied successfully"; \
+    else \
+      echo "⚠️  No patches directory found, skipping..."; \
+    fi
+
+# Calculate optimal worker count based on 16 vCPUs
+# Using (2*CPU)+1 formula for CPU-bound applications
+ENV WORKERS=7
+ENV THREADS=2
+ENV WORKER_CONNECTIONS=2000
+
+ENV PYTHONPATH=/app
+# Railway provides PORT env var, default to 8000 and 8080 for gunicorn for local testing
+ENV PORT=8000
+EXPOSE $PORT
+
+# Gunicorn configuration
+CMD ["sh", "-c", "uv run gunicorn api:app \
+  --workers $WORKERS \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --bind 0.0.0.0:${PORT} \
+  --timeout 1800 \
+  --graceful-timeout 600 \
+  --keep-alive 1800 \
+  --max-requests 0 \
+  --max-requests-jitter 0 \
+  --forwarded-allow-ips '*' \
+  --worker-connections $WORKER_CONNECTIONS \
+  --worker-tmp-dir /dev/shm \
+  --preload \
+  --log-level info \
+  --access-logfile - \
+  --error-logfile - \
+  --capture-output \
+  --enable-stdio-inheritance \
+  --threads $THREADS"]

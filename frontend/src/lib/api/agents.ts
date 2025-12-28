@@ -7,6 +7,48 @@ import { Message } from './threads';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
+// Helper function to check if a model is a local model (Ollama or LM Studio)
+export function isLocalModel(modelId: string | undefined): boolean {
+  if (!modelId) return false;
+
+  // Check for actual model ID patterns used in the registry:
+  // - Ollama models: "ollama/{model_name}"
+  // - LM Studio models: "lm_studio/{model_id}"
+  // - Generic OpenAI-compatible fallback: "openai-compatible/local-model"
+  return (
+    modelId.startsWith('ollama/') ||
+    modelId.startsWith('lm_studio/') ||
+    modelId.startsWith('openai-compatible/')
+  );
+}
+
+// Helper function to check admin status from Supabase
+export async function checkIsAdmin(): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return false;
+
+    const { data: roleData, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['admin', 'super_admin'])
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+
+    return !!roleData;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
 export type AgentRun = {
   id: string;
   thread_id: string;
@@ -82,39 +124,66 @@ export const unifiedAgentStart = async (options: {
       );
     }
 
+    // Check if using a local model and if user has admin access
+    if (isLocalModel(options.model_name)) {
+      const isAdmin = await checkIsAdmin();
+      if (!isAdmin) {
+        throw new Error('Admin Access Restriction: Local models (Ollama, LM Studio) require admin privileges.');
+      }
+    }
+
     const formData = new FormData();
-    
+
     if (options.threadId) {
       formData.append('thread_id', options.threadId);
     }
-    
+
     // For new threads (no threadId), prompt is required
     // Always append prompt if provided (even if empty string) so backend can validate
     if (options.prompt !== undefined) {
       const promptValue = typeof options.prompt === 'string' ? options.prompt.trim() : options.prompt;
       formData.append('prompt', promptValue);
     }
-    
+
     if (options.model_name && options.model_name.trim()) {
       formData.append('model_name', options.model_name.trim());
     }
-    
+
     if (options.agent_id) {
       formData.append('agent_id', options.agent_id);
     }
-    
+
     if (options.files && options.files.length > 0) {
       options.files.forEach((file) => {
         formData.append('files', file);
       });
     }
-    
+
     if (options.file_ids && options.file_ids.length > 0) {
       options.file_ids.forEach((fileId) => {
         formData.append('file_ids', fileId);
       });
     }
 
+    // Debug logging
+    console.log('[unifiedAgentStart] Sending to backend:', {
+      threadId: options.threadId,
+      prompt: options.prompt ? options.prompt.substring(0, 100) : undefined,
+      promptLength: options.prompt?.length || 0,
+      model_name: options.model_name,
+      agent_id: options.agent_id,
+      filesCount: options.files?.length || 0,
+    });
+
+    // Debug: Log FormData contents
+    console.log('[unifiedAgentStart] FormData entries:');
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: File(${value.name}, ${value.size} bytes)`);
+      } else {
+        console.log(`  ${key}: ${String(value).substring(0, 100)}`);
+      }
+    }
 
     const response = await backendApi.upload<{ thread_id: string; agent_run_id: string; status: string }>(
       '/agent/start',
@@ -124,17 +193,16 @@ export const unifiedAgentStart = async (options: {
 
     if (response.error) {
       const status = response.error.status || 500;
-      
       // Check if error is already parsed by api-client (e.g., AgentRunLimitError)
       if (response.error instanceof AgentRunLimitError) {
         throw response.error;
       }
-      
+
       if (status === 402) {
         // Check error_code to determine the correct error type
         const errorDetail = response.error.details?.detail || { message: response.error.message || 'Payment required' };
         const errorCode = errorDetail.error_code || response.error.code;
-        
+
         // Handle concurrent agent run limit (should be AgentRunLimitError, not BillingError)
         if (errorCode === 'AGENT_RUN_LIMIT_EXCEEDED') {
           const detail = {
@@ -145,25 +213,25 @@ export const unifiedAgentStart = async (options: {
           };
           throw new AgentRunLimitError(status, detail);
         }
-        
+
         // For other 402 errors, use parseTierRestrictionError to get the correct error type
         const parsedError = parseTierRestrictionError({
           status,
           detail: errorDetail,
           response: { data: { detail: errorDetail } },
         });
-        
+
         // If parseTierRestrictionError returned a different error type, throw that
         if (!(parsedError instanceof BillingError) && parsedError instanceof Error) {
           throw parsedError;
         }
-        
+
         // Otherwise, throw BillingError
         throw new BillingError(status, errorDetail);
       }
 
       if (status === 429) {
-        const detail = response.error.details?.detail || { 
+        const detail = response.error.details?.detail || {
           message: 'Too many agent runs running',
           running_thread_ids: [],
           running_count: 0,
@@ -186,7 +254,7 @@ export const unifiedAgentStart = async (options: {
         const filesCount = options.files?.length || 0;
         throw new RequestTooLargeError(431, {
           message: `Request is too large (${filesCount} files attached)`,
-          suggestion: filesCount > 1 
+          suggestion: filesCount > 1
             ? 'Try uploading files one at a time instead of all at once.'
             : 'The file or request data is too large. Try a smaller file or simplify your message.',
         });
@@ -195,13 +263,20 @@ export const unifiedAgentStart = async (options: {
       console.error(
         `[API] Error starting agent: ${status} ${response.error.message}`,
       );
-    
+
       if (status === 401) {
         throw new Error('Authentication error: Please sign in again');
+      } else if (status === 403) {
+        // Handle admin access restrictions with user-friendly message
+        const errorMessage = response.error.message || 'Access denied';
+        if (errorMessage.includes('Admin Access Restriction')) {
+          throw new Error(errorMessage);
+        }
+        throw new Error(`Access denied: ${errorMessage}`);
       } else if (status >= 500) {
         throw new Error('Server error: Please try again later');
       }
-    
+
       throw new Error(
         `Error starting agent: ${response.error.message} (${status})`,
       );
@@ -222,7 +297,7 @@ export const unifiedAgentStart = async (options: {
     }
 
     console.error('[API] Failed to start agent:', error);
-    
+
     if (
       error instanceof TypeError &&
       error.message.includes('Failed to fetch')
@@ -328,7 +403,7 @@ export const setupAgentFromChat = async (request: AgentSetupFromChatRequest): Pr
     const response = await backendApi.post<AgentSetupFromChatResponse>(
       '/agents/setup-from-chat',
       request,
-      { showErrors: true, timeout: 20000 } // 20 seconds (single optimized LLM call)
+      { showErrors: true, timeout: 60000 } // 60 seconds (single optimized LLM call)
     );
 
     if (response.error) {
@@ -360,6 +435,8 @@ export const getAgentRuns = async (threadId: string): Promise<AgentRun[]> => {
 
     return response.data?.agent_runs || [];
   } catch (error) {
+    console.error('Failed to get agent runs:', error);
+    handleApiError(error, { operation: 'load agent runs', resource: 'conversation history' });
     throw error;
   }
 };
@@ -401,22 +478,22 @@ export const optimisticAgentStart = async (options: {
     }
 
     const formData = new FormData();
-    
+
     formData.append('thread_id', options.thread_id);
     formData.append('project_id', options.project_id);
     formData.append('optimistic', 'true');
-    
+
     const promptValue = typeof options.prompt === 'string' ? options.prompt.trim() : options.prompt;
     formData.append('prompt', promptValue);
-    
+
     if (options.model_name && options.model_name.trim()) {
       formData.append('model_name', options.model_name.trim());
     }
-    
+
     if (options.agent_id) {
       formData.append('agent_id', options.agent_id);
     }
-    
+
     if (options.file_ids && options.file_ids.length > 0) {
       options.file_ids.forEach((fileId) => {
         formData.append('file_ids', fileId);
@@ -426,7 +503,7 @@ export const optimisticAgentStart = async (options: {
         formData.append('files', file);
       });
     }
-    
+
     if (options.memory_enabled !== undefined) {
       formData.append('memory_enabled', String(options.memory_enabled));
     }
@@ -439,12 +516,12 @@ export const optimisticAgentStart = async (options: {
 
     if (response.error) {
       const status = response.error.status || 500;
-      
+
       // Check if error is already parsed by api-client (e.g., AgentRunLimitError)
       if (response.error instanceof AgentRunLimitError) {
         throw response.error;
       }
-      
+
       if (status === 402) {
         const errorDetail = response.error.details?.detail || { message: response.error.message || 'Payment required' };
         const parsedError = parseTierRestrictionError({
@@ -456,7 +533,7 @@ export const optimisticAgentStart = async (options: {
       }
 
       if (status === 429) {
-        const detail = response.error.details?.detail || { 
+        const detail = response.error.details?.detail || {
           message: 'Too many agent runs running',
           running_thread_ids: [],
           running_count: 0,
@@ -468,7 +545,7 @@ export const optimisticAgentStart = async (options: {
         const filesCount = options.files?.length || 0;
         throw new RequestTooLargeError(431, {
           message: `Request is too large (${filesCount} files attached)`,
-          suggestion: filesCount > 1 
+          suggestion: filesCount > 1
             ? 'Try uploading files one at a time instead of all at once.'
             : 'The file or request data is too large. Try a smaller file or simplify your message.',
         });
@@ -477,13 +554,13 @@ export const optimisticAgentStart = async (options: {
       console.error(
         `[API] Error starting agent optimistically: ${status} ${response.error.message}`,
       );
-    
+
       if (status === 401) {
         throw new Error('Authentication error: Please sign in again');
       } else if (status >= 500) {
         throw new Error('Server error: Please try again later');
       }
-    
+
       throw new Error(
         `Error starting agent: ${response.error.message} (${status})`,
       );
@@ -504,7 +581,7 @@ export const optimisticAgentStart = async (options: {
     }
 
     console.error('[API] Failed to start agent optimistically:', error);
-    
+
     if (
       error instanceof TypeError &&
       error.message.includes('Failed to fetch')
@@ -564,7 +641,7 @@ export const streamAgent = (
       callbacks.onClose();
     }, 0);
 
-    return () => {};
+    return () => { };
   }
 
   const existingStream = activeStreams.get(agentRunId);
@@ -620,7 +697,7 @@ export const streamAgent = (
       activeStreams.set(agentRunId, eventSource);
 
       eventSource.onopen = () => {
-        // Stream opened successfully
+        console.log(`[STREAM] EventSource opened for ${agentRunId}`);
       };
 
       eventSource.onmessage = (event) => {
@@ -684,7 +761,7 @@ export const streamAgent = (
 
       eventSource.onerror = (event) => {
         console.error(`[STREAM] EventSource error for ${agentRunId}:`, event);
-        
+
         getAgentStatus(agentRunId)
           .then((status) => {
             if (status.status !== 'running') {
@@ -728,7 +805,7 @@ export const streamAgent = (
     console.error(`[STREAM] Error setting up stream for ${agentRunId}:`, error);
     callbacks.onError(error instanceof Error ? error : String(error));
     callbacks.onClose();
-    return () => {};
+    return () => { };
   }
 };
 

@@ -1,0 +1,44 @@
+---
+description: Manage the Portkit Ecosystem Rules (Adaptation Constitution). View, Add, or Remove adaptation laws.
+---
+
+//turbo-all
+
+## User Input
+```text
+$ARGUMENTS
+```
+
+You **MUST** consider the user input before proceeding (if not empty).
+
+## Goal
+Manage the `ecosystem-rules.json` file, which serves as the "Constitution" for Portkit adaptation. It defines dependencies that must be denied (stripped) and architectural invariants that must be upheld when porting over features from other repos
+
+## Outline
+
+1.  **Parse Input**: Determine intent (View, Add Rule, Remove Rule).
+    *   Result: `action = "view" | "add" | "remove"`
+
+2.  **Context**: Read `.portkit/ecosystem-rules.json`.
+
+3.  **Action Execution**:
+
+    *   **If View**:
+        *   Display the current rules in a user-friendly format (Markdown tables).
+        *   List `denied_dependencies`, `forced_adapters`, and `architectural_invariants`.
+
+    *   **If Add Rule**:
+        *   Prompt user for `Rule Type` (Dependency, Adapter, Invariant).
+        *   Prompt for details (Package Name, Replacement Strategy, Reason).
+        *   Update the JSON structure.
+
+    *   **If Remove Rule**:
+        *   Show numbered list of rules.
+        *   Ask user to select which one to remove.
+        *   Update key in JSON.
+
+4.  **Save**: write back to `.portkit/ecosystem-rules.json`.
+
+5.  **Completion**:
+    *   Output: "Ecosystem Rules updated."
+    *   **Note**: "These rules will automatically be enforced by `map-dependencies` and `portkit.research` in future runs."

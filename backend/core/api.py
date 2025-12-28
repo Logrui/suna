@@ -17,6 +17,7 @@ from .export_api import router as export_router
 from .file_uploads_api import router as file_uploads_router
 from .apify_approvals_api import router as apify_approvals_router
 from .categorization.api import router as categorization_router
+from .workflows.api import router as workflows_router
 router = APIRouter()
 
 # Include all sub-routers
@@ -37,6 +38,7 @@ router.include_router(export_router)
 router.include_router(file_uploads_router)
 router.include_router(apify_approvals_router)
 router.include_router(categorization_router)
+router.include_router(workflows_router)
 
 # Re-export the initialize and cleanup functions
 __all__ = ['router', 'initialize', 'cleanup']
