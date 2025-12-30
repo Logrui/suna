@@ -1,51 +1,42 @@
-BEGIN;
-
--- Add 'advanced-legacy' value to the workflow_mode enum
--- This allows workflows to be saved with the legacy React Flow editor mode
-ALTER TYPE public.workflow_mode ADD VALUE IF NOT EXISTS 'advanced-legacy';
-
-COMMIT;
-
--- Note: CHECK constraints need to be updated in a separate transaction
--- because the new enum value won't be visible until the ALTER TYPE commits
-
-BEGIN;
-
--- Drop existing constraints that don't include 'advanced-legacy'
-ALTER TABLE public.agent_workflows DROP CONSTRAINT IF EXISTS check_advanced_workflow_data;
-ALTER TABLE public.agent_workflows DROP CONSTRAINT IF EXISTS check_mode_data_consistency;
-
--- Re-create constraints to include 'advanced-legacy' mode
--- advanced-legacy workflows are treated the same as advanced workflows
-ALTER TABLE public.agent_workflows ADD CONSTRAINT check_advanced_workflow_data CHECK (
-    (mode = 'simple'::workflow_mode)
-    OR (
-        (mode = 'advanced'::workflow_mode)
-        AND (graph_definition IS NOT NULL)
-        AND (compiled_logic IS NOT NULL)
-    )
-    OR (
-        (mode = 'advanced-legacy'::workflow_mode)
-        -- advanced-legacy may have graph_definition and compiled_logic OR steps
-        -- allowing more flexibility during transition
-    )
-);
-
-ALTER TABLE public.agent_workflows ADD CONSTRAINT check_mode_data_consistency CHECK (
+create table public.agent_workflows (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  agent_id uuid not null,
+  name character varying(255) not null,
+  description text null,
+  status public.agent_workflow_status null default 'draft'::agent_workflow_status,
+  trigger_phrase character varying(255) null,
+  is_default boolean null default false,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  steps jsonb null,
+  mode public.workflow_mode not null default 'simple'::workflow_mode,
+  graph_definition jsonb null,
+  compiled_logic jsonb null,
+  trigger_id uuid null,
+  constraint agent_workflows_pkey primary key (id),
+  constraint agent_workflows_agent_id_fkey foreign KEY (agent_id) references agents (agent_id) on delete CASCADE,
+  constraint agent_workflows_trigger_id_fkey foreign KEY (trigger_id) references agent_triggers (trigger_id) on delete set null,
+  constraint check_workflow_mode_valid check (
     (
-        (mode = 'simple'::workflow_mode)
-        AND (steps IS NOT NULL)
+      mode = any (
+        array[
+          'simple'::workflow_mode,
+          'advanced'::workflow_mode,
+          'advanced-legacy'::workflow_mode
+        ]
+      )
     )
-    OR (
-        (mode = 'advanced'::workflow_mode)
-        AND (graph_definition IS NOT NULL)
-    )
-    OR (
-        (mode = 'advanced-legacy'::workflow_mode)
-        -- advanced-legacy can have steps, graph_definition, or both during transition
-    )
-);
+  )
+) TABLESPACE pg_default;
 
-COMMENT ON TYPE public.workflow_mode IS 'Workflow editor mode: simple (step-by-step), advanced (Langflow), or advanced-legacy (React Flow)';
+create index IF not exists idx_agent_workflows_agent_id on public.agent_workflows using btree (agent_id) TABLESPACE pg_default;
 
-COMMIT;
+create index IF not exists idx_agent_workflows_status on public.agent_workflows using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_agent_workflows_steps on public.agent_workflows using gin (steps) TABLESPACE pg_default;
+
+create index IF not exists idx_agent_workflows_mode on public.agent_workflows using btree (mode) TABLESPACE pg_default;
+
+create index IF not exists idx_agent_workflows_agent_mode on public.agent_workflows using btree (agent_id, mode) TABLESPACE pg_default;
+
+create index IF not exists idx_agent_workflows_status_mode on public.agent_workflows using btree (status, mode) TABLESPACE pg_default;

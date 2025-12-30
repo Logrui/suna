@@ -18,10 +18,11 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Search, Check, ChevronDown, Plus, Loader2, Plug, Brain, LibraryBig, Zap, Lock, Sparkles, ChevronLeft } from 'lucide-react';
+import { Search, Check, ChevronDown, Plus, Loader2, Plug, Brain, LibraryBig, Zap, ChevronLeft } from 'lucide-react';
 import { useAgents } from '@/hooks/agents/use-agents';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
 import type { ModelOption } from '@/hooks/agents';
+import { ModelProviderIcon } from '@/lib/model-provider-icons';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 export type SubscriptionStatus = 'no_subscription' | 'active';
@@ -34,10 +35,11 @@ import { NewAgentDialog } from '@/components/agents/new-agent-dialog';
 import { AgentAvatar } from '@/components/thread/content/agent-avatar';
 import { AgentConfigurationDialog } from '@/components/agents/agent-configuration-dialog';
 import { usePricingModalStore } from '@/stores/pricing-modal-store';
-import { useAccountState, accountStateSelectors } from '@/hooks/billing';
-import { isLocalMode, isProductionMode } from '@/lib/config';
+import { isLocalModel } from '@/lib/api/agents';
+import { useAdminRole } from '@/hooks/admin';
+import { toast } from 'sonner';
+import { ModelItemWithTooltip } from './model-item-with-tooltip';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-
 
 
 type UnifiedConfigMenuProps = {
@@ -75,16 +77,15 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
     const [showNewAgentDialog, setShowNewAgentDialog] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [agentConfigDialog, setAgentConfigDialog] = useState<{ open: boolean; tab: 'instructions' | 'knowledge' | 'triggers' | 'tools' | 'integrations' }>({ open: false, tab: 'instructions' });
-    const { data: accountState } = useAccountState();
-    const { openPricingModal } = usePricingModalStore();
-    const [isMobile, setIsMobile] = useState(false);
-    const [mobileSection, setMobileSection] = useState<'main' | 'agents'>('main');
 
-    const tierKey = accountStateSelectors.tierKey(accountState);
-    const isFreeTier = tierKey && (
-      tierKey === 'free' ||
-      tierKey === 'none'
-    ) && !isLocalMode();
+    // Check if user is admin for local model access
+    const { data: adminData, isLoading: isLoadingAdminRole } = useAdminRole();
+    const isAdmin = adminData?.isAdmin || false;
+
+    const [isMobile, setIsMobile] = useState(false);
+    // feature-start: mobile-model-sheet
+    const [mobileSection, setMobileSection] = useState<'main' | 'agents' | 'models'>('main');
+    // feature-end: mobile-model-sheet
 
     // Detect mobile view
     useEffect(() => {
@@ -132,7 +133,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
 
     const placeholderSunaAgent = useMemo(() => ({
         agent_id: undefined,
-        name: 'Kortix',
+        name: 'Suna',
         metadata: { is_suna_default: true }
     }), []);
 
@@ -200,7 +201,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
 
     const renderAgentIcon = useCallback((agent: any, size: number = 32) => {
         if (!agent && (isLoading || sunaAgent)) {
-            return <AgentAvatar isSunaDefault={true} agentName="Kortix" size={size} className="flex-shrink-0 !border-0" />;
+            return <AgentAvatar isSunaDefault={true} agentName="Suna" size={size} className="flex-shrink-0 !border-0" />;
         }
         return <AgentAvatar agent={agent} agentId={agent?.agent_id} size={size} className="flex-shrink-0 !border-0" />;
     }, [isLoading, sunaAgent]);
@@ -301,203 +302,121 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                 )}
                 onClick={() => {
                     setIsOpen(false);
-                    if (isFreeTier) {
-                        openPricingModal();
-                    } else {
-                        setShowNewAgentDialog(true);
-                    }
+                    setShowNewAgentDialog(true);
                 }}
             >
                 <div className={cn(
-                    "flex items-center justify-center border-[1.5px] flex-shrink-0 transition-colors",
-                    compact ? "w-8 h-8" : "w-10 h-10 sm:w-8 sm:h-8",
-                    isFreeTier
-                        ? "bg-primary/10 border-primary/30"
-                        : "bg-card border-border"
+                    "flex items-center justify-center border-[1.5px] flex-shrink-0 transition-colors bg-card border-border",
+                    compact ? "w-8 h-8" : "w-10 h-10 sm:w-8 sm:h-8"
                 )} style={{ borderRadius: '10.4px' }}>
-                    {isFreeTier ? (
-                        <Sparkles className={cn(
-                            "text-primary",
-                            compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
-                        )} />
-                    ) : (
-                        <Plus className={cn(
-                            "text-muted-foreground",
-                            compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
-                        )} />
-                    )}
+                    <Plus className={cn(
+                        "text-muted-foreground",
+                        compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
+                    )} />
                 </div>
                 <div className="flex-1 min-w-0">
                     <span className={cn(
-                        "font-medium",
-                        compact ? "text-sm" : "text-base sm:text-sm",
-                        isFreeTier ? "text-primary" : "text-foreground"
+                        "font-medium text-foreground",
+                        compact ? "text-sm" : "text-base sm:text-sm"
                     )}>
                         Create AI Worker
                     </span>
-                    {isFreeTier && (
-                        <p className={cn(
-                            "text-muted-foreground leading-tight mt-0.5",
-                            compact ? "text-[10px]" : "text-xs sm:text-[10px]"
-                        )}>
-                            Upgrade to create custom workers
-                        </p>
-                    )}
                 </div>
             </div>
         </div>
-    ), [isFreeTier, openPricingModal]);
+    ), []);
 
-    const ModeToggle = useCallback(({ compact = false }: { compact?: boolean }) => {
-        const basicModel = modelOptions.find(m => m.id === 'kortix/basic' || m.label === 'Kortix Basic');
-        const powerModel = modelOptions.find(m => m.id === 'kortix/power' || m.label === 'Kortix Advanced Mode');
-        
-        // Get additional models (not basic or power)
-        // Exclude kortix/test in PRODUCTION
-        const additionalModels = modelOptions.filter(m => 
-            m.id !== 'kortix/basic' && 
-            m.id !== 'kortix/power' && 
-            m.label !== 'Kortix Basic' && 
-            m.label !== 'Kortix Advanced Mode' &&
-            !(isProductionMode() && m.id === 'kortix/test')
-        );
+    // feature-start: mobile-model-sheet
+    const ModelsList = useCallback(({ compact = false }: { compact?: boolean }) => (
+        <>
+            <div className={cn(
+                "overflow-y-auto space-y-0.5",
+                compact ? "max-h-[340px] px-2" : "max-h-[50vh] px-3",
+                "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+            )}>
+                {modelOptions.map((model) => {
+                    const isActive = selectedModel === model.id;
+                    const canAccess = canAccessModel(model.id);
 
-        const canAccessPower = powerModel ? canAccessModel(powerModel.id) : false;
-        const isPowerSelected = powerModel && selectedModel === powerModel.id;
-        const isBasicSelected = basicModel && selectedModel === basicModel.id;
-        
-        // Check if an additional model is selected
-        const selectedAdditionalModel = additionalModels.find(m => m.id === selectedModel);
-        const isAdditionalSelected = !!selectedAdditionalModel;
+                    return (
+                        <div
+                            key={model.id}
+                            className={cn(
+                                "flex items-center gap-3 text-sm cursor-pointer rounded-xl sm:rounded-2xl transition-colors",
+                                compact ? "px-2 py-2" : "px-3 py-3 sm:py-2",
+                                isActive ? "bg-primary/5" : "hover:bg-muted/50 active:bg-muted/70"
+                            )}
+                            onClick={() => {
+                                // Check if it's a local model (Ollama/LM Studio) and if user is admin
+                                if (isLocalModel(model.id)) {
+                                    // If still loading admin role, show a loading toast
+                                    if (isLoadingAdminRole) {
+                                        toast.info('Checking permissions...', {
+                                            description: 'Please wait while we verify your access.',
+                                            duration: 2000,
+                                        });
+                                        return;
+                                    }
 
-        return (
-            <div className="flex flex-col gap-2">
-                <div className={cn(
-                    "flex items-center gap-1.5 p-1 bg-muted/50 rounded-xl",
-                    compact ? "" : ""
-                )}>
-                    {/* Basic Mode */}
-                    <button
-                        onClick={() => {
-                            if (basicModel) {
-                                onModelChange(basicModel.id);
-                            }
-                        }}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-1.5 rounded-lg transition-all",
-                            compact ? "px-3 py-1.5" : "px-4 py-2",
-                            isBasicSelected
-                                ? "bg-background shadow-sm text-foreground"
-                                : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <span className={cn(
-                            "font-medium",
-                            compact ? "text-xs" : "text-sm"
-                        )}>Basic</span>
-                    </button>
+                                    // If not admin, block with clear error message
+                                    if (!isAdmin) {
+                                        toast.error('Admin Access Restriction', {
+                                            description: 'Local models (Ollama, LM Studio) require admin privileges.',
+                                            duration: 5000,
+                                        });
+                                        setIsOpen(false);
+                                        return;
+                                    }
+                                }
 
-                    {/* Advanced Mode */}
-                    <button
-                        onClick={() => {
-                            if (powerModel) {
-                                if (canAccessPower) {
-                                    onModelChange(powerModel.id);
+                                if (canAccess) {
+                                    onModelChange(model.id);
+                                    setIsOpen(false);
                                 } else {
                                     setIsOpen(false);
                                     usePricingModalStore.getState().openPricingModal({
                                         isAlert: true,
-                                        alertTitle: 'Upgrade to access Kortix Advanced mode'
+                                        alertTitle: 'Upgrade to access this AI model'
                                     });
                                 }
-                            }
-                        }}
-                        className={cn(
-                            "flex-1 flex items-center justify-center gap-1.5 rounded-lg transition-all",
-                            compact ? "px-3 py-1.5" : "px-4 py-2",
-                            isPowerSelected
-                                ? "bg-background shadow-sm"
-                                : canAccessPower
-                                    ? "text-muted-foreground hover:text-foreground"
-                                    : "text-muted-foreground/50"
-                        )}
-                    >
-                        <KortixLogo size={compact ? 10 : 12} variant="symbol" />
-                        <span className={cn(
-                            "font-medium",
-                            compact ? "text-xs" : "text-sm",
-                            isPowerSelected ? "text-primary" : canAccessPower ? "text-muted-foreground" : "text-muted-foreground/50"
-                        )}>Advanced</span>
-                        {!canAccessPower && (
-                            <Lock className={cn(
-                                "text-muted-foreground/50",
-                                compact ? "h-3 w-3" : "h-3.5 w-3.5"
-                            )} />
-                        )}
-                    </button>
-                </div>
-                
-                {/* Additional Models Dropdown */}
-                {additionalModels.length > 0 && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className={cn(
-                                    "w-full flex items-center justify-between rounded-lg transition-all border border-border",
-                                    compact ? "px-3 py-1.5" : "px-4 py-2",
-                                    isAdditionalSelected
-                                        ? "bg-muted/80 text-foreground"
-                                        : "bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                                )}
-                            >
+                            }}
+                        >
+                            <div className={cn(
+                                "flex items-center justify-center flex-shrink-0",
+                                compact ? "w-8 h-8" : "w-10 h-10 sm:w-8 sm:h-8"
+                            )}>
+                                <ModelProviderIcon
+                                    modelId={model.id}
+                                    size={compact ? 32 : (isMobile ? 40 : 32)}
+                                    className="flex-shrink-0"
+                                />
+                            </div>
+                            <div className="flex-1 min-w-0">
                                 <span className={cn(
-                                    "font-medium",
-                                    compact ? "text-xs" : "text-sm"
+                                    "font-medium block truncate",
+                                    compact ? "text-sm" : "text-base sm:text-sm"
                                 )}>
-                                    {isAdditionalSelected ? selectedAdditionalModel?.label : 'More Models'}
+                                    {model.label}
                                 </span>
-                                <ChevronDown className={cn(
-                                    "transition-transform",
-                                    compact ? "h-3 w-3" : "h-4 w-4"
+                                {model.variant && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {model.variant}
+                                    </span>
+                                )}
+                            </div>
+                            {isActive && (
+                                <Check className={cn(
+                                    "text-primary flex-shrink-0",
+                                    compact ? "h-4 w-4" : "h-5 w-5 sm:h-4 sm:w-4"
                                 )} />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-[200px]">
-                            {additionalModels.map((model) => {
-                                const canAccess = canAccessModel(model.id);
-                                const isSelected = selectedModel === model.id;
-                                
-                                return (
-                                    <div
-                                        key={model.id}
-                                        className={cn(
-                                            "flex items-center justify-between px-3 py-2 text-sm cursor-pointer rounded-md transition-colors",
-                                            isSelected ? "bg-muted" : "hover:bg-muted/50",
-                                            !canAccess && "opacity-50"
-                                        )}
-                                        onClick={() => {
-                                            if (canAccess) {
-                                                onModelChange(model.id);
-                                            } else {
-                                                usePricingModalStore.getState().openPricingModal({
-                                                    isAlert: true,
-                                                    alertTitle: `Upgrade to access ${model.label}`
-                                                });
-                                            }
-                                        }}
-                                    >
-                                        <span className="font-medium">{model.label}</span>
-                                        {isSelected && <Check className="h-4 w-4 text-primary" />}
-                                        {!canAccess && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-                                    </div>
-                                );
-                            })}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
+                            )}
+                        </div>
+                    );
+                })}
             </div>
-        );
-    }, [modelOptions, selectedModel, canAccessModel, onModelChange]);
+        </>
+    ), [modelOptions, selectedModel, canAccessModel, onModelChange, isAdmin, isLoadingAdminRole, isMobile]);
+    // feature-end: mobile-model-sheet
 
     const WorkerSettingsButtons = useCallback(({ compact = false }: { compact?: boolean }) => (
         onAgentSelect && (selectedAgentId || displayAgent?.agent_id) ? (
@@ -588,6 +507,33 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
             );
         }
 
+        // feature-start: mobile-model-sheet
+        if (mobileSection === 'models') {
+            return (
+                <div className="flex flex-col h-full">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                        <button
+                            onClick={() => setMobileSection('main')}
+                            className="p-2 -ml-2 hover:bg-muted/50 rounded-2xl transition-colors"
+                        >
+                            <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                        <span className="text-base font-semibold">Select Model</span>
+                    </div>
+
+                    {/* List */}
+                    <div className="flex-1 overflow-hidden">
+                        <div className="px-4 pb-2 pt-3">
+                            <span className="text-xs font-medium text-muted-foreground">Available Models</span>
+                        </div>
+                        <ModelsList compact={false} />
+                    </div>
+                </div>
+            );
+        }
+        // feature-end: mobile-model-sheet
+
         // Main section
         return (
             <div className="flex flex-col">
@@ -605,13 +551,13 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                         <div className="px-4 pb-2">
                             <button
                                 onClick={() => setMobileSection('agents')}
-                                className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border bg-card hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                                className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border bg-card dark:bg-card/50 hover:bg-muted/50 active:bg-muted/70 transition-colors"
                             >
-                                <div className="flex items-center justify-center w-10 h-10 bg-card border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
+                                <div className="flex items-center justify-center w-10 h-10 bg-card dark:bg-card/50 border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
                                     {renderAgentIcon(isLoading && !displayAgent ? placeholderSunaAgent : displayAgent, 40)}
                                 </div>
                                 <span className="flex-1 truncate text-base font-medium text-left min-w-0">
-                                    {displayAgent?.name || 'Kortix'}
+                                    {displayAgent?.name || 'Suna'}
                                 </span>
                                 <ChevronDown className="h-5 w-5 text-muted-foreground rotate-[-90deg] flex-shrink-0" />
                             </button>
@@ -619,13 +565,32 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                     </>
                 )}
 
-                {/* Mode toggle */}
-                <div className="px-3 pt-2 pb-1">
-                    <span className="text-xs font-medium text-muted-foreground">Mode</span>
-                </div>
-                <div className="px-3 pb-3">
-                    <ModeToggle compact={false} />
-                </div>
+                {/* Model selector */}
+                {/* feature-start: mobile-model-sheet */}
+                <>
+                    <div className="px-4 pt-1 pb-1">
+                        <span className="text-xs font-medium text-muted-foreground">Model</span>
+                    </div>
+                    <div className="px-4 pb-2">
+                        <button
+                            onClick={() => setMobileSection('models')}
+                            className="w-full flex items-center gap-3 p-3 rounded-2xl border border-border bg-card hover:bg-muted/50 active:bg-muted/70 transition-colors"
+                        >
+                            <div className="flex items-center justify-center w-10 h-10 flex-shrink-0">
+                                <ModelProviderIcon
+                                    modelId={selectedModel}
+                                    size={40}
+                                    className="flex-shrink-0"
+                                />
+                            </div>
+                            <span className="flex-1 truncate text-base font-medium text-left min-w-0">
+                                {modelOptions.find(m => m.id === selectedModel)?.label || 'Select Model'}
+                            </span>
+                            <ChevronDown className="h-5 w-5 text-muted-foreground rotate-[-90deg] flex-shrink-0" />
+                        </button>
+                    </div>
+                </>
+                {/* feature-end: mobile-model-sheet */}
 
                 {/* Worker settings */}
                 {onAgentSelect && (selectedAgentId || displayAgent?.agent_id) && (
@@ -635,7 +600,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                 )}
             </div>
         );
-    }, [mobileSection, searchQuery, onAgentSelect, displayAgent, isLoading, placeholderSunaAgent, renderAgentIcon, selectedAgentId, AgentsList, CreateWorkerButton, ModeToggle, WorkerSettingsButtons]);
+    }, [mobileSection, searchQuery, onAgentSelect, displayAgent, isLoading, placeholderSunaAgent, renderAgentIcon, selectedAgentId, selectedModel, modelOptions, AgentsList, CreateWorkerButton, WorkerSettingsButtons, ModelsList]);
 
     // Trigger button
     const TriggerButton = (
@@ -650,7 +615,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                 <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
                     {renderAgentIcon(isLoading && !displayAgent ? placeholderSunaAgent : displayAgent, 24)}
                     <span className="truncate text-sm font-medium">
-                        {displayAgent?.name || 'Kortix'}
+                        {displayAgent?.name || 'Suna'}
                     </span>
                     <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                 </div>
@@ -722,7 +687,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                                     <div className="flex items-center justify-center w-8 h-8 bg-card border-[1.5px] border-border flex-shrink-0" style={{ borderRadius: '10.4px' }}>
                                                         {renderAgentIcon(isLoading && !displayAgent ? placeholderSunaAgent : displayAgent)}
                                                     </div>
-                                                    <span className="flex-1 truncate font-medium text-left">{displayAgent?.name || 'Kortix'}</span>
+                                                    <span className="flex-1 truncate font-medium text-left">{displayAgent?.name || 'Suna'}</span>
                                                 </DropdownMenuSubTrigger>
                                                 <DropdownMenuPortal>
                                                     <DropdownMenuSubContent className="w-[320px] px-0 py-3 border-[1.5px] border-border rounded-2xl max-h-[500px] overflow-hidden" sideOffset={8}>
@@ -753,14 +718,86 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                                 </>
                             )}
 
-                            {/* Mode Toggle */}
-                            <div className="px-3 pt-2 pb-1">
-                                <span className="text-xs font-medium text-muted-foreground">Mode</span>
+                            {/* Models Submenu */}
+                            <div className="px-3">
+                                <div className="mb-3">
+                                    <span className="text-xs font-medium text-muted-foreground">Models</span>
+                                </div>
                             </div>
-                            <div className="px-3 pb-2">
-                                <ModeToggle compact={true} />
+                            <div className="px-2">
+                                <SpotlightCard className="transition-colors cursor-pointer bg-transparent">
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger className="flex items-center gap-3 text-sm cursor-pointer px-1 py-1 hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent w-full">
+                                            <ModelProviderIcon
+                                                modelId={selectedModel}
+                                                size={32}
+                                                className="flex-shrink-0"
+                                            />
+                                            <span className="flex-1 truncate font-medium text-left">
+                                                {modelOptions.find(m => m.id === selectedModel)?.label || 'Select Model'}
+                                            </span>
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuPortal>
+                                            <DropdownMenuSubContent className="w-[320px] p-3 border-[1.5px] border-border rounded-2xl max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent" sideOffset={8}>
+                                                <div className="mb-3">
+                                                    <span className="text-xs font-medium text-muted-foreground pl-1">Available Models</span>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    {modelOptions.map((model) => {
+                                                        const isActive = selectedModel === model.id;
+                                                        const canAccess = canAccessModel(model.id);
+
+                                                        return (
+                                                            <ModelItemWithTooltip
+                                                                key={model.id}
+                                                                model={model}
+                                                                isActive={isActive}
+                                                                canAccess={canAccess}
+                                                                onSelect={() => {
+                                                                    // Check if it's a local model (Ollama/LM Studio) and if user is admin
+                                                                    if (isLocalModel(model.id)) {
+                                                                        // If still loading admin role, show a loading toast
+                                                                        if (isLoadingAdminRole) {
+                                                                            toast.info('Checking permissions...', {
+                                                                                description: 'Please wait while we verify your access.',
+                                                                                duration: 2000,
+                                                                            });
+                                                                            return;
+                                                                        }
+
+                                                                        // If not admin, block with clear error message
+                                                                        if (!isAdmin) {
+                                                                            toast.error('Admin Access Restriction', {
+                                                                                description: 'Local models (Ollama, LM Studio) require admin privileges.',
+                                                                                duration: 5000,
+                                                                            });
+                                                                            setIsOpen(false);
+                                                                            return;
+                                                                        }
+                                                                    }
+
+                                                                    if (canAccess) {
+                                                                        onModelChange(model.id);
+                                                                        setIsOpen(false);
+                                                                    } else {
+                                                                        setIsOpen(false);
+                                                                        usePricingModalStore.getState().openPricingModal({
+                                                                            isAlert: true,
+                                                                            alertTitle: 'Upgrade to access this AI model'
+                                                                        });
+                                                                    }
+                                                                }}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuPortal>
+                                    </DropdownMenuSub>
+                                </SpotlightCard>
                             </div>
-                            <div className="h-px bg-border/50 -mx-3 my-2" />
+
+                            <div className="h-px bg-border/50 -mx-3 my-3" />
                             <WorkerSettingsButtons compact={true} />
                         </TooltipProvider>
                     </DropdownMenuContent>
@@ -769,7 +806,7 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
 
             {/* Dialogs */}
             <Dialog open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
-                <DialogContent className="p-0 max-w-6xl h-[90vh] sm:h-[90vh] max-h-[100vh] sm:max-h-[90vh] overflow-hidden">
+                <DialogContent className="p-0 max-w-6xl h-[90vh] overflow-hidden">
                     <DialogHeader className="sr-only">
                         <DialogTitle>Integrations</DialogTitle>
                     </DialogHeader>
@@ -778,8 +815,6 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
                         selectedAgentId={selectedAgentId}
                         onAgentChange={onAgentSelect}
                         onClose={() => setIntegrationsOpen(false)}
-                        isBlocked={isFreeTier}
-                        onBlockedClick={() => openPricingModal()}
                     />
                 </DialogContent>
             </Dialog>
@@ -806,37 +841,39 @@ const LoggedInMenu: React.FC<UnifiedConfigMenuProps> = memo(function LoggedInMen
 
 const GuestMenu: React.FC<UnifiedConfigMenuProps> = memo(function GuestMenu() {
     return (
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <span className="inline-block">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-10 px-2 sm:px-3 py-2 bg-transparent border-[1.5px] border-border rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-1 sm:gap-1.5 cursor-pointer transition-all duration-200 flex-shrink-0 animate-in fade-in-0 zoom-in-95"
-                        disabled
-                    >
-                        <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
-                            <div className="flex-shrink-0">
-                                <KortixLogo size={20} />
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="inline-flex">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 bg-border border-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center gap-1.5 cursor-not-allowed opacity-80 pointer-events-none"
+                            disabled
+                        >
+                            <div className="flex items-center gap-2 min-w-0 max-w-[180px]">
+                                <div className="flex-shrink-0">
+                                    <KortixLogo size={20} />
+                                </div>
+                                <span className="truncate text-sm font-medium">Suna</span>
+                                <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
                             </div>
-                            <span className="truncate text-sm font-medium">Kortix</span>
-                            <ChevronDown size={12} className="opacity-60 flex-shrink-0" />
-                        </div>
-                    </Button>
-                </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
-                <p>Log in to change agent</p>
-            </TooltipContent>
-        </Tooltip>
+                        </Button>
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                    <p>Log in to change agent</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
     );
 });
 
-export const UnifiedConfigMenu: React.FC<UnifiedConfigMenuProps> = memo(function UnifiedConfigMenu(props) {
+export const UnifiedConfigMenu: React.FC<UnifiedConfigMenuProps> = (props) => {
     if (props.isLoggedIn) {
         return <LoggedInMenu {...props} />;
     }
     return <GuestMenu {...props} />;
-});
+};
 
 export default UnifiedConfigMenu;

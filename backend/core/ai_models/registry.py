@@ -2,6 +2,8 @@ from typing import Dict, List, Optional, Tuple, Any
 from .models import Model, ModelProvider, ModelCapability, ModelPricing, ModelConfig
 from core.utils.config import config, EnvMode
 from core.utils.logger import logger
+from .fallback_registry import fallback_registry
+from .aws_registry import registry as aws_registry
 
 # Use Bedrock for STAGING and PRODUCTION, LOCAL uses native APIs (Anthropic API, etc.)
 SHOULD_USE_BEDROCK = config.ENV_MODE in (EnvMode.STAGING, EnvMode.PRODUCTION)
@@ -79,7 +81,7 @@ class ModelRegistry:
                 # cache_write_1h_cost_per_million_tokens=2.00
             ),
             tier_availability=["free", "paid"],
-            priority=102,
+            priority=200,
             recommended=True,
             enabled=True,
             fallback_model_id=HAIKU_BEDROCK_ARN,  # Fallback for vision/image input
@@ -122,7 +124,7 @@ class ModelRegistry:
                 # cache_write_1h_cost_per_million_tokens=2.00
             ),
             tier_availability=["paid"],
-            priority=101,
+            priority=199,
             recommended=True,
             enabled=True,
             fallback_model_id=HAIKU_BEDROCK_ARN,  # Fallback for vision/image input
@@ -146,6 +148,8 @@ class ModelRegistry:
             # test_litellm_id = "openrouter/deepseek/deepseek-v3.2-speciale" 164K context $0.27/M input tokens $0.41/M output tokens
             # test_litellm_id = "openrouter/deepseek/deepseek-v3.2" 164K context $0.26/M input tokens $0.38/M output tokens
 
+            # test_litellm_id ="groq/moonshotai/kimi-k2-instruct" 
+
             self.register(Model(
                 id="kortix/test",
                 name="Kortix Test",
@@ -166,12 +170,25 @@ class ModelRegistry:
                     cache_write_5m_cost_per_million_tokens=0.375,
                 ),
                 tier_availability=["free", "paid"],
-                priority=100,
+                priority=198,
                 recommended=False,
                 enabled=True,
-                fallback_model_id=HAIKU_BEDROCK_ARN,
                 config=ModelConfig()
             ))
+
+        # Merge models from Fallback Registry
+        for model in fallback_registry.get_all(enabled_only=False):
+            # Only register if not already registered to avoid overwriting presets
+            # But we might want to overwrite if fallback has better config? 
+            # Presets (Kortix Basic/Power) use specific IDs "kortix/basic" etc.
+            # Fallback models use "anthropic/claude-..." etc.
+            # So IDs shouldn't collide.
+            self.register(model)
+
+        # Merge models from AWS Registry
+        for model in aws_registry.get_all(enabled_only=False):
+            self.register(model)
+
     
     def register(self, model: Model) -> None:
         self._models[model.id] = model

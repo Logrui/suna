@@ -14,209 +14,42 @@ import {
 } from '@/components/ui/tooltip';
 import { UploadedFile } from './chat-input';
 import { normalizeFilenameToNFC } from '@/lib/utils/unicode';
-import { backendApi } from '@/lib/api-client';
-import JSZip from 'jszip';
-import {
-  UPLOAD_LIMITS,
-  ALLOWED_EXTENSIONS,
-  isAllowedFile,
-  isExtractableArchive,
-  formatFileSize,
-} from '@/lib/constants/upload-limits';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
-const ALLOWED_EXTENSIONS_STRING = ALLOWED_EXTENSIONS.join(',');
-
-interface StageFileResponse {
-  file_id: string;
-  filename: string;
-  storage_path: string;
-  mime_type: string;
-  file_size: number;
-  status: string;
-}
-
-const stageFileToS3 = async (
-  file: File,
-  fileId: string,
-  setUploadedFiles: React.Dispatch<React.SetStateAction<UploadedFile[]>>,
-): Promise<void> => {
-  const normalizedName = normalizeFilenameToNFC(file.name);
-  
-  try {
-    const formData = new FormData();
-    formData.append('file', file, normalizedName);
-    formData.append('file_id', fileId);
-    
-    const response = await backendApi.upload<StageFileResponse>(
-      '/files/stage',
-      formData,
-      { showErrors: false }
-    );
-    
-    if (response.error) {
-      throw new Error(response.error.message || 'Upload failed');
-    }
-    
-    setUploadedFiles((prev) => 
-      prev.map((f) => 
-        f.fileId === fileId 
-          ? { ...f, status: 'ready' as const }
-          : f
-      )
-    );
-    
-  } catch (error) {
-    console.error(`Failed to stage file ${normalizedName}:`, error);
-    setUploadedFiles((prev) => 
-      prev.map((f) => 
-        f.fileId === fileId 
-          ? { ...f, status: 'error' as const }
-          : f
-      )
-    );
-    toast.error(`Failed to upload: ${normalizedName}`);
-  }
-};
-
-const handleLocalFilesOptimistic = async (
+const handleLocalFiles = (
   files: File[],
   setPendingFiles: React.Dispatch<React.SetStateAction<File[]>>,
   setUploadedFiles: React.Dispatch<React.SetStateAction<UploadedFile[]>>,
 ) => {
-  const processedFiles: File[] = [];
-  
-  for (const file of files) {
-    if (isExtractableArchive(file)) {
-      const extracted = await extractZipFiles(file);
-      processedFiles.push(...extracted);
-    } else {
-      const validation = isAllowedFile(file);
-      if (!validation.allowed) {
-        toast.error(`${file.name}: ${validation.reason}`);
-        continue;
-      }
-      processedFiles.push(file);
+  const filteredFiles = files.filter((file) => {
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error(`File size exceeds 50MB limit: ${file.name}`);
+      return false;
     }
-  }
-  
-  if (processedFiles.length === 0) return;
-
-  const newUploadedFiles: UploadedFile[] = processedFiles.map((file) => {
-    const normalizedName = normalizeFilenameToNFC(file.name);
-    const fileId = crypto.randomUUID();
-
-    return {
-      name: normalizedName,
-      path: `/workspace/uploads/${normalizedName}`,
-      size: file.size,
-      type: file.type || 'application/octet-stream',
-      localUrl: URL.createObjectURL(file),
-      fileId,
-      status: 'pending' as const,
-    };
-  });
-
-  setPendingFiles((prevFiles) => [...prevFiles, ...processedFiles]);
-  setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
-};
-
-const extractZipFiles = async (zipFile: File): Promise<File[]> => {
-  try {
-    const zip = await JSZip.loadAsync(zipFile);
-    const extractedFiles: File[] = [];
-    let totalSize = 0;
-    let fileCount = 0;
-    
-    const entries = Object.entries(zip.files).filter(([_, file]) => !file.dir);
-    
-    if (entries.length > UPLOAD_LIMITS.MAX_ZIP_FILES) {
-      toast.error(`Zip contains too many files (${entries.length}). Max: ${UPLOAD_LIMITS.MAX_ZIP_FILES}`);
-      return [];
-    }
-    
-    for (const [path, file] of entries) {
-      const filename = path.split('/').pop() || path;
-      const content = await file.async('blob');
-      
-      totalSize += content.size;
-      if (totalSize > UPLOAD_LIMITS.MAX_ZIP_TOTAL_SIZE_BYTES) {
-        toast.error(`Zip total size exceeds ${formatFileSize(UPLOAD_LIMITS.MAX_ZIP_TOTAL_SIZE_BYTES)} limit`);
-        return [];
-      }
-      
-      if (content.size > UPLOAD_LIMITS.MAX_FILE_SIZE_BYTES) {
-        toast.warning(`Skipping ${filename}: exceeds ${UPLOAD_LIMITS.MAX_FILE_SIZE_MB}MB limit`);
-        continue;
-      }
-      
-      const ext = '.' + filename.split('.').pop()?.toLowerCase();
-      if (!ALLOWED_EXTENSIONS.includes(ext as any)) {
-        toast.warning(`Skipping ${filename}: unsupported file type`);
-        continue;
-      }
-      
-      const extractedFile = new File([content], filename, { type: content.type || 'application/octet-stream' });
-      extractedFiles.push(extractedFile);
-      fileCount++;
-    }
-    
-    if (fileCount > 0) {
-      toast.success(`Extracted ${fileCount} files from ${zipFile.name}`);
-    }
-    
-    return extractedFiles;
-  } catch (error) {
-    console.error('Failed to extract zip:', error);
-    toast.error(`Failed to extract ${zipFile.name}`);
-    return [];
-  }
-};
-
-const handleLocalFiles = async (
-  files: File[],
-  setPendingFiles: React.Dispatch<React.SetStateAction<File[]>>,
-  setUploadedFiles: React.Dispatch<React.SetStateAction<UploadedFile[]>>,
-  setIsUploading?: React.Dispatch<React.SetStateAction<boolean>>,
-) => {
-  const processedFiles: File[] = [];
-  
-  for (const file of files) {
-    if (isExtractableArchive(file)) {
-      const extracted = await extractZipFiles(file);
-      processedFiles.push(...extracted);
-    } else {
-      const validation = isAllowedFile(file);
-      if (!validation.allowed) {
-        toast.error(`${file.name}: ${validation.reason}`);
-        continue;
-      }
-      processedFiles.push(file);
-    }
-  }
-  
-  const filteredFiles = processedFiles;
-
-  if (filteredFiles.length === 0) return;
-
-  const newUploadedFiles: UploadedFile[] = filteredFiles.map((file) => {
-    const normalizedName = normalizeFilenameToNFC(file.name);
-    const fileId = crypto.randomUUID();
-
-    return {
-      name: normalizedName,
-      path: `/workspace/uploads/${normalizedName}`,
-      size: file.size,
-      type: file.type || 'application/octet-stream',
-      localUrl: URL.createObjectURL(file),
-      fileId,
-      status: 'pending' as const,
-    };
+    return true;
   });
 
   setPendingFiles((prevFiles) => [...prevFiles, ...filteredFiles]);
+
+  const newUploadedFiles: UploadedFile[] = filteredFiles.map((file) => {
+    // Normalize filename to NFC
+    const normalizedName = normalizeFilenameToNFC(file.name);
+
+    return {
+      name: normalizedName,
+      path: `/workspace/uploads/${normalizedName}`,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      localUrl: URL.createObjectURL(file)
+    };
+  });
+
   setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
+  filteredFiles.forEach((file) => {
+    const normalizedName = normalizeFilenameToNFC(file.name);
+    toast.success(`File attached: ${normalizedName}`);
+  });
 };
 
 const uploadFiles = async (
@@ -231,18 +64,22 @@ const uploadFiles = async (
   try {
     setIsUploading(true);
 
-    const fileUploadResults: Array<{ originalName: string; uploadedFile: UploadedFile }> = [];
+    const newUploadedFiles: UploadedFile[] = [];
 
     for (const file of files) {
-      if (file.size > UPLOAD_LIMITS.MAX_FILE_SIZE_BYTES) {
-        toast.error(`File size exceeds ${UPLOAD_LIMITS.MAX_FILE_SIZE_MB}MB limit: ${file.name}`);
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(`File size exceeds 50MB limit: ${file.name}`);
         continue;
       }
 
+      // Normalize filename to NFC
       const normalizedName = normalizeFilenameToNFC(file.name);
+      // Backend will now handle the path to /workspace/uploads/ and unique naming
       const uploadPath = `/workspace/uploads/${normalizedName}`;
 
       const formData = new FormData();
+      // If the filename was normalized, append with the normalized name in the field name
+      // The server will use the path parameter for the actual filename
       formData.append('file', file, normalizedName);
       formData.append('path', uploadPath);
 
@@ -297,14 +134,11 @@ const uploadFiles = async (
         });
       }
 
-      fileUploadResults.push({
-        originalName: normalizedName,
-        uploadedFile: {
-          name: finalFilename,
-          path: actualPath,
-          size: file.size,
-          type: file.type || 'application/octet-stream',
-        },
+      newUploadedFiles.push({
+        name: finalFilename,
+        path: actualPath,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
       });
 
       if (wasRenamed) {
@@ -314,18 +148,7 @@ const uploadFiles = async (
       }
     }
 
-    setUploadedFiles((prev) => {
-      const updated = [...prev];
-      for (const { originalName, uploadedFile } of fileUploadResults) {
-        const index = updated.findIndex(f => normalizeFilenameToNFC(f.name) === normalizeFilenameToNFC(originalName) && f.status === 'pending');
-        if (index !== -1) {
-          updated[index] = { ...updated[index], ...uploadedFile, status: 'ready' as const };
-        } else {
-          updated.push({ ...uploadedFile, status: 'ready' as const });
-        }
-      }
-      return updated;
-    });
+    setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
 
     // Clear pending files after successful upload
     if (setPendingFiles) {
@@ -355,14 +178,15 @@ const uploadFilesToProject = async (
   try {
     setIsUploading(true);
 
-    const fileUploadResults: Array<{ originalName: string; uploadedFile: UploadedFile }> = [];
+    const newUploadedFiles: UploadedFile[] = [];
 
     for (const file of files) {
-      if (file.size > UPLOAD_LIMITS.MAX_FILE_SIZE_BYTES) {
-        toast.error(`File size exceeds ${UPLOAD_LIMITS.MAX_FILE_SIZE_MB}MB limit: ${file.name}`);
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(`File size exceeds 50MB limit: ${file.name}`);
         continue;
       }
 
+      // Normalize filename to NFC
       const normalizedName = normalizeFilenameToNFC(file.name);
       const uploadPath = `/workspace/uploads/${normalizedName}`;
 
@@ -400,14 +224,11 @@ const uploadFilesToProject = async (
       const finalFilename = responseData.final_filename || normalizedName;
       const wasRenamed = responseData.renamed || false;
 
-      fileUploadResults.push({
-        originalName: normalizedName,
-        uploadedFile: {
-          name: finalFilename,
-          path: actualPath,
-          size: file.size,
-          type: file.type || 'application/octet-stream',
-        },
+      newUploadedFiles.push({
+        name: finalFilename,
+        path: actualPath,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
       });
 
       if (wasRenamed) {
@@ -417,19 +238,8 @@ const uploadFilesToProject = async (
       }
     }
 
-    setUploadedFiles((prev) => {
-      const updated = [...prev];
-      for (const { originalName, uploadedFile } of fileUploadResults) {
-        const index = updated.findIndex(f => normalizeFilenameToNFC(f.name) === normalizeFilenameToNFC(originalName) && f.status === 'pending');
-        if (index !== -1) {
-          updated[index] = { ...updated[index], ...uploadedFile, status: 'ready' as const };
-        } else {
-          updated.push({ ...uploadedFile, status: 'ready' as const });
-        }
-      }
-      return updated;
-    });
-    
+    setUploadedFiles((prev) => [...prev, ...newUploadedFiles]);
+
     // Clear pending files after successful upload
     if (setPendingFiles) {
       setPendingFiles([]);
@@ -455,15 +265,18 @@ const handleFiles = async (
   setPendingFiles: React.Dispatch<React.SetStateAction<File[]>>,
   setUploadedFiles: React.Dispatch<React.SetStateAction<UploadedFile[]>>,
   setIsUploading: React.Dispatch<React.SetStateAction<boolean>>,
-  messages: any[] = [],
-  queryClient?: any,
+  messages: any[] = [], // Add messages parameter
+  queryClient?: any, // Add queryClient parameter
 ) => {
-  await handleLocalFiles(files, setPendingFiles, setUploadedFiles, setIsUploading);
-
-  if (sandboxId && files.length > 0) {
+  if (sandboxId) {
+    // If we have a sandboxId, upload files directly to sandbox
     await uploadFiles(files, sandboxId, setUploadedFiles, setIsUploading, messages, queryClient, setPendingFiles);
-  } else if (projectId && files.length > 0) {
+  } else if (projectId) {
+    // If we have a projectId but no sandbox, upload to project (creates sandbox if needed)
     await uploadFilesToProject(files, projectId, setUploadedFiles, setIsUploading, setPendingFiles);
+  } else {
+    // No sandboxId or projectId, store files locally
+    handleLocalFiles(files, setPendingFiles, setUploadedFiles);
   }
 };
 
@@ -578,7 +391,6 @@ export const FileUploadHandler = memo(forwardRef<
           className="hidden"
           onChange={processFileUpload}
           multiple
-          accept={ALLOWED_EXTENSIONS_STRING}
         />
       </>
     );
@@ -586,94 +398,4 @@ export const FileUploadHandler = memo(forwardRef<
 ));
 
 FileUploadHandler.displayName = 'FileUploadHandler';
-
-export const uploadPendingFilesToProject = async (
-  files: File[],
-  projectId: string,
-  onProgress?: (fileIndex: number, status: 'uploading' | 'ready' | 'error', error?: string) => void,
-): Promise<{ success: boolean; uploadedPaths: string[] }> => {
-  const uploadedPaths: string[] = [];
-  let allSuccess = true;
-
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error('No access token available');
-  }
-
-  try {
-    await fetch(`${API_URL}/project/${projectId}/files/upload-started`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ file_count: files.length }),
-    });
-  } catch (e) {
-    console.warn('Failed to signal upload start:', e);
-  }
-
-  try {
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      onProgress?.(i, 'uploading');
-
-      try {
-        if (file.size > UPLOAD_LIMITS.MAX_FILE_SIZE_BYTES) {
-          throw new Error(`File size exceeds ${UPLOAD_LIMITS.MAX_FILE_SIZE_MB}MB limit`);
-        }
-
-        const normalizedName = normalizeFilenameToNFC(file.name);
-        const uploadPath = `/workspace/uploads/${normalizedName}`;
-
-        const formData = new FormData();
-        formData.append('file', file, normalizedName);
-        formData.append('path', uploadPath);
-
-        const response = await fetch(`${API_URL}/project/${projectId}/files`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          if (response.status === 431) {
-            throw new Error('Request is too large');
-          }
-          throw new Error(`Upload failed: ${response.statusText}`);
-        }
-
-        const responseData = await response.json();
-        const actualPath = responseData.path || uploadPath;
-        uploadedPaths.push(actualPath);
-        
-        onProgress?.(i, 'ready');
-      } catch (error) {
-        console.error(`Failed to upload file ${file.name}:`, error);
-        onProgress?.(i, 'error', error instanceof Error ? error.message : 'Upload failed');
-        allSuccess = false;
-      }
-    }
-  } finally {
-    try {
-      await fetch(`${API_URL}/project/${projectId}/files/upload-completed`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-    } catch (e) {
-      console.warn('Failed to signal upload complete:', e);
-    }
-  }
-
-  return { success: allSuccess, uploadedPaths };
-};
-
-export { handleFiles, handleLocalFiles, handleLocalFilesOptimistic, uploadFiles, uploadPendingFilesToProject as uploadFilesToProjectDirect };
+export { handleFiles, handleLocalFiles, uploadFiles };

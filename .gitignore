@@ -249,3 +249,4 @@ apps/mobile/
 .env
 .env.local
 .docs
+.jj/

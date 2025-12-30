@@ -59,6 +59,7 @@ import { isLocalMode } from '@/lib/config';
 
 interface ComposioConnectionsSectionProps {
   className?: string;
+  toolkit?: string;
 }
 
 interface McpUrlDialogProps {
@@ -89,7 +90,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   isDeleting,
 }) => {
   const isSingle = selectedProfiles.length === 1;
-  
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -98,7 +99,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             {isSingle ? 'Delete Profile' : `Delete ${selectedProfiles.length} Profiles`}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {isSingle 
+            {isSingle
               ? `Are you sure you want to delete "${selectedProfiles[0]?.profile_name}"? This action cannot be undone.`
               : `Are you sure you want to delete ${selectedProfiles.length} profiles? This action cannot be undone.`
             }
@@ -109,7 +110,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
+          <AlertDialogAction
             onClick={onConfirm}
             disabled={isDeleting}
             className="bg-destructive text-white hover:bg-destructive/90"
@@ -135,7 +136,7 @@ const McpUrlDialog: React.FC<McpUrlDialogProps> = ({
   const { data: toolkits } = useComposioCredentialsProfiles();
   const currentToolkit = useMemo(() => {
     if (!toolkits) return null;
-    return toolkits.find(toolkit => 
+    return toolkits.find(toolkit =>
       toolkit.profiles.some(p => p.profile_id === profileId)
     );
   }, [toolkits, profileId]);
@@ -168,8 +169,8 @@ const McpUrlDialog: React.FC<McpUrlDialogProps> = ({
           <DialogTitle className="flex items-center gap-3">
             <div className="h-14 w-14 rounded-lg bg-muted border flex items-center justify-center overflow-hidden">
               {currentToolkit?.icon_url ? (
-                <img 
-                  src={currentToolkit.icon_url} 
+                <img
+                  src={currentToolkit.icon_url}
                   alt={`${toolkitName} icon`}
                   className="h-8 w-8 object-contain"
                   onError={(e) => {
@@ -193,7 +194,7 @@ const McpUrlDialog: React.FC<McpUrlDialogProps> = ({
         <div className="space-y-6">
           <Alert className="border-amber-400/50 dark:border-amber-600/30 bg-amber-400/10 dark:bg-amber-900/10">
             <AlertDescription className="text-amber-800 dark:text-amber-600">
-              <strong>Security Warning:</strong> This MCP URL contains sensitive authentication 
+              <strong>Security Warning:</strong> This MCP URL contains sensitive authentication
               information and must not be shared. Anyone with access to this URL can perform actions on your behalf.
             </AlertDescription>
           </Alert>
@@ -335,10 +336,10 @@ const ToolkitTable: React.FC<ToolkitTableProps> = ({ toolkit }) => {
               <code className="text-xs flex items-center gap-2 font-mono text-muted-foreground bg-muted px-2 py-1 rounded-md">
                 https://mcp.composio.dev/...
                 <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewUrl(profile.profile_id, profile.profile_name, toolkit.toolkit_name)}
-                    className="h-6 text-xs"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleViewUrl(profile.profile_id, profile.profile_name, toolkit.toolkit_name)}
+                  className="h-6 text-xs"
                 >
                   <Eye className="h-3 w-3" />
                 </Button>
@@ -401,7 +402,7 @@ const ToolkitTable: React.FC<ToolkitTableProps> = ({ toolkit }) => {
                 <CheckCircle2 className="h-4 w-4" />
                 {profile.is_default ? 'Remove Default' : 'Set as Default'}
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => {
                   setSelectedProfiles([profile]);
                   setShowDeleteDialog(true);
@@ -425,8 +426,8 @@ const ToolkitTable: React.FC<ToolkitTableProps> = ({ toolkit }) => {
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-muted border flex items-center justify-center overflow-hidden">
             {toolkit.icon_url ? (
-              <img 
-                src={toolkit.icon_url} 
+              <img
+                src={toolkit.icon_url}
                 alt={`${toolkit.toolkit_name} icon`}
                 className="h-6 w-6 object-contain"
                 onError={(e) => {
@@ -468,7 +469,7 @@ const ToolkitTable: React.FC<ToolkitTableProps> = ({ toolkit }) => {
           ) : null
         }
       />
-      
+
       {selectedProfile && (
         <McpUrlDialog
           open={!!selectedProfile}
@@ -478,7 +479,7 @@ const ToolkitTable: React.FC<ToolkitTableProps> = ({ toolkit }) => {
           toolkitName={selectedProfile.toolkitName}
         />
       )}
-      
+
       <DeleteConfirmationDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
@@ -492,14 +493,23 @@ const ToolkitTable: React.FC<ToolkitTableProps> = ({ toolkit }) => {
 
 export const ComposioConnectionsSection: React.FC<ComposioConnectionsSectionProps> = ({
   className,
+  toolkit,
 }) => {
   const { data: toolkits, isLoading, error } = useComposioCredentialsProfiles();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(toolkit || '');
+
+  // Update search query if toolkit prop changes
+  React.useEffect(() => {
+    if (toolkit) {
+      setSearchQuery(toolkit);
+    }
+  }, [toolkit]);
+
   const [showRegistry, setShowRegistry] = useState(false);
   const queryClient = useQueryClient();
   const { data: accountState } = useAccountState();
   const { openPricingModal } = usePricingModalStore();
-  
+
   const isFreeTier = accountState && (
     accountState.subscription?.tier_key === 'free' ||
     accountState.tier?.name === 'free'
@@ -507,10 +517,10 @@ export const ComposioConnectionsSection: React.FC<ComposioConnectionsSectionProp
 
   const filteredToolkits = useMemo(() => {
     if (!toolkits || !searchQuery.trim()) return toolkits || [];
-    
-    return toolkits.filter(toolkit => 
+
+    return toolkits.filter(toolkit =>
       toolkit.toolkit_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      toolkit.profiles.some(profile => 
+      toolkit.profiles.some(profile =>
         profile.profile_name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     ).map(toolkit => ({
@@ -524,21 +534,21 @@ export const ComposioConnectionsSection: React.FC<ComposioConnectionsSectionProp
 
   const stats = useMemo(() => {
     if (!toolkits) return { totalProfiles: 0, connectedProfiles: 0, uniqueToolkits: 0 };
-    
+
     const totalProfiles = toolkits.reduce((acc, toolkit) => acc + toolkit.profiles.length, 0);
     const connectedProfiles = toolkits.reduce(
-      (acc, toolkit) => acc + toolkit.profiles.filter(p => p.is_connected).length, 
+      (acc, toolkit) => acc + toolkit.profiles.filter(p => p.is_connected).length,
       0
     );
     const uniqueToolkits = toolkits.length;
-    
+
     return { totalProfiles, connectedProfiles, uniqueToolkits };
   }, [toolkits]);
 
   const filteredStats = useMemo(() => {
     const filteredProfilesCount = filteredToolkits.reduce((acc, toolkit) => acc + toolkit.profiles.length, 0);
     const filteredToolkitsCount = filteredToolkits.length;
-    
+
     return { filteredProfilesCount, filteredToolkitsCount };
   }, [filteredToolkits]);
 
@@ -607,7 +617,7 @@ export const ComposioConnectionsSection: React.FC<ComposioConnectionsSectionProp
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            {searchQuery 
+            {searchQuery
               ? `${filteredStats.filteredToolkitsCount} ${filteredStats.filteredToolkitsCount === 1 ? 'app' : 'apps'} with ${filteredStats.filteredProfilesCount} ${filteredStats.filteredProfilesCount === 1 ? 'profile' : 'profiles'} found`
               : `${stats.uniqueToolkits} ${stats.uniqueToolkits === 1 ? 'app' : 'apps'} with ${stats.totalProfiles} ${stats.totalProfiles === 1 ? 'profile' : 'profiles'} (${stats.connectedProfiles} connected)`
             }
@@ -655,7 +665,7 @@ export const ComposioConnectionsSection: React.FC<ComposioConnectionsSectionProp
                   Try adjusting your search terms or browse all apps
                 </p>
               </div>
-              <Button 
+              <Button
                 onClick={() => setSearchQuery('')}
                 variant="outline"
                 size="sm"

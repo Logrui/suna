@@ -15,10 +15,10 @@ interface MemoryToggleProps {
   onMemoryToggle?: (enabled: boolean) => void;
 }
 
-export const MemoryToggle = memo(function MemoryToggle({ 
-  disabled, 
+export const MemoryToggle = memo(function MemoryToggle({
+  disabled,
   memoryEnabled: controlledEnabled,
-  onMemoryToggle 
+  onMemoryToggle
 }: MemoryToggleProps) {
   const t = useTranslations('settings.memory');
   const { data: stats } = useMemoryStats();
@@ -43,7 +43,7 @@ export const MemoryToggle = memo(function MemoryToggle({
       setShowPlanModalOpen(true);
       return;
     }
-    
+
     if (onMemoryToggle) {
       onMemoryToggle(!isEnabled);
     } else {
@@ -53,41 +53,41 @@ export const MemoryToggle = memo(function MemoryToggle({
 
   return (
     <>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleToggle}
-          disabled={disabled}
-          className={cn(
-            "relative h-10 w-10 p-0 bg-transparent border-[1.5px] border-border rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center justify-center cursor-pointer transition-colors",
-            !isFreeTier && isEnabled && "text-foreground bg-muted dark:bg-muted/50"
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggle}
+            disabled={disabled}
+            className={cn(
+              "relative h-10 w-10 p-0 bg-transparent border-[1.5px] border-border rounded-2xl text-muted-foreground hover:text-foreground hover:bg-accent/50 flex items-center justify-center cursor-pointer transition-colors",
+              !isFreeTier && isEnabled && "text-foreground bg-muted dark:bg-muted/50"
+            )}
+          >
+            <Brain className="h-4 w-4" />
+            {isFreeTier && (
+              <div className="absolute -top-1 -right-1 bg-background bg-primary rounded-full w-5 h-5 flex items-center justify-center">
+                <Lock className="h-2.5 w-2.5 scale-70 text-primary-foreground" />
+              </div>
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          {isFreeTier ? (
+            <>
+              <p>{t('upgradeRequired') || 'Memory requires upgrade'}</p>
+              <p className="text-xs text-muted-foreground">{t('clickToUpgrade') || 'Click to see plans'}</p>
+            </>
+          ) : (
+            <>
+              <p>{isEnabled ? (t('memoryEnabledTooltip') || 'Memory enabled') : (t('memoryDisabledTooltip') || 'Memory disabled')}</p>
+              <p className="text-xs text-muted-foreground">{t('clickToToggle') || `Click to ${isEnabled ? 'disable' : 'enable'}`}</p>
+            </>
           )}
-        >
-          <Brain className="h-4 w-4" />
-          {isFreeTier && (
-            <div className="absolute -top-1 -right-1 bg-background bg-primary rounded-full w-5 h-5 flex items-center justify-center">
-              <Lock className="h-2.5 w-2.5 scale-70 text-primary-foreground" />
-            </div>
-          )}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="top">
-        {isFreeTier ? (
-          <>
-            <p>{t('upgradeRequired') || 'Memory requires upgrade'}</p>
-            <p className="text-xs text-muted-foreground">{t('clickToUpgrade') || 'Click to see plans'}</p>
-          </>
-        ) : (
-          <>
-            <p>{isEnabled ? (t('memoryEnabledTooltip') || 'Memory enabled') : (t('memoryDisabledTooltip') || 'Memory disabled')}</p>
-            <p className="text-xs text-muted-foreground">{t('clickToToggle') || `Click to ${isEnabled ? 'disable' : 'enable'}`}</p>
-          </>
-        )}
-      </TooltipContent>
-    </Tooltip>
-    <PlanSelectionModal
+        </TooltipContent>
+      </Tooltip>
+      <PlanSelectionModal
         open={showPlanModalOpen}
         onOpenChange={setShowPlanModalOpen}
         returnUrl={typeof window !== 'undefined' ? window.location.href : '/'}

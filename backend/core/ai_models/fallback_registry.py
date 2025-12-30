@@ -17,6 +17,54 @@ class FallbackModelRegistry:
 
         # --- Google AI Studio Models (via Gemini API) ---
 
+        # Gemini 3 Pro Preview
+        self.register(Model(
+            id="google/gemini-3-pro-preview",
+            name="Gemini 3 Pro (Preview)",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-3-pro-preview", "google-gemini-3-pro-preview"],
+            context_window=2_097_152,
+            max_output_tokens=65_536,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING,
+                ModelCapability.STRUCTURED_OUTPUT,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=2.50,
+                output_cost_per_million_tokens=10.00
+            ),
+            tier_availability=["paid"],
+            priority=131,
+            enabled=config.GEMINI_API_KEY is not None,
+            fallback_models=["google/gemini-3-flash-preview"]
+        ))
+
+        # Gemini 3 Flash Preview
+        self.register(Model(
+            id="google/gemini-3-flash-preview",
+            name="Gemini 3 Flash (Preview)",
+            provider=ModelProvider.GOOGLE,
+            aliases=["gemini-3-flash-preview", "google-gemini-3-flash-preview"],
+            context_window=1_048_576,
+            max_output_tokens=65_536,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=0.50,
+                output_cost_per_million_tokens=3.00
+            ),
+            tier_availability=["free", "paid"],
+            priority=130,
+            enabled=config.GEMINI_API_KEY is not None,
+        ))
+
         # Gemini 2.5 Pro
         self.register(Model(
             id="google/gemini-2.5-pro",

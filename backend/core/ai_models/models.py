@@ -11,6 +11,8 @@ class ModelProvider(Enum):
     GOOGLE = "google"
     XAI = "xai"
     MOONSHOTAI = "moonshotai"
+    OLLAMA = "ollama"
+    LM_STUDIO = "lm_studio"
 
 
 class ModelCapability(Enum):
@@ -19,6 +21,7 @@ class ModelCapability(Enum):
     VISION = "vision"
     THINKING = "thinking"
     PROMPT_CACHING = "prompt_caching"
+    STRUCTURED_OUTPUT = "structured_output"
 
 
 @dataclass
@@ -71,6 +74,7 @@ class ModelConfig:
     # === Headers (Provider-Specific) ===
     headers: Optional[Dict[str, str]] = None
     extra_headers: Optional[Dict[str, str]] = None
+    extra_body: Optional[Dict[str, Any]] = None
     
     # === Bedrock-Specific Configuration ===
     performanceConfig: Optional[Dict[str, str]] = None  # e.g., {"latency": "optimized"}
@@ -92,6 +96,7 @@ class Model:
     
     aliases: List[str] = field(default_factory=list)
     context_window: int = 128_000
+    max_output_tokens: Optional[int] = None
     capabilities: List[ModelCapability] = field(default_factory=list)
     pricing: Optional[ModelPricing] = None
     enabled: bool = True
@@ -101,6 +106,7 @@ class Model:
     
     # Fallback model ID - LiteLLM model ID to use when this model fails (e.g., for vision fallback)
     fallback_model_id: Optional[str] = None
+    fallback_models: List[str] = field(default_factory=list)
     
     # Centralized model configuration
     config: Optional[ModelConfig] = None
@@ -109,6 +115,10 @@ class Model:
         # Default litellm_model_id to id if not provided
         if self.litellm_model_id is None:
             self.litellm_model_id = self.id
+            
+        # Backwards compatibility: if fallback_models provided but no fallback_model_id, use first one
+        if self.fallback_model_id is None and self.fallback_models:
+            self.fallback_model_id = self.fallback_models[0]
         
         # Ensure CHAT capability is always present
         if ModelCapability.CHAT not in self.capabilities:
@@ -156,6 +166,8 @@ class Model:
                 params["headers"] = self.config.headers.copy()
             if self.config.extra_headers:
                 params["extra_headers"] = self.config.extra_headers.copy()
+            if self.config.extra_body:
+                params["extra_body"] = self.config.extra_body.copy()
             if self.config.performanceConfig:
                 params["performanceConfig"] = self.config.performanceConfig.copy()
         
@@ -171,6 +183,11 @@ class Model:
                 elif key == "extra_headers" and "extra_headers" in params:
                     if isinstance(params["extra_headers"], dict) and isinstance(value, dict):
                         params["extra_headers"].update(value)
+                    else:
+                        params[key] = value
+                elif key == "extra_body" and "extra_body" in params:
+                    if isinstance(params["extra_body"], dict) and isinstance(value, dict):
+                        params["extra_body"].update(value)
                     else:
                         params[key] = value
                 else:
