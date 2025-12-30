@@ -168,7 +168,7 @@ CREATE POLICY trigger_events_select_policy ON trigger_events
 
 -- Service role can insert trigger events
 CREATE POLICY trigger_events_insert_policy ON trigger_events
-    FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+    FOR INSERT WITH CHECK (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 -- RLS Policies for custom_trigger_providers
 -- All authenticated users can view active custom providers
@@ -201,13 +201,13 @@ CREATE POLICY oauth_installations_select_policy ON oauth_installations
 
 -- Service role can insert/update/delete OAuth installations
 CREATE POLICY oauth_installations_insert_policy ON oauth_installations
-    FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+    FOR INSERT WITH CHECK (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 CREATE POLICY oauth_installations_update_policy ON oauth_installations
-    FOR UPDATE USING (auth.jwt() ->> 'role' = 'service_role');
+    FOR UPDATE USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 CREATE POLICY oauth_installations_delete_policy ON oauth_installations
-    FOR DELETE USING (auth.jwt() ->> 'role' = 'service_role');
+    FOR DELETE USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 -- Grant permissions
 GRANT ALL PRIVILEGES ON TABLE agent_triggers TO authenticated, service_role;

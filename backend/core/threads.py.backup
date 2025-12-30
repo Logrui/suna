@@ -484,21 +484,22 @@ async def get_thread_messages(
                 return raw_messages
             optimized_list = []
             for msg in raw_messages:
-                msg_type = msg.get("type")
+                msg_type = msg.get('type')
                 optimized_msg = {
-                    "message_id": msg.get("message_id"),
-                    "thread_id": msg.get("thread_id"),
-                    "type": msg_type,
-                    "is_llm_message": msg.get("is_llm_message"),
-                    "content": msg.get("content"),
-                    "metadata": msg.get("metadata", {}),
-                    "created_at": msg.get("created_at"),
-                    "updated_at": msg.get("updated_at"),
-                    "agent_id": msg.get("agent_id"),
+                    'message_id': msg.get('message_id'),
+                    'thread_id': msg.get('thread_id'),
+                    'type': msg_type,
+                    'is_llm_message': msg.get('is_llm_message'),
+                    'metadata': msg.get('metadata', {}),
+                    'created_at': msg.get('created_at'),
+                    'updated_at': msg.get('updated_at'),
+                    'agent_id': msg.get('agent_id'),
                 }
+                # Only include content for user messages
+                if msg_type == 'user':
+                    optimized_msg['content'] = msg.get('content')
                 optimized_list.append(optimized_msg)
             return optimized_list
-
         
         # STEP 1: Fetch messages ONCE
         raw_messages = await fetch_all_messages_raw()
@@ -538,7 +539,7 @@ async def add_message_to_thread(
     # Verify ownership or team access
     if thread_data['account_id'] != user_id:
         from core.utils.auth_utils import verify_and_authorize_thread_access
-        await verify_and_authorize_thread_access(client, thread_id, user_id)
+    await verify_and_authorize_thread_access(client, thread_id, user_id)
     
     try:
         message_result = await client.table('messages').insert({

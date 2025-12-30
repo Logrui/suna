@@ -676,7 +676,8 @@ class AgentRunner:
             # - If balance is negative: Stop (prevents infinite debt)
             # This way, a user with $0.10 can run a $0.15 request and go to -$0.05,
             # but the next iteration will stop them
-            can_run, message, reservation_id = await billing_integration.check_and_reserve_credits(self.account_id)
+            # BILLING DISABLED - always allow
+            can_run, message, reservation_id = True, "Billing disabled", None  # Originally: await billing_integration.check_and_reserve_credits(self.account_id)
             if not can_run:
                 error_msg = f"Insufficient credits: {message}"
                 logger.warning(f"Stopping agent - balance is negative: {error_msg}")

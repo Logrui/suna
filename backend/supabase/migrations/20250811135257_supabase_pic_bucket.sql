@@ -1,13 +1,7 @@
 BEGIN;
 
-INSERT INTO storage.buckets (id, name, public, allowed_mime_types, file_size_limit)
-VALUES (
-    'agent-profile-images',
-    'agent-profile-images', 
-    true,
-    ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']::text[],
-    5242880
-)
+INSERT INTO storage.buckets (id, name) VALUES (
+    'agent-profile-images', 'agent-profile-images')
 ON CONFLICT (id) DO NOTHING;
 
 DROP POLICY IF EXISTS "Users can upload agent profile images" ON storage.objects;

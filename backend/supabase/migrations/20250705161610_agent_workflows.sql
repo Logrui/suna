@@ -183,7 +183,7 @@ CREATE POLICY "Users can view executions for their workflows" ON workflow_execut
     );
 
 CREATE POLICY "Service role can manage executions" ON workflow_executions
-    FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+    FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 -- Workflow step executions policies
 CREATE POLICY "Users can view step executions for their workflows" ON workflow_step_executions
@@ -201,7 +201,7 @@ CREATE POLICY "Users can view step executions for their workflows" ON workflow_s
     );
 
 CREATE POLICY "Service role can manage step executions" ON workflow_step_executions
-    FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+    FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 -- Create function to update updated_at timestamp if it doesn't exist
 CREATE OR REPLACE FUNCTION update_updated_at_column()

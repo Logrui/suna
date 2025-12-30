@@ -72,7 +72,7 @@ class ScheduleProvider(TriggerProvider):
     async def setup_trigger(self, trigger: Trigger) -> bool:
         try:
             # Note: webhook_url removed - scheduled triggers may need alternative configuration
-            webhook_url = f"http://localhost:8000/api/triggers/{trigger.trigger_id}/webhook"
+            webhook_url = f"http://suna_backend_1:8000/api/triggers/{trigger.trigger_id}/webhook"
             cron_expression = trigger.config['cron_expression']
             user_timezone = trigger.config.get('timezone', 'UTC')
 

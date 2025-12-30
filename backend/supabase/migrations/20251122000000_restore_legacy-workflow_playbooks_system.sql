@@ -1,4 +1,4 @@
-﻿
+
 -- ==================================================================
 -- MIGRATION SOURCE: 20250417000000_workflow_system.sql
 -- ==================================================================
@@ -296,14 +296,14 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can insert executions" ON workflow_executions
-        FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+        FOR INSERT WITH CHECK (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can update executions" ON workflow_executions
-        FOR UPDATE USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR UPDATE USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -324,14 +324,14 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role full access to webhook_registrations" ON webhook_registrations
-        FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role full access to scheduled_jobs" ON scheduled_jobs
-        FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -345,7 +345,7 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can manage workflow templates" ON workflow_templates
-        FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -365,7 +365,7 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can insert execution logs" ON workflow_execution_logs
-        FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+        FOR INSERT WITH CHECK (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -775,7 +775,7 @@ CREATE POLICY "Users can view executions for their workflows" ON workflow_execut
     );
 
 CREATE POLICY "Service role can manage executions" ON workflow_executions
-    FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+    FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 -- Workflow step executions policies
 CREATE POLICY "Users can view step executions for their workflows" ON workflow_step_executions
@@ -793,7 +793,7 @@ CREATE POLICY "Users can view step executions for their workflows" ON workflow_s
     );
 
 CREATE POLICY "Service role can manage step executions" ON workflow_step_executions
-    FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+    FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 
 -- Create function to update updated_at timestamp if it doesn't exist
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -1206,20 +1206,20 @@ DROP POLICY IF EXISTS "Users can view public templates or their own templates" O
 CREATE POLICY "Users can view public templates or their own templates" ON agent_templates
     FOR SELECT USING (
         is_public = true OR 
-        creator_id = (auth.jwt() ->> 'sub')::uuid
+        creator_id = auth.uid()
     );
 
 DROP POLICY IF EXISTS "Users can create their own templates" ON agent_templates;
 CREATE POLICY "Users can create their own templates" ON agent_templates
-    FOR INSERT WITH CHECK (creator_id = (auth.jwt() ->> 'sub')::uuid);
+    FOR INSERT WITH CHECK (creator_id = auth.uid());
 
 DROP POLICY IF EXISTS "Users can update their own templates" ON agent_templates;
 CREATE POLICY "Users can update their own templates" ON agent_templates
-    FOR UPDATE USING (creator_id = (auth.jwt() ->> 'sub')::uuid);
+    FOR UPDATE USING (creator_id = auth.uid());
 
 DROP POLICY IF EXISTS "Users can delete their own templates" ON agent_templates;
 CREATE POLICY "Users can delete their own templates" ON agent_templates
-    FOR DELETE USING (creator_id = (auth.jwt() ->> 'sub')::uuid);
+    FOR DELETE USING (creator_id = auth.uid());
 
 -- Clean up helper functions
 DROP FUNCTION IF EXISTS column_exists(text, text);

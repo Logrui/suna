@@ -43,15 +43,9 @@ CREATE INDEX IF NOT EXISTS idx_file_uploads_thread_id ON public.file_uploads(thr
 CREATE INDEX IF NOT EXISTS idx_file_uploads_agent_id ON public.file_uploads(agent_id);
 CREATE INDEX IF NOT EXISTS idx_file_uploads_created_at ON public.file_uploads(created_at);
 
-INSERT INTO storage.buckets (id, name, public, allowed_mime_types, file_size_limit)
-VALUES (
-    'file-uploads',
-    'file-uploads', 
-    false,
-    NULL,
-    52428800
-)
-ON CONFLICT (id) DO UPDATE SET public = false;
+INSERT INTO storage.buckets (id, name) VALUES (
+    'file-uploads', 'file-uploads')
+ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.file_uploads 
 ADD CONSTRAINT file_uploads_user_storage_unique 

@@ -291,14 +291,14 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can insert executions" ON workflow_executions
-        FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+        FOR INSERT WITH CHECK (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can update executions" ON workflow_executions
-        FOR UPDATE USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR UPDATE USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -319,14 +319,14 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role full access to webhook_registrations" ON webhook_registrations
-        FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role full access to scheduled_jobs" ON scheduled_jobs
-        FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -340,7 +340,7 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can manage workflow templates" ON workflow_templates
-        FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+        FOR ALL USING (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -360,7 +360,7 @@ END $$;
 
 DO $$ BEGIN
     CREATE POLICY "Service role can insert execution logs" ON workflow_execution_logs
-        FOR INSERT WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+        FOR INSERT WITH CHECK (current_setting('request.jwt.claims', true)::json ->> 'role' = 'service_role');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

@@ -561,3 +561,16 @@ export const HIDE_STREAMING_XML_TAGS = new Set([
   'execute-data-provider-call',
   'execute-data-provider-endpoint',
 ]);
+// Helper function to extract thinking content from message
+export function extractThinkingContent(content: string | undefined | null): { thinking: string | null; mainContent: string } {
+  
+  if (!content) return { thinking: null, mainContent: "" };
+  const thinkingMatch = content.match(/<thinking>([\s\S]*?)<\/thinking>/);
+  if (thinkingMatch) {
+    const thinking = thinkingMatch[1].trim();
+    const mainContent = content.replace(/<thinking>[\s\S]*?<\/thinking>/, '').trim();
+    return { thinking, mainContent };
+  }
+  
+  return { thinking: null, mainContent: content };
+}

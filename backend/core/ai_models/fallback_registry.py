@@ -33,8 +33,8 @@ class FallbackModelRegistry:
                 ModelCapability.STRUCTURED_OUTPUT,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25,
-                output_cost_per_million_tokens=10.00
+                input_cost_per_million_tokens=0.0,
+                output_cost_per_million_tokens=0.0
             ),
             tier_availability=["paid"],
             priority=109,
@@ -57,8 +57,8 @@ class FallbackModelRegistry:
                 ModelCapability.THINKING,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.15,
-                output_cost_per_million_tokens=0.60
+                input_cost_per_million_tokens=0.0,
+                output_cost_per_million_tokens=0.0
             ),
             tier_availability=["free", "paid"],
             priority=108,
@@ -80,8 +80,8 @@ class FallbackModelRegistry:
                 ModelCapability.STRUCTURED_OUTPUT,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.075,
-                output_cost_per_million_tokens=0.30
+                input_cost_per_million_tokens=0.0,
+                output_cost_per_million_tokens=0.0
             ),
             tier_availability=["free", "paid"],
             priority=90,
@@ -103,8 +103,8 @@ class FallbackModelRegistry:
                 ModelCapability.THINKING, # "Extended Thinking" implied?
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
+                input_cost_per_million_tokens=0.0,
+                output_cost_per_million_tokens=0.0
             ),
             tier_availability=["paid"],
             priority=106,
@@ -132,8 +132,8 @@ class FallbackModelRegistry:
                 ModelCapability.THINKING, # "Extended Thinking"
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
-                output_cost_per_million_tokens=5.00
+                input_cost_per_million_tokens=0.0,
+                output_cost_per_million_tokens=0.0
             ),
             tier_availability=["paid"],
             priority=110,

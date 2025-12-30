@@ -42,8 +42,8 @@ class CreditService:
                 logger.info(f"LOCAL mode: Creating user {user_id} with tier='none' (no free tier in local mode)")
                 account_data = {
                     'account_id': user_id,
-                    'balance': '0',
-                    'tier': 'none',
+                    'balance': '999999',
+                    'tier': 'tier_200_1000',
                     'trial_status': 'none'
                 }
                 
@@ -68,8 +68,8 @@ class CreditService:
                 
                 account_data = {
                     'account_id': user_id,
-                    'balance': '0',
-                    'tier': 'none',
+                    'balance': '999999',
+                    'tier': 'tier_200_1000',
                     'trial_status': 'none'
                 }
                 

@@ -16,7 +16,8 @@ class BillingIntegration:
         
         This allows a single request to push balance negative, but prevents further requests.
         """
-        if config.ENV_MODE == EnvMode.LOCAL:
+        # BILLING DISABLED
+        if True:  # Originally: if config.ENV_MODE == EnvMode.LOCAL:
             return True, "Local mode", None
         
         balance_info = await credit_manager.get_balance(account_id)
@@ -41,7 +42,8 @@ class BillingIntegration:
         cache_read_tokens: int = 0,
         cache_creation_tokens: int = 0
     ) -> Dict:
-        if config.ENV_MODE == EnvMode.LOCAL:
+        # BILLING DISABLED
+        if True:  # Originally: if config.ENV_MODE == EnvMode.LOCAL:
             return {'success': True, 'cost': 0, 'new_balance': 999999}
 
         if cache_read_tokens > 0:
@@ -113,7 +115,8 @@ class BillingIntegration:
             context_info contains allowed_models, tier_info, etc.
         """
         # Skip all checks in local development mode
-        if config.ENV_MODE == EnvMode.LOCAL:
+        # BILLING DISABLED
+        if True:  # Originally: if config.ENV_MODE == EnvMode.LOCAL:
             logger.debug("Private Server/Development mode - skipping all billing and model access checks")
             return True, "Private Server/Development mode", {"local_mode": True}
         

@@ -10,7 +10,8 @@ from ..shared.config import is_model_allowed
 class BillingIntegration:
     @staticmethod
     async def check_and_reserve_credits(account_id: str, estimated_tokens: int = 10000) -> Tuple[bool, str, Optional[str]]:
-        if config.ENV_MODE == EnvMode.LOCAL:
+        # BILLING DISABLED - Always return success with zero cost
+        if True:  # Originally: if config.ENV_MODE == EnvMode.LOCAL:
             return True, "Local mode", None
         
         try:
@@ -37,7 +38,8 @@ class BillingIntegration:
         model_name: Optional[str], 
         client=None
     ) -> Tuple[bool, str, Dict]:
-        if config.ENV_MODE == EnvMode.LOCAL:
+        # BILLING DISABLED - Always return success with zero cost
+        if True:  # Originally: if config.ENV_MODE == EnvMode.LOCAL:
             logger.debug("Running in local development mode - skipping all billing and model access checks")
             return True, "Local development mode", {"local_mode": True}
         
@@ -88,7 +90,8 @@ class BillingIntegration:
         cache_read_tokens: int = 0,
         cache_creation_tokens: int = 0
     ) -> Dict:
-        if config.ENV_MODE == EnvMode.LOCAL:
+        # BILLING DISABLED - Always return success with zero cost
+        if True:  # Originally: if config.ENV_MODE == EnvMode.LOCAL:
             return {'success': True, 'cost': 0, 'new_balance': 999999}
 
         # Handle cache reads and writes separately with actual pricing
