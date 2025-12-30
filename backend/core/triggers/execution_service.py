@@ -1,4 +1,5 @@
 import json
+from core.utils.preview_urls import get_proxy_preview_url, get_vnc_preview_url, get_website_preview_url
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple, Optional
@@ -70,7 +71,7 @@ class SessionManager:
             "created_at": datetime.now(timezone.utc).isoformat()
         }).execute()
         
-        await self._create_sandbox_for_project(project_id)
+        # await self._create_sandbox_for_project(project_id)  # Sandbox is created dynamically by Daytona
         
         await client.table('threads').insert({
             "thread_id": thread_id,
