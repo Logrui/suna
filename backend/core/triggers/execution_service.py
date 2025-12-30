@@ -1,5 +1,4 @@
 import json
-from core.utils.preview_urls import get_proxy_preview_url, get_vnc_preview_url, get_website_preview_url
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Tuple, Optional
@@ -82,43 +81,6 @@ class SessionManager:
         
         logger.debug(f"Created agent session: project={project_id}, thread={thread_id}")
         return thread_id, project_id
-    
-    async def _create_sandbox_for_project(self, project_id: str) -> None:
-        client = await self._db.client
-        
-        try:
-            sandbox_id = str(uuid.uuid4())
-            sandbox_pass = str(uuid.uuid4())
-            
-            sandbox_url = get_proxy_preview_url(sandbox_id, 8080)
-            vnc_url = get_vnc_preview_url(sandbox_id)
-            website_url = get_website_preview_url(sandbox_id)
-            
-            token = str(uuid.uuid4())
-            
-            await client.table('sandboxes').insert({
-                'sandbox_id': sandbox_id,
-                'project_id': project_id,
-                'pass': sandbox_pass,
-                'vnc_preview': vnc_url,
-                'sandbox_url': website_url,
-                'token': token
-            }).execute()
-            
-            await client.table('projects').update({
-                'pass': sandbox_pass,
-                'vnc_preview': vnc_url,
-                'sandbox_url': website_url,
-                'token': token
-            }).eq('project_id', project_id).execute()
-            
-            if not update_result.data:
-                await delete_sandbox(sandbox_id)
-                raise Exception("Database update failed")
-                
-        except Exception as e:
-            await client.table('projects').delete().eq('project_id', project_id).execute()
-            raise Exception(f"Failed to create sandbox: {str(e)}")
     
     def _extract_url(self, link) -> str:
         if hasattr(link, 'url'):
