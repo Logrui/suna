@@ -95,32 +95,32 @@ export function KortixLoader({
 }: KortixLoaderProps) {
   const { colorScheme } = useColorScheme();
   const loaderSize = customSize || SIZE_MAP[size];
-
+  
   // Determine which theme to use
   const effectiveTheme = forceTheme || colorScheme;
-
+  
   // Apply color filter based on theme
   // The Lottie is originally white, we invert for light mode
-  const colorFilters = effectiveTheme === 'dark'
+  const colorFilters = effectiveTheme === 'dark' 
     ? undefined // Keep white for dark mode
     : [
-      {
-        keypath: 'Shape Layer 1',
-        color: '#000000', // Black for light mode
-      },
-      {
-        keypath: 'Shape Layer 2',
-        color: '#000000',
-      },
-      {
-        keypath: 'Shape Layer 3',
-        color: '#000000',
-      },
-      {
-        keypath: 'Shape Layer 4',
-        color: '#000000',
-      },
-    ];
+        {
+          keypath: 'Shape Layer 1',
+          color: '#000000', // Black for light mode
+        },
+        {
+          keypath: 'Shape Layer 2',
+          color: '#000000',
+        },
+        {
+          keypath: 'Shape Layer 3',
+          color: '#000000',
+        },
+        {
+          keypath: 'Shape Layer 4',
+          color: '#000000',
+        },
+      ];
 
   return (
     <View className={cn('items-center justify-center', className)} style={style}>
