@@ -134,18 +134,16 @@ GRANT EXECUTE ON FUNCTION transfer_device(UUID, UUID, TEXT) TO authenticated;
 
 
 -- Create the ui_grounding bucket
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('ui_grounding', 'ui_grounding', false)
+INSERT INTO storage.buckets (id, name) VALUES ('ui_grounding', 'ui_grounding')
 ON CONFLICT (id) DO NOTHING; -- Avoid error if bucket already exists
 
 -- Create the ui_grounding_trajs bucket
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('ui_grounding_trajs', 'ui_grounding_trajs', false)
+INSERT INTO storage.buckets (id, name)
+VALUES ('ui_grounding_trajs', 'ui_grounding_trajs')
 ON CONFLICT (id) DO NOTHING; -- Avoid error if bucket already exists
 
 -- Create the recordings bucket
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('recordings', 'recordings', false, null, null) -- Set file size limit and mime types as needed
+INSERT INTO storage.buckets (id, name) VALUES ('recordings', 'recordings') -- Set file size limit and mime types as needed
 ON CONFLICT (id) DO NOTHING; -- Avoid error if bucket already exists
 
 

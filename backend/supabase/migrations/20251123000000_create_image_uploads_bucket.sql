@@ -2,13 +2,8 @@ BEGIN;
 
 -- Create the image-uploads bucket for LLM vision processing
 -- This bucket stores images that will be analyzed by the vision tool
-INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES (
-    'image-uploads',
-    'image-uploads',
-    true,
-    52428800
-)
+INSERT INTO storage.buckets (id, name) VALUES (
+    'image-uploads', 'image-uploads')
 ON CONFLICT (id) DO NOTHING;
 
 -- RLS policies for image-uploads bucket

@@ -223,20 +223,20 @@ DROP POLICY IF EXISTS "Users can view public templates or their own templates" O
 CREATE POLICY "Users can view public templates or their own templates" ON agent_templates
     FOR SELECT USING (
         is_public = true OR 
-        creator_id = (auth.jwt() ->> 'sub')::uuid
+        creator_id = auth.uid()
     );
 
 DROP POLICY IF EXISTS "Users can create their own templates" ON agent_templates;
 CREATE POLICY "Users can create their own templates" ON agent_templates
-    FOR INSERT WITH CHECK (creator_id = (auth.jwt() ->> 'sub')::uuid);
+    FOR INSERT WITH CHECK (creator_id = auth.uid());
 
 DROP POLICY IF EXISTS "Users can update their own templates" ON agent_templates;
 CREATE POLICY "Users can update their own templates" ON agent_templates
-    FOR UPDATE USING (creator_id = (auth.jwt() ->> 'sub')::uuid);
+    FOR UPDATE USING (creator_id = auth.uid());
 
 DROP POLICY IF EXISTS "Users can delete their own templates" ON agent_templates;
 CREATE POLICY "Users can delete their own templates" ON agent_templates
-    FOR DELETE USING (creator_id = (auth.jwt() ->> 'sub')::uuid);
+    FOR DELETE USING (creator_id = auth.uid());
 
 -- Clean up helper functions
 DROP FUNCTION IF EXISTS column_exists(text, text);

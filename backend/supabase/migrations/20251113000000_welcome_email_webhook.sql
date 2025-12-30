@@ -1,4 +1,4 @@
-﻿-- Migration: Setup webhook trigger for welcome emails
+-- Migration: Setup webhook trigger for welcome emails
 -- This migration creates a trigger that calls the backend when a new user is created
 -- Instead of having the frontend trigger the email, Supabase will call the backend directly
 
