@@ -9,6 +9,7 @@ import json
 import datetime
 import asyncio
 import logging
+from core.utils.logger import logger
 
 # TODO: add subpages, etc... in filters as sometimes its necessary 
 
@@ -38,7 +39,7 @@ class SandboxWebSearchTool(SandboxToolsBase):
             logger.warning("FIRECRAWL_API_KEY not configured - Web Scraping Tool will not be available")
 
         # Tavily asynchronous search client
-        self.tavily_client = AsyncTavilyClient(api_key=self.tavily_api_key)
+        self.tavily_client = AsyncTavilyClient(api_key=self.tavily_api_key) if self.tavily_api_key else None
 
     @openapi_schema({
         "type": "function",

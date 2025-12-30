@@ -9,17 +9,9 @@ if TYPE_CHECKING:
 
 from .excluded_models import is_model_excluded
 
-# SHOULD_USE_ANTHROPIC = False
-# CRITICAL: Production and Staging must ALWAYS use Vertex AI, never Anthropic API directly, with fallbacks to dev Vertex Studio and AI Studio
-SHOULD_USE_ANTHROPIC = config.ENV_MODE == EnvMode.LOCAL and bool(config.ANTHROPIC_API_KEY)
-
-# Set premium model ID based on environment - using MAP-tagged application inference profiles with global routing
-if SHOULD_USE_ANTHROPIC:
-    FREE_MODEL_ID = "vertex_ai/claude-haiku-4-5@20250929"
-    PREMIUM_MODEL_ID = "vertex_ai/claude-haiku-4-5@20250929"
-else:  
-    FREE_MODEL_ID = "anthropic/claude-haiku-4-5@20250929"
-    PREMIUM_MODEL_ID = "anthropic/claude-haiku-4-5@20250929"
+# Default model IDs - using OpenRouter
+FREE_MODEL_ID = "openrouter/google/gemini-2.5-flash-lite"
+PREMIUM_MODEL_ID = "openrouter/anthropic/claude-sonnet-4.5"
 
 class ModelRegistry:
     def __init__(self):
@@ -30,430 +22,444 @@ class ModelRegistry:
         self._initialize_fallback_registry()
     
     def _initialize_models(self):
+        """
+        Initialize all models via OpenRouter.
+        All models configured based on OpenRouter pricing and specifications.
+        """
 
-        # --- Vertex AI Models (Google & Anthropic) ---
-        # Note: All models below use Vertex AI as the provider
+        # ============================================
+        # OPENAI MODELS (via OpenRouter)
+        # ============================================
         
+        # GPT-5.2
+        self.register(Model(
+            id="openrouter/openai/gpt-5.2",
+            name="GPT-5.2",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gpt-5.2", "gpt5"],
+            context_window=400_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=1.75, output_cost_per_million_tokens=14.00),
+            tier_availability=["free", "paid"],
+            priority=200,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # GPT-5.2 Chat
+        self.register(Model(
+            id="openrouter/openai/gpt-5.2-chat",
+            name="GPT-5.2 Chat",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gpt-5.2-chat"],
+            context_window=128_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=1.75, output_cost_per_million_tokens=14.00),
+            tier_availability=["free", "paid"],
+            priority=199,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # GPT-5 Nano
+        self.register(Model(
+            id="openrouter/openai/gpt-5-nano",
+            name="GPT-5 Nano",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gpt-5-nano", "gpt5-nano"],
+            context_window=400_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.05, output_cost_per_million_tokens=0.40),
+            tier_availability=["free", "paid"],
+            priority=195,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # GPT-OSS-120B
+        self.register(Model(
+            id="openrouter/openai/gpt-oss-120b",
+            name="GPT-OSS 120B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gpt-oss-120b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.039, output_cost_per_million_tokens=0.19),
+            tier_availability=["free", "paid"],
+            priority=180,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # GPT-OSS-20B
+        self.register(Model(
+            id="openrouter/openai/gpt-oss-20b",
+            name="GPT-OSS 20B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gpt-oss-20b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.03, output_cost_per_million_tokens=0.14),
+            tier_availability=["free", "paid"],
+            priority=175,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # GPT-OSS-Safeguard-20B
+        self.register(Model(
+            id="openrouter/openai/gpt-oss-safeguard-20b",
+            name="GPT-OSS Safeguard 20B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gpt-oss-safeguard-20b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.075, output_cost_per_million_tokens=0.30),
+            tier_availability=["free", "paid"],
+            priority=174,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # ============================================
+        # ANTHROPIC MODELS - Claude 4.5 (via OpenRouter)
+        # ============================================
+
+        # Claude Opus 4.5
+        self.register(Model(
+            id="openrouter/anthropic/claude-opus-4.5",
+            name="Claude Opus 4.5",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["claude-opus-4.5", "opus", "claude-opus"],
+            context_window=200_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=5.00, output_cost_per_million_tokens=25.00),
+            tier_availability=["free", "paid"],
+            priority=190,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # Claude Sonnet 4.5
+        self.register(Model(
+            id="openrouter/anthropic/claude-sonnet-4.5",
+            name="Claude Sonnet 4.5",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["claude-sonnet-4.5", "sonnet", "claude-sonnet"],
+            context_window=1_000_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=3.00, output_cost_per_million_tokens=15.00),
+            tier_availability=["free", "paid"],
+            priority=188,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # Claude Haiku 4.5
+        self.register(Model(
+            id="openrouter/anthropic/claude-haiku-4.5",
+            name="Claude Haiku 4.5",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["claude-haiku-4.5", "haiku", "claude-haiku"],
+            context_window=200_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=1.00, output_cost_per_million_tokens=5.00),
+            tier_availability=["free", "paid"],
+            priority=185,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # ============================================
+        # GOOGLE GEMINI MODELS (via OpenRouter)
+        # ============================================
+
         # Gemini 3 Pro Preview
         self.register(Model(
-            id="vertex_ai/gemini-3-pro-preview",
+            id="openrouter/google/gemini-3-pro-preview",
             name="Gemini 3 Pro Preview",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-3-pro-preview", "vertex-gemini-3-pro"],
-            context_window=200_000,
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "thinking_level" support
-                ModelCapability.COMPUTER_USE,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=2.00, #$2.00, prompts <= 200k tokens
-                output_cost_per_million_tokens=12.00 #$12.00, responses <= 200k tokens
-            ),
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gemini-3-pro-preview", "gemini-3-pro"],
+            context_window=1_050_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=2.00, output_cost_per_million_tokens=12.00),
             tier_availability=["free", "paid"],
-            priority=121,
+            priority=170,
             recommended=True,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-pro"]
+            enabled=True,
         ))
 
-        # Gemini 3 Pro Preview (MAX TOKENS)
+        # Gemini 3 Flash Preview
         self.register(Model(
-            id="vertex_ai/gemini-3-pro-preview",
-            name="Gemini 3 Pro Preview - Max",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-3-pro-preview-max", "vertex-gemini-3-pro-max"],
-            context_window=1_000_000,
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "thinking_level" support
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=4.00, #$4.00, prompts > 200k tokens
-                output_cost_per_million_tokens=18.00 #$18.00, responses > 200k tokens
-            ),
-            tier_availability=["paid"],
+            id="openrouter/google/gemini-3-flash-preview",
+            name="Gemini 3 Flash Preview",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gemini-3-flash-preview", "gemini-3-flash"],
+            context_window=1_050_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.50, output_cost_per_million_tokens=3.00),
+            tier_availability=["free", "paid"],
+            priority=168,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # Gemini 2.5 Flash Lite
+        self.register(Model(
+            id="openrouter/google/gemini-2.5-flash-lite",
+            name="Gemini 2.5 Flash Lite",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gemini-2.5-flash-lite", "gemini-flash-lite"],
+            context_window=1_050_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.10, output_cost_per_million_tokens=0.40),
+            tier_availability=["free", "paid"],
+            priority=165,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # ============================================
+        # XAI GROK MODELS (via OpenRouter)
+        # ============================================
+
+        # Grok 4
+        self.register(Model(
+            id="openrouter/x-ai/grok-4",
+            name="Grok 4",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["grok-4", "grok4"],
+            context_window=256_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=3.00, output_cost_per_million_tokens=15.00),
+            tier_availability=["free", "paid"],
+            priority=160,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # Grok 4.1 Fast
+        self.register(Model(
+            id="openrouter/x-ai/grok-4.1-fast",
+            name="Grok 4.1 Fast",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["grok-4.1-fast", "grok-fast"],
+            context_window=2_000_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.20, output_cost_per_million_tokens=0.50),
+            tier_availability=["free", "paid"],
+            priority=158,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # ============================================
+        # QWEN MODELS (via OpenRouter)
+        # ============================================
+
+        # Qwen 3 235B A22B
+        self.register(Model(
+            id="openrouter/qwen/qwen3-235b-a22b",
+            name="Qwen 3 235B A22B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwen3-235b", "qwen-235b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.14, output_cost_per_million_tokens=0.40),
+            tier_availability=["free", "paid"],
+            priority=150,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # Qwen 3 32B
+        self.register(Model(
+            id="openrouter/qwen/qwen3-32b",
+            name="Qwen 3 32B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwen3-32b", "qwen-32b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.10, output_cost_per_million_tokens=0.30),
+            tier_availability=["free", "paid"],
+            priority=148,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # Qwen 3 30B A3B
+        self.register(Model(
+            id="openrouter/qwen/qwen3-30b-a3b",
+            name="Qwen 3 30B A3B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwen3-30b", "qwen-30b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.07, output_cost_per_million_tokens=0.30),
+            tier_availability=["free", "paid"],
+            priority=146,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # Qwen 3 14B
+        self.register(Model(
+            id="openrouter/qwen/qwen3-14b",
+            name="Qwen 3 14B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwen3-14b", "qwen-14b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.07, output_cost_per_million_tokens=0.14),
+            tier_availability=["free", "paid"],
+            priority=144,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # Qwen 3 8B
+        self.register(Model(
+            id="openrouter/qwen/qwen3-8b",
+            name="Qwen 3 8B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwen3-8b", "qwen-8b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.02, output_cost_per_million_tokens=0.05),
+            tier_availability=["free", "paid"],
+            priority=142,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # Qwen 3 4B
+        self.register(Model(
+            id="openrouter/qwen/qwen3-4b",
+            name="Qwen 3 4B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwen3-4b", "qwen-4b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.02, output_cost_per_million_tokens=0.05),
+            tier_availability=["free", "paid"],
+            priority=140,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # Qwen QwQ 32B
+        self.register(Model(
+            id="openrouter/qwen/qwq-32b",
+            name="Qwen QwQ 32B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwq-32b", "qwq"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.12, output_cost_per_million_tokens=0.18),
+            tier_availability=["free", "paid"],
+            priority=147,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # Qwen 2.5 VL 72B
+        self.register(Model(
+            id="openrouter/qwen/qwen-2.5-vl-72b-instruct",
+            name="Qwen 2.5 VL 72B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["qwen-2.5-vl-72b", "qwen-vl"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING, ModelCapability.VISION],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.40, output_cost_per_million_tokens=0.40),
+            tier_availability=["free", "paid"],
+            priority=149,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # ============================================
+        # MISTRAL MODELS (via OpenRouter)
+        # ============================================
+
+        # Mistral Small
+        self.register(Model(
+            id="openrouter/mistralai/mistral-small",
+            name="Mistral Small",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["mistral-small", "mistral"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.20, output_cost_per_million_tokens=0.60),
+            tier_availability=["free", "paid"],
+            priority=130,
+            recommended=False,
+            enabled=True,
+        ))
+
+        # Codestral
+        self.register(Model(
+            id="openrouter/mistralai/codestral",
+            name="Codestral",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["codestral", "mistral-code"],
+            context_window=256_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.30, output_cost_per_million_tokens=0.90),
+            tier_availability=["free", "paid"],
+            priority=135,
+            recommended=True,
+            enabled=True,
+        ))
+
+        # ============================================
+        # GOOGLE GEMMA MODELS (via OpenRouter)
+        # ============================================
+
+        # Gemma 3 27B
+        self.register(Model(
+            id="openrouter/google/gemma-3-27b-it",
+            name="Gemma 3 27B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gemma-3-27b", "gemma-27b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.10, output_cost_per_million_tokens=0.20),
+            tier_availability=["free", "paid"],
             priority=120,
             recommended=False,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-pro"]
+            enabled=True,
         ))
 
-        # Gemini 2.5 Pro (MAX TOKENS)
+        # Gemma 3 12B
         self.register(Model(
-            id="vertex_ai/gemini-2.5-pro-max",
-            name="Gemini 2.5 Pro - Max",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-2.5-pro-max", "vertex-gemini-2.5-pro-max"],
-            context_window=1_000_000,
-            max_output_tokens=65_536,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "thinking_budget" support
-                ModelCapability.STRUCTURED_OUTPUT,
-                ModelCapability.WEB_SEARCH, # "Grounding"
-                ModelCapability.CODE_INTERPRETER, # "Code Execution"
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=2.50, #$2.50, prompts > 200k tokens
-                output_cost_per_million_tokens=15.00 #$15.00, responses > 200k tokens
-            ),
-            tier_availability=["paid"],
-            priority=110,
+            id="openrouter/google/gemma-3-12b-it",
+            name="Gemma 3 12B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gemma-3-12b", "gemma-12b"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.05, output_cost_per_million_tokens=0.10),
+            tier_availability=["free", "paid"],
+            priority=118,
             recommended=False,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-flash"]
+            enabled=True,
         ))
 
-        # Gemini 2.5 Pro
+        # Gemma 3 4B
         self.register(Model(
-            id="vertex_ai/gemini-2.5-pro",
-            name="Gemini 2.5 Pro",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-2.5-pro", "vertex-gemini-2.5-pro"],
-            context_window=200_000,
-            max_output_tokens=65_536,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "thinking_budget" support
-                ModelCapability.STRUCTURED_OUTPUT,
-                ModelCapability.WEB_SEARCH, # "Grounding"
-                ModelCapability.CODE_INTERPRETER, # "Code Execution"
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25, #$1.25, prompts > 200k tokens
-                output_cost_per_million_tokens=10.00 #$10.00, responses > 200k tokens
-            ),
-            tier_availability=["paid"],
-            priority=111,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-flash"]
-        ))
-
-        # Gemini 2.5 Flash
-        self.register(Model(
-            id="vertex_ai/gemini-2.5-flash",
-            name="Gemini 2.5 Flash",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-2.5-flash", "vertex-gemini-2.5-flash"],
-            context_window=1_048_576,
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "thinking_budget" support
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.30, #	$0.30 (text / image / video)
-                output_cost_per_million_tokens=2.50 #	$2.50 #no tiered pricing up to 1M context window
-            ),
+            id="openrouter/google/gemma-3-4b-it",
+            name="Gemma 3 4B",
+            provider=ModelProvider.OPENROUTER,
+            aliases=["gemma-3-4b", "gemma-4b", "gemma"],
+            context_window=131_000,
+            capabilities=[ModelCapability.CHAT, ModelCapability.FUNCTION_CALLING],
+            pricing=ModelPricing(input_cost_per_million_tokens=0.03, output_cost_per_million_tokens=0.06),
             tier_availability=["free", "paid"],
-            priority=108,
-            recommended=True,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["google/gemini-2.5-flash"]
-        ))
-
-        # Gemini 2.5 Flash-Lite
-        self.register(Model(
-            id="vertex_ai/gemini-2.5-flash-lite",
-            name="Gemini 2.5 Flash-Lite",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-2.5-flash-lite", "vertex-gemini-2.5-flash-lite"],
-            context_window=1_048_576,
-            max_output_tokens=8_192,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.10, # 	$0.10 (text / image / video)
-                output_cost_per_million_tokens=0.40 # 	$0.40 
-            ),
-            tier_availability=["free", "paid"],
-            priority=90,
-            recommended=True,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["google/gemini-2.5-flash-lite"]
-        ))
-
-        # Gemini Computer Use Preview
-        self.register(Model(
-            id="vertex_ai/gemini-2.5-computer-use-preview-10-2025",
-            name="Gemini Computer Use",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["gemini-computer-use", "vertex-gemini-computer-use"],
-            context_window=128_000,
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.VISION,
-                ModelCapability.COMPUTER_USE,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25, # 	$1.25, prompts <= 200k tokens
-                output_cost_per_million_tokens=10.00 # 	$10.00, responses <= 200k tokens
-            ),
+            priority=115,
             recommended=False,
-            tier_availability=["paid"],
-            priority=90,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-3-pro-preview"]
+            enabled=True,
         ))
 
-        # Claude Sonnet 4.5 Max Context (via Vertex AI)
-        self.register(Model(
-            id="vertex_ai/claude-sonnet-4-5@20250929",
-            name="Claude Sonnet 4.5 Max",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
-            context_window=1_000_000, # 1M in Beta
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "Extended Thinking" implied?
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["paid"],
-            priority=106,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-3-pro-preview"],
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07"
-                },
-            ),
-        ))
-
-        # Claude Sonnet 4.5 (via Vertex AI)
-        self.register(Model(
-            id="vertex_ai/claude-sonnet-4-5@20250929",
-            name="Claude Sonnet 4.5",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["claude-sonnet-4.5", "vertex-claude-sonnet-4.5"],
-            context_window=200_000, # 200k
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "Extended Thinking" implied?
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=15.00
-            ),
-            tier_availability=["free","paid"],
-            priority=106,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-3-pro-preview"],
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07"
-                },
-            ),
-        ))
-
-        # Claude Haiku 4.5 (via Vertex AI)
-        self.register(Model(
-            id="vertex_ai/claude-haiku-4-5@20251001",
-            name="Claude Haiku 4.5",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["claude-haiku-4.5", "vertex-claude-haiku-4.5"],
-            context_window=200_000,
-            max_output_tokens=64_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING, # "Extended Thinking"
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.00,
-                output_cost_per_million_tokens=5.00
-            ),
-            tier_availability=["paid"],
-            priority=110,
-            recommended=True,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-flash"],
-            config=ModelConfig(
-                extra_body={
-                    "anthropic_version": "vertex-2023-10-16"
-                }
-            ),
-        ))
-
-        # Llama 4 Scout via Google Vertex API
-        self.register(Model(
-            id="vertex_ai/meta/llama-4-scout-17b-16e-instruct-maas",
-            name="Llama 4 Scout",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["llama-4-scout", "vertex-llama-4-scout"],
-            context_window=10_000_000,
-            max_output_tokens=8192, # Defaulting as N/A in table usually means standard or unknown
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.VISION,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.10, # Placeholder
-                output_cost_per_million_tokens=0.40
-            ),
-            tier_availability=["free", "paid"],
-            priority=104,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-flash"]
-        ))
-
-        # Llama 4 Maverick via Google Vertex API
-        self.register(Model(
-            id="vertex_ai/meta/llama-4-maverick-17b-128e-instruct-maas",
-            name="Llama 4 Maverick",
-            provider=ModelProvider.VERTEX_AI,
-            aliases=["llama-4-maverick", "vertex-llama-4-maverick"],
-            context_window=1_000_000,
-            max_output_tokens=8192,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.VISION,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.20, # Placeholder
-                output_cost_per_million_tokens=0.80
-            ),
-            tier_availability=["paid"],
-            priority=103,
-            enabled=config.VERTEX_AI_PROJECT is not None,
-            fallback_models=["vertex_ai/gemini-2.5-pro"]
-        ))
-
-        # --- OpenAI Models via OpenAI API ---
-        self.register(Model(
-            id="openai/gpt-5",
-            name="GPT-5",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-5", "GPT-5"],
-            context_window=400_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=1.25,
-                output_cost_per_million_tokens=10.00
-            ),
-            tier_availability=["paid"],
-            priority=106,
-            enabled=config.OPENAI_API_KEY is not None,
-            fallback_models=["openai/gpt-4o"]
-        ))
-
-        self.register(Model(
-            id="openai/gpt-4.1",
-            name="GPT-4.1",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-4.1", "GPT-4.1"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=12.00
-            ),
-            tier_availability=["paid"],
-            priority=100,
-            enabled=config.OPENAI_API_KEY is not None,
-            fallback_models=["openai/gpt-4o"]
-        ))
-
-        self.register(Model(
-            id="openai/gpt-4.1-mini",
-            name="GPT-4.1 Mini",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-4.1-mini", "GPT-4.1 Mini"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.60,
-                output_cost_per_million_tokens=2.40
-            ),
-            tier_availability=["paid"],
-            priority=99,
-            enabled=config.OPENAI_API_KEY is not None,
-            fallback_models=["openai/gpt-4o-mini"]
-        ))
-
-        self.register(Model(
-            id="openai/gpt-4o",
-            name="GPT-4o",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-4o", "GPT-4o"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00,
-                output_cost_per_million_tokens=10.00
-            ),
-            tier_availability=["paid"],
-            priority=98,
-            enabled=config.OPENAI_API_KEY is not None,
-            fallback_models=["openai/gpt-4o-mini"]
-        ))
-
-        self.register(Model(
-            id="openai/gpt-4o-mini",
-            name="GPT-4o Mini",
-            provider=ModelProvider.OPENAI,
-            aliases=["gpt-4o-mini", "GPT-4o Mini"],
-            context_window=128_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=0.15,
-            output_cost_per_million_tokens=0.60
-            ),
-            tier_availability=["free", "paid"],
-            priority=97,
-            enabled=config.OPENAI_API_KEY is not None,
-        ))
-    
     def _initialize_fallback_registry(self):
         """Initialize the fallback registry for API-based models."""
         from .fallback_registry import fallback_registry
@@ -550,7 +556,7 @@ class ModelRegistry:
         self._models[model.id] = model
         for alias in model.aliases:
             self._aliases[alias] = model.id
-    
+
     def get(self, model_id: str) -> Optional[Model]:
         # Handle None or empty model_id
         if not model_id:
@@ -687,8 +693,8 @@ class ModelRegistry:
                 api_base=config.OPENAI_COMPATIBLE_API_BASE,
             ),
             fallback_models=[
-                "anthropic/claude-haiku-4-5",
-                "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash" if config.GEMINI_API_KEY else "vertex_ai/claude-sonnet-4-5@20250929",
+                "openrouter/anthropic/claude-haiku-4.5",
+                "openrouter/google/gemini-2.5-flash-lite",
             ]
         ))
     
@@ -804,7 +810,8 @@ class ModelRegistry:
                             api_base=config.OLLAMA_API_BASE,
                         ),
                         fallback_models=[
-                            "vertex_ai/claude-haiku-4-5@20251001" if SHOULD_USE_ANTHROPIC else "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash",
+                            "openrouter/anthropic/claude-haiku-4.5",
+                            "openrouter/google/gemini-2.5-flash-lite",
                         ]
                     ))
                     
@@ -894,13 +901,12 @@ class ModelRegistry:
                             api_base=config.LM_STUDIO_API_BASE or "http://localhost:1234",
                         ),
                         fallback_models=[
-                            "anthropic/claude-haiku-4-5",
-                            "openai/gpt-4o-mini" if config.OPENAI_API_KEY else "vertex_ai/gemini-2.5-flash" if config.GEMINI_API_KEY else "vertex_ai/claude-sonnet-4-5@20250929",
+                            "openrouter/anthropic/claude-haiku-4.5",
+                            "openrouter/google/gemini-2.5-flash-lite",
                         ]
                     ))
                     
                     registered_count += 1
-                    #logger.debug(f"Registered LM Studio model: {display_name} (context: {context_window}, priority: {priority})")
                     
                 except Exception as e:
                     logger.warning(f"Failed to register LM Studio model {model_id}: {e}")
@@ -909,4 +915,4 @@ class ModelRegistry:
         except Exception as e:
             logger.error(f"LM Studio model discovery failed: {e}")
 
-registry = ModelRegistry() 
+registry = ModelRegistry()

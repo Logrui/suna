@@ -1,20 +1,16 @@
 'use client';
-
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Icons } from './home/icons';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
 interface GoogleSignInProps {
   returnUrl?: string;
 }
-
 export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
-
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
@@ -27,9 +23,11 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
         provider: 'google',
         options: {
           redirectTo: redirectUrl,
+          queryParams: {
+            hd: 'douravita.com.br',  // Restrict to douravita.com.br domain only
+          },
         },
       });
-
       if (error) {
         throw error;
       }
@@ -39,7 +37,6 @@ export default function GoogleSignIn({ returnUrl }: GoogleSignInProps) {
       setIsLoading(false);
     }
   };
-
   return (
     <Button
       onClick={handleGoogleSignIn}

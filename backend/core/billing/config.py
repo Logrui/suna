@@ -14,7 +14,7 @@ DEFAULT_TOKEN_COST = Decimal('0.000002')
 
 CREDITS_PER_DOLLAR = 100
 
-FREE_TIER_INITIAL_CREDITS = Decimal('2.00')
+FREE_TIER_INITIAL_CREDITS = Decimal('999999.00')
 
 @dataclass
 class Tier:
@@ -52,13 +52,13 @@ TIERS: Dict[str, Tier] = {
         monthly_credits=FREE_TIER_INITIAL_CREDITS,
         display_name='Basic',
         can_purchase_credits=False,
-        models=['haiku'],
-        project_limit=1,
-        thread_limit=1,
-        concurrent_runs=1,
-        custom_workers_limit=1,
-        scheduled_triggers_limit=1,
-        app_triggers_limit=1
+        models=['all'],
+        project_limit=25000,
+        thread_limit=25000,
+        concurrent_runs=250,
+        custom_workers_limit=250,
+        scheduled_triggers_limit=500,
+        app_triggers_limit=1000
     ),
     'tier_2_20': Tier(
         name='tier_2_20',
@@ -76,7 +76,7 @@ TIERS: Dict[str, Tier] = {
         concurrent_runs=3,
         custom_workers_limit=2,
         scheduled_triggers_limit=5,
-        app_triggers_limit=10
+        app_triggers_limit=10000
     ),
     'tier_6_50': Tier(
         name='tier_6_50',
@@ -129,7 +129,7 @@ TIERS: Dict[str, Tier] = {
         concurrent_runs=20,
         custom_workers_limit=25,
         scheduled_triggers_limit=50,
-        app_triggers_limit=100
+        app_triggers_limit=100000
     ),
     'tier_50_400': Tier(
         name='tier_50_400',
@@ -180,7 +180,7 @@ TIERS: Dict[str, Tier] = {
         concurrent_runs=250,
         custom_workers_limit=250,
         scheduled_triggers_limit=500,
-        app_triggers_limit=1000
+        app_triggers_limit=1000000
     ),
 }
 

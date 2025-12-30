@@ -6,7 +6,6 @@ import { useMessagesQuery } from '@/hooks/threads/use-messages';
 import { useProjectQuery } from '@/hooks/threads/use-project';
 import { useAgentRunsQuery } from '@/hooks/threads/use-agent-run';
 import { ApiMessageType, UnifiedMessage, AgentStatus } from '@/components/thread/types';
-
 interface UseThreadDataReturn {
   messages: UnifiedMessage[];
   setMessages: React.Dispatch<React.SetStateAction<UnifiedMessage[]>>;
@@ -25,7 +24,6 @@ interface UseThreadDataReturn {
   projectQuery: ReturnType<typeof useProjectQuery>;
   agentRunsQuery: ReturnType<typeof useAgentRunsQuery>;
 }
-
 export function useThreadData(threadId: string, projectId: string, isShared: boolean = false): UseThreadDataReturn {
   const [messages, setMessages] = useState<UnifiedMessage[]>([]);
   const [project, setProject] = useState<Project | null>(null);
@@ -35,47 +33,40 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const initialLoadCompleted = useRef<boolean>(false);
   const messagesLoadedRef = useRef(false);
   const agentRunsCheckedRef = useRef(false);
   const hasInitiallyScrolled = useRef<boolean>(false);
-
-
+  // Track current threadId to detect changes
+  const currentThreadIdRef = useRef<string>(threadId);
   const threadQuery = useThreadQuery(threadId);
   const messagesQuery = useMessagesQuery(threadId);
-
   // For shared pages, projectId might be empty - get it from thread data
   const effectiveProjectId = projectId || threadQuery.data?.project_id || '';
   const projectQuery = useProjectQuery(effectiveProjectId);
-
   // Only fetch agent runs if not in shared mode (requires authentication)
   const agentRunsQuery = useAgentRunsQuery(threadId, { enabled: !isShared });
-
   // (debug logs removed)
-
   // Reset refs when thread changes
   useEffect(() => {
     agentRunsCheckedRef.current = false;
     messagesLoadedRef.current = false;
     initialLoadCompleted.current = false;
+    currentThreadIdRef.current = threadId;
     setMessages([]);
+    setIsLoading(true);
   }, [threadId]);
-
   useEffect(() => {
     let isMounted = true;
-
     async function initializeData() {
       if (!initialLoadCompleted.current) setIsLoading(true);
       setError(null);
       try {
         if (!threadId) throw new Error('Thread ID is required');
-
         if (threadQuery.isError) {
           throw new Error('Failed to load thread data: ' + threadQuery.error);
         }
         if (!isMounted) return;
-
         if (projectQuery.data) {
           setProject(projectQuery.data);
           if (typeof projectQuery.data.sandbox === 'string') {
@@ -83,13 +74,10 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
           } else if (projectQuery.data.sandbox?.id) {
             setSandboxId(projectQuery.data.sandbox.id);
           }
-
           setProjectName(projectQuery.data.name || '');
         }
-
         if (messagesQuery.data && !messagesLoadedRef.current) {
           // (debug logs removed)
-
           const unifiedMessages = (messagesQuery.data || [])
             .filter((msg) => msg.type !== 'status')
             .map((msg: ApiMessageType) => ({
@@ -104,13 +92,11 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
               agent_id: (msg as any).agent_id,
               agents: (msg as any).agents,
             }));
-
-          // Merge with any local messages that are not present in server data yet
-          setMessages((prevMessages) => {
+          setMessages((prev) => {
             const serverIds = new Set(
               unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
             );
-            const localExtras = (prevMessages || []).filter(
+            const localExtras = (prev || []).filter(
               (m) =>
                 !m.message_id ||
                 (typeof m.message_id === 'string' && m.message_id.startsWith('temp-')) ||
@@ -123,21 +109,16 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
             });
             return mergedMessages;
           });
-
           // Messages set only from server merge; no cross-thread cache
           messagesLoadedRef.current = true;
-
           if (!hasInitiallyScrolled.current) {
             hasInitiallyScrolled.current = true;
           }
         }
-
         // For shared pages, skip agent runs check (anon users don't have access)
         if (!isShared && (agentRunsQuery.data || agentRunsQuery.isError) && !agentRunsCheckedRef.current && isMounted) {
           // (debug logs removed)
-
           agentRunsCheckedRef.current = true;
-
           if (agentRunsQuery.data) {
             // Check for any running agents - no time restrictions!
             const runningRuns = agentRunsQuery.data.filter(r => r.status === 'running');
@@ -155,18 +136,15 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
             setAgentRunId(null);
           }
         }
-
         // For shared pages, only wait for thread and messages data
         const requiredDataLoaded = isShared
           ? (threadQuery.data && messagesQuery.data)
           : (threadQuery.data && messagesQuery.data && (agentRunsQuery.data || agentRunsQuery.isError));
-
         if (requiredDataLoaded) {
           initialLoadCompleted.current = true;
           setIsLoading(false);
           // Removed time-based final check to avoid incorrectly forcing idle while a stream is active
         }
-
       } catch (err) {
         console.error('Error loading thread data:', err);
         if (isMounted) {
@@ -178,11 +156,9 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
         }
       }
     }
-
     if (threadId) {
       initializeData();
     }
-
     return () => {
       isMounted = false;
     };
@@ -197,18 +173,28 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
     agentRunsQuery.isError,
     isShared
   ]);
-
   // Force message reload when thread changes or new data arrives
   useEffect(() => {
     if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
-      // (debug logs removed)
-
-      // Always reload messages when thread data changes or we have more raw messages than processed
-      const shouldReload = messages.length === 0 || messagesQuery.data.length > messages.length + 50; // Allow for status messages
-
+      // Check if this is data for the current thread
+      const isCurrentThread = messagesQuery.data.length === 0 || 
+        messagesQuery.data.some((msg: any) => msg.thread_id === threadId);
+      
+      if (!isCurrentThread) {
+        // Data is stale from a different thread, skip
+        return;
+      }
+      
+      // Always reload messages when:
+      // 1. messages array is empty (thread just changed)
+      // 2. server has significantly more messages than local
+      // 3. messagesLoadedRef is false (fresh thread load)
+      const shouldReload = messages.length === 0 || 
+        messagesQuery.data.length > messages.length + 50 ||
+        !messagesLoadedRef.current;
+        
       if (shouldReload) {
         // (debug logs removed)
-
         const unifiedMessages = (messagesQuery.data || [])
           .filter((msg) => msg.type !== 'status')
           .map((msg: ApiMessageType) => ({
@@ -223,7 +209,6 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
             agent_id: (msg as any).agent_id,
             agents: (msg as any).agents,
           }));
-
         // Merge strategy: preserve any local (optimistic/streamed) messages not in server yet
         setMessages((prev) => {
           const serverIds = new Set(
@@ -240,16 +225,15 @@ export function useThreadData(threadId: string, projectId: string, isShared: boo
             const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
             return aTime - bTime;
           });
-
           // Messages set only from server merge; no cross-thread cache
           return merged;
         });
+        messagesLoadedRef.current = true;
       } else {
         // (debug logs removed)
       }
     }
   }, [messagesQuery.data, messagesQuery.status, isLoading, messages.length, threadId]);
-
   return {
     messages,
     setMessages,

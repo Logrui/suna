@@ -39,6 +39,7 @@ from core.services import email_api
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
 from core import models_api
+from core import limits_api
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -235,6 +236,7 @@ api_router.include_router(triggers_api.workflows_router)
 
 from core.composio_integration import api as composio_api
 api_router.include_router(composio_api.router)
+api_router.include_router(limits_api.router)
 
 from core import users_api
 api_router.include_router(users_api.router)
