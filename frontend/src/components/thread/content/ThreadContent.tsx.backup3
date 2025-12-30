@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { CircleDashed, CheckCircle, AlertTriangle, Info, CheckCircle2, Clock, Brain } from 'lucide-react';
+import { CircleDashed, CheckCircle, AlertTriangle, Info, CheckCircle2, Clock } from 'lucide-react';
 import { UnifiedMessage, ParsedContent, ParsedMetadata } from '@/components/thread/types';
 import { FileAttachmentGrid } from '@/components/thread/file-attachment';
 import { useFilePreloader } from '@/hooks/files';
@@ -20,7 +20,6 @@ import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
 import { TaskCompletedFeedback } from '@/components/thread/tool-views/complete-tool/TaskCompletedFeedback';
 import { PromptExamples } from '@/components/shared/prompt-examples';
-import { Reasoning, ReasoningTrigger, ReasoningContent, ReasoningResponse } from '@/components/home/ui/reasoning';
 
 // Configuration for prompt/answer rendering
 const PROMPT_SAMPLES_CONFIG = {
@@ -903,11 +902,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
                                                                         // Check if this is the latest message (last assistant message in the last group)
                                                                         const isLatestMessage = isLastGroup && message.message_id === lastAssistantMessageId;
 
-                                                                        // Extract thinking content from message
-                                                                        const { thinking, mainContent } = extractThinkingContent(parsedContent.content);
-                                                                        
                                                                         const renderedContent = renderMarkdownContent(
-                                                                            mainContent,
+                                                                            parsedContent.content,
                                                                             handleToolClick,
                                                                             message.message_id,
                                                                             handleOpenFileViewer,
@@ -921,17 +917,6 @@ export const ThreadContent: React.FC<ThreadContentProps> = ({
 
                                                                         elements.push(
                                                                             <div key={msgKey} className={assistantMessageCount > 0 ? "mt-4" : ""}>
-                                                                                {thinking && (
-                                                                                    <Reasoning className="mb-3">
-                                                                                        <ReasoningTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                                                                            <Brain className="size-4" />
-                                                                                            <span>Raciocínio do modelo</span>
-                                                                                        </ReasoningTrigger>
-                                                                                        <ReasoningContent className="mt-2 pl-6 border-l-2 border-muted">
-                                                                                            <ReasoningResponse text={thinking} mode="typewriter" />
-                                                                                        </ReasoningContent>
-                                                                                    </Reasoning>
-                                                                                )}
                                                                                 <div className="prose prose-sm dark:prose-invert chat-markdown max-w-none [&>:first-child]:mt-0 prose-headings:mt-3 break-words overflow-hidden">
                                                                                     {renderedContent}
                                                                                 </div>

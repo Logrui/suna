@@ -312,7 +312,6 @@ export function NavUserWithTeams({
                 General
               </DropdownMenuLabel>
               <DropdownMenuGroup>
-                {/* DISABLED - Plan
                 <DropdownMenuItem
                   onClick={() => {
                     setShowPlanModal(true);
@@ -322,37 +321,32 @@ export function NavUserWithTeams({
                   <Zap className="h-4 w-4" />
                   <span>Plan</span>
                 </DropdownMenuItem>
-                */}
                 <DropdownMenuItem asChild>
                   <Link href="/knowledge" className="gap-2 p-2">
                     <FileText className="h-4 w-4" />
                     <span>Knowledge Base</span>
                   </Link>
                 </DropdownMenuItem>
-                {/* DISABLED - Billing
                 <DropdownMenuItem
                   onClick={() => {
-                    setSettingsTab('general');
+                    setSettingsTab('general'); // billing disabled
                     setShowSettingsModal(true);
                   }}
                   className="gap-2 p-2"
                 >
                   <CreditCard className="h-4 w-4" />
-                  <span>Billing</span>
+                  <span style={{display: "none"}}>Billing</span>
                 </DropdownMenuItem>
-                */}
-                {/* DISABLED - Usage
                 <DropdownMenuItem
                   onClick={() => {
-                    setSettingsTab('general');
+                    setSettingsTab('general'); // usage disabled
                     setShowSettingsModal(true);
                   }}
                   className="gap-2 p-2"
                 >
                   <TrendingDown className="h-4 w-4" />
-                  <span>Usage</span>
+                  <span style={{display: "none"}}>Usage</span>
                 </DropdownMenuItem>
-                */}
                 <DropdownMenuItem asChild>
                   <Link href="/settings/credentials" className="gap-2 p-2">
                     <Plug className="h-4 w-4" />

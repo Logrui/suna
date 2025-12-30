@@ -376,6 +376,7 @@ class ResponseProcessor:
         last_assistant_message_object = None # Store the final saved assistant message object
         tool_result_message_objects = {} # tool_index -> full saved message object
         has_printed_thinking_prefix = False # Flag for printing thinking prefix only once
+        accumulated_reasoning = "" # Accumulate reasoning content separately
         agent_should_terminate = False # Flag to track if a terminating tool has been executed
         complete_native_tool_calls = [] # Initialize early for use in assistant_response_end
 
@@ -481,7 +482,7 @@ class ResponseProcessor:
                         if isinstance(reasoning_content, list):
                             reasoning_content = ''.join(str(item) for item in reasoning_content)
                         # logger.debug(f"About to concatenate reasoning_content (type={type(reasoning_content)}) to accumulated_content (type={type(accumulated_content)})")
-                        accumulated_content += reasoning_content
+                        accumulated_reasoning += reasoning_content
 
                     # Process content chunk
                     if delta and hasattr(delta, 'content') and delta.content:
@@ -729,7 +730,7 @@ class ResponseProcessor:
                             except json.JSONDecodeError: continue
 
                 message_data = { # Dict to be saved in 'content'
-                    "role": "assistant", "content": accumulated_content,
+                    "role": "assistant", "content": ("<thinking>" + accumulated_reasoning + "</thinking>" if accumulated_reasoning else "") + accumulated_content,
                     "tool_calls": complete_native_tool_calls or None
                 }
 

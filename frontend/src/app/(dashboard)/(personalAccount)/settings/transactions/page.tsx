@@ -1,9 +1,13 @@
-import CreditTransactions from '@/components/billing/credit-transactions';
+'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function TransactionsPage() {
-  return (
-    <div className="space-y-6">
-      <CreditTransactions />
-    </div>
-  );
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.replace('/dashboard');
+  }, [router]);
+  
+  return null;
 }

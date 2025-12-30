@@ -93,10 +93,10 @@ class VapiConfig:
         "transcript"
     ])
     
-    cost_per_minute_base: Decimal = field(default=Decimal("0.05"))
-    cost_per_minute_transcription: Decimal = field(default=Decimal("0.01"))
-    cost_per_minute_voice: Decimal = field(default=Decimal("0.02"))
-    cost_per_minute_model: Decimal = field(default=Decimal("0.02"))
+    cost_per_minute_base: Decimal = field(default=Decimal("0"))
+    cost_per_minute_transcription: Decimal = field(default=Decimal("0"))
+    cost_per_minute_voice: Decimal = field(default=Decimal("0"))
+    cost_per_minute_model: Decimal = field(default=Decimal("0"))
     
     def calculate_call_cost(self, duration_seconds: int) -> Decimal:
         if duration_seconds <= 0:

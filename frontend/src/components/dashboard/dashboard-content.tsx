@@ -323,7 +323,7 @@ export function DashboardContent() {
         {/* Credits Display - Top right corner */}
         <div className="absolute flex items-center gap-2 top-4 right-4 z-10">
           <Suspense fallback={<div className="h-8 w-20 bg-muted/30 rounded animate-pulse" />}>
-            <CreditsDisplay />
+            {/* CreditsDisplay removed */}
           </Suspense>
           <NotificationBell />
           <Popover>

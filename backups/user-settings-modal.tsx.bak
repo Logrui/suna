@@ -115,9 +115,9 @@ export function UserSettingsModal({
         if (tabId === 'plan') {
             setShowPlanModal(true);
         } else if (tabId === 'knowledge-base') {
-            setActiveTab(tabId); // Changed from window.open
+            window.open('/knowledge', '_blank');
         } else if (tabId === 'integrations') {
-            setActiveTab(tabId); // Changed from window.open
+            window.open('/settings/credentials', '_blank');
         } else {
             setActiveTab(tabId);
         }
@@ -947,6 +947,7 @@ function EnvManagerTab() {
 
 function KnowledgeBaseTab() {
     useEffect(() => {
+        window.open('/knowledge', '_blank');
     }, []);
     
     return (
@@ -964,6 +965,7 @@ function KnowledgeBaseTab() {
 
 function IntegrationsTab() {
     useEffect(() => {
+        window.open('/settings/credentials', '_blank');
     }, []);
     
     return (
