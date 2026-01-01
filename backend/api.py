@@ -101,6 +101,10 @@ async def lifespan(app: FastAPI):
             logger.error(f"Failed to initialize Redis connection: {e}")
             # Continue without Redis - the application will handle Redis failures gracefully
         
+        # Initialize local AI models (Ollama, LM Studio) in background
+        from core.ai_models.registry import registry
+        asyncio.create_task(registry.initialize_local_models())
+        
         # Start background tasks
         # asyncio.create_task(core_api.restore_running_agent_runs())
         

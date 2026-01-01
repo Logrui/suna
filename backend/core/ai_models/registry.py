@@ -4,6 +4,7 @@ from core.utils.config import config, EnvMode
 from core.utils.logger import logger
 from .fallback_registry import fallback_registry
 from .aws_registry import registry as aws_registry
+from .local_registry import LocalModelRegistry
 
 # Use Bedrock for STAGING and PRODUCTION, LOCAL uses native APIs (Anthropic API, etc.)
 SHOULD_USE_BEDROCK = config.ENV_MODE in (EnvMode.STAGING, EnvMode.PRODUCTION)
@@ -45,8 +46,21 @@ class ModelRegistry:
         self._aliases: Dict[str, str] = {}
         # Mapping of LiteLLM model IDs to pricing (for fallback models not in registry)
         self._litellm_id_to_pricing: Dict[str, ModelPricing] = {}
+        
+        self.local_registry = LocalModelRegistry()
+        
         self._initialize_models()
     
+    async def initialize_local_models(self):
+        """Initialize and merge local models."""
+        try:
+            await self.local_registry.initialize()
+            for model in self.local_registry.get_all():
+                self.register(model)
+            logger.info(f"Registered {len(self.local_registry.get_all())} local models")
+        except Exception as e:
+            logger.error(f"Failed to initialize local models: {e}")
+
     def _initialize_models(self):
         # Register Haiku Bedrock ARN pricing for fallback billing resolution
         self._litellm_id_to_pricing[HAIKU_BEDROCK_ARN] = HAIKU_PRICING
