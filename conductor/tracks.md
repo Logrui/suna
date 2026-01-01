@@ -23,5 +23,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Implement a new frontend page and backend API for diagnostics and model status.
+## [x] Track: Implement a new frontend page and backend API for diagnostics and model status.
 *Link: [./conductor/tracks/admin_model_dashboard_20251231/](./conductor/tracks/admin_model_dashboard_20251231/)*
+
+---
+
+## [~] Track: Update ollama and lm studio models to properly display ollama.svg and lmstudio.svg on the frontend.
+*Link: [./conductor/tracks/local_model_icons_20251231/](./conductor/tracks/local_model_icons_20251231/)*

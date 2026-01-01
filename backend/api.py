@@ -45,12 +45,6 @@ import sys
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
 from core.notifications import api as notifications_api
-# ...
-api_router.include_router(admin_router)
-api_router.include_router(feedback_admin_router)
-api_router.include_router(notification_admin_router)
-api_router.include_router(analytics_admin_router)
-api_router.include_router(admin_models_router)
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -392,6 +386,7 @@ api_router.include_router(admin_router)
 api_router.include_router(feedback_admin_router)
 api_router.include_router(notification_admin_router)
 api_router.include_router(analytics_admin_router)
+api_router.include_router(admin_models_router)
 
 from core.mcp_module import api as mcp_api
 from core.credentials import api as credentials_api

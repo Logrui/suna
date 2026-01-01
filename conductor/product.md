@@ -30,6 +30,7 @@ Kortix is an open-source platform for building, managing, and training autonomou
 3. **Frontend** (Next.js/React) - Web UI for agent management
 4. **Agent Sandbox** (Daytona) - **Mandatory core requirement** - Isolated runtime for agent actions.
 5. **Database** (Supabase) - PostgreSQL with authentication and real-time subscriptions
+6. **Admin Dashboard** - Internal tools for user management, billing, and **model diagnostics**.
 
 ## Key Fork Modifications
 

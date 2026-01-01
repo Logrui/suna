@@ -11,7 +11,9 @@ export type ModelProvider =
   | 'moonshotai'
   | 'bedrock'
   | 'openrouter'
-  | 'kortix';
+  | 'kortix'
+  | 'ollama'
+  | 'lm_studio';
 
 /**
  * Check if a model ID corresponds to a Kortix mode (Basic, Advanced, or Test)
@@ -41,6 +43,14 @@ export function getModelProvider(modelId: string): ModelProvider {
   if (isKortixMode(modelId)) {
     return 'kortix';
   }
+  // Check for local models
+  if (modelId.startsWith('ollama/')) {
+    return 'ollama';
+  }
+  if (modelId.startsWith('lm_studio/')) {
+    return 'lm_studio';
+  }
+  
   if (modelId.includes('anthropic') || modelId.includes('claude')) {
     return 'anthropic';
   }
@@ -67,7 +77,7 @@ export function getModelProvider(modelId: string): ModelProvider {
   const parts = modelId.split('/');
   if (parts.length > 1) {
     const provider = parts[0].toLowerCase();
-    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter'].includes(provider)) {
+    if (['openai', 'anthropic', 'google', 'xai', 'moonshotai', 'bedrock', 'openrouter', 'ollama', 'lm_studio'].includes(provider)) {
       return provider as ModelProvider;
     }
   }
@@ -102,6 +112,8 @@ export function ModelProviderIcon({
     moonshotai: '/images/models/Moonshot.svg',
     bedrock: '/images/models/Anthropic.svg', // Bedrock uses Anthropic models primarily
     openrouter: '/images/models/OAI.svg', // Default to OpenAI icon for OpenRouter
+    ollama: '/images/models/ollama.svg',
+    lm_studio: '/images/models/lmstudio.svg',
   };
 
   // Special handling for Kortix symbol - needs different invert behavior
@@ -168,6 +180,8 @@ export function getModelProviderName(modelId: string): string {
     moonshotai: 'Moonshot AI',
     bedrock: 'AWS Bedrock',
     openrouter: 'OpenRouter',
+    ollama: 'Ollama',
+    lm_studio: 'LM Studio',
   };
 
   return nameMap[provider] || 'Unknown';
