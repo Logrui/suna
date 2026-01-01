@@ -24,12 +24,12 @@ class LMStudioClient:
         """
         if base_url:
             self.base_url = base_url.rstrip('/v1').rstrip('/')
-        elif hasattr(config, 'LM_STUDIO_API_BASE') and config.LM_STUDIO_API_BASE:
+        elif config.LM_STUDIO_API_BASE:
             logger.debug(f"Using LM_STUDIO_API_BASE: {config.LM_STUDIO_API_BASE}")
             self.base_url = config.LM_STUDIO_API_BASE.rstrip('/v1').rstrip('/')
         else:
-            # Default - use host.docker.internal for Docker networking
-            self.base_url = "http://host.docker.internal:1234"
+            # Default
+            self.base_url = "http://localhost:1234"
         
         self._model_cache: Dict[str, Dict[str, Any]] = {}
         logger.debug(f"LMStudioClient initialized with base_url: {self.base_url}")

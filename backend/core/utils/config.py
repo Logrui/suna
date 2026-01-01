@@ -283,6 +283,10 @@ class Configuration:
     # Vercel Analytics (via drains) - primary source of truth for visitor tracking
     VERCEL_DRAIN_SECRET: Optional[str] = None  # Secret for authenticating Vercel drain webhooks
 
+    # Local Inference
+    OLLAMA_API_BASE: Optional[str] = "http://localhost:11434"
+    LM_STUDIO_API_BASE: Optional[str] = "http://localhost:1234"
+
     # LLM API keys
     ANTHROPIC_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None

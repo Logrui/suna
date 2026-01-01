@@ -36,6 +36,7 @@ Kortix is an open-source platform for building, managing, and training autonomou
 1. **Self-Hosted Supabase** - Running via Docker Compose in `suna-supabase/docker/`
 2. **Docker Network Integration** - Services connected across `suna` and `supabase` networks
 3. **Basejump Schema** - Required schema exposure in PostgREST configuration
+4. **Local Model Integration** - Support for discovering and using local AI models via Ollama and LM Studio
 
 ## System Architecture
 

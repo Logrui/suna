@@ -6,7 +6,7 @@ This document defines the core technology stack for the project.
 - **Language:** Python 3.11+
 - **Framework:** FastAPI
 - **Server:** Uvicorn
-- **AI/LLM:** LiteLLM (Unified Interface), Langfuse (Observability), MCP (Model Context Protocol)
+- **AI/LLM:** LiteLLM (Unified Interface), Langfuse (Observability), MCP, Ollama & LM Studio (Local Inference)
 - **Database & Auth:** Supabase (PostgreSQL), Redis (Caching & Broker)
 - **Task Queue:** Dramatiq (with Redis broker)
 - **Monitoring:** Sentry

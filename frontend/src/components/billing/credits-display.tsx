@@ -18,7 +18,7 @@ export function CreditsDisplay() {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const queryClient = useQueryClient();
   const isLocal = isLocalMode();
-  
+
   const planName = accountStateSelectors.planName(accountState);
 
   if (!user) return null;
@@ -32,7 +32,8 @@ export function CreditsDisplay() {
   }
 
   const credits = accountStateSelectors.totalCredits(accountState);
-  const formattedCredits = formatCredits(credits);
+  // In local mode, display infinity symbol instead of the actual credit number
+  const formattedCredits = isLocal ? '∞' : formatCredits(credits);
 
   const handleClick = () => {
     setShowPlanModal(true);
@@ -40,7 +41,7 @@ export function CreditsDisplay() {
 
   const handleModalClose = (open: boolean) => {
     setShowPlanModal(open);
-    
+
     if (!open) {
       // Invalidate account state when modal closes (in case of changes)
       invalidateAccountState(queryClient, true);
@@ -60,11 +61,11 @@ export function CreditsDisplay() {
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         )}
       >
-        <TierBadge 
-          planName={planName} 
-          variant="default" 
-          size="md" 
-          isLocal={isLocal} 
+        <TierBadge
+          planName={planName}
+          variant="default"
+          size="md"
+          isLocal={isLocal}
         />
         <div className="flex items-baseline gap-1.5 min-w-0 flex-shrink-0">
           <span className="text-[15px] font-medium text-foreground dark:text-foreground leading-none tabular-nums">

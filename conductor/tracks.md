@@ -13,5 +13,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Link: [./conductor/tracks/expose_all_models_20251230/](./conductor/tracks/expose_all_models_20251230/)*
 ---
 
-## [~] Track: Integration of Ollama and LM Studio local models into the main registry.
+## [x] Track: Integration of Ollama and LM Studio local models into the main registry.
 *Link: [./conductor/tracks/local_model_registry_20251231/](./conductor/tracks/local_model_registry_20251231/)*
+
+---
+
+## [~] Track: Create an E2E connectivity test for all online AI models.
+*Link: [./conductor/tracks/e2e_model_check_20251231/](./conductor/tracks/e2e_model_check_20251231/)*
