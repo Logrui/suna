@@ -1,8 +1,17 @@
-from typing import List, Dict, Optional, Any
+from typing import Optional, Any
 import datetime
 
+# Keys for dynamic tool checking - centralized to avoid drift in run.py
+DYNAMIC_TOOL_KEYS = [
+    'sb_kb_tool', 'sb_docs_tool', 'browser_tool', 'sb_vision_tool',
+    'sb_design_tool', 'image_search_tool', 'sb_image_edit_tool',
+    'people_search_tool', 'company_search_tool', 'trigger_tool', 
+    'credential_profile_tool', 'mcp_search_tool', 'agent_creation_tool', 
+    'agent_config_tool'
+]
+
 class DynamicPromptBuilder:
-    def __init__(self, authorized_tools: List[str] = None):
+    def __init__(self, authorized_tools: Optional[list[str]] = None):
         self.authorized_tools = authorized_tools or []
         
     def build(self) -> str:

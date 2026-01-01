@@ -5,7 +5,7 @@ SUNA_CONFIG = {
     "name": "Suna",
     "description": "Suna is your AI assistant with access to various tools and integrations to help you with tasks across domains.",
     "model": "claude-haiku-4.5",
-    "system_prompt": None, # Use dynamic system prompt
+    "system_prompt": "", # Use dynamic system prompt (empty string to pass cache warmup check)
     "configured_mcps": [],
     "custom_mcps": [],
     "agentpress_tools": {

@@ -16,7 +16,6 @@ from core.agentpress.response_processor import ProcessorConfig
 from core.agentpress.error_processor import ErrorProcessor
 from core.tools.data_providers_tool import DataProvidersTool
 from core.tools.expand_msg_tool import ExpandMessageTool
-from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.dynamic_prompt import DynamicPromptBuilder
 
 from core.utils.logger import logger
@@ -342,11 +341,8 @@ class PromptManager:
         
         # Determine enabled tools for dynamic prompt
         authorized_tools = []
-        dynamic_tool_keys = [
-            'sb_kb_tool', 'sb_docs_tool', 'browser_tool', 'sb_vision_tool',
-            'sb_design_tool', 'image_search_tool', 'sb_image_edit_tool',
-            'people_search_tool', 'company_search_tool'
-        ]
+        from core.prompts.dynamic_prompt import DYNAMIC_TOOL_KEYS
+        dynamic_tool_keys = DYNAMIC_TOOL_KEYS
         
         if not agent_config or 'agentpress_tools' not in agent_config:
              authorized_tools = dynamic_tool_keys
