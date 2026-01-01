@@ -18,7 +18,7 @@ class AWSModelRegistry:
 
         # Claude Haiku 4.5
         self.register(Model(
-            id="bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0",
+            id="openrouter/bedrock/anthropic/claude-haiku-4-5",
             name="Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=[
@@ -50,10 +50,45 @@ class AWSModelRegistry:
             enabled=True,
             config=ModelConfig()
         ))
+
+        # Claude Opus 4.5
+        self.register(Model(
+            id="openrouter/bedrock/anthropic/claude-opus-4.5",
+            name="Opus 4.5",
+            provider=ModelProvider.ANTHROPIC,
+            aliases=[
+                "claude-opus-4.5", 
+                "anthropic/claude-opus-4.5", 
+                "anthropic/claude-opus-4-5", 
+                "Claude Opus 4.5", 
+                "anthropic/claude-opus-4-5-20251001", 
+                "global.anthropic.claude-opus-4-5-20251001-v1:0", 
+                "bedrock/global.anthropic.claude-opus-4-5-20251001-v1:0", 
+                "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+                # Add bedrock/converse/ prefixed alias for Router fallback compatibility
+                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/heol2zyy5v48",
+            ],
+            context_window=200_000,
+            capabilities=[
+                ModelCapability.CHAT,
+                ModelCapability.FUNCTION_CALLING,
+                ModelCapability.VISION,
+                ModelCapability.THINKING,
+            ],
+            pricing=ModelPricing(
+                input_cost_per_million_tokens=1.00 * pricing_multiplier,
+                output_cost_per_million_tokens=5.00 * pricing_multiplier
+            ),
+            tier_availability=["paid"],
+            priority=102,
+            recommended=True,
+            enabled=True,
+            config=ModelConfig()
+        ))
         
         # Claude Sonnet 4.5
         self.register(Model(
-            id="bedrock/us.anthropic.claude-4-5-sonnet-20250620-v1:0",
+            id="openrouter/bedrock/anthropic/claude-4-5-sonnet",
             name="Sonnet 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=[
@@ -94,7 +129,7 @@ class AWSModelRegistry:
         
         # Claude Sonnet 4
         self.register(Model(
-            id="bedrock/us.anthropic.claude-4-sonnet-20250229-v1:0",
+            id="openrouter/bedrock/us.anthropic.claude-4-sonnet-20250229-v1:0",
             name="Sonnet 4",
             provider=ModelProvider.ANTHROPIC,
             aliases=[

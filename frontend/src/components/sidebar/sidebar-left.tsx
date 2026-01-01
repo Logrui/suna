@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Bot, Menu, Plus, Zap, MessageCircle, PanelLeftOpen, PanelLeftClose, Search, Bell, Folder, Database, Workflow, ChevronRight, BookOpen, Code, Star, Package, Sparkle, Sparkles, X, Settings, LogOut, User, CreditCard, Key, Plug, Shield, DollarSign, KeyRound, Sun, Moon, Book } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/components/AuthProvider';
 
 import { NavAgents } from '@/components/sidebar/nav-agents';
 import { NavAgentsView } from '@/components/sidebar/nav-agents-view';
@@ -49,22 +50,16 @@ import { useAccountState, accountStateSelectors } from '@/hooks/billing';
 import { getPlanIcon } from '@/components/billing/plan-utils';
 import { Kbd, KbdGroup } from '../ui/kbd';
 import { useTranslations } from 'next-intl';
-// import { NotificationDropdown } from '../notifications/notification-dropdown'; // DISABLED: Pending Novu integration
-import { useNotifications } from '@novu/nextjs/hooks';
 
-// Hook to get unread notification count
-function useUnreadNotificationCount(): number {
-  const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER;
-  const { notifications } = useNotifications();
+// Simple bell icon for the sidebar - notification counts are shown inside NavInbox
+const InboxButton: React.FC = () => {
+  return (
+    <div className="relative inline-flex">
+      <Bell className="!h-4 !w-4" />
+    </div>
+  );
+};
 
-  // If Novu is not configured, return 0
-  if (!applicationIdentifier) {
-    return 0;
-  }
-
-  // Count unread notifications
-  return notifications?.filter(n => !n.isRead).length || 0;
-}
 
 
 function UserProfileSection({ user }: { user: any }) {
@@ -124,18 +119,6 @@ function FloatingMobileMenuButton() {
   );
 }
 
-// Component for inbox button with unread badge
-const InboxButton: React.FC<{ unreadCount: number }> = ({ unreadCount }) => {
-  return (
-    <div className="relative inline-flex">
-      <Bell className="!h-4 !w-4" />
-      {unreadCount > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500" />
-      )}
-    </div>
-  );
-};
-
 export function SidebarLeft({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -147,8 +130,8 @@ export function SidebarLeft({
   const [activeView, setActiveView] = useState<'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox' | 'workflows'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
 
-  // Get real unread count from Novu
-  const unreadCount = useUnreadNotificationCount();
+  // Get real unread count from Novu - Removed hook call, handled inside InboxButton
+  // const unreadCount = useUnreadNotificationCount();
 
   //console.log('SidebarLeft rendering:', { state, isMobile, openMobile, activeView });
 
@@ -405,7 +388,7 @@ export function SidebarLeft({
                           }}
                         >
                           {view === 'inbox' ? (
-                            <InboxButton unreadCount={unreadCount} />
+                            <InboxButton />
                           ) : (
                             <Icon className="!h-4 !w-4" />
                           )}
@@ -513,7 +496,7 @@ export function SidebarLeft({
                         )}
                       >
                         {view === 'inbox' ? (
-                          <InboxButton unreadCount={unreadCount} />
+                          <InboxButton />
                         ) : (
                           <Icon className="!h-4 !w-4" />
                         )}

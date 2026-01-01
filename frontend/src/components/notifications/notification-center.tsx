@@ -14,12 +14,6 @@ interface NotificationCenterProps {
 export function NotificationCenter({ applicationIdentifier }: NotificationCenterProps) {
   const { user } = useAuth();
 
-  // Render if user is authenticated and app identifier is configured
-  // Works in any environment mode (local, staging, production) as long as Novu is configured
-  if (!user?.id || !applicationIdentifier) {
-    return null;
-  }
-
   return (
     <NovuProvider
       subscriberId={user.id}

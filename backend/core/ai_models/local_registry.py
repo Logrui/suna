@@ -94,7 +94,7 @@ class LocalModelRegistry:
                         enabled=True,
                         tier_availability=["free"],
                         pricing=ModelPricing(0, 0),
-                        priority=50
+                        priority=51
                     )
                     
                     # LM Studio is OpenAI compatible

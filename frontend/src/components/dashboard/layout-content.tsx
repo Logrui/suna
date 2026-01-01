@@ -16,7 +16,6 @@ import { useProjects } from '@/hooks/sidebar/use-sidebar';
 import { useIsMobile } from '@/hooks/utils';
 import { AppProviders } from '@/components/layout/app-providers';
 import { AnnouncementDialog } from '../announcements/announcement-dialog';
-import { NovuProviderWrapper } from '../notifications/novu-provider-wrapper';
 
 // Lazy load heavy components that aren't needed for initial render
 const FloatingMobileMenuButton = lazy(() =>
@@ -161,48 +160,42 @@ export default function DashboardLayoutContent({
   }
 
   return (
-    <NovuProviderWrapper>
-      <AppProviders
-        showSidebar={true}
-        sidebarSiblings={
-          <Suspense fallback={null}>
-            {/* Status overlay for deletion operations */}
-            <StatusOverlay />
-            {/* Floating mobile menu button */}
-            <FloatingMobileMenuButton />
-          </Suspense>
-        }
-      >
-        <div className="relative h-full">
-          {/* Site-wide welcome bonus banner for free tier users */}
-          <Suspense fallback={null}>
-            <WelcomeBonusBanner />
-          </Suspense>
-          <Suspense fallback={null}>
-            <AnnouncementDialog />
-          </Suspense>
+    <AppProviders
+      showSidebar={true}
+      sidebarSiblings={
+        <Suspense fallback={null}>
+          {/* Status overlay for deletion operations */}
+          <StatusOverlay />
+          {/* Floating mobile menu button */}
+          <FloatingMobileMenuButton />
+        </Suspense>
+      }
+    >
+      <div className="relative h-full">
+        <Suspense fallback={null}>
+          <AnnouncementDialog />
+        </Suspense>
 
+        <Suspense fallback={null}>
+          <OnboardingProvider>
+            {mantenanceBanner}
+            <div className="bg-background">{children}</div>
+          </OnboardingProvider>
+        </Suspense>
+        <Suspense fallback={null}>
+          <PresentationViewerWrapper />
+        </Suspense>
+        {/* Kortix App announcement banners */}
+        <Suspense fallback={null}>
+          <KortixAppBanners disableMobileAdvertising={featureFlags.disableMobileAdvertising} />
+        </Suspense>
+        {/* Mobile app install interstitial - shown on actual mobile devices */}
+        {!featureFlags.disableMobileAdvertising ? (
           <Suspense fallback={null}>
-            <OnboardingProvider>
-              {mantenanceBanner}
-              <div className="bg-background">{children}</div>
-            </OnboardingProvider>
+            <MobileAppInterstitial />
           </Suspense>
-          <Suspense fallback={null}>
-            <PresentationViewerWrapper />
-          </Suspense>
-          {/* Kortix App announcement banners */}
-          <Suspense fallback={null}>
-            <KortixAppBanners disableMobileAdvertising={featureFlags.disableMobileAdvertising} />
-          </Suspense>
-          {/* Mobile app install interstitial - shown on actual mobile devices */}
-          {!featureFlags.disableMobileAdvertising ? (
-            <Suspense fallback={null}>
-              <MobileAppInterstitial />
-            </Suspense>
-          ) : null}
-        </div>
-      </AppProviders>
-    </NovuProviderWrapper>
+        ) : null}
+      </div>
+    </AppProviders>
   );
 }

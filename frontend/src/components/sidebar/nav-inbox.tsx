@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/components/AuthProvider';
-import { useNotifications, useNovu } from '@novu/nextjs/hooks';
+import { NovuProvider, useNotifications, useNovu, useCounts } from '@novu/react';
 import { cn } from '@/lib/utils';
 import { UnifiedMarkdown } from '@/components/markdown';
 import { useAnnouncementStore, AnnouncementData } from '@/stores/announcement-store';
@@ -331,7 +331,7 @@ function NotificationSkeleton() {
 // Empty state component
 function EmptyState() {
     return (
-        <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-6 text-center">
+        <div className="flex flex-col items-center justify-center h-full p-6 text-center">
             <div className="relative mb-4">
                 <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center">
                     <Bell className="h-8 w-8 text-muted-foreground/50" />
@@ -340,51 +340,43 @@ function EmptyState() {
                     <Check className="h-3 w-3 text-primary" />
                 </div>
             </div>
-            <p className="text-sm font-medium text-muted-foreground">All caught up!</p>
+            <p className="text-sm font-medium text-muted-foreground">Quiet for now</p>
             <p className="text-xs text-muted-foreground/70 mt-1">
-                You have no new notifications
+                Check back later
             </p>
         </div>
     );
 }
 
-// Main NavInbox component
-export function NavInbox() {
-    const { user } = useAuth();
-    const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER;
+// Inner component that uses Novu hooks - only rendered when wrapped by NovuProvider
+function NavInboxContent() {
+    // Use @novu/react headless hooks
+    const { notifications, isLoading, hasMore, fetchMore, refetch } = useNotifications();
     const novu = useNovu();
-    const { notifications, isLoading, isFetching, hasMore, fetchMore, refetch } = useNotifications();
 
-    // Check if Novu is configured
-    if (!applicationIdentifier || !user?.id) {
-        return (
-            <div className="flex flex-col h-full">
-                {/* Header */}
-                <div className="px-2.5 py-3 border-b border-transparent">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
-                    </div>
-                </div>
+    // useCounts requires filters - use filter for unread notifications
+    const { counts } = useCounts({ filters: [{ read: false }] });
 
-                {/* Not configured state */}
-                <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-6 text-center">
-                    <Bell className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground">Notifications not configured</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">
-                        Set NEXT_PUBLIC_NOVU_APP_IDENTIFIER to enable
-                    </p>
-                </div>
-            </div>
-        );
-    }
+    // Calculate unread count from counts array
+    const unreadCount = Array.isArray(counts) && counts.length > 0
+        ? counts[0].count
+        : 0;
 
-    // Calculate unread count
-    const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
+    // Debug logging
+    console.log('[NavInbox] State:', {
+        isLoading,
+        notificationCount: notifications?.length || 0,
+        unreadCount,
+        hasMore
+    });
 
     const handleMarkAllAsRead = async () => {
-        if (novu) {
+        try {
             await novu.notifications.readAll();
+            // Refetch to update the UI
             refetch();
+        } catch (error) {
+            console.error('Failed to mark all as read:', error);
         }
     };
 
@@ -420,9 +412,9 @@ export function NavInbox() {
                             onClick={() => refetch()}
                             title="Refresh"
                         >
-                            <RefreshCw className={cn("h-3 w-3", isFetching && "animate-spin")} />
+                            <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
                         </Button>
-                        <Link href="/notifications">
+                        {/*<Link href="/notifications">
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -432,55 +424,104 @@ export function NavInbox() {
                             >
                                 <ExternalLink className="h-3 w-3" />
                             </Button>
-                        </Link>
+                        </Link>*/}
                     </div>
                 </div>
             </div>
 
-            {/* Notification list */}
-            <ScrollArea className="flex-1">
-                <div className="p-1.5 space-y-1">
-                    {isLoading ? (
-                        // Loading state
-                        <>
-                            <NotificationSkeleton />
-                            <NotificationSkeleton />
-                            <NotificationSkeleton />
-                        </>
-                    ) : notifications && notifications.length > 0 ? (
-                        // Notifications list
-                        <>
-                            {notifications.map((notification) => (
-                                <NotificationItem
-                                    key={notification.id}
-                                    notification={notification as unknown as Notification}
-                                />
-                            ))}
-
-                            {/* Load more button */}
-                            {hasMore && (
-                                <div className="pt-2 pb-1 px-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full h-7 text-xs text-muted-foreground"
-                                        onClick={() => fetchMore()}
-                                        disabled={isFetching}
-                                    >
-                                        {isFetching ? (
-                                            <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
-                                        ) : null}
-                                        Load more
-                                    </Button>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        // Empty state
-                        <EmptyState />
-                    )}
+            {/* Notification list or empty state */}
+            {!isLoading && (!notifications || notifications.length === 0) ? (
+                // Empty state - rendered outside ScrollArea for proper centering
+                <div className="flex-1 flex items-center justify-center">
+                    <EmptyState />
                 </div>
-            </ScrollArea>
+            ) : (
+                <ScrollArea className="flex-1">
+                    <div className="p-1.5 space-y-1">
+                        {isLoading ? (
+                            // Loading state
+                            <>
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                                <NotificationSkeleton />
+                            </>
+                        ) : notifications && notifications.length > 0 ? (
+                            // Notifications list
+                            <>
+                                {notifications.map((notification) => (
+                                    <NotificationItem
+                                        key={notification.id}
+                                        notification={notification as unknown as Notification}
+                                    />
+                                ))}
+
+                                {/* Load more button */}
+                                {hasMore && (
+                                    <div className="pt-2 pb-1 px-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full h-7 text-xs text-muted-foreground"
+                                            onClick={() => fetchMore()}
+                                            disabled={isLoading}
+                                        >
+                                            {isLoading ? (
+                                                <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
+                                            ) : null}
+                                            Load more
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
+                        ) : null}
+                    </div>
+                </ScrollArea>
+            )}
         </div>
+    );
+}
+
+// Main NavInbox component - handles provider setup like notification-center.tsx
+export function NavInbox() {
+    const { user } = useAuth();
+    const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER;
+
+    // Check if Novu is configured - BEFORE any hook usage
+    if (!applicationIdentifier || !user?.id) {
+        return (
+            <div className="flex flex-col h-full">
+                {/* Header */}
+                <div className="px-2.5 py-3 border-b border-transparent">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-medium text-muted-foreground pl-0.5">Inbox</h3>
+                    </div>
+                </div>
+
+                {/* Not configured state */}
+                <div className="flex flex-col items-center justify-center h-full min-h-[200px] p-6 text-center">
+                    <Bell className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                    <p className="text-sm text-muted-foreground">Notifications Needs Configurations</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                        NEXT_PUBLIC_NOVU_APP_IDENTIFIER Required
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Wrap with NovuProvider from @novu/react (proper headless hooks)
+    return (
+        <NovuProvider
+            applicationIdentifier={applicationIdentifier}
+            subscriberId={user.id}
+        >
+            <NavInboxContent />
+        </NovuProvider>
     );
 }

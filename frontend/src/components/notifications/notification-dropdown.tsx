@@ -248,11 +248,6 @@ export function NotificationDropdown() {
   const { user } = useAuth();
   const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER;
 
-  // Don't render if no app identifier configured or user not authenticated
-  if (!applicationIdentifier || !user?.id) {
-    return null;
-  }
-
   const appearance = {
     variables: {
       colorBackground: 'var(--card)',

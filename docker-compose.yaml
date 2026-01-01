@@ -34,7 +34,7 @@ services:
       - ./backend/services/docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
     command: redis-server /usr/local/etc/redis/redis.conf --save 60 1 --loglevel warning
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -97,6 +97,7 @@ services:
         - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
         - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
         - NEXT_PUBLIC_ENV_MODE=${NEXT_PUBLIC_ENV_MODE:-staging}
+        - NEXT_PUBLIC_NOVU_APP_IDENTIFIER=${NEXT_PUBLIC_NOVU_APP_IDENTIFIER}
         - BACKEND_INTERNAL_URL=http://backend:8000
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
@@ -107,6 +108,7 @@ services:
       - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
       - NEXT_PUBLIC_POSTHOG_KEY=${NEXT_PUBLIC_POSTHOG_KEY}
       - NEXT_PUBLIC_ENV_MODE=${NEXT_PUBLIC_ENV_MODE:-staging}
+      - NEXT_PUBLIC_NOVU_APP_IDENTIFIER=${NEXT_PUBLIC_NOVU_APP_IDENTIFIER}
     ports:
       - "9990:3000"
     depends_on:

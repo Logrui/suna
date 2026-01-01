@@ -19,7 +19,7 @@ class FallbackModelRegistry:
 
         # Gemini 3 Pro Preview
         self.register(Model(
-            id="google/gemini-3-pro-preview",
+            id="openrouter/google/gemini-3-pro-preview",
             name="Gemini 3 Pro (Preview)",
             provider=ModelProvider.GOOGLE,
             aliases=["gemini-3-pro-preview", "google-gemini-3-pro-preview"],
@@ -44,7 +44,7 @@ class FallbackModelRegistry:
 
         # Gemini 3 Flash Preview
         self.register(Model(
-            id="google/gemini-3-flash-preview",
+            id="openrouter/google/gemini-3-flash-preview",
             name="Gemini 3 Flash (Preview)",
             provider=ModelProvider.GOOGLE,
             aliases=["gemini-3-flash-preview", "google-gemini-3-flash-preview"],
@@ -67,7 +67,7 @@ class FallbackModelRegistry:
 
         # Gemini 2.5 Pro
         self.register(Model(
-            id="google/gemini-2.5-pro",
+            id="openrouter/google/gemini-2.5-pro",
             name="Gemini 2.5 Pro",
             provider=ModelProvider.GOOGLE,
             aliases=["gemini-2.5-pro-api", "google-gemini-2.5-pro-api"],
@@ -92,7 +92,7 @@ class FallbackModelRegistry:
 
         # Gemini 2.5 Flash
         self.register(Model(
-            id="google/gemini-2.5-flash",
+            id="openrouter/google/gemini-2.5-flash",
             name="Gemini 2.5 Flash",
             provider=ModelProvider.GOOGLE,
             aliases=["gemini-2.5-flash-api", "google-gemini-2.5-flash-api"],
@@ -112,33 +112,34 @@ class FallbackModelRegistry:
             priority=108,
             enabled=config.GEMINI_API_KEY is not None,
         ))
-
-        # Gemini 2.0 Flash-Lite
+        
+        # Claude Opus 4.5 (via Claude API)
         self.register(Model(
-            id="google/gemini-2.0-flash-lite-001",
-            name="Gemini 2.0 Flash-Lite",
-            provider=ModelProvider.GOOGLE,
-            aliases=["gemini-2.0-flash-lite-api", "google-gemini-2.0-flash-lite-api"],
-            context_window=1_048_576,
-            max_output_tokens=8_192,
+            id="openrouter/anthropic/claude-opus-4-5",
+            name="Claude Opus 4.5",
+            provider=ModelProvider.ANTHROPIC,
+            aliases=["claude-opus-4.5", "anthropic-claude-opus-4.5"],
+            context_window=200_000, # 1M in Beta
+            max_output_tokens=64_000,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
                 ModelCapability.VISION,
-                ModelCapability.STRUCTURED_OUTPUT,
+                ModelCapability.THINKING, # "Extended Thinking" implied?
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.075,
-                output_cost_per_million_tokens=0.30
+                input_cost_per_million_tokens=3.00,
+                output_cost_per_million_tokens=15.00
             ),
-            tier_availability=["free", "paid"],
-            priority=90,
-            enabled=config.GEMINI_API_KEY is not None,
+            tier_availability=["paid"],
+            priority=106,
+            enabled=config.ANTHROPIC_API_KEY is not None,
+            fallback_models=["openrouter/anthropic/claude-haiku-4-5"],
         ))
-        
+
         # Claude Sonnet 4.5 (via Claude API)
         self.register(Model(
-            id="anthropic/claude-sonnet-4-5",
+            id="openrouter/anthropic/claude-sonnet-4-5",
             name="Claude Sonnet 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4.5", "anthropic-claude-sonnet-4.5"],
@@ -157,7 +158,7 @@ class FallbackModelRegistry:
             tier_availability=["paid"],
             priority=106,
             enabled=config.ANTHROPIC_API_KEY is not None,
-            fallback_models=["anthropic/claude-haiku-4-5"],
+            fallback_models=["openrouter/anthropic/claude-haiku-4-5"],
             config=ModelConfig(
                 extra_headers={
                     "anthropic-beta": "context-1m-2025-08-07"
@@ -167,7 +168,7 @@ class FallbackModelRegistry:
 
         # Claude Haiku 4.5 (via Claude API)
         self.register(Model(
-            id="anthropic/claude-haiku-4-5",
+            id="openrouter/anthropic/claude-haiku-4-5",
             name="Claude Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-haiku-4.5", "anthropic-claude-haiku-4.5"],
@@ -186,7 +187,7 @@ class FallbackModelRegistry:
             tier_availability=["paid"],
             priority=110,
             enabled=config.ANTHROPIC_API_KEY is not None,
-            fallback_models=["google/gemini-2.5-flash"],
+            fallback_models=["openrouter/google/gemini-3-flash"],
             config=ModelConfig(
                 extra_body={
                     "anthropic_version": "vertex-2023-10-16"
