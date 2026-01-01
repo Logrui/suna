@@ -149,6 +149,118 @@ class NotificationService:
             logger.error(f"Error triggering task failed notification: {str(e)}")
             return {"success": False, "error": str(e)}
     
+    async def send_task_needs_attention_notification(
+        self,
+        account_id: str,
+        task_name: str,
+        thread_id: str,
+        question: str,
+        follow_up_options: Optional[list] = None
+    ) -> Dict[str, Any]:
+        """Send notification when agent uses ask tool and needs user response."""
+        try:
+            from core.notifications.presence_service import presence_service
+            
+            should_send = await presence_service.should_send_notification(
+                account_id=account_id,
+                thread_id=thread_id,
+                channel="email"
+            )
+            
+            if not should_send:
+                logger.info(f"Suppressing task needs attention notification for account {account_id} (actively viewing thread {thread_id})")
+                return {"success": False, "reason": "Account is actively viewing thread"}
+            
+            account_info = await self._get_account_info(account_id)
+            
+            # Build task URL
+            client = await self.db.client
+            thread_result = await client.table('threads').select('project_id').eq('thread_id', thread_id).maybe_single().execute()
+            project_id = thread_result.data.get('project_id') if thread_result and thread_result.data else None
+            
+            task_url = f"https://www.kortix.com/projects/{project_id}/thread/{thread_id}" if project_id else f"https://www.kortix.com/thread/{thread_id}"
+            
+            payload = {
+                "first_name": account_info.get("first_name"),
+                "task_name": task_name,
+                "task_url": task_url,
+                "question": question
+            }
+            
+            if follow_up_options:
+                payload["options"] = follow_up_options
+            
+            result = await self.novu.trigger_workflow(
+                workflow_id="task-needs-attention",
+                subscriber_id=account_id,
+                payload=payload,
+                subscriber_email=account_info.get("email"),
+                subscriber_name=account_info.get("name")
+            )
+            
+            logger.info(f"Task needs attention workflow triggered for account {account_id}: {result}")
+            return {"success": True, "result": result}
+            
+        except Exception as e:
+            logger.error(f"Error triggering task needs attention notification: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
+    async def send_task_needs_permissions_notification(
+        self,
+        account_id: str,
+        task_name: str,
+        thread_id: str,
+        permission_request: str,
+        resource_type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Send notification when agent needs permission to access a resource (scaffold for future use)."""
+        try:
+            from core.notifications.presence_service import presence_service
+            
+            should_send = await presence_service.should_send_notification(
+                account_id=account_id,
+                thread_id=thread_id,
+                channel="email"
+            )
+            
+            if not should_send:
+                logger.info(f"Suppressing task needs permissions notification for account {account_id} (actively viewing thread {thread_id})")
+                return {"success": False, "reason": "Account is actively viewing thread"}
+            
+            account_info = await self._get_account_info(account_id)
+            
+            # Build task URL
+            client = await self.db.client
+            thread_result = await client.table('threads').select('project_id').eq('thread_id', thread_id).maybe_single().execute()
+            project_id = thread_result.data.get('project_id') if thread_result and thread_result.data else None
+            
+            task_url = f"https://www.kortix.com/projects/{project_id}/thread/{thread_id}" if project_id else f"https://www.kortix.com/thread/{thread_id}"
+            
+            payload = {
+                "first_name": account_info.get("first_name"),
+                "task_name": task_name,
+                "task_url": task_url,
+                "permission_request": permission_request
+            }
+            
+            if resource_type:
+                payload["resource_type"] = resource_type
+            
+            result = await self.novu.trigger_workflow(
+                workflow_id="task-needs-permissions",
+                subscriber_id=account_id,
+                payload=payload,
+                subscriber_email=account_info.get("email"),
+                subscriber_name=account_info.get("name")
+            )
+            
+            logger.info(f"Task needs permissions workflow triggered for account {account_id}: {result}")
+            return {"success": True, "result": result}
+            
+        except Exception as e:
+            logger.error(f"Error triggering task needs permissions notification: {str(e)}")
+            return {"success": False, "error": str(e)}
+    
     async def send_payment_succeeded_notification(
         self,
         account_id: str,

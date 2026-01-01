@@ -94,6 +94,60 @@ def check_terminating_tool_call(response: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def extract_ask_question_from_messages(client, thread_id: str) -> Optional[Tuple[str, Optional[list]]]:
+    """
+    Extract the question text and follow-up options from the most recent ask tool call.
+    This looks at the saved messages in the thread to find the ask tool's arguments.
+    Returns (question_text, follow_up_options) or None if not found.
+    """
+    # This is a sync helper - the actual extraction happens in the async version below
+    return None
+
+
+async def get_ask_question_from_thread(client, thread_id: str) -> Tuple[Optional[str], Optional[list]]:
+    """
+    Extract the question text and follow-up options from the most recent ask tool call in the thread.
+    Returns (question_text, follow_up_options).
+    """
+    try:
+        # Get the most recent messages to find the ask tool call
+        result = await client.table('messages').select('content', 'metadata').eq(
+            'thread_id', thread_id
+        ).order('created_at', desc=True).limit(10).execute()
+        
+        if not result.data:
+            return None, None
+        
+        for message in result.data:
+            metadata = message.get('metadata', {})
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+            
+            # Look for tool_calls in metadata that contain 'ask'
+            tool_calls = metadata.get('tool_calls', [])
+            for tc in tool_calls:
+                if tc.get('function_name') == 'ask':
+                    arguments = tc.get('arguments', {})
+                    if isinstance(arguments, str):
+                        try:
+                            arguments = json.loads(arguments)
+                        except (json.JSONDecodeError, TypeError):
+                            continue
+                    
+                    question = arguments.get('text')
+                    follow_up_options = arguments.get('follow_up_answers')
+                    if question:
+                        return question, follow_up_options
+        
+        return None, None
+    except Exception as e:
+        logger.warning(f"Failed to extract ask question from thread {thread_id}: {e}")
+        return None, None
+
+
 async def initialize():
     global db, instance_id, _initialized, _STATIC_CORE_PROMPT
 
@@ -299,6 +353,31 @@ async def send_failure_notification(client, thread_id: str, error_message: str):
         logger.warning(f"Failed to send failure notification: {notif_error}")
 
 
+async def send_attention_notification(client, thread_id: str):
+    """Send notification when ask tool is called and agent needs user input."""
+    try:
+        from core.notifications.notification_service import notification_service
+        thread_info = await client.table('threads').select('account_id').eq('thread_id', thread_id).maybe_single().execute()
+        if thread_info and thread_info.data:
+            user_id = thread_info.data.get('account_id')
+            if user_id:
+                notification_data = await get_thread_data(client, thread_id)
+                
+                # Extract the question from the ask tool call
+                question, follow_up_options = await get_ask_question_from_thread(client, thread_id)
+                
+                result = await notification_service.send_task_needs_attention_notification(
+                    account_id=user_id,
+                    task_name=notification_data['task_name'],
+                    thread_id=thread_id,
+                    question=question or "The agent has a question for you",
+                    follow_up_options=follow_up_options
+                )
+                logger.info(f"Task needs attention notification sent: {result}")
+    except Exception as notif_error:
+        logger.warning(f"Failed to send attention notification: {notif_error}")
+
+
 def create_redis_keys(agent_run_id: str, instance_id: str) -> Dict[str, str]:
     return {
         'response_stream': f"agent_run:{agent_run_id}:stream",
@@ -317,11 +396,18 @@ async def process_agent_responses(
     trace,
     worker_start: float,
     stop_signal_checker_state: Dict[str, Any]
-) -> Tuple[str, Optional[str], bool, int]:
+) -> Tuple[str, Optional[str], bool, bool, int]:
+    """
+    Process agent responses and track terminating tool calls.
+    
+    Returns:
+        Tuple of (final_status, error_message, complete_tool_called, ask_tool_called, total_responses)
+    """
     final_status = "running"
     error_message = None
     first_response_logged = False
     complete_tool_called = False
+    ask_tool_called = False
     total_responses = 0
     redis_streaming_enabled = True
     
@@ -381,7 +467,8 @@ async def process_agent_responses(
             complete_tool_called = True
             logger.info(f"Complete tool was called in agent run {agent_run_id}")
         elif terminating_tool == 'ask':
-            logger.debug(f"Ask tool was called in agent run {agent_run_id} (terminating but no notification)")
+            ask_tool_called = True
+            logger.info(f"Ask tool was called in agent run {agent_run_id}")
 
         if response.get('type') == 'status':
             status_val = response.get('status')
@@ -395,7 +482,8 @@ async def process_agent_responses(
                 break
     
     # All stream writes are synchronous now, so no pending operations to await
-    return final_status, error_message, complete_tool_called, total_responses
+    return final_status, error_message, complete_tool_called, ask_tool_called, total_responses
+
 
 
 async def handle_normal_completion(
@@ -592,7 +680,7 @@ async def run_agent_background(
         total_to_ready = (time.time() - worker_start) * 1000
         logger.info(f"⏱️ [TIMING] 🏁 Worker ready for first LLM call: {total_to_ready:.1f}ms from job start")
 
-        final_status, error_message, complete_tool_called, total_responses = await process_agent_responses(
+        final_status, error_message, complete_tool_called, ask_tool_called, total_responses = await process_agent_responses(
             agent_gen, agent_run_id, redis_keys, trace, worker_start, stop_signal_checker_state
         )
 
@@ -607,9 +695,14 @@ async def run_agent_background(
 
         if final_status == "failed" and error_message:
             await send_failure_notification(client, thread_id, error_message)
+        
+        # Send attention notification when ask tool is called
+        if ask_tool_called:
+            await send_attention_notification(client, thread_id)
 
         stop_reason = stop_signal_checker_state.get('stop_reason')
         await publish_final_control_signal(agent_run_id, final_status, stop_reason=stop_reason)
+
 
     except Exception as e:
         error_message = str(e)

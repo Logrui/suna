@@ -28,5 +28,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Update ollama and lm studio models to properly display ollama.svg and lmstudio.svg on the frontend.
+## [x] Track: Update ollama and lm studio models to properly display ollama.svg and lmstudio.svg on the frontend.
 *Link: [./conductor/tracks/local_model_icons_20251231/](./conductor/tracks/local_model_icons_20251231/)*
