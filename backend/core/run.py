@@ -16,7 +16,8 @@ from core.agentpress.response_processor import ProcessorConfig
 from core.agentpress.error_processor import ErrorProcessor
 from core.tools.data_providers_tool import DataProvidersTool
 from core.tools.expand_msg_tool import ExpandMessageTool
-from core.prompts.prompt import get_system_prompt
+from core.tools.expand_msg_tool import ExpandMessageTool
+from core.prompts.dynamic_prompt import DynamicPromptBuilder
 
 from core.utils.logger import logger
 
@@ -339,13 +340,31 @@ class PromptManager:
                                   tool_registry=None,
                                   xml_tool_calling: bool = True) -> dict:
         
-        default_system_content = get_system_prompt()
+        # Determine enabled tools for dynamic prompt
+        authorized_tools = []
+        dynamic_tool_keys = [
+            'sb_kb_tool', 'sb_docs_tool', 'browser_tool', 'sb_vision_tool',
+            'sb_design_tool', 'image_search_tool', 'sb_image_edit_tool',
+            'people_search_tool', 'company_search_tool'
+        ]
         
-        # if "anthropic" not in model_name.lower():
-        #     sample_response_path = os.path.join(os.path.dirname(__file__), 'prompts/samples/1.txt')
-        #     with open(sample_response_path, 'r') as file:
-        #         sample_response = file.read()
-        #     default_system_content = default_system_content + "\n\n <sample_assistant_response>" + sample_response + "</sample_assistant_response>"
+        if not agent_config or 'agentpress_tools' not in agent_config:
+             authorized_tools = dynamic_tool_keys
+        else:
+             tools_config = agent_config.get('agentpress_tools', {})
+             for key in dynamic_tool_keys:
+                 tool_conf = tools_config.get(key, True)
+                 is_enabled = True
+                 if isinstance(tool_conf, bool):
+                     is_enabled = tool_conf
+                 elif isinstance(tool_conf, dict):
+                     is_enabled = tool_conf.get('enabled', True)
+                 
+                 if is_enabled:
+                     authorized_tools.append(key)
+
+        builder = DynamicPromptBuilder(authorized_tools)
+        default_system_content = builder.build()
         
         # Start with agent's normal system prompt or default
         if agent_config and agent_config.get('system_prompt'):
