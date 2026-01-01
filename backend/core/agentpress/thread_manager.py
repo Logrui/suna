@@ -343,7 +343,7 @@ class ThreadManager:
         llm_max_tokens: Optional[int] = None,
         processor_config: Optional[ProcessorConfig] = None,
         tool_choice: ToolChoice = "auto",
-        native_max_auto_continues: int = 25,
+        native_max_auto_continues: int = 50,
         generation: Optional[StatefulGenerationClient] = None,
         latest_user_message_content: Optional[str] = None,
         cancellation_event: Optional[asyncio.Event] = None,

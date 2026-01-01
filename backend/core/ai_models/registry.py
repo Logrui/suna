@@ -200,8 +200,8 @@ class ModelRegistry:
             self.register(model)
 
         # Merge models from AWS Registry
-        for model in aws_registry.get_all(enabled_only=False):
-            self.register(model)
+        #for model in aws_registry.get_all(enabled_only=False):
+        #    self.register(model)
 
     
     def register(self, model: Model) -> None:

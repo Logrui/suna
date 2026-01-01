@@ -10,7 +10,8 @@ import {
   ChevronLeft,
   Frown,
   Plus,
-  ChevronDown
+  ChevronDown,
+  Check
 } from "lucide-react"
 import { ThreadIcon } from "./thread-icon"
 import { toast } from "sonner"
@@ -68,6 +69,8 @@ const SingleChatCard: React.FC<{
   isActive: boolean;
   isThreadLoading: boolean;
   isAgentRunning: boolean;
+  isSelected: boolean;
+  onToggleSelect: (threadId: string, e?: React.MouseEvent) => void;
   handleThreadClick: (e: React.MouseEvent<HTMLAnchorElement>, threadId: string, url: string) => void;
   handleDeleteThread: (threadId: string, threadName: string) => void;
   handleCreateNewChat: (projectId: string) => Promise<void>;
@@ -78,109 +81,126 @@ const SingleChatCard: React.FC<{
   isActive,
   isThreadLoading,
   isAgentRunning,
+  isSelected,
+  onToggleSelect,
   handleThreadClick,
   handleDeleteThread,
   handleCreateNewChat,
   isCreatingChat,
 }) => {
-  const [isHoveringCard, setIsHoveringCard] = useState(false);
+    const [isHoveringCard, setIsHoveringCard] = useState(false);
 
-  return (
-    <SpotlightCard
-      className={cn(
-        "transition-colors cursor-pointer",
-        isActive ? "bg-muted" : "bg-transparent"
-      )}
-    >
-      <Link
-        href={thread.url}
-        onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
-        prefetch={false}
-        className="block"
+    return (
+      <SpotlightCard
+        className={cn(
+          "transition-colors cursor-pointer",
+          isActive ? "bg-muted" : "bg-transparent"
+        )}
       >
-        <div
-          className="flex items-center gap-3 p-2.5 text-sm"
-          onMouseEnter={() => setIsHoveringCard(true)}
-          onMouseLeave={() => setIsHoveringCard(false)}
+        <Link
+          href={thread.url}
+          onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
+          prefetch={false}
+          className="block"
         >
-          {/* Icon */}
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-card border-[1.5px] border-border flex-shrink-0">
-            {isThreadLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            ) : (
-              <ThreadIcon
-                iconName={projectGroup.iconName}
-                className="text-muted-foreground"
-                size={14}
-              />
-            )}
-            {isAgentRunning && (
-              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-background animate-pulse" />
-            )}
-          </div>
-          
-          {/* Name */}
-          <span className="flex-1 truncate">{projectGroup.projectName}</span>
-          
-          {/* Date & Menu */}
-          <div className="flex-shrink-0 relative">
-            <span
+          <div
+            className="flex items-center gap-3 p-2.5 text-sm"
+            onMouseEnter={() => setIsHoveringCard(true)}
+            onMouseLeave={() => setIsHoveringCard(false)}
+          >
+            {/* Icon - Clickable for multiselect */}
+            <button
+              type="button"
               className={cn(
-                "text-xs text-muted-foreground transition-opacity",
-                isHoveringCard ? "opacity-0" : "opacity-100"
+                "relative flex items-center justify-center w-10 h-10 rounded-2xl border-[1.5px] flex-shrink-0 transition-all",
+                isSelected
+                  ? "bg-primary border-primary"
+                  : "bg-card border-border hover:border-primary/50"
               )}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelect(thread.threadId, e);
+              }}
             >
-              {formatDateForList(thread.updatedAt)}
-            </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={cn(
-                    "absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-2xl hover:bg-accent transition-all text-muted-foreground",
-                    isHoveringCard ? "opacity-100" : "opacity-0 pointer-events-none"
-                  )}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  <MoreHorizontal className="h-4 w-4 rotate-90" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleCreateNewChat(projectGroup.projectId);
-                  }}
-                  disabled={isCreatingChat}
-                >
-                  {isCreatingChat ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="mr-2 h-4 w-4" />
-                  )}
-                  New chat
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDeleteThread(thread.threadId, thread.projectName);
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {isThreadLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              ) : isSelected ? (
+                <Check className="h-4 w-4 text-primary-foreground" />
+              ) : (
+                <ThreadIcon
+                  iconName={projectGroup.iconName}
+                  className="text-muted-foreground"
+                  size={14}
+                />
+              )}
+              {isAgentRunning && !isSelected && (
+                <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-background animate-pulse" />
+              )}
+            </button>
+
+            {/* Name */}
+            <span className="flex-1 truncate">{projectGroup.projectName}</span>
+
+            {/* Date & Menu */}
+            <div className="flex-shrink-0 relative">
+              <span
+                className={cn(
+                  "text-xs text-muted-foreground transition-opacity",
+                  isHoveringCard ? "opacity-0" : "opacity-100"
+                )}
+              >
+                {formatDateForList(thread.updatedAt)}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      "absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-2xl hover:bg-accent transition-all text-muted-foreground",
+                      isHoveringCard ? "opacity-100" : "opacity-0 pointer-events-none"
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <MoreHorizontal className="h-4 w-4 rotate-90" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCreateNewChat(projectGroup.projectId);
+                    }}
+                    disabled={isCreatingChat}
+                  >
+                    {isCreatingChat ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
+                    New chat
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteThread(thread.threadId, thread.projectName);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
-      </Link>
-    </SpotlightCard>
-  );
-};
+        </Link>
+      </SpotlightCard>
+    );
+  };
 
 export function NavAgents() {
   const t = useTranslations('sidebar');
@@ -256,13 +276,13 @@ export function NavAgents() {
     if (currentThreads.length === 0) {
       return [];
     }
-    
+
     const processed: ThreadWithProject[] = [];
-    
+
     for (const thread of currentThreads) {
       const projectId = thread.project_id;
       const project = thread.project; // Backend already provides this!
-      
+
       // Handle threads without project data gracefully
       // This can happen if the project was deleted or thread created without project
       if (!projectId) {
@@ -270,13 +290,13 @@ export function NavAgents() {
         console.debug('Thread without project_id:', thread.thread_id);
         continue;
       }
-      
+
       // Use fallback values if project data is missing (e.g., deleted project)
       const displayName = project?.name || 'Unnamed Project';
       const iconName = project?.icon_name;
       const updatedAt = thread.updated_at || project?.updated_at || new Date().toISOString();
       const formattedDate = formatDateForList(updatedAt);
-      
+
       processed.push({
         threadId: thread.thread_id,
         projectId: projectId,
@@ -287,16 +307,16 @@ export function NavAgents() {
         iconName: iconName,
       });
     }
-    
+
     // Sort by updated_at
-    return processed.sort((a, b) => 
+    return processed.sort((a, b) =>
       new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
   }, [currentThreads]);
 
   // Group threads by date, then by project within each date
   const groupedByDateThenProject: GroupedByDateThenProject = groupThreadsByDateThenProject(combinedThreads);
-  
+
   // Initialize expanded projects - expand all by default
   useEffect(() => {
     const allProjectIds = Object.values(groupedByDateThenProject)
@@ -305,7 +325,7 @@ export function NavAgents() {
       setExpandedProjects(new Set(allProjectIds));
     }
   }, [groupedByDateThenProject]);
-  
+
   const toggleProjectExpanded = (projectId: string) => {
     setExpandedProjects(prev => {
       const newSet = new Set(prev);
@@ -321,17 +341,17 @@ export function NavAgents() {
   // Handle creating a new chat with debounce and refetch
   const handleCreateNewChat = async (projectId: string) => {
     if (isCreatingChat) return; // Prevent double-clicks
-    
+
     setIsCreatingChat(true);
     try {
       const result = await createThreadInProject(projectId);
-      
+
       // Refetch threads and projects to update the sidebar
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: threadKeys.all }),
         queryClient.invalidateQueries({ queryKey: projectKeys.all }),
       ]);
-      
+
       router.push(`/projects/${projectId}/thread/${result.thread_id}`);
       toast.success('New chat created');
     } catch (error) {
@@ -713,215 +733,235 @@ export function NavAgents() {
                     <DateGroupHeader dateGroup={dateGroup} />
                     <div className="space-y-1.5">
                       {Object.values(projectsInDate).map((projectGroup: ProjectGroup) => {
-                  const isExpanded = expandedProjects.has(projectGroup.projectId);
-                  const projectThreads = projectGroup.threads;
-                  const hasActiveThread = projectThreads.some(t => pathname?.includes(t.threadId));
-                  const hasSingleChat = projectThreads.length === 1;
-                  const singleThread = hasSingleChat ? projectThreads[0] : null;
-                  
-                  // Single chat - show simple card (original ThreadItem style)
-                  if (hasSingleChat && singleThread) {
-                    const isActive = pathname?.includes(singleThread.threadId) || false;
-                    const isThreadLoading = loadingThreadId === singleThread.threadId;
-                    const isAgentRunning = agentStatusMap.get(singleThread.threadId) || false;
-                    
-                    return (
-                      <SingleChatCard
-                        key={`project-${projectGroup.projectId}`}
-                        thread={singleThread}
-                        projectGroup={projectGroup}
-                        isActive={isActive}
-                        isThreadLoading={isThreadLoading}
-                        isAgentRunning={isAgentRunning}
-                        handleThreadClick={handleThreadClick}
-                        handleDeleteThread={handleDeleteThread}
-                        handleCreateNewChat={handleCreateNewChat}
-                        isCreatingChat={isCreatingChat}
-                      />
-                    );
-                  }
-                  
-                  // Multiple chats - show project with expandable threads
-                  return (
-                    <div 
-                      key={`project-${projectGroup.projectId}`}
-                      className="rounded-xl"
-                    >
-                      <Collapsible
-                        open={isExpanded}
-                        onOpenChange={() => toggleProjectExpanded(projectGroup.projectId)}
-                      >
-                        <CollapsibleTrigger asChild>
-                          <div className={cn(
-                            "flex items-center gap-2.5 px-2.5 py-2.5 cursor-pointer group/project rounded-xl transition-colors",
-                            hasActiveThread ? "bg-muted" : "hover:bg-muted/30"
-                          )}>
-                            {/* Project Icon */}
-                            <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-card border-[1.5px] border-border flex-shrink-0">
-                              <ThreadIcon
-                                iconName={projectGroup.iconName}
-                                className="text-muted-foreground"
-                                size={14}
-                              />
-                            </div>
-                            
-                            {/* Project Name & Chat Count */}
-                            <div className="flex-1 min-w-0">
-                              <span className="block text-sm truncate text-foreground/90">
-                                {projectGroup.projectName}
-                              </span>
-                              <span className="text-[11px] text-muted-foreground">
-                                {projectThreads.length} chats
-                              </span>
-                            </div>
-                            
-                            {/* Actions */}
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              {/* New chat button */}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground opacity-0 group-hover/project:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                                    disabled={isCreatingChat}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCreateNewChat(projectGroup.projectId);
-                                    }}
-                                  >
-                                    {isCreatingChat ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      <Plus className="h-3.5 w-3.5" />
-                                    )}
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="right">
-                                  {isCreatingChat ? 'Creating...' : 'New chat'}
-                                </TooltipContent>
-                              </Tooltip>
-                              
-                              {/* Chevron */}
-                              <ChevronDown className={cn(
-                                "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                                isExpanded ? "rotate-0" : "-rotate-90"
-                              )} />
-                            </div>
-                          </div>
-                        </CollapsibleTrigger>
-                        
-                        <CollapsibleContent>
-                          <div className="ml-[26px] pl-3 border-l border-border/40 mt-1 pb-2 space-y-1">
-                            {projectThreads.map((thread) => {
-                              const isThreadActive = pathname?.includes(thread.threadId) || false;
-                              const isRunning = agentStatusMap.get(thread.threadId) || false;
+                        const isExpanded = expandedProjects.has(projectGroup.projectId);
+                        const projectThreads = projectGroup.threads;
+                        const hasActiveThread = projectThreads.some(t => pathname?.includes(t.threadId));
+                        const hasSingleChat = projectThreads.length === 1;
+                        const singleThread = hasSingleChat ? projectThreads[0] : null;
 
-                              return (
-                                <Link
-                                  key={`thread-${thread.threadId}`}
-                                  href={thread.url}
-                                  onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
-                                  prefetch={false}
-                                  className={cn(
-                                    "flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors group/chat",
-                                    isThreadActive 
-                                      ? "bg-muted text-foreground font-medium" 
-                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                                  )}
-                                >
-                                  {/* Status dot */}
-                                  <div className={cn(
-                                    "w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors",
-                                    isRunning ? "bg-green-500 animate-pulse" : isThreadActive ? "bg-primary" : "bg-muted-foreground/30"
-                                  )} />
-                                    
-                                    {/* Chat name */}
-                                    <span className={cn(
-                                      "flex-1 truncate",
-                                      isThreadActive && "font-medium"
-                                    )}>
-                                      {thread.threadName}
+                        // Single chat - show simple card (original ThreadItem style)
+                        if (hasSingleChat && singleThread) {
+                          const isActive = pathname?.includes(singleThread.threadId) || false;
+                          const isThreadLoading = loadingThreadId === singleThread.threadId;
+                          const isAgentRunning = agentStatusMap.get(singleThread.threadId) || false;
+
+                          return (
+                            <SingleChatCard
+                              key={`project-${projectGroup.projectId}`}
+                              thread={singleThread}
+                              projectGroup={projectGroup}
+                              isActive={isActive}
+                              isThreadLoading={isThreadLoading}
+                              isAgentRunning={isAgentRunning}
+                              isSelected={selectedThreads.has(singleThread.threadId)}
+                              onToggleSelect={toggleThreadSelection}
+                              handleThreadClick={handleThreadClick}
+                              handleDeleteThread={handleDeleteThread}
+                              handleCreateNewChat={handleCreateNewChat}
+                              isCreatingChat={isCreatingChat}
+                            />
+                          );
+                        }
+
+                        // Multiple chats - show project with expandable threads
+                        return (
+                          <div
+                            key={`project-${projectGroup.projectId}`}
+                            className="rounded-xl"
+                          >
+                            <Collapsible
+                              open={isExpanded}
+                              onOpenChange={() => toggleProjectExpanded(projectGroup.projectId)}
+                            >
+                              <CollapsibleTrigger asChild>
+                                <div className={cn(
+                                  "flex items-center gap-2.5 px-2.5 py-2.5 cursor-pointer group/project rounded-xl transition-colors",
+                                  hasActiveThread ? "bg-muted" : "hover:bg-muted/30"
+                                )}>
+                                  {/* Project Icon */}
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-card border-[1.5px] border-border flex-shrink-0">
+                                    <ThreadIcon
+                                      iconName={projectGroup.iconName}
+                                      className="text-muted-foreground"
+                                      size={14}
+                                    />
+                                  </div>
+
+                                  {/* Project Name & Chat Count */}
+                                  <div className="flex-1 min-w-0">
+                                    <span className="block text-sm truncate text-foreground/90">
+                                      {projectGroup.projectName}
                                     </span>
-                                    
-                                    {/* Menu */}
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      {projectThreads.length} chats
+                                    </span>
+                                  </div>
+
+                                  {/* Actions */}
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    {/* New chat button */}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
                                         <button
-                                          className="p-1 rounded-md hover:bg-accent transition-colors opacity-0 group-hover/chat:opacity-100"
+                                          className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground opacity-0 group-hover/project:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                                          disabled={isCreatingChat}
                                           onClick={(e) => {
-                                            e.preventDefault();
                                             e.stopPropagation();
+                                            handleCreateNewChat(projectGroup.projectId);
                                           }}
                                         >
-                                          <MoreHorizontal className="h-3.5 w-3.5" />
+                                          {isCreatingChat ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <Plus className="h-3.5 w-3.5" />
+                                          )}
                                         </button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" className="w-40">
-                                        <DropdownMenuItem
+                                      </TooltipTrigger>
+                                      <TooltipContent side="right">
+                                        {isCreatingChat ? 'Creating...' : 'New chat'}
+                                      </TooltipContent>
+                                    </Tooltip>
+
+                                    {/* Chevron */}
+                                    <ChevronDown className={cn(
+                                      "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                                      isExpanded ? "rotate-0" : "-rotate-90"
+                                    )} />
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+
+                              <CollapsibleContent>
+                                <div className="ml-[26px] pl-3 border-l border-border/40 mt-1 pb-2 space-y-1">
+                                  {projectThreads.map((thread) => {
+                                    const isThreadActive = pathname?.includes(thread.threadId) || false;
+                                    const isRunning = agentStatusMap.get(thread.threadId) || false;
+
+                                    return (
+                                      <Link
+                                        key={`thread-${thread.threadId}`}
+                                        href={thread.url}
+                                        onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
+                                        prefetch={false}
+                                        className={cn(
+                                          "flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors group/chat",
+                                          isThreadActive
+                                            ? "bg-muted text-foreground font-medium"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                        )}
+                                      >
+                                        {/* Status dot / Selection button */}
+                                        <button
+                                          type="button"
+                                          className={cn(
+                                            "w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center transition-all",
+                                            selectedThreads.has(thread.threadId)
+                                              ? "bg-primary"
+                                              : isRunning
+                                                ? "bg-green-500 animate-pulse"
+                                                : isThreadActive
+                                                  ? "bg-primary"
+                                                  : "bg-muted-foreground/30 hover:bg-primary/50"
+                                          )}
                                           onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            handleDeleteThread(thread.threadId, thread.projectName);
+                                            toggleThreadSelection(thread.threadId, e);
                                           }}
                                         >
-                                          <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </Link>
-                              );
-                            })}
+                                          {selectedThreads.has(thread.threadId) && (
+                                            <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                                          )}
+                                        </button>
+
+                                        {/* Chat name */}
+                                        <span className={cn(
+                                          "flex-1 truncate",
+                                          isThreadActive && "font-medium"
+                                        )}>
+                                          {thread.threadName}
+                                        </span>
+
+                                        {/* Menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="p-1 rounded-md hover:bg-accent transition-colors opacity-0 group-hover/chat:opacity-100"
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                              }}
+                                            >
+                                              <MoreHorizontal className="h-3.5 w-3.5" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="w-40">
+                                            <DropdownMenuItem
+                                              onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleDeleteThread(thread.threadId, thread.projectName);
+                                              }}
+                                            >
+                                              <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
                           </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </div>
                         );
                       })}
                     </div>
                   </div>
                 ))}
 
-              {/* Minimal pagination controls */}
-              {pagination && totalPages > 1 && (
-                <div className="px-3 py-3 mt-2">
-                  <div className="flex items-center justify-center gap-4">
-                    <button
-                      onClick={handlePreviousPage}
-                      disabled={!canGoPrevious || isThreadsFetching}
-                      className={cn(
-                        "p-1.5 rounded-md transition-all",
-                        canGoPrevious && !isThreadsFetching
-                          ? "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          : "text-muted-foreground/30 cursor-not-allowed"
-                      )}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    
-                    <span className="text-xs text-muted-foreground flex items-center gap-1.5 tabular-nums">
-                      {isThreadsFetching && (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      )}
-                      <span className="font-medium">{currentPage}</span>
-                      <span>/</span>
-                      <span>{totalPages}</span>
-                    </span>
-                    
-                    <button
-                      onClick={handleNextPage}
-                      disabled={!canGoNext || isThreadsFetching}
-                      className={cn(
-                        "p-1.5 rounded-md transition-all",
-                        canGoNext && !isThreadsFetching
-                          ? "text-muted-foreground hover:text-foreground hover:bg-muted"
-                          : "text-muted-foreground/30 cursor-not-allowed"
-                      )}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
+                {/* Minimal pagination controls */}
+                {pagination && totalPages > 1 && (
+                  <div className="px-3 py-3 mt-2">
+                    <div className="flex items-center justify-center gap-4">
+                      <button
+                        onClick={handlePreviousPage}
+                        disabled={!canGoPrevious || isThreadsFetching}
+                        className={cn(
+                          "p-1.5 rounded-md transition-all",
+                          canGoPrevious && !isThreadsFetching
+                            ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            : "text-muted-foreground/30 cursor-not-allowed"
+                        )}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+
+                      <span className="text-xs text-muted-foreground flex items-center gap-1.5 tabular-nums">
+                        {isThreadsFetching && (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        )}
+                        <span className="font-medium">{currentPage}</span>
+                        <span>/</span>
+                        <span>{totalPages}</span>
+                      </span>
+
+                      <button
+                        onClick={handleNextPage}
+                        disabled={!canGoNext || isThreadsFetching}
+                        className={cn(
+                          "p-1.5 rounded-md transition-all",
+                          canGoNext && !isThreadsFetching
+                            ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            : "text-muted-foreground/30 cursor-not-allowed"
+                        )}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               </>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 px-6 text-center">

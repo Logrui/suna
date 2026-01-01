@@ -39,7 +39,7 @@ class FallbackModelRegistry:
             tier_availability=["paid"],
             priority=131,
             enabled=config.GEMINI_API_KEY is not None,
-            fallback_models=["google/gemini-3-flash-preview"]
+            fallback_models=["openrouter/google/gemini-3-flash-preview"]
         ))
 
         # Gemini 3 Flash Preview
@@ -115,7 +115,7 @@ class FallbackModelRegistry:
         
         # Claude Opus 4.5 (via Claude API)
         self.register(Model(
-            id="openrouter/anthropic/claude-opus-4-5",
+            id="openrouter/anthropic/claude-opus-4.5",
             name="Claude Opus 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-opus-4.5", "anthropic-claude-opus-4.5"],
@@ -134,12 +134,12 @@ class FallbackModelRegistry:
             tier_availability=["paid"],
             priority=106,
             enabled=config.ANTHROPIC_API_KEY is not None,
-            fallback_models=["openrouter/anthropic/claude-haiku-4-5"],
+            fallback_models=["openrouter/anthropic/claude-haiku-4.5"],
         ))
 
         # Claude Sonnet 4.5 (via Claude API)
         self.register(Model(
-            id="openrouter/anthropic/claude-sonnet-4-5",
+            id="openrouter/anthropic/claude-sonnet-4.5",
             name="Claude Sonnet 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-sonnet-4.5", "anthropic-claude-sonnet-4.5"],
@@ -158,7 +158,7 @@ class FallbackModelRegistry:
             tier_availability=["paid"],
             priority=106,
             enabled=config.ANTHROPIC_API_KEY is not None,
-            fallback_models=["openrouter/anthropic/claude-haiku-4-5"],
+            fallback_models=["openrouter/anthropic/claude-haiku-4.5"],
             config=ModelConfig(
                 extra_headers={
                     "anthropic-beta": "context-1m-2025-08-07"
@@ -168,7 +168,7 @@ class FallbackModelRegistry:
 
         # Claude Haiku 4.5 (via Claude API)
         self.register(Model(
-            id="openrouter/anthropic/claude-haiku-4-5",
+            id="openrouter/anthropic/claude-haiku-4.5",
             name="Claude Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=["claude-haiku-4.5", "anthropic-claude-haiku-4.5"],

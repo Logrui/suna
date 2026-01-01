@@ -18,7 +18,7 @@ class AWSModelRegistry:
 
         # Claude Haiku 4.5
         self.register(Model(
-            id="openrouter/bedrock/anthropic/claude-haiku-4-5",
+            id="openrouter/anthropic/claude-haiku-4.5",
             name="Haiku 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=[
@@ -53,7 +53,7 @@ class AWSModelRegistry:
 
         # Claude Opus 4.5
         self.register(Model(
-            id="openrouter/bedrock/anthropic/claude-opus-4.5",
+            id="openrouter/anthropic/claude-opus-4.5",
             name="Opus 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=[
@@ -88,7 +88,7 @@ class AWSModelRegistry:
         
         # Claude Sonnet 4.5
         self.register(Model(
-            id="openrouter/bedrock/anthropic/claude-4-5-sonnet",
+            id="openrouter/anthropic/claude-sonnet-4.5",
             name="Sonnet 4.5",
             provider=ModelProvider.ANTHROPIC,
             aliases=[
@@ -127,46 +127,6 @@ class AWSModelRegistry:
             )
         ))
         
-        # Claude Sonnet 4
-        self.register(Model(
-            id="openrouter/bedrock/us.anthropic.claude-4-sonnet-20250229-v1:0",
-            name="Sonnet 4",
-            provider=ModelProvider.ANTHROPIC,
-            aliases=[
-                "claude-sonnet-4", 
-                "anthropic/claude-sonnet-4", 
-                "anthropic/claude-sonnet-4-20250514", 
-                "Claude Sonnet 4", 
-                "claude-sonnet-4-20250514", 
-                "global.anthropic.claude-sonnet-4-20250514-v1:0", 
-                "arn:aws:bedrock:us-west-2:935064898258:inference-profile/global.anthropic.claude-sonnet-4-20250514-v1:0", 
-                "bedrock/global.anthropic.claude-sonnet-4-20250514-v1:0", 
-                "arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-                # Add bedrock/converse/ prefixed alias for Router fallback compatibility
-                "bedrock/converse/arn:aws:bedrock:us-west-2:935064898258:application-inference-profile/tyj1ks3nj9qf",
-            ],
-            context_window=1_000_000,
-            capabilities=[
-                ModelCapability.CHAT,
-                ModelCapability.FUNCTION_CALLING,
-                ModelCapability.VISION,
-                ModelCapability.THINKING,
-            ],
-            pricing=ModelPricing(
-                input_cost_per_million_tokens=3.00 * pricing_multiplier,
-                output_cost_per_million_tokens=15.00 * pricing_multiplier
-            ),
-            tier_availability=["paid"],
-            priority=100,
-            recommended=True,
-            enabled=True,
-            config=ModelConfig(
-                extra_headers={
-                    "anthropic-beta": "context-1m-2025-08-07" 
-                },
-            )
-        ))
-
     def register(self, model: Model) -> None:
         self._models[model.id] = model
         for alias in model.aliases:
