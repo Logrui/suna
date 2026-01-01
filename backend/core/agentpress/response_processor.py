@@ -543,6 +543,11 @@ class ResponseProcessor:
         # DELTA STREAMING: Track how much has been sent for each tool call to avoid duplication
         tool_call_sent_lengths = {}  # Maps tool_call_index -> length of arguments already sent
         xml_tool_calls_sent_count = 0  # Track how many XML tool calls have been sent
+        
+        # Track streaming tool results and partial assistant messages
+        streaming_tool_result_ids = []  # Track tool result message IDs for batch update after streaming
+        partial_assistant_message_id = None  # Track partial assistant message ID for updates
+        tool_results_buffer = []  # Buffer for tool results that need final processing
 
         # Store the complete LiteLLM response object as received
         final_llm_response = None

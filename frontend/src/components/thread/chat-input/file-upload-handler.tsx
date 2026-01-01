@@ -398,4 +398,100 @@ export const FileUploadHandler = memo(forwardRef<
 ));
 
 FileUploadHandler.displayName = 'FileUploadHandler';
+
+/**
+ * Upload pending files directly to a project (used for optimistic file uploads)
+ * This function handles the upload without needing React state setters
+ */
+export const uploadPendingFilesToProject = async (
+  files: File[],
+  projectId: string,
+  onProgress?: (fileIndex: number, status: 'uploading' | 'ready' | 'error', error?: string) => void,
+): Promise<{ success: boolean; uploadedPaths: string[] }> => {
+  const uploadedPaths: string[] = [];
+  let allSuccess = true;
+
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('No access token available');
+  }
+
+  // Signal upload start
+  try {
+    await fetch(`${API_URL}/project/${projectId}/files/upload-started`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file_count: files.length }),
+    });
+  } catch (e) {
+    console.warn('Failed to signal upload start:', e);
+  }
+
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      onProgress?.(i, 'uploading');
+
+      try {
+        if (file.size > 50 * 1024 * 1024) {
+          throw new Error('File size exceeds 50MB limit');
+        }
+
+        const normalizedName = normalizeFilenameToNFC(file.name);
+        const uploadPath = `/workspace/uploads/${normalizedName}`;
+
+        const formData = new FormData();
+        formData.append('file', file, normalizedName);
+        formData.append('path', uploadPath);
+
+        const response = await fetch(`${API_URL}/project/${projectId}/files`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          if (response.status === 431) {
+            throw new Error('Request is too large');
+          }
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const responseData = await response.json();
+        const actualPath = responseData.path || uploadPath;
+        uploadedPaths.push(actualPath);
+
+        onProgress?.(i, 'ready');
+      } catch (error) {
+        console.error(`Failed to upload file ${file.name}:`, error);
+        onProgress?.(i, 'error', error instanceof Error ? error.message : 'Upload failed');
+        allSuccess = false;
+      }
+    }
+  } finally {
+    // Signal upload complete
+    try {
+      await fetch(`${API_URL}/project/${projectId}/files/upload-completed`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+    } catch (e) {
+      console.warn('Failed to signal upload complete:', e);
+    }
+  }
+
+  return { success: allSuccess, uploadedPaths };
+};
+
 export { handleFiles, handleLocalFiles, uploadFiles };

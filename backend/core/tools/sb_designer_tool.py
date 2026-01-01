@@ -373,4 +373,4 @@ class SandboxDesignerTool(SandboxToolsBase):
             return full_path
 
         except Exception as e:
-            return self.fail_response(f"Failed to save design: {str(e)}")
+            return self.fail_response(f"Failed to save design: {str(e)}") 
