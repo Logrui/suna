@@ -128,6 +128,7 @@ async def make_llm_api_call(
     headers: Optional[Dict[str, str]] = None,
     extra_headers: Optional[Dict[str, str]] = None,
     stop: Optional[List[str]] = None,
+    fallbacks: Optional[List[Any]] = None,
 ) -> Union[Dict[str, Any], AsyncGenerator, ModelResponse]:
     """
     Make an API call to a language model using LiteLLM.
@@ -148,6 +149,7 @@ async def make_llm_api_call(
         headers: Optional headers to send with request
         extra_headers: Optional extra headers to send with request
         stop: Optional list of stop sequences
+        fallbacks: Optional list of fallback models
     """
     logger.info(f"LLM API call: {model_name} ({len(messages)} messages)")
     # Handle mock AI for stress testing
@@ -188,6 +190,7 @@ async def make_llm_api_call(
     if stop is not None: override_params["stop"] = stop
     if headers is not None: override_params["headers"] = headers
     if extra_headers is not None: override_params["extra_headers"] = extra_headers
+    if fallbacks is not None: override_params["fallbacks"] = fallbacks
     
     params = model_manager.get_litellm_params(resolved_model_name, **override_params)
     

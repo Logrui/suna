@@ -18,5 +18,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-## [~] Track: Create an E2E connectivity test for all online AI models.
+## [x] Track: Create an E2E connectivity test for all online AI models.
 *Link: [./conductor/tracks/e2e_model_check_20251231/](./conductor/tracks/e2e_model_check_20251231/)*
+
+---
+
+## [~] Track: Implement a new frontend page and backend API for diagnostics and model status.
+*Link: [./conductor/tracks/admin_model_dashboard_20251231/](./conductor/tracks/admin_model_dashboard_20251231/)*

@@ -39,12 +39,18 @@ from core.admin.billing_admin_api import router as billing_admin_router
 from core.admin.feedback_admin_api import router as feedback_admin_router
 from core.admin.notification_admin_api import router as notification_admin_router
 from core.admin.analytics_admin_api import router as analytics_admin_router
+from core.admin.models_api import router as admin_models_router
 from core.services import transcription as transcription_api
 import sys
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
 from core.notifications import api as notifications_api
-
+# ...
+api_router.include_router(admin_router)
+api_router.include_router(feedback_admin_router)
+api_router.include_router(notification_admin_router)
+api_router.include_router(analytics_admin_router)
+api_router.include_router(admin_models_router)
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
