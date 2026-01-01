@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   BadgeCheck,
   Bell,
@@ -30,7 +31,6 @@ import {
   MessageSquare,
   Heart,
   LifeBuoy,
-  Link,
 } from 'lucide-react';
 import { useAccounts } from '@/hooks/account';
 import { useAccountState } from '@/hooks/billing';
@@ -451,6 +451,7 @@ export function NavUserWithTeams({
                     {user.isAdmin && (
                       <DropdownMenuItem asChild>
                         <Link href="/admin/models" className="gap-2 p-2">
+                          <Zap className="h-4 w-4" />
                           <span>Model Diagnostics</span>
                         </Link>
                       </DropdownMenuItem>

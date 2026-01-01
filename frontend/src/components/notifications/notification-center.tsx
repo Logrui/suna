@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { NovuProvider, PopoverNotificationCenter, NotificationBell } from '@novu/notification-center';
 import { useAuth } from '@/components/AuthProvider';
-import { isStagingMode } from '@/lib/config';
 
 interface NotificationCenterProps {
   applicationIdentifier: string;
@@ -15,7 +14,9 @@ interface NotificationCenterProps {
 export function NotificationCenter({ applicationIdentifier }: NotificationCenterProps) {
   const { user } = useAuth();
 
-  if (!isStagingMode() || !user?.id || !applicationIdentifier) {
+  // Render if user is authenticated and app identifier is configured
+  // Works in any environment mode (local, staging, production) as long as Novu is configured
+  if (!user?.id || !applicationIdentifier) {
     return null;
   }
 

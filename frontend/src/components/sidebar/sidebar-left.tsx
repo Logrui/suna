@@ -50,7 +50,21 @@ import { getPlanIcon } from '@/components/billing/plan-utils';
 import { Kbd, KbdGroup } from '../ui/kbd';
 import { useTranslations } from 'next-intl';
 // import { NotificationDropdown } from '../notifications/notification-dropdown'; // DISABLED: Pending Novu integration
-import { useNotifications } from '@novu/nextjs';
+import { useNotifications } from '@novu/nextjs/hooks';
+
+// Hook to get unread notification count
+function useUnreadNotificationCount(): number {
+  const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER;
+  const { notifications } = useNotifications();
+
+  // If Novu is not configured, return 0
+  if (!applicationIdentifier) {
+    return 0;
+  }
+
+  // Count unread notifications
+  return notifications?.filter(n => !n.isRead).length || 0;
+}
 
 
 function UserProfileSection({ user }: { user: any }) {
@@ -133,8 +147,8 @@ export function SidebarLeft({
   const [activeView, setActiveView] = useState<'chats' | 'agents' | 'triggers' | 'library' | 'knowledge' | 'inbox' | 'workflows'>('chats');
   const [showEnterpriseCard, setShowEnterpriseCard] = useState(true);
 
-  // TODO: Integrate with Novu notifications when ready
-  const unreadCount = 0;
+  // Get real unread count from Novu
+  const unreadCount = useUnreadNotificationCount();
 
   //console.log('SidebarLeft rendering:', { state, isMobile, openMobile, activeView });
 

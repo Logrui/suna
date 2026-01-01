@@ -66,7 +66,7 @@ const getRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
+
   if (seconds < 60) return 'just now';
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -83,7 +83,7 @@ const getRelativeTime = (dateString: string) => {
 
 const NotificationItem = (notification: Notification) => {
   const { openAnnouncement } = useAnnouncementStore();
-  
+
   const handleNavigation = (url: string, target?: '_blank' | '_self' | '_parent' | '_top') => {
     if (url.startsWith('/internal/announcement')) {
       const data = notification.data as unknown as AnnouncementData | undefined;
@@ -128,118 +128,118 @@ const NotificationItem = (notification: Notification) => {
   };
 
   return (
-     <div onClick={handleClick} className='p-2 flex items-center justify-center'>
-         <div
-         className={`
+    <div onClick={handleClick} className='p-2 flex items-center justify-center'>
+      <div
+        className={`
              relative px-4 py-3 rounded-xl w-full transition-all cursor-pointer group
              ${notification.isRead ? 'bg-card' : 'bg-muted/30'}
              hover:bg-accent/50
          `}
-         style={{
-             border: '1px solid transparent',
-         }}
-         onMouseEnter={(e) => {
-             e.currentTarget.style.borderColor = 'var(--border)';
-         }}
-         onMouseLeave={(e) => {
-             e.currentTarget.style.borderColor = 'transparent';
-         }}
-         >
+        style={{
+          border: '1px solid transparent',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = 'var(--border)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'transparent';
+        }}
+      >
         <div className="flex gap-3">
-            {notification.avatar && (
-                <Avatar className="h-10 w-10 flex-shrink-0">
-                    <AvatarImage src={notification.avatar} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                        {notification.subject?.charAt(0) || 'N'}
-                    </AvatarFallback>
-                </Avatar>
-            )}
-            
-            <div className="flex-1 min-w-0 space-y-1.5">
+          {notification.avatar && (
+            <Avatar className="h-10 w-10 flex-shrink-0">
+              <AvatarImage src={notification.avatar} />
+              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                {notification.subject?.charAt(0) || 'N'}
+              </AvatarFallback>
+            </Avatar>
+          )}
+
+          <div className="flex-1 min-w-0 space-y-1.5">
             <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0">
                 {notification.subject && (
-                    <h4 
-                      className={`text-sm font-medium leading-tight`}
-                      style={{
-                        fontWeight: '600',
-                      }}
-                    >
-                        {notification.subject}
-                    </h4>
+                  <h4
+                    className={`text-sm font-medium leading-tight`}
+                    style={{
+                      fontWeight: '600',
+                    }}
+                  >
+                    {notification.subject}
+                  </h4>
                 )}
                 <UnifiedMarkdown
-                    content={notification.body}
-                    className={`text-xs text-muted-foreground line-clamp-2 ${notification.isRead ? 'text-muted-foreground font-normal' : 'text-foreground font-medium'}`}
+                  content={notification.body}
+                  className={`text-xs text-muted-foreground line-clamp-2 ${notification.isRead ? 'text-muted-foreground font-normal' : 'text-foreground font-medium'}`}
                 />
-                </div>
-                
-                {!notification.isRead && (
+              </div>
+
+              {!notification.isRead && (
                 <Circle className="h-2 w-2 fill-primary text-primary flex-shrink-0 mt-1.5" />
-                )}
+              )}
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {getRelativeTime(notification.createdAt)}
-                </span>
-                
-                {notification.tags && notification.tags.length > 0 && (
+              </span>
+
+              {notification.tags && notification.tags.length > 0 && (
                 <>
-                    <span className="text-muted-foreground">•</span>
-                    <div className="flex gap-1 flex-wrap">
+                  <span className="text-muted-foreground">•</span>
+                  <div className="flex gap-1 flex-wrap">
                     {notification.tags.slice(0, 2).map((tag, index) => (
-                        <Badge
+                      <Badge
                         key={index}
                         variant="secondary"
                         className="text-xs px-1.5 py-0 h-5"
-                        >
+                      >
                         {tag}
-                        </Badge>
+                      </Badge>
                     ))}
                     {notification.tags.length > 2 && (
-                        <Badge
+                      <Badge
                         variant="secondary"
                         className="text-xs px-1.5 py-0 h-5"
-                        >
+                      >
                         +{notification.tags.length - 2}
-                        </Badge>
+                      </Badge>
                     )}
-                    </div>
+                  </div>
                 </>
-                )}
+              )}
             </div>
 
             {(notification.primaryAction || notification.secondaryAction) && (
-                <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-1">
                 {notification.primaryAction && (
-                    <Button
-                        size="sm"
-                        variant="default"
-                        className="h-7 text-xs"
-                        onClick={handlePrimaryAction}
-                    >
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 text-xs"
+                    onClick={handlePrimaryAction}
+                  >
                     {notification.primaryAction.isCompleted && (
-                        <Check className="h-3 w-3 mr-1" />
+                      <Check className="h-3 w-3 mr-1" />
                     )}
                     {notification.primaryAction.label}
-                    </Button>
+                  </Button>
                 )}
                 {notification.secondaryAction && (
-                    <Button
+                  <Button
                     size="sm"
                     variant="outline"
                     className="h-7 text-xs"
                     onClick={handleSecondaryAction}
-                    >
+                  >
                     {notification.secondaryAction.label}
-                    </Button>
+                  </Button>
                 )}
-                </div>
+              </div>
             )}
-            </div>
+          </div>
         </div>
-        </div>
+      </div>
     </div>
   );
 }
@@ -248,7 +248,8 @@ export function NotificationDropdown() {
   const { user } = useAuth();
   const applicationIdentifier = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER;
 
-  if (!applicationIdentifier) {
+  // Don't render if no app identifier configured or user not authenticated
+  if (!applicationIdentifier || !user?.id) {
     return null;
   }
 

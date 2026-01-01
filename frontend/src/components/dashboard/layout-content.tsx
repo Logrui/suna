@@ -16,37 +16,38 @@ import { useProjects } from '@/hooks/sidebar/use-sidebar';
 import { useIsMobile } from '@/hooks/utils';
 import { AppProviders } from '@/components/layout/app-providers';
 import { AnnouncementDialog } from '../announcements/announcement-dialog';
+import { NovuProviderWrapper } from '../notifications/novu-provider-wrapper';
 
 // Lazy load heavy components that aren't needed for initial render
-const FloatingMobileMenuButton = lazy(() => 
+const FloatingMobileMenuButton = lazy(() =>
   import('@/components/sidebar/sidebar-left').then(mod => ({ default: mod.FloatingMobileMenuButton }))
 );
-const MaintenancePage = lazy(() => 
+const MaintenancePage = lazy(() =>
   import('@/components/maintenance/maintenance-page').then(mod => ({ default: mod.MaintenancePage }))
 );
-const StatusOverlay = lazy(() => 
+const StatusOverlay = lazy(() =>
   import('@/components/ui/status-overlay').then(mod => ({ default: mod.StatusOverlay }))
 );
-const PresentationViewerWrapper = lazy(() => 
+const PresentationViewerWrapper = lazy(() =>
   import('@/stores/presentation-viewer-store').then(mod => ({ default: mod.PresentationViewerWrapper }))
 );
 
-const OnboardingProvider = lazy(() => 
+const OnboardingProvider = lazy(() =>
   import('@/components/onboarding/onboarding-provider').then(mod => ({ default: mod.OnboardingProvider }))
 );
-const WelcomeBonusBanner = lazy(() => 
+const WelcomeBonusBanner = lazy(() =>
   import('@/components/billing/welcome-bonus-banner').then(mod => ({ default: mod.WelcomeBonusBanner }))
 );
 
-const PresenceDebug = lazy(() => 
+const PresenceDebug = lazy(() =>
   import('@/components/debug/presence-debug').then(mod => ({ default: mod.PresenceDebug }))
 );
 
-const KortixAppBanners = lazy(() => 
+const KortixAppBanners = lazy(() =>
   import('@/components/announcements/kortix-app-banners').then(mod => ({ default: mod.KortixAppBanners }))
 );
 
-const MobileAppInterstitial = lazy(() => 
+const MobileAppInterstitial = lazy(() =>
   import('@/components/announcements/mobile-app-interstitial').then(mod => ({ default: mod.MobileAppInterstitial }))
 );
 
@@ -88,9 +89,9 @@ export default function DashboardLayoutContent({
   const { user, isLoading } = useAuth();
   const params = useParams();
   const threadId = params?.threadId as string | undefined;
-  
+
   usePresence(threadId);
-  
+
   const { data: accounts } = useAccounts({ enabled: !!user });
   const personalAccount = accounts?.find((account) => account.personal_account);
   const router = useRouter();
@@ -160,46 +161,48 @@ export default function DashboardLayoutContent({
   }
 
   return (
-    <AppProviders 
-      showSidebar={true}
-      sidebarSiblings={
-        <Suspense fallback={null}>
-          {/* Status overlay for deletion operations */}
-          <StatusOverlay />
-          {/* Floating mobile menu button */}
-          <FloatingMobileMenuButton />
-        </Suspense>
-      }
-    >
-      <div className="relative h-full">
-        {/* Site-wide welcome bonus banner for free tier users */}
-        <Suspense fallback={null}>
-          <WelcomeBonusBanner />
-        </Suspense>
-        <Suspense fallback={null}>
-          <AnnouncementDialog />
-        </Suspense>
-        
-        <Suspense fallback={null}>
-          <OnboardingProvider>
-            {mantenanceBanner}
-            <div className="bg-background">{children}</div>
-          </OnboardingProvider>
-        </Suspense>
-        <Suspense fallback={null}>
-          <PresentationViewerWrapper />
-        </Suspense>
-        {/* Kortix App announcement banners */}
-        <Suspense fallback={null}>
-          <KortixAppBanners disableMobileAdvertising={featureFlags.disableMobileAdvertising} />
-        </Suspense>
-        {/* Mobile app install interstitial - shown on actual mobile devices */}
-        {!featureFlags.disableMobileAdvertising ? (
+    <NovuProviderWrapper>
+      <AppProviders
+        showSidebar={true}
+        sidebarSiblings={
           <Suspense fallback={null}>
-            <MobileAppInterstitial />
+            {/* Status overlay for deletion operations */}
+            <StatusOverlay />
+            {/* Floating mobile menu button */}
+            <FloatingMobileMenuButton />
           </Suspense>
-        ) : null}
-      </div>
-    </AppProviders>
+        }
+      >
+        <div className="relative h-full">
+          {/* Site-wide welcome bonus banner for free tier users */}
+          <Suspense fallback={null}>
+            <WelcomeBonusBanner />
+          </Suspense>
+          <Suspense fallback={null}>
+            <AnnouncementDialog />
+          </Suspense>
+
+          <Suspense fallback={null}>
+            <OnboardingProvider>
+              {mantenanceBanner}
+              <div className="bg-background">{children}</div>
+            </OnboardingProvider>
+          </Suspense>
+          <Suspense fallback={null}>
+            <PresentationViewerWrapper />
+          </Suspense>
+          {/* Kortix App announcement banners */}
+          <Suspense fallback={null}>
+            <KortixAppBanners disableMobileAdvertising={featureFlags.disableMobileAdvertising} />
+          </Suspense>
+          {/* Mobile app install interstitial - shown on actual mobile devices */}
+          {!featureFlags.disableMobileAdvertising ? (
+            <Suspense fallback={null}>
+              <MobileAppInterstitial />
+            </Suspense>
+          ) : null}
+        </div>
+      </AppProviders>
+    </NovuProviderWrapper>
   );
 }
