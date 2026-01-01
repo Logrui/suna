@@ -16,6 +16,42 @@ class NotificationService:
         self._device_tokens: Dict[str, Dict[str, Any]] = {}
         self._notification_settings: Dict[str, UserNotificationSettings] = {}
 
+    async def _get_thread_context(self, thread_id: str) -> Dict[str, Any]:
+        """
+        Get thread context including project_id, agent_id, agent_name, and task_url.
+        
+        Returns:
+            Dict with keys: project_id, agent_id, agent_name, task_url
+        """
+        client = await self.db.client
+        
+        # Get thread info (project_id and agent_id)
+        thread_result = await client.table('threads').select('project_id, agent_id').eq('thread_id', thread_id).maybe_single().execute()
+        project_id = thread_result.data.get('project_id') if thread_result and thread_result.data else None
+        agent_id = thread_result.data.get('agent_id') if thread_result and thread_result.data else None
+        
+        # Fetch agent name from agents table
+        agent_name = "Kortix"  # Default
+        if agent_id:
+            agent_result = await client.table('agents').select('name').eq('agent_id', agent_id).maybe_single().execute()
+            if agent_result and agent_result.data and agent_result.data.get('name'):
+                agent_name = agent_result.data.get('name')
+        
+        # Build task URL using FRONTEND_URL from config
+        frontend_url = config.FRONTEND_URL.rstrip('/')
+        if project_id:
+            task_url = f"{frontend_url}/projects/{project_id}/thread/{thread_id}"
+        else:
+            task_url = f"{frontend_url}/thread/{thread_id}"
+        
+        return {
+            "project_id": project_id,
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "task_url": task_url
+        }
+
+
     async def send_referral_code_notification(
         self,
         recipient_email: str,
@@ -172,19 +208,14 @@ class NotificationService:
                 return {"success": False, "reason": "Account is actively viewing thread"}
             
             account_info = await self._get_account_info(account_id)
-            
-            # Build task URL
-            client = await self.db.client
-            thread_result = await client.table('threads').select('project_id').eq('thread_id', thread_id).maybe_single().execute()
-            project_id = thread_result.data.get('project_id') if thread_result and thread_result.data else None
-            
-            task_url = f"https://www.kortix.com/projects/{project_id}/thread/{thread_id}" if project_id else f"https://www.kortix.com/thread/{thread_id}"
+            thread_context = await self._get_thread_context(thread_id)
             
             payload = {
                 "first_name": account_info.get("first_name"),
                 "task_name": task_name,
-                "task_url": task_url,
-                "question": question
+                "task_url": thread_context["task_url"],
+                "question": question,
+                "agent_name": thread_context["agent_name"]
             }
             
             if follow_up_options:
@@ -228,19 +259,14 @@ class NotificationService:
                 return {"success": False, "reason": "Account is actively viewing thread"}
             
             account_info = await self._get_account_info(account_id)
-            
-            # Build task URL
-            client = await self.db.client
-            thread_result = await client.table('threads').select('project_id').eq('thread_id', thread_id).maybe_single().execute()
-            project_id = thread_result.data.get('project_id') if thread_result and thread_result.data else None
-            
-            task_url = f"https://www.kortix.com/projects/{project_id}/thread/{thread_id}" if project_id else f"https://www.kortix.com/thread/{thread_id}"
+            thread_context = await self._get_thread_context(thread_id)
             
             payload = {
                 "first_name": account_info.get("first_name"),
                 "task_name": task_name,
-                "task_url": task_url,
-                "permission_request": permission_request
+                "task_url": thread_context["task_url"],
+                "permission_request": permission_request,
+                "agent_name": thread_context["agent_name"]
             }
             
             if resource_type:

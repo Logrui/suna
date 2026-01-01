@@ -21,7 +21,7 @@ export type ModelProvider =
 export function isKortixMode(modelId: string): boolean {
   // New Kortix registry IDs
   if (modelId === 'kortix/basic' || modelId === 'kortix/power' || modelId === 'kortix/test' ||
-      modelId === 'kortix-basic' || modelId === 'kortix-power' || modelId === 'kortix-test') {
+    modelId === 'kortix-basic' || modelId === 'kortix-power' || modelId === 'kortix-test') {
     return true;
   }
   // Legacy: Kortix Basic (Haiku 4.5)
@@ -50,7 +50,7 @@ export function getModelProvider(modelId: string): ModelProvider {
   if (modelId.startsWith('lm_studio/')) {
     return 'lm_studio';
   }
-  
+
   if (modelId.includes('anthropic') || modelId.includes('claude')) {
     return 'anthropic';
   }
