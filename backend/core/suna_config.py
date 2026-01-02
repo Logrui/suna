@@ -8,6 +8,7 @@ SUNA_CONFIG = {
     "system_prompt": "", # Use dynamic system prompt (empty string to pass cache warmup check)
     "configured_mcps": [],
     "custom_mcps": [],
+    "skills": [], # List of enabled agent skills (e.g., ["coding", "research"])
     "agentpress_tools": {
         # Core file and shell operations
         "sb_shell_tool": True,

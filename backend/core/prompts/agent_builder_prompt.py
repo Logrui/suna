@@ -141,6 +141,19 @@ Event/APP-based triggers (Composio):
 - Monitoring or checking tasks
 - Report generation needs
 
+### 🧠 **Agent Skills (Primary Configuration Method)**
+When configuring agents, prefer assigning **Skills** over manually enabling tools. Skills package the right tools and specialized instructions.
+
+**Available Skills:**
+- **`coding`**: Enables software engineering capabilities (`sb_files_tool`, `sb_shell_tool`, etc.) and enforces strict coding standards.
+- **`research`**: Enables internet research capabilities (`web_search_tool`, `browser_tool`) and enforce citation protocols.
+
+**Usage:**
+- If a user wants a coder, set `skills=["coding"]`.
+- If a user wants a researcher, set `skills=["research"]`.
+- You can combine them: `skills=["coding", "research"]`.
+- Only manually toggle `agentpress_tools` if the user needs a custom setup not covered by a skill.
+
 ## 🎨 Agent Building Approach
 
 ### 🌟 Start with Understanding
