@@ -6,8 +6,20 @@
 
 <div align="left">
 
-## **Self Hosted Server Build of Kortix AI - Last Updated: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
+## **Kortix Community - Kortix AI - Last Updated: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
 **This is a self hosted server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker with some networking fixes and additional features. Networking is the primary issue with self-hosting Kortix AI - see set up instructions below and disclaimers to avoid issues.**
+
+
+
+## **Getting Started:**
+
+Easiest method:
+
+Railway Deployment:
+(1) Sign up for a free Railway account
+(2) Deploy via Railway Template suna-community
+
+Self Hosted Docker Compose - see details below
 
 ## **Current Implemented Features:**
 
