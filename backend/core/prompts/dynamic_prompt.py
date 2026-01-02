@@ -1,5 +1,6 @@
 from typing import Optional, Any
 import datetime
+from core.skills.base_skill import BaseSkill
 
 # Keys for dynamic tool checking - centralized to avoid drift in run.py
 DYNAMIC_TOOL_KEYS = [
@@ -11,14 +12,16 @@ DYNAMIC_TOOL_KEYS = [
 ]
 
 class DynamicPromptBuilder:
-    def __init__(self, authorized_tools: Optional[list[str]] = None):
+    def __init__(self, authorized_tools: Optional[list[str]] = None, skills: Optional[list[BaseSkill]] = None):
         self.authorized_tools = authorized_tools or []
+        self.skills = skills or []
         
     def build(self) -> str:
         sections = [
             self._get_core_identity(),
             self._get_execution_environment(),
             self._get_tool_guidelines(),
+            self._get_skill_prompts(),
             self._get_dynamic_tool_instructions()
         ]
         return "\n\n".join(filter(None, sections))
@@ -110,3 +113,10 @@ You are a full-spectrum autonomous agent capable of executing complex tasks acro
     4. Wait for explicit confirmation.""")
             
         return "\n\n".join(instructions)
+
+    def _get_skill_prompts(self) -> str:
+        """Inject prompt sections from active skills"""
+        prompts = []
+        for skill in self.skills:
+            prompts.append(skill.get_system_prompt_section())
+        return "\n\n".join(prompts)

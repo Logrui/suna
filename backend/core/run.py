@@ -17,6 +17,8 @@ from core.agentpress.error_processor import ErrorProcessor
 from core.tools.data_providers_tool import DataProvidersTool
 from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.dynamic_prompt import DynamicPromptBuilder
+from core.skills.registry import SkillRegistry
+from core.skills import initialize_skills
 
 from core.utils.logger import logger
 
@@ -356,10 +358,26 @@ class PromptManager:
                  elif isinstance(tool_conf, dict):
                      is_enabled = tool_conf.get('enabled', True)
                  
-                 if is_enabled:
-                     authorized_tools.append(key)
+                  if is_enabled:
+                      authorized_tools.append(key)
+        
+        # Resolve Skills
+        active_skills = []
+        if agent_config and 'skills' in agent_config:
+            # Ensure skills are registered
+            initialize_skills()
+            
+            for skill_name in agent_config['skills']:
+                skill = SkillRegistry.get_skill(skill_name)
+                if skill:
+                    active_skills.append(skill)
+                    # Automatically authorize tools required by the skill
+                    authorized_tools.extend(skill.required_tools)
+        
+        # Deduplicate tools list
+        authorized_tools = list(set(authorized_tools))
 
-        builder = DynamicPromptBuilder(authorized_tools)
+        builder = DynamicPromptBuilder(authorized_tools, skills=active_skills)
         default_system_content = builder.build()
         
         # Start with agent's normal system prompt or default
