@@ -1,6 +1,6 @@
 ﻿<div align="center">
 
-# Self Hosted Build - Kortix – Open Source Platform to Build, Manage and Train AI Agents
+# Community - Suna Kortix
 
 ![Kortix Screenshot](frontend/public/banner.png)
 
