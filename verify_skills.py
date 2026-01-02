@@ -3,7 +3,7 @@ import asyncio
 import os
 import sys
 
-import sys
+
 from unittest.mock import MagicMock
 
 # Mock logger dependencies before import
@@ -35,7 +35,7 @@ def verify():
         # Simulate Agent Config
         active_skills = [coding_skill]
         # Simulate tools enabled by the skill + some manual ones
-        authorized_tools = coding_skill.required_tools + ['browser_tool']
+        authorized_tools = [*coding_skill.required_tools, 'browser_tool']
         
         builder = DynamicPromptBuilder(authorized_tools, skills=active_skills)
         prompt = builder.build()

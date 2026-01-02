@@ -1,4 +1,4 @@
-from typing import Dict, Type, List, Optional
+from typing import Dict, Type, List, Optional, ClassVar
 from core.skills.base_skill import BaseSkill
 from core.utils.logger import logger
 
@@ -6,34 +6,24 @@ class SkillRegistry:
     """
     Registry for managing available Agent Skills.
     """
-    _instance = None
-    _skills: Dict[str, Type[BaseSkill]] = {}
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(SkillRegistry, cls).__new__(cls)
-        return cls._instance
+    _skills: ClassVar[Dict[str, Type[BaseSkill]]] = {}
 
     @classmethod
     def register(cls, skill_class: Type[BaseSkill]):
-        """Register a new skill class"""
+        """Register a new skill class."""
         try:
-            # Instantiate to validate abstract methods implemented
-            # Note: We rely on the class having a no-arg constructor or handling it here
-            # Ideally we register the class and instantiate on demand, or expect instances.
-            # For simplicity, let's assume stateless skills that can be instantiated cheaply
-            # or we just inspect the class properties if they are static.
-            # But BaseSkill defined them as properties. Let's instantiate a temporary one
-            # to get the name, or change BaseSkill to use class attributes.
-            # For now, let's assume we instantiaite it later.
-            # Wait, to register by name we need to know the name. 
-            # Let's verify we can get the name without full instantiation or instantiate once.
+            # Attempt to get name from class attribute or instantiate if property
+            name = getattr(skill_class, "name", None)
+            if not isinstance(name, str):
+                instance = skill_class()
+                name = instance.name
             
-            # Simple approach: Instantiate singleton
-            instance = skill_class()
-            cls._skills[instance.name] = skill_class
-            logger.info(f"Registered skill: {instance.name}")
-        except Exception as e:
+            if not name:
+                raise ValueError("Skill name is empty or invalid")
+                
+            cls._skills[name] = skill_class
+            logger.info(f"Registered skill: {name}")
+        except (TypeError, ValueError, AttributeError) as e:
             logger.error(f"Failed to register skill {skill_class}: {e}")
 
     @classmethod
