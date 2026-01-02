@@ -63,6 +63,19 @@ class AgentCreationTool(Tool):
                             "type": "boolean"
                         }
                     },
+                    "agentpress_tools": {
+                        "type": "object",
+                        "description": "Configuration for AgentPress tools. Each key is a tool name, value is boolean for enabled/disabled. Available tools: sb_shell_tool, sb_files_tool, web_search_tool, browser_tool, sb_vision_tool, data_providers_tool, etc.",
+                        "additionalProperties": {
+                            "type": "boolean"
+                        }
+                    },
+                    "skills": {
+                        "type": "array",
+                        "description": "List of high-level skills to enable (e.g., 'coding', 'research'). These automatically enable required tools.",
+                        "items": { "type": "string" },
+                        "default": []
+                    },
                     "configured_mcps": {
                         "type": "array",
                         "description": "List of configured MCP servers for external integrations (e.g. Gmail, Slack, GitHub). Leave empty if none needed initially.",
@@ -98,6 +111,9 @@ class AgentCreationTool(Tool):
         icon_color: str,
         icon_background: str,
         agentpress_tools: Optional[Dict[str, bool]] = None,
+        icon_background: str,
+        agentpress_tools: Optional[Dict[str, bool]] = None,
+        skills: Optional[List[str]] = None,
         configured_mcps: Optional[List[Dict[str, Any]]] = None,
         is_default: bool = False
     ) -> ToolResult:
@@ -138,6 +154,9 @@ class AgentCreationTool(Tool):
             
             if configured_mcps is None:
                 configured_mcps = []
+            
+            if skills is None:
+                skills = []
 
             if is_default:
                 await client.table('agents').update({"is_default": False}).eq("account_id", account_id).eq("is_default", True).execute()
@@ -176,6 +195,7 @@ class AgentCreationTool(Tool):
                     configured_mcps=configured_mcps,
                     custom_mcps=[],
                     agentpress_tools=agentpress_tools,
+                    skills=skills,
                     version_name="v1",
                     change_description="Initial version"
                 )
@@ -187,6 +207,7 @@ class AgentCreationTool(Tool):
                 success_message = f"✅ Successfully created agent '{name}'!\n\n"
                 success_message += f"**Icon**: {icon_name} ({icon_color} on {icon_background})\n"
                 success_message += f"**Default Agent**: {'Yes' if is_default else 'No'}\n"
+                success_message += f"**Skills Enabled**: {', '.join(skills) if skills else 'None'}\n"
                 success_message += f"**Tools Enabled**: {len([k for k, v in agentpress_tools.items() if v])}\n"
                 success_message += f"**MCPs Configured**: {len(configured_mcps)}\n\n"
                 success_message += "The agent is now available in your agent library and ready to use!\n\n"
