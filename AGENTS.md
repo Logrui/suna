@@ -412,7 +412,7 @@ jj bookmark set dev -r '@' --allow-backwards
 
 # Push (may need force if history changed)
 jj git push --bookmark dev
-```
+``` 
 
 #### Renaming Commits
 

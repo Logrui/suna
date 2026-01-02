@@ -163,8 +163,9 @@ export async function GET(request: NextRequest) {
 
           // Only redirect to setting-up if no subscription exists (webhook failed or old user)
           if (creditAccount && (creditAccount.tier === 'none' || !creditAccount.stripe_subscription_id)) {
-            console.log('⚠️ No subscription detected - redirecting to setting-up (fallback)');
-            finalDestination = '/setting-up'
+            // console.log('⚠️ No subscription detected - redirecting to setting-up (fallback)');
+            // finalDestination = '/setting-up'
+            console.log('⚠️ No subscription detected - flagging but proceeding to dashboard');
           } else {
             console.log('✅ Account already initialized via webhook');
           }
