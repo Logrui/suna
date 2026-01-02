@@ -56,7 +56,8 @@ def load_static_suna_config() -> Dict[str, Any]:
     }
     
     _SUNA_STATIC_LOADED = True
-    logger.info(f"✅ Loaded static Suna config into memory (prompt: {len(_SUNA_STATIC_CONFIG['system_prompt'])} chars)")
+    prompt_len = len(_SUNA_STATIC_CONFIG['system_prompt']) if _SUNA_STATIC_CONFIG['system_prompt'] else 0
+    logger.info(f"✅ Loaded static Suna config into memory (prompt: {prompt_len} chars)")
     return _SUNA_STATIC_CONFIG
 
 # ============================================================================
