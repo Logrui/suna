@@ -1,3 +1,16 @@
+-- Create enum types if they don't exist
+DO $$ BEGIN
+    CREATE TYPE public.workflow_mode AS ENUM ('simple', 'advanced', 'advanced-legacy');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE public.agent_workflow_status AS ENUM ('draft', 'active', 'paused', 'archived');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 create table public.agent_workflows (
   id uuid not null default extensions.uuid_generate_v4 (),
   agent_id uuid not null,

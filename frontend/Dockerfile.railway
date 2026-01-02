@@ -11,17 +11,17 @@ WORKDIR /app
 COPY frontend/package.json frontend/yarn.lock* frontend/package-lock.json* frontend/pnpm-lock.yaml* frontend/.npmrc* ./
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    make \
-    g++ \
-    build-essential \
-    pkg-config \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libjpeg-dev \
-    libgif-dev \
-    librsvg2-dev \
-    && rm -rf /var/lib/apt/lists/*
+  python3 \
+  make \
+  g++ \
+  build-essential \
+  pkg-config \
+  libcairo2-dev \
+  libpango1.0-dev \
+  libjpeg-dev \
+  libgif-dev \
+  librsvg2-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
@@ -48,18 +48,18 @@ COPY patches ./patches
 # APPLY PATCHES - Before building, apply all patches
 # ============================================================
 RUN echo "🔧 Checking for patches..." && \
-    if [ -d "./patches" ] && [ -f "./patches/apply-patches.js" ]; then \
-      echo "📦 Found patches directory, applying..." && \
-      git init -q && \
-      git add -A && \
-      git config user.email "builder@docker.local" && \
-      git config user.name "Docker Builder" && \
-      git commit -q -m "Initial commit before patches" --allow-empty && \
-      node ./patches/apply-patches.js --verbose && \
-      echo "✅ Patches applied successfully"; \
-    else \
-      echo "⚠️  No patches directory found, skipping..."; \
-    fi
+  if [ -d "./patches" ] && [ -f "./patches/apply-patches.js" ]; then \
+  echo "📦 Found patches directory, applying..." && \
+  git init -q && \
+  git add -A && \
+  git config user.email "builder@docker.local" && \
+  git config user.name "Docker Builder" && \
+  git commit -q -m "Initial commit before patches" --allow-empty && \
+  node ./patches/apply-patches.js --verbose && \
+  echo "✅ Patches applied successfully"; \
+  else \
+  echo "⚠️  No patches directory found, skipping..."; \
+  fi
 
 # Accept build arguments for Next.js public environment variables
 ARG NEXT_PUBLIC_SUPABASE_URL
@@ -69,6 +69,7 @@ ARG NEXT_PUBLIC_URL
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ARG NEXT_PUBLIC_POSTHOG_KEY
 ARG NEXT_PUBLIC_ENV_MODE
+ARG NEXT_PUBLIC_DISABLE_MOBILE_ADVERTISING
 
 # Set them as environment variables for the build
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
@@ -78,6 +79,7 @@ ENV NEXT_PUBLIC_URL=$NEXT_PUBLIC_URL
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
 ENV NEXT_PUBLIC_ENV_MODE=$NEXT_PUBLIC_ENV_MODE
+ENV NEXT_PUBLIC_DISABLE_MOBILE_ADVERTISING=$NEXT_PUBLIC_DISABLE_MOBILE_ADVERTISING
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry

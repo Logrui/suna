@@ -114,29 +114,42 @@ CREATE POLICY "Users can delete their own staged files"
     FOR DELETE
     USING (auth.uid() = account_id);
 
-CREATE POLICY "Users can upload to their own folder in staged-files"
-    ON storage.objects
-    FOR INSERT
-    WITH CHECK (
-        bucket_id = 'staged-files' AND
-        (storage.foldername(name))[1] = auth.uid()::text
-    );
+-- Storage policies (may fail on Railway if not owner of storage.objects - that's okay)
+DO $$ BEGIN
+    CREATE POLICY "Users can upload to their own folder in staged-files"
+        ON storage.objects
+        FOR INSERT
+        WITH CHECK (
+            bucket_id = 'staged-files' AND
+            (storage.foldername(name))[1] = auth.uid()::text
+        );
+EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Skipping storage.objects INSERT policy - not owner';
+END $$;
 
-CREATE POLICY "Users can read their own files in staged-files"
-    ON storage.objects
-    FOR SELECT
-    USING (
-        bucket_id = 'staged-files' AND
-        (storage.foldername(name))[1] = auth.uid()::text
-    );
+DO $$ BEGIN
+    CREATE POLICY "Users can read their own files in staged-files"
+        ON storage.objects
+        FOR SELECT
+        USING (
+            bucket_id = 'staged-files' AND
+            (storage.foldername(name))[1] = auth.uid()::text
+        );
+EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Skipping storage.objects SELECT policy - not owner';
+END $$;
 
-CREATE POLICY "Users can delete their own files in staged-files"
-    ON storage.objects
-    FOR DELETE
-    USING (
-        bucket_id = 'staged-files' AND
-        (storage.foldername(name))[1] = auth.uid()::text
-    );
+DO $$ BEGIN
+    CREATE POLICY "Users can delete their own files in staged-files"
+        ON storage.objects
+        FOR DELETE
+        USING (
+            bucket_id = 'staged-files' AND
+            (storage.foldername(name))[1] = auth.uid()::text
+        );
+EXCEPTION WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Skipping storage.objects DELETE policy - not owner';
+END $$;
 
 CREATE OR REPLACE FUNCTION cleanup_expired_staged_files()
 RETURNS void
