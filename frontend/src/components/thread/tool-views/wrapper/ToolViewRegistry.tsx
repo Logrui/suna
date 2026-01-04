@@ -71,6 +71,7 @@ import { createPresentationViewerToolContent, parsePresentationSlidePath } from 
 import { extractToolData } from '../utils';
 import { KbToolView } from '../KbToolView';
 import { ExpandMessageToolView } from '../expand-message-tool/ExpandMessageToolView';
+import { CodeExecutionToolView } from '../code-execution-tool/ToolView';
 
 
 export type ToolViewComponent = React.ComponentType<ToolViewProps>;
@@ -87,6 +88,7 @@ const defaultRegistry: ToolViewRegistryType = {
   'check-command-output': CheckCommandOutputToolView,
   'terminate-command': TerminateCommandToolView,
   'list-commands': GenericToolView,
+  'execute-code': CodeExecutionToolView,
 
   'create-file': FileOperationToolView,
   'delete-file': FileOperationToolView,

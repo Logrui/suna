@@ -23,6 +23,7 @@ CORE_TOOLS = [
 # Sandbox tools - File system, shell, and workspace operations
 SANDBOX_TOOLS = [
     ('sb_shell_tool', 'core.tools.sb_shell_tool', 'SandboxShellTool'),
+    ('sb_code_execution_tool', 'core.tools.sb_code_execution_tool', 'SandboxCodeExecutionTool'),
     ('sb_files_tool', 'core.tools.sb_files_tool', 'SandboxFilesTool'),
     ('sb_expose_tool', 'core.tools.sb_expose_tool', 'SandboxExposeTool'),
     ('sb_vision_tool', 'core.tools.sb_vision_tool', 'SandboxVisionTool'),
