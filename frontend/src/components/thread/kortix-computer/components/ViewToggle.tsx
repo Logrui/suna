@@ -1,7 +1,7 @@
 'use client';
 
 import { memo } from 'react';
-import { Globe, Zap, FolderOpen } from 'lucide-react';
+import { Globe, Zap, FolderOpen, Monitor } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,24 +18,24 @@ interface ViewToggleProps {
   showFilesTab?: boolean;
 }
 
-export const ViewToggle = memo(function ViewToggle({ 
-  currentView, 
-  onViewChange, 
-  showFilesTab = true 
+export const ViewToggle = memo(function ViewToggle({
+  currentView,
+  onViewChange,
+  showFilesTab = true
 }: ViewToggleProps) {
-  // Hide browser tab if flag is enabled
+  // Build view options - always include desktop
   const viewOptions = HIDE_BROWSER_TAB
-    ? (showFilesTab ? ['tools', 'files'] as const : ['tools'] as const)
-    : (showFilesTab ? ['tools', 'files', 'browser'] as const : ['tools', 'browser'] as const);
-  
+    ? (showFilesTab ? ['tools', 'files', 'desktop'] as const : ['tools', 'desktop'] as const)
+    : (showFilesTab ? ['tools', 'files', 'browser', 'desktop'] as const : ['tools', 'browser', 'desktop'] as const);
+
   const getViewIndex = (view: ViewType) => {
     if (!showFilesTab && view === 'files') return 0;
     return viewOptions.indexOf(view as any);
   };
-  
+
   const tabWidth = 28;
   const gap = 4;
-  
+
   return (
     <div className="relative flex items-center gap-1 bg-muted rounded-3xl px-1 py-1">
       <motion.div
@@ -56,11 +56,10 @@ export const ViewToggle = memo(function ViewToggle({
           <Button
             size="sm"
             onClick={() => onViewChange('tools')}
-            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${
-              currentView === 'tools'
+            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'tools'
                 ? 'text-black dark:text-white'
                 : 'text-gray-500 dark:text-gray-400'
-            }`}
+              }`}
           >
             <Zap className="h-3.5 w-3.5" />
           </Button>
@@ -76,11 +75,10 @@ export const ViewToggle = memo(function ViewToggle({
             <Button
               size="sm"
               onClick={() => onViewChange('files')}
-              className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${
-                currentView === 'files'
+              className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'files'
                   ? 'text-black dark:text-white'
                   : 'text-gray-500 dark:text-gray-400'
-              }`}
+                }`}
             >
               <FolderOpen className="h-3.5 w-3.5" />
             </Button>
@@ -97,11 +95,10 @@ export const ViewToggle = memo(function ViewToggle({
             <Button
               size="sm"
               onClick={() => onViewChange('browser')}
-              className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${
-                currentView === 'browser'
+              className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'browser'
                   ? 'text-black dark:text-white'
                   : 'text-gray-500 dark:text-gray-400'
-              }`}
+                }`}
             >
               <Globe className="h-3.5 w-3.5" />
             </Button>
@@ -111,6 +108,24 @@ export const ViewToggle = memo(function ViewToggle({
           </TooltipContent>
         </Tooltip>
       )}
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="sm"
+            onClick={() => onViewChange('desktop')}
+            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'desktop'
+                ? 'text-black dark:text-white'
+                : 'text-gray-500 dark:text-gray-400'
+              }`}
+          >
+            <Monitor className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>Desktop</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 });

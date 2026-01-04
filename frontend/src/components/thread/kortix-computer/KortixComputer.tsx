@@ -15,7 +15,7 @@ import { BrowserHeader } from '../tool-views/BrowserToolView';
 import { useTranslations } from 'next-intl';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
-import { 
+import {
   useKortixComputerStore,
   useKortixComputerPendingToolNavIndex,
   useKortixComputerClearPendingToolNav,
@@ -109,30 +109,29 @@ export const KortixComputer = memo(function KortixComputer({
   const [isInitialized, setIsInitialized] = useState(false);
   const [vncRefreshKey, setVncRefreshKey] = useState(0);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [isSuiteMode, setIsSuiteMode] = useState(false);
-  const [preSuiteSize, setPreSuiteSize] = useState<number | null>(null);
+
 
   const isMobile = useIsMobile();
   const { isOpen: isDocumentModalOpen } = useDocumentModalStore();
   const sandbox = project?.sandbox;
 
-  const { 
-    activeView, 
-    filesSubView, 
+  const {
+    activeView,
+    filesSubView,
     selectedFilePath,
     setActiveView,
     currentPath,
     navigateToPath,
     openFile,
   } = useKortixComputerStore();
-  
+
   const pendingToolNavIndex = useKortixComputerPendingToolNavIndex();
   const clearPendingToolNav = useKortixComputerClearPendingToolNav();
 
   const effectiveSandboxIdForQuery = sandboxId || project?.sandbox?.id || '';
   const { data: enhancedBrowserFiles = [] } = useDirectoryQuery(
-    effectiveSandboxIdForQuery, 
-    currentPath, 
+    effectiveSandboxIdForQuery,
+    currentPath,
     { enabled: !!effectiveSandboxIdForQuery && isMaximized }
   );
 
@@ -177,7 +176,7 @@ export const KortixComputer = memo(function KortixComputer({
   useEffect(() => {
     // Skip browser tab switching if flag is enabled
     if (HIDE_BROWSER_TAB) return;
-    
+
     if (!isInitialized && toolCallSnapshots.length > 0) {
       const streamingSnapshot = toolCallSnapshots.find(snapshot =>
         snapshot.toolCall.toolResult === undefined
@@ -206,9 +205,9 @@ export const KortixComputer = memo(function KortixComputer({
   useEffect(() => {
     // Skip browser tab switching if flag is enabled
     if (HIDE_BROWSER_TAB) return;
-    
+
     if (activeView !== 'tools') return;
-    
+
     const safeIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
     const currentSnapshot = toolCallSnapshots[safeIndex];
     const isCurrentSnapshotBrowserTool = isBrowserTool(currentSnapshot?.toolCall.toolCall?.function_name?.replace(/_/g, '-'));
@@ -476,7 +475,7 @@ export const KortixComputer = memo(function KortixComputer({
       internalNavigate(externalNavigateToIndex, 'external_click');
     }
   }, [externalNavigateToIndex, totalCalls, internalNavigate, setActiveView]);
-  
+
   useEffect(() => {
     if (pendingToolNavIndex !== null && pendingToolNavIndex >= 0 && pendingToolNavIndex < totalCalls) {
       setActiveView('tools');
@@ -611,8 +610,8 @@ export const KortixComputer = memo(function KortixComputer({
     }
 
     const pathSegments = currentPath.split('/').filter(Boolean);
-    const parentPath = pathSegments.length > 1 
-      ? '/' + pathSegments.slice(0, -1).join('/') 
+    const parentPath = pathSegments.length > 1
+      ? '/' + pathSegments.slice(0, -1).join('/')
       : '/workspace';
 
     return (
@@ -639,7 +638,7 @@ export const KortixComputer = memo(function KortixComputer({
     if (HIDE_BROWSER_TAB) {
       return null;
     }
-    
+
     if (persistentVncIframe) {
       return (
         <div className="h-full flex flex-col overflow-hidden">
@@ -678,7 +677,6 @@ export const KortixComputer = memo(function KortixComputer({
       <div className="flex flex-col h-full max-h-full max-w-full overflow-hidden min-w-0" style={{ contain: 'strict' }}>
         {!isMobile && (
           <PanelHeader
-            agentName={agentName}
             onClose={handleClose}
             onMaximize={handleMaximize}
             isStreaming={isStreaming && activeView === 'tools'}
@@ -687,31 +685,37 @@ export const KortixComputer = memo(function KortixComputer({
             onViewChange={setActiveView}
             showFilesTab={true}
             isMaximized={isMaximized}
-            isSuiteMode={isSuiteMode}
-            onToggleSuiteMode={() => {
-              if (isSuiteMode) {
-                // Exit suite mode - restore previous size
-                if (preSuiteSize !== null && sidePanelRef?.current) {
-                  sidePanelRef.current.resize(preSuiteSize);
-                }
-                setPreSuiteSize(null);
-                setIsSuiteMode(false);
-              } else {
-                // Enter suite mode - save current size and maximize
-                if (sidePanelRef?.current) {
-                  const currentSize = sidePanelRef.current.getSize();
-                  setPreSuiteSize(currentSize);
-                  sidePanelRef.current.resize(70); // Max size from ResizablePanel config
-                }
-                setIsSuiteMode(true);
-              }
-            }}
+
           />
         )}
         <div className="flex-1 overflow-hidden max-w-full max-h-full min-w-0 min-h-0" style={{ contain: 'strict' }}>
           {activeView === 'tools' && renderToolsView()}
           {activeView === 'files' && renderFilesView()}
           {!HIDE_BROWSER_TAB && activeView === 'browser' && renderBrowserView()}
+          {activeView === 'desktop' && (
+            <SandboxDesktop
+              toolCalls={toolCallSnapshots.map(s => s.toolCall)}
+              currentIndex={safeInternalIndex}
+              onNavigate={handleDockNavigate}
+              onPrevious={navigateToPrevious}
+              onNext={navigateToNext}
+              latestIndex={latestIndex}
+              agentStatus={agentStatus}
+              isLiveMode={isLiveMode}
+              onJumpToLive={jumpToLive}
+              onJumpToLatest={jumpToLatest}
+              project={project}
+              onClose={handleClose}
+              currentView={activeView}
+              onViewChange={setActiveView}
+              isEmbedded={true}
+              isExpanded={isMaximized}
+              onMaximize={() => setIsMaximized(!isMaximized)}
+              project_id={projectId || ''}
+              renderFilesView={renderFilesView}
+              renderBrowserView={renderBrowserView}
+            />
+          )}
         </div>
       </div>
     );
@@ -722,7 +726,6 @@ export const KortixComputer = memo(function KortixComputer({
       <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DrawerContent className="h-[85vh] max-h-[85vh] overflow-hidden" style={{ contain: 'strict' }}>
           <PanelHeader
-            agentName={agentName}
             onClose={handleClose}
             variant="drawer"
             currentView={activeView}
@@ -734,6 +737,27 @@ export const KortixComputer = memo(function KortixComputer({
             {activeView === 'tools' && renderToolsView()}
             {activeView === 'files' && renderFilesView()}
             {!HIDE_BROWSER_TAB && activeView === 'browser' && renderBrowserView()}
+            {activeView === 'desktop' && (
+              <SandboxDesktop
+                toolCalls={toolCallSnapshots.map(s => s.toolCall)}
+                currentIndex={safeInternalIndex}
+                onNavigate={handleDockNavigate}
+                onPrevious={navigateToPrevious}
+                onNext={navigateToNext}
+                latestIndex={latestIndex}
+                agentStatus={agentStatus}
+                isLiveMode={isLiveMode}
+                onJumpToLive={jumpToLive}
+                onJumpToLatest={jumpToLatest}
+                project={project}
+                onClose={handleClose}
+                currentView={activeView}
+                onViewChange={setActiveView}
+                project_id={projectId || ''}
+                renderFilesView={renderFilesView}
+                renderBrowserView={renderBrowserView}
+              />
+            )}
           </div>
 
           {activeView === 'tools' && (displayTotalCalls > 1 || (isCurrentToolStreaming && totalCompletedCalls > 0)) && (
@@ -792,7 +816,7 @@ export const KortixComputer = memo(function KortixComputer({
 
     if (isMaximized) {
       if (typeof document === 'undefined') return null;
-      
+
       return createPortal(
         <div className="fixed inset-0 z-[9999] bg-background">
           <SandboxDesktop
@@ -893,7 +917,7 @@ export const KortixComputer = memo(function KortixComputer({
 
   if (isMaximized) {
     if (typeof document === 'undefined') return null;
-    
+
     return createPortal(
       <div className="fixed inset-0 z-[9999] bg-background">
         <SandboxDesktop

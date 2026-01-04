@@ -144,8 +144,8 @@ const FolderWindow = memo(function FolderWindow({
   }));
 
   const pathSegments = currentPath.split('/').filter(Boolean);
-  const parentPath = pathSegments.length > 1 
-    ? '/' + pathSegments.slice(0, -1).join('/') 
+  const parentPath = pathSegments.length > 1
+    ? '/' + pathSegments.slice(0, -1).join('/')
     : '/workspace';
 
   const folderName = currentPath.split('/').pop() || 'Folder';
@@ -215,6 +215,9 @@ interface SandboxDesktopProps {
   renderBrowserView?: () => ReactNode;
   isStreaming?: boolean;
   project_id: string;
+  isEmbedded?: boolean;
+  isExpanded?: boolean;
+  onMaximize?: () => void;
 }
 
 export const SandboxDesktop = memo(function SandboxDesktop({
@@ -236,9 +239,14 @@ export const SandboxDesktop = memo(function SandboxDesktop({
   currentView,
   onViewChange,
   renderFilesView,
+
+
   renderBrowserView,
   project_id,
   isStreaming = false,
+  isEmbedded = false,
+  isExpanded = false,
+  onMaximize,
 }: SandboxDesktopProps) {
   const [openWindows, setOpenWindows] = useState<OpenWindow[]>([]);
   const [maxZIndex, setMaxZIndex] = useState(1);
@@ -246,14 +254,14 @@ export const SandboxDesktop = memo(function SandboxDesktop({
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
   const [sandboxInfoOpen, setSandboxInfoOpen] = useState(false);
   const [isCreatingNewFolder, setIsCreatingNewFolder] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const fileUploadMutation = useFileUpload();
   const { session } = useAuth();
 
   const { data: sandboxDetails, isLoading: sandboxLoading, error: sandboxError } = useSandboxDetails(project_id);
-  
+
   const sandboxId = project?.sandbox?.id;
   const { data: workspaceFiles = [] } = useDirectoryQuery(sandboxId, '/workspace', {
     enabled: !!sandboxId,
@@ -287,19 +295,19 @@ export const SandboxDesktop = memo(function SandboxDesktop({
 
   const openToolWindow = useCallback((toolIndex: number) => {
     const windowId = `tool-${toolIndex}`;
-    
+
     setOpenWindows(prev => {
       const existing = prev.find(w => w.id === windowId);
       if (existing) {
         if (existing.isMinimized) {
-          return prev.map(w => 
-            w.id === windowId 
+          return prev.map(w =>
+            w.id === windowId
               ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 }
               : w
           );
         }
-        return prev.map(w => 
-          w.id === windowId 
+        return prev.map(w =>
+          w.id === windowId
             ? { ...w, zIndex: maxZIndex + 1 }
             : w
         );
@@ -315,33 +323,39 @@ export const SandboxDesktop = memo(function SandboxDesktop({
         isMinimized: false,
       }];
     });
-    
+
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(windowId);
     onNavigate(toolIndex);
   }, [maxZIndex, getInitialPosition, onNavigate]);
 
   const openSystemWindow = useCallback((type: 'files' | 'browser' | 'terminal') => {
+    // If we're fully expanded or not embedded, switch the main view tab (except for terminal)
+    if (type !== 'terminal' && (isExpanded || !isEmbedded)) {
+      onViewChange(type);
+      return;
+    }
+
     const windowId = `system-${type}`;
-    
+
     setOpenWindows(prev => {
       const existing = prev.find(w => w.id === windowId);
       if (existing) {
         if (existing.isMinimized) {
-          return prev.map(w => 
-            w.id === windowId 
+          return prev.map(w =>
+            w.id === windowId
               ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 }
               : w
           );
         }
-        return prev.map(w => 
-          w.id === windowId 
+        return prev.map(w =>
+          w.id === windowId
             ? { ...w, zIndex: maxZIndex + 1 }
             : w
         );
       }
 
-      const windowSize = type === 'terminal' 
+      const windowSize = type === 'terminal'
         ? { width: 800, height: 500 }
         : { width: 900, height: 600 };
 
@@ -354,18 +368,15 @@ export const SandboxDesktop = memo(function SandboxDesktop({
         isMinimized: false,
       }];
     });
-    
+
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(windowId);
-    if (type !== 'terminal') {
-      onViewChange(type);
-    }
-  }, [maxZIndex, getInitialPosition, onViewChange]);
+  }, [maxZIndex, getInitialPosition, onViewChange, currentView, isExpanded, isEmbedded]);
 
   const openFileWindow = useCallback((path: string, isDirectory: boolean) => {
     const fileName = path.split('/').pop() || path;
     const windowId = `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     setOpenWindows(prev => [...prev, {
       id: windowId,
       type: isDirectory ? 'folder-browser' : 'file-viewer',
@@ -376,14 +387,14 @@ export const SandboxDesktop = memo(function SandboxDesktop({
       size: isDirectory ? { width: 800, height: 500 } : { width: 700, height: 500 },
       isMinimized: false,
     }]);
-    
+
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(windowId);
   }, [maxZIndex, getInitialPosition]);
 
   const openFileInfoWindow = useCallback((fileInfo: FileInfo) => {
     const windowId = `file-info-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     setOpenWindows(prev => [...prev, {
       id: windowId,
       type: 'file-info',
@@ -395,7 +406,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
       size: { width: 380, height: 500 },
       isMinimized: false,
     }]);
-    
+
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(windowId);
   }, [maxZIndex, getInitialPosition]);
@@ -416,28 +427,34 @@ export const SandboxDesktop = memo(function SandboxDesktop({
   }, [openWindows]);
 
   const minimizeWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w => 
+    setOpenWindows(prev => prev.map(w =>
       w.id === windowId ? { ...w, isMinimized: true } : w
     ));
   }, []);
 
   const focusWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w => 
+    setOpenWindows(prev => prev.map(w =>
       w.id === windowId ? { ...w, zIndex: maxZIndex + 1 } : w
     ));
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(windowId);
-    
+
     const window = openWindows.find(w => w.id === windowId);
     if (window) {
       if (window.type === 'tool' && window.toolIndex !== undefined) {
         onNavigate(window.toolIndex);
-        onViewChange('tools');
+        // Only switch to tools tab if we're not in embedded desktop mode
+        if (currentView !== 'desktop') {
+          onViewChange('tools');
+        }
       } else if (window.type === 'files' || window.type === 'browser') {
-        onViewChange(window.type);
+        // Only switch tabs if we're not in embedded desktop mode
+        if (currentView !== 'desktop') {
+          onViewChange(window.type);
+        }
       }
     }
-  }, [maxZIndex, openWindows, onNavigate, onViewChange]);
+  }, [maxZIndex, openWindows, onNavigate, onViewChange, currentView]);
 
   useEffect(() => {
     if (toolCalls.length > 0 && openWindows.length === 0) {
@@ -463,15 +480,15 @@ export const SandboxDesktop = memo(function SandboxDesktop({
     // Only act if view actually changed
     if (previousViewRef.current === currentView) return;
     previousViewRef.current = currentView;
-    
+
     if (currentView === 'files') {
       const existingFilesWindow = openWindows.find(w => w.type === 'files');
       if (!existingFilesWindow) {
         openSystemWindow('files');
       } else if (existingFilesWindow.isMinimized) {
         // Restore minimized window and bring to front
-        setOpenWindows(prev => prev.map(w => 
-          w.id === existingFilesWindow.id 
+        setOpenWindows(prev => prev.map(w =>
+          w.id === existingFilesWindow.id
             ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 }
             : w
         ));
@@ -479,8 +496,8 @@ export const SandboxDesktop = memo(function SandboxDesktop({
         setActiveWindowId(existingFilesWindow.id);
       } else {
         // Bring existing window to front
-        setOpenWindows(prev => prev.map(w => 
-          w.id === existingFilesWindow.id 
+        setOpenWindows(prev => prev.map(w =>
+          w.id === existingFilesWindow.id
             ? { ...w, zIndex: maxZIndex + 1 }
             : w
         ));
@@ -492,16 +509,16 @@ export const SandboxDesktop = memo(function SandboxDesktop({
       if (!existingBrowserWindow) {
         openSystemWindow('browser');
       } else if (existingBrowserWindow.isMinimized) {
-        setOpenWindows(prev => prev.map(w => 
-          w.id === existingBrowserWindow.id 
+        setOpenWindows(prev => prev.map(w =>
+          w.id === existingBrowserWindow.id
             ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 }
             : w
         ));
         setMaxZIndex(prev => prev + 1);
         setActiveWindowId(existingBrowserWindow.id);
       } else {
-        setOpenWindows(prev => prev.map(w => 
-          w.id === existingBrowserWindow.id 
+        setOpenWindows(prev => prev.map(w =>
+          w.id === existingBrowserWindow.id
             ? { ...w, zIndex: maxZIndex + 1 }
             : w
         ));
@@ -513,24 +530,27 @@ export const SandboxDesktop = memo(function SandboxDesktop({
 
   const handleDockNavigate = useCallback((index: number) => {
     openToolWindow(index);
-    onViewChange('tools');
-  }, [openToolWindow, onViewChange]);
+    // Only switch to tools tab if we're not in embedded desktop mode
+    if (currentView !== 'desktop') {
+      onViewChange('tools');
+    }
+  }, [openToolWindow, onViewChange, currentView]);
 
   const handleOpenInfoWindow = useCallback(() => {
     const windowId = 'system-info';
-    
+
     setOpenWindows(prev => {
       const existing = prev.find(w => w.id === windowId);
       if (existing) {
         if (existing.isMinimized) {
-          return prev.map(w => 
-            w.id === windowId 
+          return prev.map(w =>
+            w.id === windowId
               ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 }
               : w
           );
         }
-        return prev.map(w => 
-          w.id === windowId 
+        return prev.map(w =>
+          w.id === windowId
             ? { ...w, zIndex: maxZIndex + 1 }
             : w
         );
@@ -545,24 +565,24 @@ export const SandboxDesktop = memo(function SandboxDesktop({
         isMinimized: false,
       }];
     });
-    
+
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(windowId);
   }, [maxZIndex, getInitialPosition]);
 
   const handleOpenSpreadsheetWindow = useCallback(() => {
     const windowId = 'system-spreadsheet';
-    
+
     setOpenWindows(prev => {
       const existing = prev.find(w => w.id === windowId);
       if (existing) {
-        return prev.map(w => 
-          w.id === windowId 
-            ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 } 
+        return prev.map(w =>
+          w.id === windowId
+            ? { ...w, isMinimized: false, zIndex: maxZIndex + 1 }
             : w
         );
       }
-      
+
       return [...prev, {
         id: windowId,
         type: 'spreadsheet' as const,
@@ -572,12 +592,17 @@ export const SandboxDesktop = memo(function SandboxDesktop({
         isMinimized: false,
       }];
     });
-    
+
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(windowId);
   }, [maxZIndex, getInitialPosition]);
 
   const handleSystemAppClick = useCallback((type: 'files' | 'browser' | 'terminal' | 'info' | 'spreadsheet') => {
+    if ((isExpanded || !isEmbedded) && type !== 'info' && type !== 'spreadsheet' && type !== 'terminal') {
+      onViewChange(type);
+      return;
+    }
+
     if (type === 'info') {
       handleOpenInfoWindow();
     } else if (type === 'spreadsheet') {
@@ -585,7 +610,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
     } else {
       openSystemWindow(type);
     }
-  }, [openSystemWindow, handleOpenInfoWindow, handleOpenSpreadsheetWindow]);
+  }, [openSystemWindow, handleOpenInfoWindow, handleOpenSpreadsheetWindow, isExpanded, isEmbedded, onViewChange]);
 
   const isFilesWindowOpen = openWindows.some(w => w.id === 'system-files' && !w.isMinimized);
   const isBrowserWindowOpen = openWindows.some(w => w.id === 'system-browser' && !w.isMinimized);
@@ -627,12 +652,12 @@ export const SandboxDesktop = memo(function SandboxDesktop({
     }
 
     const fileName = filePath.split('/').pop() || 'download';
-    
+
     try {
       toast.loading(`Downloading ${fileName}...`, { id: 'download' });
-      
+
       const blob = await fetchFileContent(sandboxId, filePath, 'blob', session.access_token);
-      
+
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -641,7 +666,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success(`Downloaded ${fileName}`, { id: 'download' });
     } catch (error) {
       console.error('Download failed:', error);
@@ -654,7 +679,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
       toast.error('No sandbox available');
       return;
     }
-    
+
     const fileArray = Array.from(files);
     fileArray.forEach(file => {
       const targetPath = `/workspace/${file.name}`;
@@ -682,17 +707,17 @@ export const SandboxDesktop = memo(function SandboxDesktop({
 
   const handleCreateNewFolder = useCallback(async (folderName: string) => {
     setIsCreatingNewFolder(false);
-    
+
     if (!sandboxId || !session?.access_token) {
       toast.error('Cannot create folder');
       return;
     }
-    
+
     if (workspaceFiles.some(f => f.name === folderName)) {
       toast.error(`"${folderName}" already exists`);
       return;
     }
-    
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/sandboxes/${sandboxId}/terminal/execute`, {
         method: 'POST',
@@ -704,7 +729,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
           command: `mkdir -p "/workspace/${folderName}"`,
         }),
       });
-      
+
       if (response.ok) {
         toast.success(`Created "${folderName}"`);
         queryClient.invalidateQueries({ queryKey: fileQueryKeys.directories() });
@@ -728,7 +753,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleUploadFiles(e.dataTransfer.files);
     }
@@ -746,7 +771,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
     <>
       <div className="absolute inset-0">
         {!sandboxInfoOpen && (desktopFiles.length > 0 || isCreatingNewFolder) && (
-          <DesktopIcons 
+          <DesktopIcons
             files={desktopFiles}
             onFileOpen={handleDesktopFileOpen}
             onFileEdit={handleDesktopFileEdit}
@@ -764,7 +789,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
             onNewFolderCancel={handleCancelNewFolder}
           />
         )}
-        
+
         <AnimatePresence>
           {sandboxInfoOpen && (
             <SandboxInfoCard
@@ -773,251 +798,251 @@ export const SandboxDesktop = memo(function SandboxDesktop({
             />
           )}
           {visibleWindows.map(window => {
-              if (window.type === 'tool' && window.toolIndex !== undefined) {
-                const toolCall = toolCalls[window.toolIndex];
-                if (!toolCall) return null;
+            if (window.type === 'tool' && window.toolIndex !== undefined) {
+              const toolCall = toolCalls[window.toolIndex];
+              if (!toolCall) return null;
 
-                const toolName = toolCall.toolCall?.function_name || 'tool';
-                const friendlyName = getUserFriendlyToolName(toolName);
-                const ToolIcon = getToolIcon(convertToolName(toolName));
-                const colorScheme = getToolColorScheme(convertToolName(toolName));
-                const isToolStreaming = toolCall.toolResult === undefined;
-                const isSuccess = isToolStreaming ? true : getActualSuccess(toolCall);
+              const toolName = toolCall.toolCall?.function_name || 'tool';
+              const friendlyName = getUserFriendlyToolName(toolName);
+              const ToolIcon = getToolIcon(convertToolName(toolName));
+              const colorScheme = getToolColorScheme(convertToolName(toolName));
+              const isToolStreaming = toolCall.toolResult === undefined;
+              const isSuccess = isToolStreaming ? true : getActualSuccess(toolCall);
 
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title={friendlyName}
-                    icon={
-                      <div className={cn("w-4 h-4 rounded flex items-center justify-center", colorScheme.bg)}>
-                        <ToolIcon className={cn("w-2.5 h-2.5", colorScheme.iconColor)} />
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    <ToolView
-                      toolCall={toolCall.toolCall}
-                      toolResult={toolCall.toolResult}
-                      assistantTimestamp={toolCall.assistantTimestamp}
-                      toolTimestamp={toolCall.toolTimestamp}
-                      isSuccess={isSuccess}
-                      isStreaming={isToolStreaming}
-                      project={project}
-                      messages={messages}
-                      agentStatus={agentStatus}
-                      currentIndex={window.toolIndex}
-                      totalCalls={toolCalls.length}
-                      onFileClick={onFileClick}
-                      streamingText={isToolStreaming ? streamingText : undefined}
-                    />
-                  </AppWindow>
-                );
-              }
-
-              if (window.type === 'files' && renderFilesView) {
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title="Files"
-                    icon={
-                      <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#89A8C8] to-[#6B8DB5]">
-                        <Folder className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    {renderFilesView()}
-                  </AppWindow>
-                );
-              }
-
-              if (window.type === 'browser' && renderBrowserView) {
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title="Browser"
-                    icon={
-                      <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#7CB9E8] to-[#5B9BD5]">
-                        <Globe className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    {renderBrowserView()}
-                  </AppWindow>
-                );
-              }
-
-              if (window.type === 'terminal' && sandboxId) {
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title="Terminal"
-                    icon={
-                      <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#3f3f46] to-[#18181b]">
-                        <TerminalSquare className="w-2.5 h-2.5 text-[#4ade80]" />
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    <SSHTerminal sandboxId={sandboxId} />
-                  </AppWindow>
-                );
-              }
-
-              if (window.type === 'file-viewer' && window.filePath && sandboxId) {
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title={window.fileName || 'File'}
-                    icon={
-                      <div className="w-4 h-4 flex items-center justify-center">
-                        {getFileIconByName(window.fileName || '', false)}
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    <FileViewerView
-                      sandboxId={sandboxId}
-                      filePath={window.filePath}
-                      project={project}
-                      projectId={project_id}
-                    />
-                  </AppWindow>
-                );
-              }
-
-              if (window.type === 'folder-browser' && window.filePath && sandboxId) {
-                return (
-                  <FolderWindow
-                    key={window.id}
-                    window={window}
-                    sandboxId={sandboxId}
-                    isActive={activeWindowId === window.id}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    onOpenFile={(path, isDir) => openFileWindow(path, isDir)}
-                    onGetFileInfo={(fileInfo) => openFileInfoWindow(fileInfo)}
-                    onFileDownload={handleFileDownload}
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title={friendlyName}
+                  icon={
+                    <div className={cn("w-4 h-4 rounded flex items-center justify-center", colorScheme.bg)}>
+                      <ToolIcon className={cn("w-2.5 h-2.5", colorScheme.iconColor)} />
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  <ToolView
+                    toolCall={toolCall.toolCall}
+                    toolResult={toolCall.toolResult}
+                    assistantTimestamp={toolCall.assistantTimestamp}
+                    toolTimestamp={toolCall.toolTimestamp}
+                    isSuccess={isSuccess}
+                    isStreaming={isToolStreaming}
+                    project={project}
+                    messages={messages}
+                    agentStatus={agentStatus}
+                    currentIndex={window.toolIndex}
+                    totalCalls={toolCalls.length}
+                    onFileClick={onFileClick}
+                    streamingText={isToolStreaming ? streamingText : undefined}
                   />
-                );
-              }
+                </AppWindow>
+              );
+            }
 
-              if (window.type === 'info') {
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title="System Info"
-                    icon={
-                      <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#64748B] to-[#475569]">
-                        <Info className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    <SystemInfoContent
-                      sandboxDetails={sandboxDetails}
-                      isLoading={sandboxLoading}
-                    />
-                  </AppWindow>
-                );
-              }
-              if (window.type === 'file-info' && window.fileInfo) {
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title={`${window.fileInfo.name} Info`}
-                    icon={
-                      <div className="w-4 h-4 flex items-center justify-center">
-                        {getFileIconByName(window.fileInfo.name, window.fileInfo.isDirectory)}
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    <FileInfoContent fileInfo={window.fileInfo} />
-                  </AppWindow>
-                );
-              }
+            if (window.type === 'files' && renderFilesView) {
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title="Files"
+                  icon={
+                    <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#89A8C8] to-[#6B8DB5]">
+                      <Folder className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  {renderFilesView()}
+                </AppWindow>
+              );
+            }
 
-              if (window.type === 'spreadsheet') {
-                return (
-                  <AppWindow
-                    key={window.id}
-                    id={window.id}
-                    title="Spreadsheets"
-                    icon={
-                      <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#10b981] to-[#059669]">
-                        <Table className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    }
-                    isActive={activeWindowId === window.id}
-                    initialPosition={window.position}
-                    initialSize={window.size}
-                    onFocus={() => focusWindow(window.id)}
-                    onClose={() => closeWindow(window.id)}
-                    onMinimize={() => minimizeWindow(window.id)}
-                    zIndex={window.zIndex}
-                  >
-                    <SpreadsheetApp
-                      sandboxId={sandboxId}
-                      initialFilePath={window.filePath}
-                    />
-                  </AppWindow>
-                );
-              }
+            if (window.type === 'browser' && renderBrowserView) {
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title="Browser"
+                  icon={
+                    <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#7CB9E8] to-[#5B9BD5]">
+                      <Globe className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  {renderBrowserView()}
+                </AppWindow>
+              );
+            }
 
-              return null;
-            })}
+            if (window.type === 'terminal' && sandboxId) {
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title="Terminal"
+                  icon={
+                    <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#3f3f46] to-[#18181b]">
+                      <TerminalSquare className="w-2.5 h-2.5 text-[#4ade80]" />
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  <SSHTerminal sandboxId={sandboxId} />
+                </AppWindow>
+              );
+            }
+
+            if (window.type === 'file-viewer' && window.filePath && sandboxId) {
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title={window.fileName || 'File'}
+                  icon={
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      {getFileIconByName(window.fileName || '', false)}
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  <FileViewerView
+                    sandboxId={sandboxId}
+                    filePath={window.filePath}
+                    project={project}
+                    projectId={project_id}
+                  />
+                </AppWindow>
+              );
+            }
+
+            if (window.type === 'folder-browser' && window.filePath && sandboxId) {
+              return (
+                <FolderWindow
+                  key={window.id}
+                  window={window}
+                  sandboxId={sandboxId}
+                  isActive={activeWindowId === window.id}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  onOpenFile={(path, isDir) => openFileWindow(path, isDir)}
+                  onGetFileInfo={(fileInfo) => openFileInfoWindow(fileInfo)}
+                  onFileDownload={handleFileDownload}
+                />
+              );
+            }
+
+            if (window.type === 'info') {
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title="System Info"
+                  icon={
+                    <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#64748B] to-[#475569]">
+                      <Info className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  <SystemInfoContent
+                    sandboxDetails={sandboxDetails}
+                    isLoading={sandboxLoading}
+                  />
+                </AppWindow>
+              );
+            }
+            if (window.type === 'file-info' && window.fileInfo) {
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title={`${window.fileInfo.name} Info`}
+                  icon={
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      {getFileIconByName(window.fileInfo.name, window.fileInfo.isDirectory)}
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  <FileInfoContent fileInfo={window.fileInfo} />
+                </AppWindow>
+              );
+            }
+
+            if (window.type === 'spreadsheet') {
+              return (
+                <AppWindow
+                  key={window.id}
+                  id={window.id}
+                  title="Spreadsheets"
+                  icon={
+                    <div className="w-4 h-4 rounded flex items-center justify-center bg-gradient-to-br from-[#10b981] to-[#059669]">
+                      <Table className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  }
+                  isActive={activeWindowId === window.id}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  onFocus={() => focusWindow(window.id)}
+                  onClose={() => closeWindow(window.id)}
+                  onMinimize={() => minimizeWindow(window.id)}
+                  zIndex={window.zIndex}
+                >
+                  <SpreadsheetApp
+                    sandboxId={sandboxId}
+                    initialFilePath={window.filePath}
+                  />
+                </AppWindow>
+              );
+            }
+
+            return null;
+          })}
         </AnimatePresence>
       </div>
 
@@ -1059,7 +1084,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
       onDownloadAll={handleDownloadAll}
       onShowInfo={handleOpenInfoWindow}
     >
-      <div 
+      <div
         className="relative w-full h-full overflow-hidden flex flex-col"
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -1071,14 +1096,14 @@ export const SandboxDesktop = memo(function SandboxDesktop({
           className="hidden"
           onChange={handleFileInputChange}
         />
-        
+
         <div className="absolute inset-0">
-          <img 
+          <img
             src="https://heprlhlltebrxydgtsjs.supabase.co/storage/v1/object/public/image-uploads/backgrounds/computer-bg-dark.jpg"
             alt="Desktop wallpaper"
             className="absolute inset-0 w-full h-full object-cover dark:block"
           />
-          <img 
+          <img
             src="https://heprlhlltebrxydgtsjs.supabase.co/storage/v1/object/public/image-uploads/backgrounds/computer-bg-light.jpg"
             alt="Desktop wallpaper"
             className="absolute inset-0 w-full h-full object-cover dark:hidden"
@@ -1087,19 +1112,21 @@ export const SandboxDesktop = memo(function SandboxDesktop({
         </div>
 
         <div className="relative z-50 flex-shrink-0">
-          <PanelHeader
-            sandboxInfoOpen={sandboxInfoOpen}
-            setSandboxInfoOpen={setSandboxInfoOpen}
-            onClose={onClose}
-            onMaximize={() => {}}
-            isStreaming={isStreaming}
-            variant="motion"
-            currentView={currentView}
-            onViewChange={onViewChange}
-            showFilesTab={false}
-            isMaximized={true}
-            hideViewToggle={true}
-          />
+          {!isEmbedded && (
+            <PanelHeader
+              onClose={onClose}
+              onMaximize={onMaximize}
+              isStreaming={isStreaming}
+              variant="motion"
+              currentView={currentView}
+              onViewChange={onViewChange}
+              showFilesTab={false}
+              isMaximized={true}
+              hideViewToggle={true}
+              isEmbedded={isEmbedded}
+              isExpanded={isExpanded}
+            />
+          )}
         </div>
 
         <div className="relative flex-1 overflow-hidden">

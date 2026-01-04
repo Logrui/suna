@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { HIDE_BROWSER_TAB } from '@/components/thread/utils';
 
-export type ViewType = 'tools' | 'files' | 'browser';
+export type ViewType = 'tools' | 'files' | 'browser' | 'desktop';
 export type FilesSubView = 'browser' | 'viewer';
 
 /**
@@ -11,18 +11,18 @@ export type FilesSubView = 'browser' | 'viewer';
  */
 function normalizeWorkspacePath(path: string): string {
   if (!path) return '/workspace';
-  
+
   // Handle paths that start with "workspace" (without leading /)
   // This prevents "/workspace/workspace" when someone passes "workspace" or "workspace/foo"
   if (path === 'workspace' || path.startsWith('workspace/')) {
     return '/' + path;
   }
-  
+
   // If already starts with /workspace, return as-is
   if (path.startsWith('/workspace')) {
     return path;
   }
-  
+
   // Otherwise, prepend /workspace/
   return `/workspace/${path.replace(/^\//, '')}`;
 }
@@ -30,70 +30,70 @@ function normalizeWorkspacePath(path: string): string {
 interface KortixComputerState {
   // Main view state
   activeView: ViewType;
-  
+
   // Files view state
   filesSubView: FilesSubView;
   currentPath: string;
   selectedFilePath: string | null;
   filePathList: string[] | undefined;
   currentFileIndex: number;
-  
+
   // Version history state (shared across file browser and viewer)
   selectedVersion: string | null;
   selectedVersionDate: string | null;
-  
+
   // Panel state
   shouldOpenPanel: boolean;
   isSidePanelOpen: boolean;
-  
+
   // Tool navigation state (for external tool click triggers)
   pendingToolNavIndex: number | null;
-  
+
   // Unsaved file content persistence
   unsavedFileContent: Record<string, string>;
   // Unsaved state tracking (has user made edits?)
   unsavedFileState: Record<string, boolean>;
-  
+
   // Actions
   setActiveView: (view: ViewType) => void;
-  
+
   // File browser actions
   openFile: (filePath: string, filePathList?: string[]) => void;
   goBackToBrowser: () => void;
   navigateToPath: (path: string) => void;
   setCurrentFileIndex: (index: number) => void;
-  
+
   // Version history actions
   setSelectedVersion: (commit: string | null, date?: string | null) => void;
   clearSelectedVersion: () => void;
-  
+
   // For external triggers (clicking file in chat)
   openFileInComputer: (filePath: string, filePathList?: string[]) => void;
-  
+
   // Open files browser without selecting a file
   openFileBrowser: () => void;
-  
+
   // Navigate to a specific tool call (clicking tool in ThreadContent)
   navigateToToolCall: (toolIndex: number) => void;
-  
+
   // Clear pending tool nav after KortixComputer processes it
   clearPendingToolNav: () => void;
-  
+
   // Panel control
   clearShouldOpenPanel: () => void;
   setIsSidePanelOpen: (open: boolean) => void;
   openSidePanel: () => void;
   closeSidePanel: () => void;
-  
+
   // Unsaved content management
   setUnsavedContent: (filePath: string, content: string) => void;
   getUnsavedContent: (filePath: string) => string | undefined;
   clearUnsavedContent: (filePath: string) => void;
-  
+
   // Unsaved state management (tracks if user has made edits)
   setUnsavedState: (filePath: string, hasUnsaved: boolean) => void;
   getUnsavedState: (filePath: string) => boolean;
-  
+
   // Reset state
   reset: () => void;
 }
@@ -118,14 +118,14 @@ export const useKortixComputerStore = create<KortixComputerState>()(
   devtools(
     (set, get) => ({
       ...initialState,
-      
+
       setActiveView: (view: ViewType) => {
         // If browser tab is hidden and trying to set browser view, default to tools
         const effectiveView = HIDE_BROWSER_TAB && view === 'browser' ? 'tools' : view;
-        
+
         // Clear file selection when switching away from files view
         if (effectiveView !== 'files') {
-          set({ 
+          set({
             activeView: effectiveView,
             selectedFilePath: null,
             filePathList: undefined,
@@ -135,17 +135,17 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           set({ activeView: effectiveView });
         }
       },
-      
+
       openFile: (filePath: string, filePathList?: string[]) => {
         // Normalize the file path
         const normalizedPath = normalizeWorkspacePath(filePath);
-        
+
         // Extract directory from file path for breadcrumb context
         const lastSlashIndex = normalizedPath.lastIndexOf('/');
         const directoryPath = lastSlashIndex > 0
           ? normalizedPath.substring(0, lastSlashIndex)
           : '/workspace';
-        
+
         // Find index in filePathList if provided
         let fileIndex = -1;
         if (filePathList && filePathList.length > 0) {
@@ -154,7 +154,7 @@ export const useKortixComputerStore = create<KortixComputerState>()(
             return normalizedListPath === normalizedPath;
           });
         }
-        
+
         set({
           filesSubView: 'viewer',
           selectedFilePath: normalizedPath,
@@ -163,7 +163,7 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           currentFileIndex: fileIndex >= 0 ? fileIndex : 0,
         });
       },
-      
+
       goBackToBrowser: () => {
         set({
           filesSubView: 'browser',
@@ -172,10 +172,10 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           currentFileIndex: -1,
         });
       },
-      
+
       navigateToPath: (path: string) => {
         const normalizedPath = normalizeWorkspacePath(path);
-        
+
         set({
           currentPath: normalizedPath,
           filesSubView: 'browser',
@@ -184,44 +184,44 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           currentFileIndex: -1,
         });
       },
-      
+
       setCurrentFileIndex: (index: number) => {
         const { filePathList } = get();
         if (filePathList && index >= 0 && index < filePathList.length) {
           const filePath = filePathList[index];
           const normalizedPath = normalizeWorkspacePath(filePath);
-          
+
           set({
             currentFileIndex: index,
             selectedFilePath: normalizedPath,
           });
         }
       },
-      
+
       setSelectedVersion: (commit: string | null, date?: string | null) => {
         set({
           selectedVersion: commit,
           selectedVersionDate: date ?? null,
         });
       },
-      
+
       clearSelectedVersion: () => {
         set({
           selectedVersion: null,
           selectedVersionDate: null,
         });
       },
-      
+
       openFileInComputer: (filePath: string, filePathList?: string[]) => {
         // This is called from external sources (clicking file in chat)
         // It should open the panel, switch to files view, and show the file
         const normalizedPath = normalizeWorkspacePath(filePath);
-        
+
         const lastSlashIndex = normalizedPath.lastIndexOf('/');
         const directoryPath = lastSlashIndex > 0
           ? normalizedPath.substring(0, lastSlashIndex)
           : '/workspace';
-        
+
         let fileIndex = -1;
         if (filePathList && filePathList.length > 0) {
           fileIndex = filePathList.findIndex(path => {
@@ -229,7 +229,7 @@ export const useKortixComputerStore = create<KortixComputerState>()(
             return normalizedListPath === normalizedPath;
           });
         }
-        
+
         set({
           activeView: 'files',
           filesSubView: 'viewer',
@@ -240,7 +240,7 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           shouldOpenPanel: true,
         });
       },
-      
+
       openFileBrowser: () => {
         // Open files tab in browser mode without selecting a file
         set({
@@ -253,7 +253,7 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           shouldOpenPanel: true,
         });
       },
-      
+
       navigateToToolCall: (toolIndex: number) => {
         // Navigate to a specific tool call - switch to tools view and set pending nav
         set({
@@ -262,27 +262,27 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           shouldOpenPanel: true,
         });
       },
-      
+
       clearPendingToolNav: () => {
         set({ pendingToolNavIndex: null });
       },
-      
+
       clearShouldOpenPanel: () => {
         set({ shouldOpenPanel: false });
       },
-      
+
       setIsSidePanelOpen: (open: boolean) => {
         set({ isSidePanelOpen: open });
       },
-      
+
       openSidePanel: () => {
         set({ isSidePanelOpen: true });
       },
-      
+
       closeSidePanel: () => {
         set({ isSidePanelOpen: false });
       },
-      
+
       setUnsavedContent: (filePath: string, content: string) => {
         const normalizedPath = normalizeWorkspacePath(filePath);
         set((state) => ({
@@ -292,24 +292,24 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           },
         }));
       },
-      
+
       getUnsavedContent: (filePath: string) => {
         const normalizedPath = normalizeWorkspacePath(filePath);
         return get().unsavedFileContent[normalizedPath];
       },
-      
+
       clearUnsavedContent: (filePath: string) => {
         const normalizedPath = normalizeWorkspacePath(filePath);
         set((state) => {
           const { [normalizedPath]: _, ...restContent } = state.unsavedFileContent;
           const { [normalizedPath]: __, ...restState } = state.unsavedFileState;
-          return { 
+          return {
             unsavedFileContent: restContent,
             unsavedFileState: restState,
           };
         });
       },
-      
+
       setUnsavedState: (filePath: string, hasUnsaved: boolean) => {
         const normalizedPath = normalizeWorkspacePath(filePath);
         set((state) => ({
@@ -319,12 +319,12 @@ export const useKortixComputerStore = create<KortixComputerState>()(
           },
         }));
       },
-      
+
       getUnsavedState: (filePath: string) => {
         const normalizedPath = normalizeWorkspacePath(filePath);
         return get().unsavedFileState[normalizedPath] ?? false;
       },
-      
+
       reset: () => {
         set(initialState);
       },
@@ -336,7 +336,7 @@ export const useKortixComputerStore = create<KortixComputerState>()(
 );
 
 // Selector hooks for common use cases
-export const useKortixComputerActiveView = () => 
+export const useKortixComputerActiveView = () =>
   useKortixComputerStore((state) => state.activeView);
 
 // Individual selectors for files state (stable, primitive values)

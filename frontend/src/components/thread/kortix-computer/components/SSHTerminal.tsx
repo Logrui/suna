@@ -87,7 +87,7 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
   const wsRef = useRef<WebSocket | null>(null);
   const connectionIdRef = useRef<number>(0);
   const invalidateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [sshCommand, setSshCommand] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -152,10 +152,10 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
     connectionIdRef.current = myConnectionId;
 
     setStatus('connecting');
-    
+
     const wsUrl = getWebSocketUrl();
     console.log('[Terminal] Creating WebSocket (id:', myConnectionId, '):', `${wsUrl}/sandboxes/${sandboxId}/terminal/ws`);
-    
+
     const ws = new WebSocket(`${wsUrl}/sandboxes/${sandboxId}/terminal/ws`);
     wsRef.current = ws;
 
@@ -177,11 +177,11 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
 
     ws.onmessage = (event) => {
       if (connectionIdRef.current !== myConnectionId) return;
-      
+
       try {
         const message = JSON.parse(event.data);
         console.log('[SSHTerminal] Message:', message.type, message.message || '');
-        
+
         switch (message.type) {
           case 'status':
             term.writeln(`\x1b[33m${message.message}\x1b[0m`);
@@ -228,11 +228,11 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
 
   const reconnect = useCallback(() => {
     disconnect();
-    
+
     if (xtermRef.current && session?.access_token) {
       xtermRef.current.clear();
       xtermRef.current.writeln('\x1b[33mReconnecting...\x1b[0m');
-      
+
       setTimeout(() => {
         if (xtermRef.current) {
           connectWebSocket(session.access_token, xtermRef.current);
@@ -255,13 +255,13 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
 
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
-    
+
     term.loadAddon(fitAddon);
     term.loadAddon(webLinksAddon);
-    
+
     term.open(terminalRef.current);
     fitAddon.fit();
-    
+
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
 
@@ -269,6 +269,51 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
     term.writeln('\x1b[38;5;141m│\x1b[0m   \x1b[1;38;5;183m◉\x1b[0m \x1b[1;37mKortix\x1b[0m \x1b[38;5;245m• Terminal\x1b[0m               \x1b[38;5;141m│\x1b[0m');
     term.writeln('\x1b[38;5;141m└──────────────────────────────────────────┘\x1b[0m');
     term.writeln('');
+
+    // Handle special keyboard shortcuts
+    term.attachCustomKeyEventHandler((event) => {
+      // Ctrl+A / Cmd+A - Select all terminal content
+      if ((event.ctrlKey || event.metaKey) && event.key === 'a' && event.type === 'keydown') {
+        term.selectAll();
+        return false;
+      }
+      // Ctrl+V / Cmd+V - Paste: return false to prevent xterm's default, we handle via onPaste
+      if ((event.ctrlKey || event.metaKey) && event.key === 'v' && event.type === 'keydown') {
+        return false;
+      }
+      return true;
+    });
+
+    // Handle paste via the DOM paste event (more reliable than keyboard interception)
+    const terminalElement = terminalRef.current;
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      const text = e.clipboardData?.getData('text');
+      if (text && wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'input', data: text }));
+      }
+    };
+    terminalElement.addEventListener('paste', handlePaste);
+
+    // Right-click: copy if selection exists, paste if not
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      if (term.hasSelection()) {
+        // Copy selected text to clipboard
+        navigator.clipboard.writeText(term.getSelection());
+        term.clearSelection();
+      } else {
+        // Paste from clipboard
+        navigator.clipboard.readText().then((text) => {
+          if (text && wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: 'input', data: text }));
+          }
+        }).catch(() => {
+          // Clipboard access denied - silently fail
+        });
+      }
+    };
+    terminalElement.addEventListener('contextmenu', handleContextMenu);
 
     term.onData((data) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -287,13 +332,15 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
 
     const handleResize = () => fitAddonRef.current?.fit();
     window.addEventListener('resize', handleResize);
-    
+
     const container = terminalRef.current;
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      terminalElement.removeEventListener('paste', handlePaste);
+      terminalElement.removeEventListener('contextmenu', handleContextMenu);
       resizeObserver.disconnect();
       if (invalidateTimeoutRef.current) {
         clearTimeout(invalidateTimeoutRef.current);
@@ -321,7 +368,7 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
     if (!session?.access_token || !sandboxId || !xtermRef.current || wsRef.current) {
       return;
     }
-    
+
     console.log('[SSHTerminal] Initiating connection...');
     getSSHCommand();
     connectWebSocket(session.access_token, xtermRef.current);
@@ -333,11 +380,12 @@ export const SSHTerminal = memo(function SSHTerminal({ sandboxId, className }: S
       "bg-white/50 dark:bg-zinc-900/50",
       className
     )}>
-      <div 
+      <div
         ref={terminalRef}
         className={cn(
           "flex-1 overflow-hidden",
-          "bg-gradient-to-b from-zinc-50 to-white dark:from-[#0f0f14] dark:to-[#0a0a0d]"
+          "bg-gradient-to-b from-zinc-50 to-white dark:from-[#0f0f14] dark:to-[#0a0a0d]",
+          "[&_.xterm-viewport]:scrollbar-thin [&_.xterm-viewport]:scrollbar-track-transparent [&_.xterm-viewport]:scrollbar-thumb-zinc-400/50 dark:[&_.xterm-viewport]:scrollbar-thumb-zinc-600/50"
         )}
         style={{ padding: '12px 16px' }}
       />

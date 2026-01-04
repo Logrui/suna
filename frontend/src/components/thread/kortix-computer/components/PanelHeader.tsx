@@ -74,22 +74,10 @@ function useCurrentTime() {
   return time;
 }
 
-function BatteryIcon({ level, charging }: { level: number; charging: boolean }) {
-  if (charging) return <BatteryCharging className="h-4.5 w-4.5" />;
-  if (level <= 20) return <BatteryLow className="h-4.5 w-4.5" />;
-  if (level <= 50) return <BatteryMedium className="h-4.5 w-4.5" />;
-  return <BatteryFull className="h-4.5 w-4.5" />;
-}
-
 function StatusBar() {
-  const batteryInfo = useBatteryStatus();
   const currentTime = useCurrentTime();
-
   return (
     <div className="flex items-center gap-2 text-[11px]">
-      <div className="flex items-center gap-1">
-        <Wifi className="h-3.5 w-3.5" />
-      </div>
       <div className="font-medium">
         {currentTime}
       </div>
@@ -98,48 +86,53 @@ function StatusBar() {
 }
 
 interface PanelHeaderProps {
-  agentName?: string;
   onClose: () => void;
   onMaximize?: () => void;
   isStreaming?: boolean;
   variant?: 'drawer' | 'desktop' | 'motion';
-  layoutId?: string;
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
   showFilesTab?: boolean;
   isMaximized?: boolean;
-  isSuiteMode?: boolean;
-  onToggleSuiteMode?: () => void;
+
   hideViewToggle?: boolean;
-  sandboxInfoOpen?: boolean;
-  setSandboxInfoOpen?: (open: boolean) => void;
+  isEmbedded?: boolean;
+  isExpanded?: boolean;
 }
 
 export const PanelHeader = memo(function PanelHeader({
-  agentName,
   onClose,
   onMaximize,
   isStreaming = false,
   variant = 'desktop',
-  layoutId,
   currentView,
   onViewChange,
   showFilesTab = true,
   isMaximized = false,
-  isSuiteMode = false,
-  onToggleSuiteMode,
+
   hideViewToggle = false,
-  sandboxInfoOpen,
-  setSandboxInfoOpen,
+  isEmbedded = false,
+  isExpanded = false,
 }: PanelHeaderProps) {
+
+  if (variant == 'drawer') {
+    return (
+      <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border">
+        <div className="flex items-center gap-2">
+          <ViewToggle currentView={currentView} onViewChange={onViewChange} showFilesTab={showFilesTab} />
+        </div>
+      </div>
+    );
+  }
+
   const title = "Kortix Computer";
 
-  if (variant === 'drawer') {
+  if (variant === 'motion') {
     return (
       <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 flex items-center justify-center">
-            <KortixLogo size={18}/>
+            <KortixLogo size={18} />
           </div>
           <DrawerTitle className="text-sm font-semibold text-foreground">
             {title}
@@ -163,25 +156,32 @@ export const PanelHeader = memo(function PanelHeader({
 
   return (
     <div className={cn(
-      "h-9 flex-shrink-0 px-3 grid grid-cols-3 items-center",
-      !isMaximized && "h-12 border-b border-border"
+      "flex-shrink-0 grid grid-cols-3 items-center",
+      isMaximized
+        ? "h-9 px-3"
+        : "h-14 px-3.5 pt-1 border-b border-border"
     )}>
       <div className="flex items-center justify-start">
-        <ToolbarButtons 
+        <ToolbarButtons
           onClose={onClose}
-          onMaximize={onMaximize || (() => {})}
           isMaximized={isMaximized}
+          isEmbedded={isEmbedded}
+          isExpanded={isExpanded}
+          onMaximize={onMaximize}
         />
       </div>
-      <div onClick={() => setSandboxInfoOpen?.(!sandboxInfoOpen)} className="flex items-center justify-center gap-1.5 cursor-default">
+      <div
+        onClick={() => onMaximize?.()}
+        className="flex items-center justify-center gap-1.5 cursor-pointer select-none hover:opacity-80 transition-opacity"
+      >
         <div className="w-5 h-5 flex items-center justify-center">
-          <KortixLogo size={14}/>
+          <KortixLogo size={14} />
         </div>
         <h2 className="text-sm font-semibold text-foreground">
           {title}
         </h2>
       </div>
-      
+
       <div className="flex items-center justify-end gap-2">
         {isStreaming && (
           <div className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-primary/10 text-primary flex items-center gap-1">

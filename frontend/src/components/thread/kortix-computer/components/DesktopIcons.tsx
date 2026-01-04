@@ -31,11 +31,11 @@ interface DesktopIconsProps {
 
 function getNextFolderName(files: DesktopFile[]): string {
   const existingNames = new Set(files.filter(f => f.is_dir).map(f => f.name.toLowerCase()));
-  
+
   if (!existingNames.has('new folder')) {
     return 'New Folder';
   }
-  
+
   let counter = 2;
   while (existingNames.has(`new folder ${counter}`)) {
     counter++;
@@ -64,14 +64,14 @@ export const DesktopIcons = memo(function DesktopIcons({
     if (isCreatingNewFolder && !wasCreatingRef.current) {
       const suggestedName = getNextFolderName(files);
       setNewFolderName(suggestedName);
-      
+
       const timer = setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
           inputRef.current.select();
         }
       }, 150);
-      
+
       wasCreatingRef.current = true;
       return () => clearTimeout(timer);
     } else if (!isCreatingNewFolder) {
@@ -102,7 +102,7 @@ export const DesktopIcons = memo(function DesktopIcons({
 
   return (
     <div className="absolute right-2 top-0 bottom-20 pointer-events-none overflow-visible px-2">
-      <div 
+      <div
         className="flex flex-col flex-wrap-reverse gap-0.5 h-full content-start items-start justify-start"
       >
         {isCreatingNewFolder && (
