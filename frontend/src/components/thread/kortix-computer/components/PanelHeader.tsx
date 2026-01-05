@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect } from 'react';
-import { CircleDashed, Minimize2, Maximize2, Wifi, Battery, BatteryLow, BatteryMedium, BatteryFull, BatteryCharging } from 'lucide-react';
+import { CircleDashed, Minimize2, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DrawerTitle } from '@/components/ui/drawer';
 import { ViewType } from '@/stores/kortix-computer-store';
@@ -85,6 +85,41 @@ function StatusBar() {
   );
 }
 
+// Sandbox status helpers
+const getSandboxStateColor = (state: string) => {
+  switch (state?.toLowerCase()) {
+    case 'started':
+    case 'running':
+      return 'text-chart-2';
+    case 'stopped':
+      return 'text-chart-4';
+    case 'archived':
+      return 'text-muted-foreground';
+    default:
+      return 'text-amber-500';
+  }
+};
+
+const SandboxStatusIndicator = ({ state }: { state: string }) => {
+  const isActive = state?.toLowerCase() === 'started' || state?.toLowerCase() === 'running';
+
+  if (isActive) {
+    return (
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-2 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-chart-2" />
+      </span>
+    );
+  }
+
+  if (state?.toLowerCase() === 'stopped') {
+    return <span className="h-2 w-2 rounded-full bg-chart-4" />;
+  }
+
+  // Default for loading/initializing states
+  return <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />;
+};
+
 interface PanelHeaderProps {
   onClose: () => void;
   onMaximize?: () => void;
@@ -94,7 +129,7 @@ interface PanelHeaderProps {
   onViewChange: (view: ViewType) => void;
   showFilesTab?: boolean;
   isMaximized?: boolean;
-
+  sandboxState?: string;
   hideViewToggle?: boolean;
   isEmbedded?: boolean;
   isExpanded?: boolean;
@@ -109,25 +144,15 @@ export const PanelHeader = memo(function PanelHeader({
   onViewChange,
   showFilesTab = true,
   isMaximized = false,
-
+  sandboxState,
   hideViewToggle = false,
   isEmbedded = false,
   isExpanded = false,
 }: PanelHeaderProps) {
 
-  if (variant == 'drawer') {
-    return (
-      <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border">
-        <div className="flex items-center gap-2">
-          <ViewToggle currentView={currentView} onViewChange={onViewChange} showFilesTab={showFilesTab} />
-        </div>
-      </div>
-    );
-  }
-
   const title = "Kortix Computer";
 
-  if (variant === 'motion') {
+  if (variant === 'drawer') {
     return (
       <div className="h-14 flex-shrink-0 px-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2">
@@ -154,6 +179,82 @@ export const PanelHeader = memo(function PanelHeader({
     );
   }
 
+
+
+  if (variant === 'motion') {
+    const canExpand = currentView === 'desktop' && onMaximize && !isMaximized;
+
+    // Show status indicator only when on desktop tab and sandbox is not in 'started'/'running' state
+    const showSandboxStatus = currentView === 'desktop' &&
+      sandboxState &&
+      sandboxState.toLowerCase() !== 'started' &&
+      sandboxState.toLowerCase() !== 'running';
+
+    return (
+      <div className="h-14 flex-shrink-0 px-4 grid grid-cols-3 items-center border-b border-border">
+        {/* Left side - Sandbox status when not running */}
+        <div className="flex items-center gap-2">
+          {showSandboxStatus && (
+            <>
+              <SandboxStatusIndicator state={sandboxState} />
+              <span className={cn(
+                "text-xs font-medium capitalize",
+                getSandboxStateColor(sandboxState)
+              )}>
+                {sandboxState}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Center - Clickable title when on desktop tab */}
+        <div
+          onClick={canExpand ? onMaximize : undefined}
+          className={cn(
+            "flex items-center justify-center gap-2",
+            canExpand && "cursor-pointer hover:opacity-80 transition-opacity"
+          )}
+        >
+          <div className="w-6 h-6 flex items-center justify-center">
+            <KortixLogo size={18} />
+          </div>
+          <h2 className="text-sm font-semibold text-foreground">
+            {title}
+          </h2>
+        </div>
+
+        {/* Right side - ViewToggle + action buttons */}
+        <div className="flex items-center gap-2 justify-end">
+          <ViewToggle currentView={currentView} onViewChange={onViewChange} showFilesTab={showFilesTab} />
+          {/* Show Expand button when on desktop tab and not maximized */}
+          {canExpand && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onMaximize}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              title="Expand to Fullscreen"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          )}
+          {/* Hide minimize button when on desktop tab - user should use Expand or click title */}
+          {currentView !== 'desktop' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              title="Minimize"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn(
       "flex-shrink-0 grid grid-cols-3 items-center",
@@ -161,7 +262,7 @@ export const PanelHeader = memo(function PanelHeader({
         ? "h-9 px-3"
         : "h-14 px-3.5 pt-1 border-b border-border"
     )}>
-      <div className="flex items-center justify-start">
+      <div className="flex items-center justify-start gap-4">
         <ToolbarButtons
           onClose={onClose}
           isMaximized={isMaximized}
@@ -169,10 +270,27 @@ export const PanelHeader = memo(function PanelHeader({
           isExpanded={isExpanded}
           onMaximize={onMaximize}
         />
+        {/* Sandbox status when not running and on desktop view */}
+        {currentView === 'desktop' &&
+          sandboxState &&
+          sandboxState.toLowerCase() !== 'started' &&
+          sandboxState.toLowerCase() !== 'running' && (
+            <div className="flex items-center gap-2 border-l border-border pl-4">
+              <SandboxStatusIndicator state={sandboxState} />
+              <span className={cn(
+                "text-[10px] font-medium capitalize",
+                getSandboxStateColor(sandboxState)
+              )}>
+                {sandboxState}
+              </span>
+            </div>
+          )}
       </div>
+      {/* Title click: if maximized, exit fullscreen (onClose). Otherwise expand (onMaximize) */}
       <div
-        onClick={() => onMaximize?.()}
+        onClick={isMaximized ? onClose : () => onMaximize?.()}
         className="flex items-center justify-center gap-1.5 cursor-pointer select-none hover:opacity-80 transition-opacity"
+        title={isMaximized ? "Exit Fullscreen" : "Expand to Fullscreen"}
       >
         <div className="w-5 h-5 flex items-center justify-center">
           <KortixLogo size={14} />

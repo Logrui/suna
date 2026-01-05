@@ -45,7 +45,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
   const [presences, setPresences] = useState<Record<string, PresenceEventPayload>>({});
   const [sessionId, setSessionId] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
-    
+
     let storedId = sessionStorage.getItem('presence_session_id');
     if (!storedId) {
       storedId = generateSessionId();
@@ -81,12 +81,12 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       const now = Date.now();
 
       if (!force && now - lastUpdateTimeRef.current < MIN_UPDATE_INTERVAL) {
-        console.log('[Presence] Rate limited - skipping update');
+        // console.log('[Presence] Rate limited - skipping update');
         return;
       }
 
       if (!force && lastSentThreadRef.current === threadKey && pendingRequestRef.current) {
-        console.log('[Presence] Duplicate call prevented for same thread:', threadKey);
+        // console.log('[Presence] Duplicate call prevented for same thread:', threadKey);
         return;
       }
 
@@ -103,7 +103,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
 
       const requestPromise = (async () => {
         try {
-          console.log('[Presence] Sending update:', { threadId, sessionId: sessionId.slice(0, 8) });
+          // console.log('[Presence] Sending update:', { threadId, sessionId: sessionId.slice(0, 8) });
           await backendApi.post('/presence/update', {
             session_id: sessionId,
             active_thread_id: threadId,
@@ -111,7 +111,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
             client_timestamp: timestamp,
           }, { showErrors: false });
         } catch (err) {
-          console.error('[Presence] Update failed:', err);
+          // console.error('[Presence] Update failed:', err);
           throw err;
         } finally {
           setTimeout(() => {
@@ -150,7 +150,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     if (!payload.new) {
       return;
     }
-    
+
     const record = payload.new as {
       session_id: string;
       account_id: string;
@@ -177,13 +177,13 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
 
     setPresences((prev) => {
       const key = `${record.account_id}:${record.session_id}`;
-      
+
       if (payload.eventType === 'DELETE' || !record.active_thread_id) {
         const next = { ...prev };
         delete next[key];
         return next;
       }
-      
+
       return {
         ...prev,
         [key]: presencePayload,
@@ -213,7 +213,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     if (DISABLE_PRESENCE || !user) {
       return;
     }
-    
+
     if (channelRef.current) {
       return;
     }
@@ -262,10 +262,10 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     const url = new URL(`${apiUrl}/presence/clear`);
     url.searchParams.set('token', session.access_token);
     url.searchParams.set('session_id', sessionId);
-    
+
     const payload = new Blob([JSON.stringify({})], { type: 'application/json' });
     navigator.sendBeacon(url.toString(), payload);
-    
+
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('presence_session_id');
     }
@@ -273,14 +273,14 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
 
   const setActiveThreadId = useCallback((threadId: string | null) => {
     const normalized = threadId || null;
-    
+
     if (latestThreadRef.current === normalized) {
       return;
     }
-    
+
     latestThreadRef.current = normalized;
     setActiveThreadState(normalized);
-    
+
     if (DISABLE_PRESENCE || !user) {
       return;
     }
@@ -311,15 +311,15 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
-    
+
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
       sendPresenceUpdate(latestThreadRef.current, true);
     }
-    
+
     startHeartbeat();
     connectChannel();
-    
+
     return () => {
       stopHeartbeat();
       disconnectChannel();
@@ -334,20 +334,20 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     if (DISABLE_PRESENCE || typeof document === 'undefined') {
       return;
     }
-    
+
     let wasHidden = document.hidden;
-    
+
     const handleVisibilityChange = () => {
       if (!user) {
         return;
       }
-      
+
       if (wasHidden === document.hidden) {
         return;
       }
-      
+
       wasHidden = document.hidden;
-      
+
       if (document.hidden) {
         stopHeartbeat();
         sendPresenceUpdate(null, false);
@@ -358,7 +358,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
         startHeartbeat();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);

@@ -153,14 +153,20 @@ export const DesktopIcons = memo(function DesktopIcons({
                 className={cn(
                   "flex flex-col items-center justify-start gap-1.5 p-2 rounded-xl pointer-events-auto w-[84px]",
                   "hover:bg-white/10 active:bg-white/20 backdrop-blur-sm",
-                  "transition-all duration-100 cursor-default select-none group",
+                  "transition-[background-color,box-shadow,ring-color] duration-100 cursor-default select-none group",
+                  "will-change-transform transform-gpu",
                   activeContextPath === file.path && "bg-white/20 ring-2 ring-white/30"
                 )}
                 drag
                 dragMomentum={false}
                 dragElastic={0}
                 whileTap={{ scale: 0.96 }}
-                whileDrag={{ scale: 1.1, zIndex: 1000 }}
+                whileDrag={{
+                  scale: 1.1,
+                  zIndex: 1000,
+                  filter: "none",
+                  backdropFilter: "none",
+                }}
               >
                 <div className="w-[52px] h-[52px] flex items-center justify-center transition-transform duration-100 shrink-0 drop-shadow-md group-hover:drop-shadow-lg">
                   {getFileIcon(file)}

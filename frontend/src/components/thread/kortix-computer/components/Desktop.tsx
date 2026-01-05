@@ -1117,7 +1117,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
               onClose={onClose}
               onMaximize={onMaximize}
               isStreaming={isStreaming}
-              variant="motion"
+              variant="desktop"
               currentView={currentView}
               onViewChange={onViewChange}
               showFilesTab={false}
@@ -1125,6 +1125,7 @@ export const SandboxDesktop = memo(function SandboxDesktop({
               hideViewToggle={true}
               isEmbedded={isEmbedded}
               isExpanded={isExpanded}
+              sandboxState={sandboxDetails?.state}
             />
           )}
         </div>

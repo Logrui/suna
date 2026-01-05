@@ -27,6 +27,35 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Node.js dependencies
+node_modules/
+**/node_modules/
+**/node_modules/**
+.pnpm-store/**
+# Ensure .bin directories in node_modules are ignored
+**/node_modules/.bin/**
+**/.bin/**
+
+# mobile specific
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/web-build/
+apps/mobile/expo-env.d.ts
+apps/mobile/.metro-health-check*
+apps/mobile/npm-debug.*apps/mobile/npm-debug.*
+apps/mobile/yarn-debug.*
+apps/mobile/yarn-error.*
+apps/mobile/*.tsbuildinfo
+apps/mobile/.DS_Store
+apps/mobile/*.pem
+apps/mobile/.env
+apps/mobile/.env*.local
+apps/mobile/app-example
+
+# Docker-specific env files
+*.env.docker
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -244,7 +273,7 @@ infra/
 #Ignore Mobile Apps folder for ease of use for Desktop
 apps/mobile/
 
-# Documentation and Environments variables (separate repository)
+# Documentation, Separate Repositories, Environments variables (separate repository)
 .docs/
 .env
 .env.local

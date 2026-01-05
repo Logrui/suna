@@ -43,11 +43,11 @@ export const ToolbarButtons = memo(function ToolbarButtons({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Maximize2 className="w-4 h-4" strokeWidth={2} />
+              <Icon className="w-4 h-4" strokeWidth={2} />
             </motion.button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <span>Expand</span>
+            <span>{tooltipText}</span>
           </TooltipContent>
         </Tooltip>
       </div>

@@ -31,6 +31,7 @@ import { AppDock } from './components/Dock';
 import { SandboxDesktop } from './components/Desktop';
 import { EnhancedFileBrowser } from './components/EnhancedFileBrowser';
 import { useDirectoryQuery } from '@/hooks/files';
+import { useSandboxDetails } from '@/hooks/files/use-sandbox-details';
 
 export interface ToolCallInput {
   toolCall: ToolCallData;
@@ -127,6 +128,8 @@ export const KortixComputer = memo(function KortixComputer({
 
   const pendingToolNavIndex = useKortixComputerPendingToolNavIndex();
   const clearPendingToolNav = useKortixComputerClearPendingToolNav();
+
+  const { data: sandboxDetails } = useSandboxDetails(projectId);
 
   const effectiveSandboxIdForQuery = sandboxId || project?.sandbox?.id || '';
   const { data: enhancedBrowserFiles = [] } = useDirectoryQuery(
@@ -685,7 +688,7 @@ export const KortixComputer = memo(function KortixComputer({
             onViewChange={setActiveView}
             showFilesTab={true}
             isMaximized={isMaximized}
-
+            sandboxState={sandboxDetails?.state}
           />
         )}
         <div className="flex-1 overflow-hidden max-w-full max-h-full min-w-0 min-h-0" style={{ contain: 'strict' }}>
