@@ -31,6 +31,7 @@ import {
   MessageSquare,
   Heart,
   LifeBuoy,
+  Brain,
 } from 'lucide-react';
 import { useAccounts } from '@/hooks/account';
 import { useAccountState } from '@/hooks/billing';
@@ -98,7 +99,7 @@ export function NavUserWithTeams({
   const [showNewTeamDialog, setShowNewTeamDialog] = React.useState(false);
   const [showSettingsModal, setShowSettingsModal] = React.useState(false);
   const [showPlanModal, setShowPlanModal] = React.useState(false);
-  const [settingsTab, setSettingsTab] = React.useState<'general' | 'billing' | 'usage' | 'env-manager'>('general');
+  const [settingsTab, setSettingsTab] = React.useState<'general' | 'billing' | 'usage' | 'env-manager' | 'memory'>('general');
   const { isOpen: isReferralDialogOpen, openDialog: openReferralDialog, closeDialog: closeReferralDialog } = useReferralDialog();
   const { theme, setTheme } = useTheme();
 
@@ -358,16 +359,18 @@ export function NavUserWithTeams({
                     <span>Support</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setSettingsTab('billing');
-                    setShowSettingsModal(true);
-                  }}
-                  className="gap-2 p-2"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  <span>Billing</span>
-                </DropdownMenuItem>
+                {!isLocalMode() && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSettingsTab('billing');
+                      setShowSettingsModal(true);
+                    }}
+                    className="gap-2 p-2"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    <span>Billing</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => {
                     setSettingsTab('usage');
@@ -399,6 +402,16 @@ export function NavUserWithTeams({
                 >
                   <Settings className="h-4 w-4" />
                   <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSettingsTab('memory');
+                    setShowSettingsModal(true);
+                  }}
+                  className="gap-2 p-2"
+                >
+                  <Brain className="h-4 w-4" />
+                  <span>Memory</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/notifications" className="gap-2 p-2">

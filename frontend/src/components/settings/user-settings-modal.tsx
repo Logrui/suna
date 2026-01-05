@@ -51,9 +51,9 @@ import { LocalEnvManager } from '@/components/env-manager/local-env-manager';
 import { useIsMobile } from '@/hooks/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useQueryClient } from '@tanstack/react-query';
-import { 
-    useAccountDeletionStatus, 
-    useRequestAccountDeletion, 
+import {
+    useAccountDeletionStatus,
+    useRequestAccountDeletion,
     useCancelAccountDeletion,
     useDeleteAccountImmediately
 } from '@/hooks/account/use-account-deletion';
@@ -62,7 +62,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { PlanSelectionModal, PricingSection } from '@/components/billing/pricing';
 import { CreditBalanceDisplay, CreditPurchaseModal } from '@/components/billing/credit-purchase';
 import { ScheduledDowngradeCard } from '@/components/billing/scheduled-downgrade-card';
-import { 
+import {
     useAccountState,
     accountStateSelectors,
     useCreatePortalSession,
@@ -110,7 +110,7 @@ interface Tab {
 
 interface UserSettingsModalProps {
     open: boolean;
-    onOpenChange: (open: boolean) => void; 
+    onOpenChange: (open: boolean) => void;
     defaultTab?: TabId;
     returnUrl?: string;
 }
@@ -129,8 +129,8 @@ export function UserSettingsModal({
     const isProduction = isProductionMode();
     const tabs: Tab[] = [
         { id: 'general', label: 'General', icon: Settings },
-        { id: 'plan', label: 'Plan', icon: Zap },
-        { id: 'billing', label: 'Billing', icon: CreditCard },
+        ...(!isProduction ? [{ id: 'plan' as TabId, label: 'Plan', icon: Zap }] : []),
+        ...(!isProduction ? [{ id: 'billing' as TabId, label: 'Billing', icon: CreditCard }] : []),
         { id: 'usage', label: 'Usage', icon: TrendingDown },
         { id: 'memory', label: 'Memory', icon: Brain },
         ...(!isProduction ? [{ id: 'referrals' as TabId, label: 'Referrals', icon: Users }] : []),
@@ -139,7 +139,7 @@ export function UserSettingsModal({
         { id: 'api-keys', label: 'API Keys', icon: Key },
         ...(isLocal ? [{ id: 'env-manager' as TabId, label: 'Env Manager', icon: KeyRound }] : []),
     ];
-    
+
     useEffect(() => {
         setActiveTab(defaultTab);
     }, [defaultTab]);
@@ -167,14 +167,14 @@ export function UserSettingsModal({
             <DialogContent
                 className={cn(
                     "p-0 gap-0",
-                    isMobile 
-                        ? "fixed inset-0 w-screen h-screen max-w-none max-h-none rounded-none m-0 translate-x-0 translate-y-0 left-0 top-0" 
+                    isMobile
+                        ? "fixed inset-0 w-screen h-screen max-w-none max-h-none rounded-none m-0 translate-x-0 translate-y-0 left-0 top-0"
                         : "max-w-6xl max-h-[90vh] overflow-hidden"
                 )}
                 hideCloseButton={true}
             >
                 <DialogTitle className="sr-only">Settings</DialogTitle>
-                
+
                 {isMobile ? (
                     /* Mobile Layout - Full Screen */
                     <div className="flex flex-col h-screen w-screen overflow-hidden">
@@ -192,7 +192,7 @@ export function UserSettingsModal({
                                 </Button>
                             </div>
                         </div>
-                        
+
                         {/* Mobile Tabs - Horizontal Scroll */}
                         <div className="px-3 py-2.5 border-b border-border flex-shrink-0 bg-background">
                             <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-3 px-3 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -219,7 +219,7 @@ export function UserSettingsModal({
                                 })}
                             </div>
                         </div>
-                        
+
                         {/* Mobile Content - Scrollable */}
                         <div className="flex-1 overflow-x-hidden overflow-y-auto">
                             <div className="w-full max-w-full">
@@ -247,7 +247,7 @@ export function UserSettingsModal({
                                     <X className="h-4 w-4" />
                                 </Button>
                             </div>
-                            
+
                             {/* Desktop Tabs */}
                             <div className="flex flex-col gap-1.5">
                                 {tabs.map((tab) => {
@@ -273,7 +273,7 @@ export function UserSettingsModal({
                                 })}
                             </div>
                         </div>
-                        
+
                         {/* Desktop Content */}
                         <div className="flex-1 overflow-y-auto min-h-0 w-full max-w-full">
                             {activeTab === 'general' && <GeneralTab onClose={() => onOpenChange(false)} />}
@@ -406,7 +406,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
         try {
             const { data: userData } = await supabase.auth.getUser();
             const userId = userData.user?.id;
-            
+
             if (!userId) throw new Error('User not found');
 
             // Upload avatar if a new one was selected
@@ -419,7 +419,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
             }
 
             const { data, error } = await supabase.auth.updateUser({
-                data: { 
+                data: {
                     name: userName,
                     avatar_url: newAvatarUrl,
                 }
@@ -501,9 +501,9 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                     <div className="flex items-center gap-4">
                         <div className="relative group">
                             <Avatar className="h-16 w-16 border-2 border-border">
-                                <AvatarImage 
-                                    src={avatarPreview || avatarUrl} 
-                                    alt={userName} 
+                                <AvatarImage
+                                    src={avatarPreview || avatarUrl}
+                                    alt={userName}
                                 />
                                 <AvatarFallback className="text-base bg-muted">
                                     {getInitials(userName)}
@@ -659,8 +659,8 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                             <div className="space-y-4">
                                 <Alert className={cn(
                                     "shadow-none",
-                                    deletionType === 'immediate' 
-                                        ? "border-red-500/30 bg-red-500/5" 
+                                    deletionType === 'immediate'
+                                        ? "border-red-500/30 bg-red-500/5"
                                         : "border-amber-500/30 bg-amber-500/5"
                                 )}>
                                     <AlertTriangle className={cn(
@@ -669,13 +669,13 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                                     )} />
                                     <AlertDescription>
                                         <strong className="text-foreground text-sm sm:text-base">
-                                            {deletionType === 'immediate' 
+                                            {deletionType === 'immediate'
                                                 ? t('deleteAccount.warningImmediate')
                                                 : t('deleteAccount.warningGracePeriod')}
                                         </strong>
                                     </AlertDescription>
                                 </Alert>
-                                
+
                                 <div>
                                     <p className="text-sm font-medium mb-2">
                                         {t('deleteAccount.whenDelete')}
@@ -719,7 +719,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                                         </div>
                                     </RadioGroup>
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                     <Label htmlFor="delete-confirm" className="text-sm">
                                         {t('deleteAccount.confirmText')}
@@ -733,7 +733,7 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                                         autoComplete="off"
                                     />
                                 </div>
-                                
+
                                 <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
                                     <Button variant="outline" onClick={() => {
                                         setShowDeleteDialog(false);
@@ -742,17 +742,17 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                                     }} className="w-full sm:w-auto">
                                         {t('deleteAccount.keepAccount')}
                                     </Button>
-                                    <Button 
-                                        variant="destructive" 
-                                        onClick={handleRequestDeletion} 
+                                    <Button
+                                        variant="destructive"
+                                        onClick={handleRequestDeletion}
                                         disabled={
-                                            (requestDeletion.isPending || deleteImmediately.isPending) || 
+                                            (requestDeletion.isPending || deleteImmediately.isPending) ||
                                             deleteConfirmText !== 'delete'
                                         }
                                         className="w-full sm:w-auto"
                                     >
-                                        {(requestDeletion.isPending || deleteImmediately.isPending) 
-                                            ? tCommon('processing') 
+                                        {(requestDeletion.isPending || deleteImmediately.isPending)
+                                            ? tCommon('processing')
                                             : t('deleteAccount.button')}
                                     </Button>
                                 </div>
@@ -773,8 +773,8 @@ function GeneralTab({ onClose }: { onClose: () => void }) {
                                     <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="w-full sm:w-auto">
                                         {tCommon('back')}
                                     </Button>
-                                    <Button 
-                                        onClick={handleCancelDeletion} 
+                                    <Button
+                                        onClick={handleCancelDeletion}
                                         disabled={cancelDeletion.isPending}
                                         className="w-full sm:w-auto"
                                     >
@@ -839,7 +839,7 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
     } = useAccountState({
         enabled: !!session && !authLoading,
     });
-    
+
     // Get commitment info from account state
     const commitmentInfo = accountState?.subscription.commitment;
 
@@ -849,11 +849,11 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
 
     const planName = accountStateSelectors.planName(accountState);
     const planIcon = getPlanIcon(planName, isLocal);
-    
+
     // Get scheduled change from account state
     const hasScheduledChange = accountState?.subscription.has_scheduled_change && accountState?.subscription.scheduled_change;
     const scheduledChange = accountState?.subscription.scheduled_change;
-    
+
     const getFrontendTierName = (tierKey: string) => {
         const tier = siteConfig.cloudPricingItems.find(p => p.tierKey === tierKey);
         return tier?.name || tierKey || 'Basic';
@@ -863,12 +863,12 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
     const getHoursUntilDailyRefresh = () => {
         const dailyInfo = accountState?.credits.daily_refresh;
         if (!dailyInfo?.enabled) return null;
-        
+
         if (dailyInfo.seconds_until_refresh) {
             const hours = Math.ceil(dailyInfo.seconds_until_refresh / 3600);
             return hours > 0 ? hours : null;
         }
-        
+
         if (dailyInfo.next_refresh_at) {
             const nextRefresh = new Date(dailyInfo.next_refresh_at);
             const now = new Date();
@@ -876,25 +876,25 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
             const hours = Math.ceil(diffMs / (1000 * 60 * 60));
             return hours > 0 ? hours : null;
         }
-        
+
         return null;
     };
 
     const hoursUntilDailyRefresh = getHoursUntilDailyRefresh();
     const dailyCreditsInfo = accountState?.credits.daily_refresh;
-    
+
     // Use the clean credits breakdown from API
     const dailyCredits = accountState?.credits.daily ?? 0;
     const monthlyCredits = accountState?.credits.monthly ?? 0;
     const nonExpiringCredits = accountState?.credits.extra ?? 0;
     const totalCredits = accountState?.credits.total ?? 0;
-    
-    console.log('[BillingTab] Credit breakdown:', { 
+
+    console.log('[BillingTab] Credit breakdown:', {
         accountState: accountState?.credits,
-        dailyCreditsInfo, 
-        dailyCredits, 
-        monthlyCredits, 
-        nonExpiringCredits, 
+        dailyCreditsInfo,
+        dailyCredits,
+        monthlyCredits,
+        nonExpiringCredits,
         totalCredits
     });
 
@@ -1036,10 +1036,10 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
                         <div className="flex items-center gap-2">
                             {planIcon && (
                                 <div className="rounded-full py-0.5 flex items-center justify-center">
-                                    <img 
-                                        src={planIcon} 
-                                        alt={planName} 
-                                        className="h-6 w-auto" 
+                                    <img
+                                        src={planIcon}
+                                        alt={planName}
+                                        className="h-6 w-auto"
                                         style={{ height: '24px', width: 'auto' }}
                                     />
                                 </div>
@@ -1067,8 +1067,8 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
             {/* Credit Breakdown - Grid adapts based on tier */}
             <div className={cn(
                 "grid gap-2 sm:gap-4",
-                dailyCreditsInfo?.enabled 
-                    ? "grid-cols-2 sm:grid-cols-2 md:grid-cols-4" 
+                dailyCreditsInfo?.enabled
+                    ? "grid-cols-2 sm:grid-cols-2 md:grid-cols-4"
                     : "grid-cols-2 sm:grid-cols-2 md:grid-cols-3"
             )}>
                 {/* Total Available Credits */}
@@ -1095,7 +1095,7 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
                             <div>
                                 <div className="text-base sm:text-xl leading-none font-semibold">{formatCredits(dailyCredits)}</div>
                                 <p className="text-[10px] sm:text-[11px] text-blue-500/80 mt-1 sm:mt-1.5 truncate">
-                                    {hoursUntilDailyRefresh !== null 
+                                    {hoursUntilDailyRefresh !== null
                                         ? `${hoursUntilDailyRefresh}h`
                                         : 'Daily'
                                     }
@@ -1277,9 +1277,9 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
                             <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="w-full sm:w-auto">
                                 Keep Subscription
                             </Button>
-                            <Button 
-                                variant="destructive" 
-                                onClick={handleCancel} 
+                            <Button
+                                variant="destructive"
+                                onClick={handleCancel}
                                 disabled={cancelSubscriptionMutation.isPending}
                                 className="w-full sm:w-auto"
                             >
@@ -1303,31 +1303,31 @@ function BillingTab({ returnUrl, onOpenPlanModal, isActive }: { returnUrl: strin
 }
 
 function CreditsHelpAlert() {
-  return (
-    <Alert>
-      <AlertDescription>
-        <div className="flex items-center">
-          <Info className="h-4 w-4" />
-          <Button
-            variant="link"
-            size="sm"
-            className="h-7 text-muted-foreground"
-            onClick={() => window.open('/help/credits', '_blank')}
-          >
-            Learn More about Credits
-          </Button>
-        </div>
-      </AlertDescription>
-    </Alert>
-  );
+    return (
+        <Alert>
+            <AlertDescription>
+                <div className="flex items-center">
+                    <Info className="h-4 w-4" />
+                    <Button
+                        variant="link"
+                        size="sm"
+                        className="h-7 text-muted-foreground"
+                        onClick={() => window.open('/help/credits', '_blank')}
+                    >
+                        Learn More about Credits
+                    </Button>
+                </div>
+            </AlertDescription>
+        </Alert>
+    );
 }
 
 function UsageTab() {
-  return (
-      <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 min-w-0 max-w-full overflow-x-hidden">
-        <ThreadUsage />
-      </div>
-  );
+    return (
+        <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 min-w-0 max-w-full overflow-x-hidden">
+            <ThreadUsage />
+        </div>
+    );
 }
 
 function EnvManagerTab() {

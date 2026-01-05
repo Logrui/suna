@@ -34,11 +34,11 @@ interface TaskCompletedFeedbackProps {
   messageId?: string | null;
 }
 
-export function TaskCompletedFeedback({ 
+export function TaskCompletedFeedback({
   taskSummary,
   followUpPrompts,
   onFollowUpClick,
-  samplePromptsTitle = 'Sample prompts',
+  samplePromptsTitle = '',
   isLatestMessage = false,
   threadId,
   messageId
@@ -131,52 +131,52 @@ export function TaskCompletedFeedback({
             {!submittedFeedback && (
               <span className="text-sm text-muted-foreground">{t('thread.rateThisResult')}</span>
             )}
-          <div className="flex items-center gap-0.5">
-            {[1, 2, 3, 4, 5].map((value) => {
-              const fullStarValue = value;
-              const halfStarValue = value - 0.5;
-              const currentRating = submittedFeedback?.rating ?? rating;
-              const isFullStar = currentRating !== null && currentRating >= fullStarValue;
-              const isHalfStar = currentRating !== null && currentRating >= halfStarValue && currentRating < fullStarValue;
-              
-              return (
-                <div key={value} className="relative flex items-center">
-                  {/* Base star for visual display */}
-                  <div className="relative">
-                    <Star
-                      className={cn(
-                        "h-4 w-4 transition-colors",
-                        isFullStar
-                          ? "text-yellow-500 fill-current"
-                          : isHalfStar
-                          ? "text-yellow-500"
-                          : "text-muted-foreground/30"
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((value) => {
+                const fullStarValue = value;
+                const halfStarValue = value - 0.5;
+                const currentRating = submittedFeedback?.rating ?? rating;
+                const isFullStar = currentRating !== null && currentRating >= fullStarValue;
+                const isHalfStar = currentRating !== null && currentRating >= halfStarValue && currentRating < fullStarValue;
+
+                return (
+                  <div key={value} className="relative flex items-center">
+                    {/* Base star for visual display */}
+                    <div className="relative">
+                      <Star
+                        className={cn(
+                          "h-4 w-4 transition-colors",
+                          isFullStar
+                            ? "text-yellow-500 fill-current"
+                            : isHalfStar
+                              ? "text-yellow-500"
+                              : "text-muted-foreground/30"
+                        )}
+                      />
+                      {/* Visual half star overlay */}
+                      {isHalfStar && (
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ width: '50%' }}>
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        </div>
                       )}
-                    />
-                    {/* Visual half star overlay */}
-                    {isHalfStar && (
-                      <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ width: '50%' }}>
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      </div>
+                    </div>
+                    {/* Clickable overlay for half-star detection */}
+                    {!submittedFeedback && (
+                      <button
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const clickX = e.clientX - rect.left;
+                          const isLeftHalf = clickX < rect.width / 2;
+                          handleStarClick(isLeftHalf ? halfStarValue : fullStarValue);
+                        }}
+                        className="absolute inset-0 z-10 hover:scale-110 transition-transform"
+                        style={{ width: '100%', height: '100%' }}
+                      />
                     )}
                   </div>
-                  {/* Clickable overlay for half-star detection */}
-                  {!submittedFeedback && (
-                    <button
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const clickX = e.clientX - rect.left;
-                        const isLeftHalf = clickX < rect.width / 2;
-                        handleStarClick(isLeftHalf ? halfStarValue : fullStarValue);
-                      }}
-                      className="absolute inset-0 z-10 hover:scale-110 transition-transform"
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export function TaskCompletedFeedback({
                 const halfStarValue = value - 0.5;
                 const isFullStar = rating !== null && rating >= fullStarValue;
                 const isHalfStar = rating !== null && rating >= halfStarValue && rating < fullStarValue;
-                
+
                 return (
                   <div key={value} className="relative flex items-center">
                     {/* Base star for visual display */}
@@ -221,8 +221,8 @@ export function TaskCompletedFeedback({
                           isFullStar
                             ? "text-yellow-500 fill-current"
                             : isHalfStar
-                            ? "text-yellow-500"
-                            : "text-muted-foreground/30"
+                              ? "text-yellow-500"
+                              : "text-muted-foreground/30"
                         )}
                       />
                       {/* Visual half star overlay */}

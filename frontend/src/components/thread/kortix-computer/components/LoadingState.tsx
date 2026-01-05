@@ -7,23 +7,20 @@ import { useKortixComputerStore } from '@/stores/kortix-computer-store';
 import { PanelHeader } from './PanelHeader';
 
 interface LoadingStateProps {
-  agentName?: string;
   onClose: () => void;
   isMobile: boolean;
 }
 
-export const LoadingState = memo(function LoadingState({ 
-  agentName, 
-  onClose, 
-  isMobile 
+export const LoadingState = memo(function LoadingState({
+  onClose,
+  isMobile
 }: LoadingStateProps) {
   const { activeView, setActiveView } = useKortixComputerStore();
-  
+
   if (isMobile) {
     return (
       <DrawerContent className="h-[85vh]">
         <PanelHeader
-          agentName={agentName}
           onClose={onClose}
           variant="drawer"
           currentView={activeView}
@@ -49,9 +46,8 @@ export const LoadingState = memo(function LoadingState({
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex flex-col h-full">
               <PanelHeader
-                agentName={agentName}
                 onClose={onClose}
-                onMaximize={() => {}}
+                onMaximize={() => { }}
                 currentView={activeView}
                 onViewChange={setActiveView}
               />

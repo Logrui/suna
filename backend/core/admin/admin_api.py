@@ -436,7 +436,9 @@ def get_env_vars() -> Dict[str, str]:
             logger.error("Could not find .env file")
             return {}
         
-        return dotenv_values(env_path)
+        raw_values = dotenv_values(env_path)
+        # Filter out None values to satisfy Dict[str, str] return type
+        return {k: v for k, v in raw_values.items() if v is not None}
     except Exception as e:
         logger.error(f"Failed to get env vars: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get env variables: {e}")

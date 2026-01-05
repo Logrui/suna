@@ -38,7 +38,7 @@ function normalizeArrayValue(value: unknown): string[] {
   if (Array.isArray(value)) {
     return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
   }
-  
+
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
@@ -50,7 +50,7 @@ function normalizeArrayValue(value: unknown): string[] {
       return value.split(',').map(a => a.trim()).filter(a => a.length > 0);
     }
   }
-  
+
   return [];
 }
 
@@ -61,11 +61,11 @@ function normalizeAttachments(attachments: unknown): string[] {
   if (Array.isArray(attachments)) {
     return attachments;
   }
-  
+
   if (typeof attachments === 'string') {
     return attachments.split(',').map(a => a.trim()).filter(a => a.length > 0);
   }
-  
+
   return [];
 }
 
@@ -92,9 +92,9 @@ function renderAskToolCall(
 
   return (
     <div key={`ask-${index}`} className="space-y-3 my-1.5">
-      <ComposioUrlDetector 
-        content={askText} 
-        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" 
+      <ComposioUrlDetector
+        content={askText}
+        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
       />
       {attachments.length > 0 && (
         <div className="mt-3">
@@ -146,11 +146,11 @@ function renderCompleteToolCall(
   return (
     <div key={`complete-${index}`} className="space-y-3 my-1.5">
       {/* Main content */}
-      <ComposioUrlDetector 
-        content={completeText} 
-        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3" 
+      <ComposioUrlDetector
+        content={completeText}
+        className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words [&>:first-child]:mt-0 prose-headings:mt-3"
       />
-      
+
       {/* Attachments underneath the text */}
       {attachments.length > 0 && (
         <div className="mt-4 space-y-3">
@@ -169,13 +169,12 @@ function renderCompleteToolCall(
           />
         </div>
       )}
-      
+
       {/* Task completed feedback */}
       <TaskCompletedFeedback
         taskSummary={completeText}
         followUpPrompts={isLatestMessage && followUpPrompts.length > 0 ? followUpPrompts : undefined}
         onFollowUpClick={(prompt) => onPromptFill?.(prompt)}
-        samplePromptsTitle={t ? t('thread.samplePrompts') : 'Sample prompts'}
         threadId={threadId}
         messageId={message.message_id}
       />
@@ -195,7 +194,7 @@ function renderRegularToolCall(
   const { message, onToolClick } = props;
   const IconComponent = getToolIcon(toolName);
   const paramDisplay = getToolCallDisplayParam(toolCall);
-  
+
   // Use display hint if available, otherwise fallback to friendly name
   const displayName = (toolCall as any)._display_hint || getUserFriendlyToolName(toolName);
 
@@ -222,24 +221,24 @@ function renderRegularToolCall(
 export function renderAssistantMessage(props: AssistantMessageRendererProps): React.ReactNode {
   const { message, threadId, toolResults = [] } = props;
   const metadata = safeJsonParse<ParsedMetadata>(message.metadata, {});
-  
+
   const toolCalls = metadata.tool_calls || [];
   const textContent = metadata.text_content || '';
-  
+
   const contentParts: React.ReactNode[] = [];
-  
+
   // Render text content first (if any)
   if (textContent.trim()) {
     contentParts.push(
       <div key="text-content" className="my-1.5">
-        <ComposioUrlDetector 
-          content={textContent} 
-          className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words" 
+        <ComposioUrlDetector
+          content={textContent}
+          className="text-sm prose prose-sm dark:prose-invert chat-markdown max-w-none break-words"
         />
       </div>
     );
   }
-  
+
   // Check for approval requests in tool calls and render inline
   toolCalls.forEach((toolCall, index) => {
     const toolName = toolCall.function_name.replace(/_/g, '-');
@@ -249,11 +248,11 @@ export function renderAssistantMessage(props: AssistantMessageRendererProps): Re
         const trMeta = safeJsonParse<ParsedMetadata>(tr.metadata, {});
         return trMeta.tool_call_id === toolCall.tool_call_id;
       });
-      
+
       if (toolResult && threadId) {
         const trMeta = safeJsonParse<ParsedMetadata>(toolResult.metadata, {});
         const resultData = trMeta.result;
-        
+
         if (resultData?.output && typeof resultData.output === 'object' && resultData.output.approval_id) {
           contentParts.push(
             <ApifyApprovalInline
@@ -266,11 +265,11 @@ export function renderAssistantMessage(props: AssistantMessageRendererProps): Re
       }
     }
   });
-  
+
   // Render tool calls
   toolCalls.forEach((toolCall, index) => {
     const toolName = toolCall.function_name.replace(/_/g, '-');
-    
+
     // Normalize arguments - handle both string and object types
     let normalizedArguments: Record<string, any> = {};
     if (toolCall.arguments) {
@@ -284,12 +283,12 @@ export function renderAssistantMessage(props: AssistantMessageRendererProps): Re
         }
       }
     }
-    
+
     const normalizedToolCall = {
       ...toolCall,
       arguments: normalizedArguments
     };
-    
+
     if (toolName === 'ask') {
       contentParts.push(renderAskToolCall(normalizedToolCall, index, props));
     } else if (toolName === 'complete') {
@@ -300,11 +299,11 @@ export function renderAssistantMessage(props: AssistantMessageRendererProps): Re
         const trMeta = safeJsonParse<ParsedMetadata>(tr.metadata, {});
         return trMeta.tool_call_id === toolCall.tool_call_id;
       });
-      
+
       // Extract result data
       const resultMeta = toolResult ? safeJsonParse<ParsedMetadata>(toolResult.metadata, {}) : null;
       const resultData = resultMeta?.result;
-      
+
       contentParts.push(
         <MediaGenerationInline
           key={`media-gen-${index}`}
@@ -319,7 +318,7 @@ export function renderAssistantMessage(props: AssistantMessageRendererProps): Re
       contentParts.push(renderRegularToolCall(normalizedToolCall, index, toolName, props));
     }
   });
-  
+
   return contentParts.length > 0 ? contentParts : null;
 }
 
