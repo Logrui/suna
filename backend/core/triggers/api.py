@@ -143,6 +143,174 @@ async def sync_triggers_to_version_config(agent_id: str):
         logger.error(f"Failed to sync triggers to version config: {e}")
 
 
+# ===== LINKED TRIGGERS FOR WORKFLOWS =====
+
+class LinkedTriggerVariable(BaseModel):
+    name: str
+    type: str
+    description: Optional[str] = None
+
+
+class LinkedTriggerInfo(BaseModel):
+    trigger_id: str
+    name: str
+    agent_id: str
+    agent_name: str
+    trigger_type: str
+    provider_id: Optional[str] = None  # Provider type (composio, schedule, generic_webhook, manual)
+    trigger_slug: Optional[str] = None
+    variables: List[LinkedTriggerVariable]
+
+
+class LinkedTriggersResponse(BaseModel):
+    triggers: List[LinkedTriggerInfo]
+
+
+@router.get("/workflow/{workflow_id}/linked", response_model=LinkedTriggersResponse)
+async def get_workflow_linked_triggers(
+    workflow_id: str,
+    request: Request
+):
+    """Get all triggers that are linked to a specific workflow.
+    
+    This endpoint is used by Langflow's Kortix Trigger component to fetch
+    triggers assigned to execute a workflow, including agent names and
+    available trigger variables.
+    """
+    try:
+        import os
+        import hmac
+        
+        # Check for internal service-to-service auth first (Langflow → Kortix)
+        x_internal_secret = request.headers.get('x-internal-secret')
+        x_user_id = request.headers.get('x-user-id')
+        internal_secret = os.getenv("ADVANCED_WORKFLOWS_INTEGRATION_SECRET")
+        
+        if x_internal_secret and internal_secret:
+            # Validate internal secret
+            if hmac.compare_digest(x_internal_secret.encode('utf-8'), internal_secret.encode('utf-8')):
+                # For internal requests, use provided user_id or a service account placeholder
+                user_id = x_user_id or "internal-service"
+                logger.debug(f"Internal auth for workflow triggers: source=advanced-workflows")
+            else:
+                raise HTTPException(status_code=401, detail="Invalid internal secret")
+        else:
+            # Fall back to normal JWT/API key auth
+            auth_header = request.headers.get('Authorization') or request.headers.get('X-API-Key')
+            if not auth_header:
+                raise HTTPException(status_code=401, detail="Authentication required")
+            
+            token = auth_header.replace('Bearer ', '').strip()
+            # Support both JWT and pk:sk format API keys
+            if ":" in token:
+                # API key format pk_xxx:sk_xxx - extract user from pk
+                parts = token.split(":")
+                if len(parts) == 2:
+                    # For API keys, we'll verify against the database
+                    pk_id = parts[0].replace("pk_", "")
+                    client = await db.client
+                    api_key_result = await client.table('api_keys').select('account_id').eq('pk_id', pk_id).single().execute()
+                    if not api_key_result.data:
+                        raise HTTPException(status_code=401, detail="Invalid API key")
+                    user_id = api_key_result.data['account_id']
+                else:
+                    raise HTTPException(status_code=401, detail="Invalid API key format")
+            else:
+                user_id = await verify_and_get_user_id_from_jwt(token)
+        
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        
+        client = await db.client
+        
+        # First, get the workflow to find its linked trigger_id
+        # The relationship is: agent_workflows.trigger_id -> agent_triggers.trigger_id
+        workflow_result = await client.table('agent_workflows').select(
+            'id, trigger_id, agent_id'
+        ).eq('id', workflow_id).single().execute()
+        
+        if not workflow_result.data or not workflow_result.data.get('trigger_id'):
+            return LinkedTriggersResponse(triggers=[])
+        
+        trigger_id = workflow_result.data['trigger_id']
+        workflow_agent_id = workflow_result.data.get('agent_id')
+        
+        # Now fetch the trigger details (only select columns that exist)
+        triggers_result = await client.table('agent_triggers').select(
+            'trigger_id, name, agent_id, trigger_type, config, is_active'
+        ).eq('trigger_id', trigger_id).execute()
+        
+        if not triggers_result.data:
+            return LinkedTriggersResponse(triggers=[])
+
+        
+        linked_triggers = []
+        
+        for trigger in triggers_result.data:
+            agent_id = trigger.get('agent_id')
+            config = trigger.get('config', {})
+            if isinstance(config, str):
+                import json
+                try:
+                    config = json.loads(config)
+                except json.JSONDecodeError:
+                    config = {}
+            
+            # Fetch agent name
+            agent_name = "Kortix Worker"
+            if agent_id:
+                agent_result = await client.table('agents').select('name').eq('agent_id', agent_id).single().execute()
+                if agent_result.data:
+                    agent_name = agent_result.data.get('name', 'Kortix Worker')
+            
+            # Extract trigger_slug from config
+            trigger_slug = config.get('trigger_slug')
+            trigger_type_str = trigger.get('trigger_type', 'Kortix Trigger')
+            
+            # Fetch variables from Composio schema if available
+            variables = []
+            if trigger_slug:
+                try:
+                    from core.composio_integration.trigger_schema import TriggerSchemaService
+                    schema_service = TriggerSchemaService()
+                    schema = await schema_service.get_trigger_schema(trigger_slug)
+                    if schema:
+                        props = schema.get('config', {}).get('properties', {})
+                        for name, prop in props.items():
+                            variables.append(LinkedTriggerVariable(
+                                name=name,
+                                type=prop.get('type', 'string'),
+                                description=prop.get('description')
+                            ))
+                except Exception as e:
+                    logger.warning(f"Failed to fetch trigger schema for {trigger_slug}: {e}")
+            
+            # Extract provider_id from config (e.g., "composio", "schedule", "generic_webhook")
+            provider_id = config.get('provider_id', '')
+            
+            linked_triggers.append(LinkedTriggerInfo(
+                trigger_id=trigger['trigger_id'],
+                name=trigger.get('name', 'Unnamed Kortix Trigger'),
+                agent_id=agent_id or '',
+                agent_name=agent_name,
+                trigger_type=trigger_type_str,
+                provider_id=provider_id,
+                trigger_slug=trigger_slug,
+                variables=variables
+            ))
+        
+        return LinkedTriggersResponse(triggers=linked_triggers)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        logger.error(f"Error getting workflow linked triggers: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 @router.get("/providers")
 async def get_providers():
     
