@@ -276,7 +276,9 @@ async def get_workflow_linked_triggers(
                     schema_service = TriggerSchemaService()
                     schema = await schema_service.get_trigger_schema(trigger_slug)
                     if schema:
-                        props = schema.get('config', {}).get('properties', {})
+                        # Use 'payload' to get output variables (the data received when trigger fires)
+                        # NOT 'config' which is input configuration for setting up the trigger
+                        props = schema.get('payload', {}).get('properties', {})
                         for name, prop in props.items():
                             variables.append(LinkedTriggerVariable(
                                 name=name,

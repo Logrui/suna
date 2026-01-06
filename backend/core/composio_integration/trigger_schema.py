@@ -33,6 +33,7 @@ class TriggerSchemaService:
                     "name": data.get("name", trigger_slug),
                     "description": data.get("description"),
                     "config": data.get("config", {}),
+                    "payload": data.get("payload", {}),  # Output schema with trigger variables
                     "app": data.get("app"),
                 }
                 
