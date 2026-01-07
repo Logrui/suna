@@ -367,7 +367,7 @@ class WebhookProvider(TriggerProvider):
 
 
 class GenericWebhookProvider(TriggerProvider):
-    """Provider for user-created generic webhook triggers.
+    """Provider for user-created custom generic webhook triggers.
     
     Allows external systems (Zapier, IFTTT, n8n, etc.) to trigger agents/workflows
     via HTTP POST to /v1/triggers/{trigger_id}/webhook

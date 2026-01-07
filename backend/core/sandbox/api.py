@@ -101,6 +101,20 @@ async def retry_with_backoff(
 router = APIRouter(tags=["sandbox"])
 db = None
 
+async def _ensure_parent_directories(sandbox: AsyncSandbox, path: str):
+    """Ensure that the parent directories of the given path exist in the sandbox."""
+    directory = os.path.dirname(path)
+    if not directory or directory == '/' or directory == '.' or directory == '/workspace':
+        return
+    
+    try:
+        # Using mkdir -p via shell is the most reliable way to handle nested paths recursively
+        # We use shlex.quote to safely handle paths with spaces or special characters
+        from daytona_sdk import SessionExecuteRequest
+        await sandbox.process.exec(SessionExecuteRequest(command=f"mkdir -p {shlex.quote(directory)}"))
+    except Exception as e:
+        logger.debug(f"Error ensuring parent directories for {path}: {str(e)}")
+
 def initialize(_db: DBConnection):
     """Initialize the sandbox API with resources from the main API."""
     global db
@@ -310,6 +324,9 @@ async def update_file(
         
         sandbox = await get_sandbox_by_id_safely(client, sandbox_id)
         
+        # Ensure parent directories exist
+        await _ensure_parent_directories(sandbox, path)
+        
         content_bytes = content.encode('utf-8') if isinstance(content, str) else content
         await sandbox.fs.upload_file(content_bytes, path)
         logger.debug(f"File updated at {path} in sandbox {sandbox_id}")
@@ -387,6 +404,32 @@ async def list_files(
         
         result = []
         
+        # Check for legacy nested /workspace/workspace structure
+        # If we're listing /workspace and there's a nested 'workspace' folder that contains the real files,
+        # we need to merge or handle it specially
+        is_workspace_root = path == '/workspace' or path == '/workspace/'
+        has_nested_workspace = False
+        nested_workspace_files = []
+        
+        if is_workspace_root:
+            # Check if there's a nested 'workspace' folder
+            workspace_names = [f.name for f in files]
+            if 'workspace' in workspace_names:
+                # Try to list the nested workspace to see if it has actual files
+                try:
+                    nested_files = await sandbox.fs.list_files('/workspace/workspace')
+                    if nested_files and len(nested_files) > 0:
+                        # The nested workspace has files - this is a legacy structure
+                        has_nested_workspace = True
+                        logger.info(f"[LIST_FILES_LEGACY] Detected legacy /workspace/workspace structure with {len(nested_files)} files")
+                        # Use the nested workspace files instead, but filter out the 'workspace' folder from root
+                        files = [f for f in files if f.name != 'workspace']
+                        # Add the nested files with their proper paths (rewriting to /workspace/X)
+                        for nested_file in nested_files:
+                            nested_workspace_files.append(nested_file)
+                except Exception as nested_err:
+                    logger.debug(f"[LIST_FILES_LEGACY] Could not list nested workspace: {nested_err}")
+        
         for file in files:
             # Convert file information to our model
             # Ensure forward slashes are used for paths, regardless of OS
@@ -398,6 +441,21 @@ async def list_files(
                 size=file.size,
                 mod_time=str(file.mod_time),
                 permissions=getattr(file, 'permissions', None)
+            )
+            result.append(file_info)
+        
+        # Add files from the legacy nested workspace (if any)
+        for nested_file in nested_workspace_files:
+            # Map /workspace/workspace/X to /workspace/X for frontend display
+            # The read_file fallback will handle reading from the actual location
+            full_path = f"/workspace/{nested_file.name}"
+            file_info = FileInfo(
+                name=nested_file.name,
+                path=full_path,
+                is_dir=nested_file.is_dir,
+                size=nested_file.size,
+                mod_time=str(nested_file.mod_time),
+                permissions=getattr(nested_file, 'permissions', None)
             )
             result.append(file_info)
         
@@ -474,6 +532,23 @@ async def read_file(
         
         # Read file with retry logic for transient errors (502, 503, 504)
         try:
+            # Enhanced debugging: Log sandbox state and attempt to verify file exists
+            logger.info(f"[FILE_READ_DEBUG] Sandbox {sandbox_id} state: {sandbox.state}, attempting to read: {path}")
+            
+            # Try to list parent directory to verify file exists
+            import os
+            parent_dir = os.path.dirname(path) or "/workspace"
+            try:
+                parent_files = await sandbox.fs.list_files(parent_dir)
+                file_names = [f.name for f in parent_files]
+                target_name = os.path.basename(path)
+                file_exists_in_listing = target_name in file_names
+                logger.info(f"[FILE_READ_DEBUG] Parent dir '{parent_dir}' contains {len(file_names)} files. Target '{target_name}' exists: {file_exists_in_listing}")
+                if not file_exists_in_listing:
+                    logger.warning(f"[FILE_READ_DEBUG] File NOT in listing. Available files: {file_names[:20]}...")  # Log first 20
+            except Exception as list_err:
+                logger.warning(f"[FILE_READ_DEBUG] Could not list parent dir '{parent_dir}': {list_err}")
+            
             content = await retry_with_backoff(
                 operation=lambda: sandbox.fs.download_file(path),
                 operation_name=f"download_file({path}) from sandbox {sandbox_id}"
@@ -481,23 +556,43 @@ async def read_file(
         except Exception as download_err:
             error_msg = str(download_err)
             logger.error(f"Error downloading file {path} from sandbox {sandbox_id}: {error_msg}")
-            # Check if it's a file not found error
+            
+            # Check if it's a file not found error - try legacy /workspace/workspace/ fallback
             if 'not found' in error_msg.lower() or '404' in error_msg.lower():
-                raise HTTPException(
-                    status_code=404, 
-                    detail=f"File not found: {path}"
-                )
+                # For paths starting with /workspace/, try the legacy nested path
+                if path.startswith('/workspace/') and not path.startswith('/workspace/workspace/'):
+                    legacy_path = path.replace('/workspace/', '/workspace/workspace/', 1)
+                    logger.info(f"[FILE_READ_FALLBACK] File not found at {path}, trying legacy path: {legacy_path}")
+                    try:
+                        content = await retry_with_backoff(
+                            operation=lambda: sandbox.fs.download_file(legacy_path),
+                            operation_name=f"download_file({legacy_path}) from sandbox {sandbox_id} [LEGACY FALLBACK]"
+                        )
+                        logger.info(f"[FILE_READ_FALLBACK] Successfully read file from legacy path: {legacy_path}")
+                        # Fall through to return the content
+                    except Exception as legacy_err:
+                        logger.debug(f"[FILE_READ_FALLBACK] Legacy path also failed: {legacy_err}")
+                        raise HTTPException(
+                            status_code=404, 
+                            detail=f"File not found: {path}"
+                        )
+                else:
+                    raise HTTPException(
+                        status_code=404, 
+                        detail=f"File not found: {path}"
+                    )
             # Check if it's a permission error
-            if 'permission' in error_msg.lower() or '403' in error_msg.lower():
+            elif 'permission' in error_msg.lower() or '403' in error_msg.lower():
                 raise HTTPException(
                     status_code=403,
                     detail=f"Permission denied: {path}"
                 )
-            # For other errors, return 500
-            raise HTTPException(
-                status_code=500, 
-                detail=f"Failed to download file: {error_msg}"
-            )
+            else:
+                # For other errors, return 500
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to download file: {error_msg}"
+                )
         
         # Return a Response object with the content directly
         filename = os.path.basename(path)
@@ -694,6 +789,7 @@ async def get_project_sandbox_details(
             "sandbox_id": sandbox.id,
             "state": sandbox.state.value if hasattr(sandbox.state, 'value') else str(sandbox.state),
             "project_id": project_id,
+            "project_name": project_data.get('name'),
             "vnc_preview": config.get('vnc_preview'),
             "sandbox_url": config.get('sandbox_url'),
         }

@@ -129,7 +129,8 @@ class SandboxFileReaderTool(SandboxToolsBase):
     async def _read_single_file(self, file_path: str) -> dict:
         try:
             cleaned_path = self.clean_path(file_path)
-            full_path = f"{self.workspace_path}/{cleaned_path}"
+            # If clean_path returned an absolute path, use it directly
+            full_path = cleaned_path if cleaned_path.startswith('/workspace') else f"{self.workspace_path}/{cleaned_path}"
 
             if self._is_image_file(cleaned_path):
                 return {
@@ -479,9 +480,12 @@ Examples:
             
             paths = []
             if file_paths:
-                paths = [f"{self.workspace_path}/{self.clean_path(p)}" for p in file_paths]
+                for p in file_paths:
+                    cleaned = self.clean_path(p)
+                    paths.append(cleaned if cleaned.startswith('/workspace') else f"{self.workspace_path}/{cleaned}")
             elif file_path:
-                paths = [f"{self.workspace_path}/{self.clean_path(file_path)}"]
+                cleaned = self.clean_path(file_path)
+                paths = [cleaned if cleaned.startswith('/workspace') else f"{self.workspace_path}/{cleaned}"]
             else:
                 paths = [f"{self.workspace_path}/uploads"]
             

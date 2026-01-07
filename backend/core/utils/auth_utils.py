@@ -149,7 +149,25 @@ async def _get_user_id_from_account_cached(account_id: str) -> Optional[str]:
         return None
 
 async def verify_and_get_user_id_from_jwt(request: Request) -> str:
+    # Check for internal service-to-service auth first (Langflow → Kortix)
+    x_internal_secret = request.headers.get('x-internal-secret')
+    x_user_id = request.headers.get('x-user-id')
+    
+    if x_internal_secret and x_user_id:
+        import os
+        internal_secret = os.getenv("ADVANCED_WORKFLOWS_INTEGRATION_SECRET") or os.getenv("KORTIX_INTERNAL_SECRET")
+        if internal_secret and _constant_time_compare(x_internal_secret, internal_secret):
+            x_source = request.headers.get('x-source', 'advanced-workflows')
+            sentry.sentry.set_user({"id": x_user_id})
+            structlog.contextvars.bind_contextvars(
+                user_id=x_user_id,
+                auth_method="internal",
+                source=x_source
+            )
+            return x_user_id
+
     x_api_key = request.headers.get('x-api-key')
+
 
     if x_api_key:
         try:
@@ -306,6 +324,25 @@ async def get_user_id_from_stream_auth(
         raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 async def get_optional_user_id(request: Request) -> Optional[str]:
+    # 1. Check for internal service-to-service auth (Langflow -> Kortix)
+    x_internal_secret = request.headers.get('x-internal-secret')
+    x_user_id = request.headers.get('x-user-id')
+    
+    if x_internal_secret and x_user_id:
+        import os
+        # Support both names for the internal secret for compatibility
+        internal_secret = os.getenv("ADVANCED_WORKFLOWS_INTEGRATION_SECRET") or os.getenv("KORTIX_INTERNAL_SECRET")
+        
+        if internal_secret and _constant_time_compare(x_internal_secret, internal_secret):
+            x_source = request.headers.get('x-source', 'advanced-workflows')
+            structlog.contextvars.bind_contextvars(
+                user_id=x_user_id,
+                auth_method="internal_optional",
+                source=x_source
+            )
+            return x_user_id
+
+    # 2. Check for standard Authorization header
     auth_header = request.headers.get('Authorization')
     
     if not auth_header or not auth_header.startswith('Bearer '):

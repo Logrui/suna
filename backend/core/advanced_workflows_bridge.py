@@ -179,7 +179,7 @@ async def exchange_suna_token_for_advanced_workflows(
                 json={
                     "external_user_id": suna_user_id,
                     "email": suna_user_email,
-                    "username": f"suna_{suna_user_id[:8]}",
+                    "username": f"suna_{suna_user_id}",
                     "source": "suna-kortix",
                 },
                 headers={

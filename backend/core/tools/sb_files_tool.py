@@ -71,6 +71,10 @@ class SandboxFilesTool(SandboxToolsBase):
     def _get_full_path(self, path: str) -> str:
         """Get full absolute path relative to /workspace"""
         cleaned = self.clean_path(path)
+        # If clean_path returned an absolute path (starts with /workspace), use it directly
+        # Otherwise, prepend the workspace_path
+        if cleaned.startswith('/workspace'):
+            return cleaned
         return f"{self.workspace_path}/{cleaned}"
 
     def _should_exclude_file(self, rel_path: str) -> bool:
@@ -576,7 +580,8 @@ class SandboxFilesTool(SandboxToolsBase):
             # Try to get original_content if possible
             original_content_on_error = None
             try:
-                full_path_on_error = f"{self.workspace_path}/{self.clean_path(target_file)}"
+                cleaned_on_error = self.clean_path(target_file)
+                full_path_on_error = cleaned_on_error if cleaned_on_error.startswith('/workspace') else f"{self.workspace_path}/{cleaned_on_error}"
                 if await self._file_exists(full_path_on_error):
                     original_content_on_error = (await self.sandbox.fs.download_file(full_path_on_error)).decode()
             except:

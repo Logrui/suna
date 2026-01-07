@@ -3,37 +3,58 @@
 This document defines the visual, user experience, and technical standards for this soft fork of Kortix.
 
 ## 1. Visual & UX Design Philosophy
-The primary goal is strict **Upstream Alignment** with the native Suna Kortix design patterns. All frontend work must adhere to the core principles of a premium, "rich" aesthetic that avoids generic, flat designs.
+The primary goal is strict **Upstream Alignment** with the native Suna Kortix design patterns. Interfaces must feel professional, high-density, and "premium."
 
-### Core Principles
-- **Premium Feel**: Use purposeful textures (grain/noise overlays), subtle gradients, and glassmorphism.
-- **Motion-First**: Utilize `framer-motion` for complex interactions and CSS animations for simple states to make the interface feel "alive."
-- **Typography-Driven**:
-  - **Font Sans**: Roobert (`var(--font-roobert)`)
-  - **Font Mono**: Roobert Mono (`var(--font-roobert-mono)`)
-  - **Styling**: Headings should use `font-medium tracking-tighter text-balance`. Secondary text should use `text-muted-foreground`.
-- **Theme-Aware**: Seamless support for Dark and Light modes using OKLCH color spaces.
+### Core Principles: "The Rich Aesthetic"
+Kortix avoids the generic "flat" SaaS look by layering textures and using high-fidelity color spaces.
+
+1.  **High-Density Premium**: Designed as an AI "Workplace." Information density is high, favoring `text-xs` or `text-sm` for administrative and secondary UI to keep the focus on the workflow.
+2.  **Layered Depth**:
+    *   **Layer 0 (Background)**: Sub-tle grid patterns (`bg-grid`) or gradients defined in OKLCH.
+    *   **Layer 1 (Texture)**: A persistent film grain/noise overlay (`opacity: 0.05`) used with `mix-blend-mode: multiply`.
+    *   **Layer 2 (Glassmorphism)**: Panes use `backdrop-blur-xl` and `bg-background/50` to create a translucent workspace feel.
+3.  **Motion-First Architecture**:
+    *   **Active States**: Use "Border Beams" (rotating conic gradients) for active loading or processing states.
+    *   **Micro-animations**: Scale-down on click (`0.97`), layout transitions via `framer-motion`, and `animate-shiny-text` for highlight effects.
+
+### Typography
+- **Font Sans**: Roobert (`var(--font-roobert)`).
+- **Font Mono**: Roobert Mono (`var(--font-roobert-mono)`) for code and technical data.
+- **Styling**: Headings use `font-medium tracking-tighter text-balance`.
 
 ## 2. Technical Standards
 
 ### Frontend Stack
 - **Framework**: Next.js 15 (App Router).
-- **Language**: TypeScript (Strict Mode).
-- **Styling**: Tailwind CSS v4 (Utility-first, avoiding CSS Modules).
-- **UI Library**: ShadCN UI (Radix Primitives + Tailwind).
-- **Icons**: `lucide-react` (primary), `react-icons` (fallback).
+- **Styling**: Tailwind CSS v4.
+- **Color System**: **MUST USE OKLCH**. Define tokens in `globals.css` variables.
+- **Icons**: `lucide-react` (primary).
 
-### Component Development
-- **Server Components**: Default to Server Components; use `"use client"` only when necessary for state or event listeners.
-- **ShadCN**: Favor composition over direct modification of `components/ui` primitives.
-- **Color System**: All color definitions **MUST USE OKLCH**. Use CSS variables defined in `globals.css`.
-- **Patterns**: Use `backdrop-blur` for glassmorphism and background noise images for depth.
+### Information Architecture
+1.  **Collapsible Navigation**: Use the `SidebarLeft` pattern supporting expanded and icon-only states.
+2.  **Command-First Workflow**: Support `Cmd+K` (Global Search) and `Cmd+J` (New Task) shortcuts.
+3.  **View Hierarchy**: Maintain the domain split: `Chats`, `Workers`, `Workflows`, `Knowledge Base`.
 
-## 3. Reference Documentation
-For detailed implementation rules, always refer to the primary frontend guidelines:
+## 3. Implementation Patterns
+
+### The Premium Card
+All surface elements should follow the Premium Card pattern to ensure consistency:
+
+```tsx
+<div className="relative group overflow-hidden rounded-2xl border border-border/50 bg-background/40 backdrop-blur-md p-6">
+  {/* Layered texture overlay */}
+  <div className="absolute inset-0 opacity-5 mix-blend-multiply pointer-events-none bg-[url('/noise.png')]" />
+  {/* Content */}
+  <div className="relative z-10">{children}</div>
+</div>
+```
+
+## 4. Reference Documentation
+For detailed implementation rules, refer to:
 `d:\Homelab\suna\.\agent\rules\frontend-design-guidelines.md`
 
-## 4. Development Workflow Reminders
-- **Jujutsu ONLY:** Use `jj` for all version control. Do not use `git commit` or `git add`.
-- **Semantic Commits:** All changes must be described using `jj describe -m` with semantic prefixes (e.g., `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`).
+## 5. Development Workflow
+- **Jujutsu ONLY:** Use `jj` for all version control (`jj describe -m "..."`).
+- **Semantic Commits:** Use prefixes like `feat:`, `fix:`, `style:`.
+- **Pre-deployment**: Run `npx lint` and verify Docker builds before pushing.
 
