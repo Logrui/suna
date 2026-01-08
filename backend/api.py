@@ -218,8 +218,9 @@ async def global_exception_handler(request: Request, exc: Exception):
             "type": type(exc).__name__,
             "path": str(request.url.path),
             # Include hint about checking backend logs
-            "hint": "Check backend logs for full traceback: docker logs suna-backend-1 --tail 100"
-        }
+            "hint": "Check backend logs for full traceback: This is likely not a CORS issue."
+        },
+        headers={"Access-Control-Allow-Origin": "*"}
     )
 
 @app.middleware("http")

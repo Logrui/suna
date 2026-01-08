@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { referralsApi, ReferralCodeResponse, ReferralStats, ReferralListResponse, ValidateReferralCodeResponse, ReferralEmailResponse } from '@/lib/api/referrals';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
+import { isReferralsDisabled } from '@/lib/config';
 
 export const REFERRALS_QUERY_KEYS = {
   code: ['referrals', 'code'] as const,
@@ -10,17 +11,19 @@ export const REFERRALS_QUERY_KEYS = {
 };
 
 export function useReferralCode() {
+  const disabled = isReferralsDisabled();
   return useQuery({
     queryKey: REFERRALS_QUERY_KEYS.code,
     queryFn: () => referralsApi.getReferralCode(),
     staleTime: Infinity,
+    enabled: !disabled,
   });
 }
 
 export function useRefreshReferralCode() {
   const queryClient = useQueryClient();
   const t = useTranslations('settings.referrals');
-  
+
   return useMutation({
     mutationFn: () => referralsApi.refreshReferralCode(),
     onSuccess: (data) => {
@@ -35,18 +38,22 @@ export function useRefreshReferralCode() {
 }
 
 export function useReferralStats() {
+  const disabled = isReferralsDisabled();
   return useQuery({
     queryKey: REFERRALS_QUERY_KEYS.stats,
     queryFn: () => referralsApi.getReferralStats(),
     refetchInterval: 30000,
+    enabled: !disabled,
   });
 }
 
 export function useUserReferrals(limit = 50, offset = 0) {
+  const disabled = isReferralsDisabled();
   return useQuery({
     queryKey: REFERRALS_QUERY_KEYS.list(limit, offset),
     queryFn: () => referralsApi.getUserReferrals(limit, offset),
     refetchInterval: 30000,
+    enabled: !disabled,
   });
 }
 
@@ -83,7 +90,7 @@ export function useCopyReferralLink() {
 
 export function useSendReferralEmails() {
   const t = useTranslations('settings.referrals');
-  
+
   return useMutation({
     mutationFn: (emails: string[]) => referralsApi.sendReferralEmails(emails),
     onSuccess: (data) => {
