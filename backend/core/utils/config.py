@@ -62,6 +62,10 @@ class Configuration:
     DISABLE_PRESENCE: bool = False  # Disable presence tracking entirely
     # ==================================
     
+    # ===== REFERRALS CONFIGURATION =====
+    DISABLE_REFERRALS: bool = False  # Disable referrals system entirely
+    # ===================================
+    
     SYSTEM_ADMIN_USER_ID: Optional[str] = None  # User ID that owns shared/fallback agents
 
     # Subscription tier IDs - Production

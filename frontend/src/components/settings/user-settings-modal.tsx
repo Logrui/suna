@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/tooltip';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { isLocalMode, isProductionMode } from '@/lib/config';
+import { isLocalMode, isProductionMode, isReferralsDisabled, isPresenceDisabled } from '@/lib/config';
 import { backendApi } from '@/lib/api-client';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Switch } from '@/components/ui/switch';
@@ -64,10 +64,10 @@ import { CreditBalanceDisplay, CreditPurchaseModal } from '@/components/billing/
 import { ScheduledDowngradeCard } from '@/components/billing/scheduled-downgrade-card';
 import {
     useAccountState,
-    accountStateSelectors,
     useCreatePortalSession,
     useCancelSubscription,
     useReactivateSubscription,
+    accountStateSelectors,
     invalidateAccountState,
 } from '@/hooks/billing';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,8 +88,6 @@ import {
     ArrowRight
 } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { getPlanName, getPlanIcon } from '../billing/plan-utils';
-import { TierBadge } from '../billing/tier-badge';
 import { siteConfig } from '@/lib/site-config';
 import ThreadUsage from '@/components/billing/thread-usage';
 import { formatCredits } from '@/lib/utils/credit-formatter';
@@ -98,6 +96,7 @@ import { useTranslations } from 'next-intl';
 import { ReferralsTab } from '@/components/referrals/referrals-tab';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MemorySettings } from '@/components/memory/MemorySettings';
+import { getPlanIcon } from '../billing';
 
 type TabId = 'general' | 'plan' | 'billing' | 'usage' | 'memory' | 'env-manager' | 'knowledge-base' | 'integrations' | 'api-keys' | 'referrals';
 
@@ -127,13 +126,15 @@ export function UserSettingsModal({
     const [showPlanModal, setShowPlanModal] = useState(false);
     const isLocal = isLocalMode();
     const isProduction = isProductionMode();
+    const referralsDisabled = isReferralsDisabled();
+
     const tabs: Tab[] = [
         { id: 'general', label: 'General', icon: Settings },
         ...(!isProduction ? [{ id: 'plan' as TabId, label: 'Plan', icon: Zap }] : []),
         ...(!isProduction ? [{ id: 'billing' as TabId, label: 'Billing', icon: CreditCard }] : []),
         { id: 'usage', label: 'Usage', icon: TrendingDown },
         { id: 'memory', label: 'Memory', icon: Brain },
-        ...(!isProduction ? [{ id: 'referrals' as TabId, label: 'Referrals', icon: Users }] : []),
+        ...(!isProduction && !referralsDisabled ? [{ id: 'referrals' as TabId, label: 'Referrals', icon: Users }] : []),
         { id: 'knowledge-base', label: 'Knowledge Base', icon: FileText },
         { id: 'integrations', label: 'Integrations', icon: Plug },
         { id: 'api-keys', label: 'API Keys', icon: Key },

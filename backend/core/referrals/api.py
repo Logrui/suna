@@ -66,6 +66,8 @@ async def refresh_referral_code(
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     service: ReferralService = Depends(get_referral_service)
 ):
+    if config.DISABLE_REFERRALS:
+        raise HTTPException(status_code=403, detail="Referral system is disabled")
     try:
         result = await service.expire_and_regenerate_code(user_id)
         
@@ -92,6 +94,8 @@ async def get_referral_code(
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     service: ReferralService = Depends(get_referral_service)
 ):
+    if config.DISABLE_REFERRALS:
+        raise HTTPException(status_code=403, detail="Referral system is disabled")
     try:
         referral_code = await service.get_or_create_referral_code(user_id)
         
@@ -113,6 +117,8 @@ async def validate_referral_code(
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     service: ReferralService = Depends(get_referral_service)
 ):
+    if config.DISABLE_REFERRALS:
+        return ValidateReferralCodeResponse(valid=False, message="Referral system is disabled")
     try:
         referrer_id = await service.validate_referral_code(request.referral_code)
         
@@ -143,6 +149,8 @@ async def get_referral_stats(
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     service: ReferralService = Depends(get_referral_service)
 ):
+    if config.DISABLE_REFERRALS:
+        raise HTTPException(status_code=403, detail="Referral system is disabled")
     try:
         stats = await service.get_referral_stats(user_id)
         
@@ -168,6 +176,8 @@ async def get_user_referrals(
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     service: ReferralService = Depends(get_referral_service)
 ):
+    if config.DISABLE_REFERRALS:
+        raise HTTPException(status_code=403, detail="Referral system is disabled")
     try:
         referrals_data = await service.get_user_referrals(user_id, limit, offset)
         
@@ -197,6 +207,8 @@ async def send_referral_email(
     user_id: str = Depends(verify_and_get_user_id_from_jwt),
     service: ReferralService = Depends(get_referral_service)
 ):
+    if config.DISABLE_REFERRALS:
+        raise HTTPException(status_code=403, detail="Referral system is disabled")
     try:
         result = await service.send_referral_emails(user_id, request.emails)
         

@@ -29,6 +29,8 @@ interface Config {
   IS_LOCAL: boolean;
   IS_STAGING: boolean;
   SUBSCRIPTION_TIERS: SubscriptionTiers;
+  DISABLE_PRESENCE: boolean;
+  DISABLE_REFERRALS: boolean;
 }
 
 // Tier keys - single source, no environment-specific price IDs
@@ -88,6 +90,8 @@ export const config: Config = {
   IS_LOCAL: currentEnvMode === EnvMode.LOCAL,
   IS_STAGING: currentEnvMode === EnvMode.STAGING,
   SUBSCRIPTION_TIERS: TIERS,  // Same tiers for all environments
+  DISABLE_PRESENCE: process.env.NEXT_PUBLIC_DISABLE_PRESENCE === 'true',
+  DISABLE_REFERRALS: process.env.NEXT_PUBLIC_DISABLE_REFERRALS === 'true',
 };
 
 export const isLocalMode = (): boolean => {
@@ -100,4 +104,12 @@ export const isStagingMode = (): boolean => {
 
 export const isProductionMode = (): boolean => {
   return config.ENV_MODE === EnvMode.PRODUCTION;
+};
+
+export const isPresenceDisabled = (): boolean => {
+  return config.DISABLE_PRESENCE;
+};
+
+export const isReferralsDisabled = (): boolean => {
+  return config.DISABLE_REFERRALS;
 };

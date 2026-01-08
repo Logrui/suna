@@ -22,15 +22,15 @@ class PresenceService:
             result = await client.schema('basejump').from_('accounts').select('id').eq('id', account_id).limit(1).execute()
             
             if not result.data or len(result.data) == 0:
-                logger.warning(f"Account {account_id} does not exist in basejump.accounts")
+                # logger.warning(f"Account {account_id} does not exist in basejump.accounts")
                 return False
             
             return True
         except ValueError:
-            logger.error(f"Invalid UUID format for account_id: {account_id}")
+            # logger.error(f"Invalid UUID format for account_id: {account_id}")
             return False
         except Exception as e:
-            logger.error(f"Error validating account_id {account_id}: {str(e)}")
+            # logger.error(f"Error validating account_id {account_id}: {str(e)}")
             return False
     
     async def _fetch_session(self, session_id: str):
@@ -83,16 +83,16 @@ class PresenceService:
             error_str = str(e).lower()
             # Check for RLS policy violations
             if 'row-level security' in error_str or 'policy' in error_str or 'permission denied' in error_str:
-                logger.error(
-                    f"RLS policy violation when upserting presence session {session_id} for account {account_id}: {str(e)}"
-                )
-                logger.error(f"Payload: {payload}")
+                # logger.error(
+                #     f"RLS policy violation when upserting presence session {session_id} for account {account_id}: {str(e)}"
+                # )
+                # logger.error(f"Payload: {payload}")
                 # Re-raise with clearer error message
                 raise ValueError(f"Permission denied: Unable to update presence for account {account_id}. This may indicate an account membership issue.")
             else:
                 # Log the full error for debugging
-                logger.error(f"Error upserting presence session {session_id} for account {account_id}: {str(e)}")
-                logger.error(f"Payload: {payload}")
+                # logger.error(f"Error upserting presence session {session_id} for account {account_id}: {str(e)}")
+                # logger.error(f"Payload: {payload}")
                 raise
 
 
@@ -150,15 +150,17 @@ class PresenceService:
 
         except ValueError as e:
             # Validation errors - log but don't fail silently
-            logger.error(f"Validation error updating presence for session {session_id}: {str(e)}")
+            # logger.error(f"Validation error updating presence for session {session_id}: {str(e)}")
             return False
         except Exception as e:
             error_str = str(e).lower()
             # Check for RLS or permission errors
             if 'row-level security' in error_str or 'policy' in error_str or 'permission denied' in error_str or 'invalid or non-existent account_id' in error_str:
-                logger.error(f"Permission/validation error updating presence for session {session_id}, account {account_id}: {str(e)}")
+                # logger.error(f"Permission/validation error updating presence for session {session_id}, account {account_id}: {str(e)}")
+                pass
             else:
-                logger.error(f"Error updating presence for session {session_id}: {str(e)}", exc_info=True)
+                # logger.error(f"Error updating presence for session {session_id}: {str(e)}", exc_info=True)
+                pass
 
             return False
     

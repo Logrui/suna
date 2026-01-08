@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { isPresenceDisabled } from '@/lib/config';
 
 type PresenceStatus = 'online' | 'idle' | 'offline';
 type PresenceEventPayload = {
@@ -32,7 +33,7 @@ const HEARTBEAT_INTERVAL = 60000;
 const DEBOUNCE_DELAY = 500; // Debounce rapid thread changes
 
 // Check if presence is disabled via environment variable
-const DISABLE_PRESENCE = process.env.NEXT_PUBLIC_DISABLE_PRESENCE === 'true';
+const DISABLE_PRESENCE = isPresenceDisabled();
 
 function generateSessionId(): string {
   return crypto.randomUUID();

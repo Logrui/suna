@@ -8,14 +8,14 @@ ENV SERVICE_ID=$RAILWAY_SERVICE_ID
 
 # Install system dependencies
 RUN apk add --no-cache curl git \
-    # Dependencies for Python package compilation
-    freetype-dev \
-    gcc \
-    linux-headers \
-    musl-dev \
-    python3-dev \
-    nodejs \
-    npm
+  # Dependencies for Python package compilation
+  freetype-dev \
+  gcc \
+  linux-headers \
+  musl-dev \
+  python3-dev \
+  nodejs \
+  npm
 
 # Install Python dependencies
 # Note: When Railway root is repo root, we need backend/ prefix
@@ -31,18 +31,18 @@ COPY patches ./patches
 # APPLY PATCHES - Before running, apply all patches
 # ============================================================
 RUN echo "🔧 Checking for patches..." && \
-    if [ -d "./patches" ] && [ -f "./patches/apply-patches.js" ]; then \
-      echo "📦 Found patches directory, applying..." && \
-      git init -q && \
-      git add -A && \
-      git config user.email "builder@docker.local" && \
-      git config user.name "Docker Builder" && \
-      git commit -q -m "Initial commit before patches" --allow-empty && \
-      node ./patches/apply-patches.js --verbose && \
-      echo "✅ Patches applied successfully"; \
-    else \
-      echo "⚠️  No patches directory found, skipping..."; \
-    fi
+  if [ -d "./patches" ] && [ -f "./patches/apply-patches.js" ]; then \
+  echo "📦 Found patches directory, applying..." && \
+  git init -q && \
+  git add -A && \
+  git config user.email "builder@docker.local" && \
+  git config user.name "Docker Builder" && \
+  git commit -q -m "Initial commit before patches" --allow-empty && \
+  node ./patches/apply-patches.js --verbose && \
+  echo "✅ Patches applied successfully"; \
+  else \
+  echo "⚠️  No patches directory found, skipping..."; \
+  fi
 
 # Calculate optimal worker count based on 16 vCPUs
 # Using (2*CPU)+1 formula for CPU-bound applications

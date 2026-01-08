@@ -29,13 +29,14 @@ async def update_presence(
         account_id = await get_user_id_from_stream_auth(request, token)
         
         if not account_id:
-            logger.error("Failed to get account_id from auth")
+            # logger.error("Failed to get account_id from auth")
             raise HTTPException(status_code=401, detail="Authentication required")
         
         if not payload.session_id:
-            logger.error("session_id is missing from request")
+            # logger.error("session_id is missing from request")
             raise HTTPException(status_code=400, detail="session_id is required")
         
+        platform = payload.platform or "web"
         #logger.debug(
         #    f"Presence update request: account={account_id}, session={payload.session_id}, "
         #    f"thread={payload.active_thread_id}, timestamp={payload.client_timestamp}"
@@ -50,7 +51,7 @@ async def update_presence(
         )
         
         if not success:
-            logger.error(f"Presence service returned False for session {payload.session_id}")
+            # logger.error(f"Presence service returned False for session {payload.session_id}")
             raise HTTPException(status_code=500, detail="Failed to update presence")
         
         return {"success": True, "session_id": payload.session_id}
