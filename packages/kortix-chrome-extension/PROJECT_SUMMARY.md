@@ -4,9 +4,9 @@
 
 The **Kortix AI Browser Operator** is a headless Chrome extension that implements a listener/router pattern for Kortix AI agents to control the user's browser. It follows the same architecture as Manus "My Browser", allowing the Kortix backend to transparently route browser commands to either the user's local browser (via this extension) or fallback to sandbox/cloud browsers.
 
-## Project Status: ✅ Complete
+## Project Status: 🟡 MVP Scaffold – Integration Pending
 
-All core components have been implemented and documented. The extension is ready for integration with the Kortix backend.
+Core extension components are implemented. Backend integration via WebSocket bridge is required before production use.
 
 ## Architecture
 
