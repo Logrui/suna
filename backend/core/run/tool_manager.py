@@ -3,6 +3,7 @@ from typing import Optional, List
 from core.tools.message_tool import MessageTool
 from core.tools.web_search_tool import SandboxWebSearchTool
 from core.tools.image_search_tool import SandboxImageSearchTool
+from core.tools.perplexity_search_tool import PerplexitySearchTool
 from core.tools.expand_msg_tool import ExpandMessageTool
 from core.tools.task_list_tool import TaskListTool
 from core.tools.people_search_tool import PeopleSearchTool
@@ -86,6 +87,10 @@ class ToolManager:
         if config.SERPER_API_KEY:
             enabled_methods = self._get_enabled_methods_for_tool('image_search_tool')
             self.thread_manager.add_tool(SandboxImageSearchTool, function_names=enabled_methods, thread_manager=self.thread_manager, project_id=self.project_id)
+        
+        if config.PERPLEXITY_API_KEY:
+            enabled_methods = self._get_enabled_methods_for_tool('perplexity_search_tool')
+            self.thread_manager.add_tool(PerplexitySearchTool, function_names=enabled_methods, thread_manager=self.thread_manager, project_id=self.project_id)
         
         from core.tools.browser_tool import BrowserTool
         enabled_methods = self._get_enabled_methods_for_tool('browser_tool')

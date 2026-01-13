@@ -26,6 +26,7 @@ SANDBOX_TOOLS = [
 SEARCH_TOOLS = [
     ('web_search_tool', 'core.tools.web_search_tool', 'SandboxWebSearchTool'),
     ('image_search_tool', 'core.tools.image_search_tool', 'SandboxImageSearchTool'),
+    ('perplexity_search_tool', 'core.tools.perplexity_search_tool', 'PerplexitySearchTool'),
     ('people_search_tool', 'core.tools.people_search_tool', 'PeopleSearchTool'),
     ('company_search_tool', 'core.tools.company_search_tool', 'CompanySearchTool'),
     ('paper_search_tool', 'core.tools.paper_search_tool', 'PaperSearchTool'),

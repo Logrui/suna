@@ -5,7 +5,7 @@ from core.services.llm import make_llm_api_call
 from core.utils.logger import logger
 from core.utils.project_helpers import PROJECT_CATEGORIES
 
-MODEL_NAME = "openai/gpt-5-nano-2025-08-07"
+MODEL_NAME = "openrouter/openai/gpt-5-mini"
 
 
 async def categorize_from_messages(messages: List[dict]) -> List[str]:

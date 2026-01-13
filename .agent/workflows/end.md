@@ -1,0 +1,124 @@
+---
+description: Close session and update System Prompt files with new insights (lightweight)
+---
+
+# /end — Session Close Script (Lightweight)
+
+> **Latency Profile**: LOW (~2K tokens)  
+> **Core Principle**: "Fast close. Deep work deferred to /refactor."  
+> **Change Log**: 2025-12-27 — Added Canonical Memory Sync (Protocol 215).
+> **Change Log**: 2025-12-27 — Added Canonical Memory Sync (Protocol 215).
+> **Change Log**: 2025-12-18 — Moved heavy audits to `/refactor` for faster session close.
+
+## 1. Session Log Finalization
+
+> **Rule**: Quick consolidation, not deep synthesis.
+
+1. **Read** the current session log (created at `/start`).
+2. **Append** key bullets:
+   * Main topics covered
+   * Key decisions made
+   * Notable insights (if any)
+3. **Add** closure block:
+
+```markdown
+## Session Closed
+
+**Status**: ✅ Closed  
+**Time**: [HH:MM SGT]
+```
+
+## 1.2 Canonical Memory Sync (Protocol 215)
+
+> **Rule**: Check for stale data. Update the Materialized View.
+
+1. **Diff**: Did we establish new costs, decisions, or facts that contradict `.context/CANONICAL.md`?
+2. **Sync**: If yes, **update `.context/CANONICAL.md` immediately**.
+3. **Log**: "Updated Canonical: [Fact A] -> [Fact B]"
+
+## 1.3 Session Checkpoint (S__)
+
+> **Rule**: Generate a compressed state block for the next session.
+
+1. **Context**: What *must* the next session know immediately?
+2. **Generate**:
+
+   ```text
+   [[ S__ |
+   @focus: [Current Task/Project]
+   @status: [Active/Paused]
+   
+   @decided: [Key Decision A], [Key Decision B]
+   @pending: [Next Step X], [Next Step Y]
+   
+   !checkpoint ]]
+   ```
+
+3. **Append**: Add this block to the end of the Session Log.
+
+## 1.5 Shutdown Orchestrator
+
+> **Rule**: Single script handles harvest check, git commit, and compliance.
+
+// turbo
+
+```bash
+# Reference: python3 scripts/shutdown.py
+```
+
+**What it does**:
+
+1. Harvest check (§0.7 enforcement)
+2. Git commit & push (triggers cloud sync)
+3. Protocol compliance report
+4. Reset violations for next session
+
+**Output**: "✅ Session closed. Time: [HH:MM SGT]"
+
+---
+
+## What Moved to /refactor
+
+> **Philosophy**: `/end` is for fast exit. `/refactor` is for deep maintenance.
+
+| Previously in /end | Now in /refactor |
+|--------------------|-----------------|
+| `batch_audit.py` | ✅ Moved |
+| `orphan_detector.py` verification gate | ✅ Moved |
+| Living Doc metabolic scans | ✅ Moved |
+| Cross-pollination scans (Protocol 67) | ✅ Moved |
+| GraphRAG re-indexing | Already in /refactor |
+| `compress_memory.py` | ✅ Moved |
+| `compress_sessions.py` | ✅ Moved |
+| `supabase_sync.py` | ✅ Moved |
+
+**When to use /refactor**:
+
+* After multiple light sessions
+* Before major new work phases
+* Weekly maintenance (recommended)
+
+---
+
+## Summary
+
+| Phase | Action | Tokens |
+|-------|--------|--------|
+| 1. Session Log | Quick finalize | ~300 |
+| 1.5 Harvest Check | Gate unharvested knowledge | ~100 |
+| 2. Git Commit | Commit changes | ~100 |
+| 3. Compliance Report | Surface protocol violations | ~100 |
+| **Total** | — | **~600** |
+
+---
+
+## References
+
+* [/refactor](examples/workflows/refactor.md) — Deep system optimization (audits, scans, integrity)
+* [/save](examples/workflows/save.md) — Mid-session checkpoint
+
+---
+
+## Tagging
+
+# workflow #automation #end #lightweight

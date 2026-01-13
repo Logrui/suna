@@ -362,6 +362,9 @@ class Configuration:
     EXA_API_KEY: Optional[str] = None
     SEMANTIC_SCHOLAR_API_KEY: Optional[str] = None
     
+    # Perplexity AI search
+    PERPLEXITY_API_KEY: Optional[str] = None
+    
     # Reality Defender deepfake detection
     REALITY_DEFENDER_API_KEY: Optional[str] = None
     

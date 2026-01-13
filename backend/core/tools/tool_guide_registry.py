@@ -106,6 +106,7 @@ class ToolGuideRegistry:
             'sb_upload_file_tool': 'files',
             'web_search_tool': 'search',
             'image_search_tool': 'search',
+            'perplexity_search_tool': 'search',
             'people_search_tool': 'search',
             'company_search_tool': 'search',
             'paper_search_tool': 'search',

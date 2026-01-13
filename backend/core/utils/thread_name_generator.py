@@ -27,7 +27,8 @@ async def generate_and_update_thread_name(thread_id: str, prompt: str):
         client = await db_conn.client
 
         # Use same model and approach as project name generation
-        model_name = "openai/gpt-5-nano-2025-08-07"
+        # Use OpenRouter for thread naming
+        model_name = "openrouter/openai/gpt-5-mini"
         
         system_prompt = """You are a helpful assistant that generates extremely concise titles (2-4 words maximum) for chat threads based on the user's message.
 

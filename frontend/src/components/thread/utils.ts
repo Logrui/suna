@@ -42,14 +42,14 @@ export function safeJsonParse<T>(
   if (!jsonString) {
     return fallback;
   }
-  
+
   try {
     // First attempt: Parse as normal JSON
     const parsed = JSON.parse(jsonString);
-    
+
     // Check if the result is a string that looks like JSON (double-escaped case)
-    if (typeof parsed === 'string' && 
-        (parsed.startsWith('{') || parsed.startsWith('['))) {
+    if (typeof parsed === 'string' &&
+      (parsed.startsWith('{') || parsed.startsWith('['))) {
       try {
         // Second attempt: Parse the string result as JSON (handles double-escaped)
         return JSON.parse(parsed) as T;
@@ -58,14 +58,14 @@ export function safeJsonParse<T>(
         return parsed as unknown as T;
       }
     }
-    
+
     return parsed as T;
   } catch (outerError) {
     // If the input is already an object/array (shouldn't happen but just in case)
     if (typeof jsonString === 'object') {
       return jsonString as T;
     }
-    
+
     // Try one more time in case it's a plain string that should be returned as-is
     if (typeof jsonString === 'string') {
       // Check if it's a string representation of a simple value
@@ -73,13 +73,13 @@ export function safeJsonParse<T>(
       if (jsonString === 'false') return false as unknown as T;
       if (jsonString === 'null') return null as unknown as T;
       if (!isNaN(Number(jsonString))) return Number(jsonString) as unknown as T;
-      
+
       // Return as string if it doesn't look like JSON
       if (!jsonString.startsWith('{') && !jsonString.startsWith('[')) {
         return jsonString as unknown as T;
       }
     }
-    
+
     // console.warn('Failed to parse JSON string:', jsonString, outerError); // Optional: log errors
     return fallback;
   }
@@ -136,7 +136,7 @@ export const getToolIcon = (toolName: string): ElementType => {
     case 'crawl-webpage':
       return Globe;
     case 'scrape-webpage':
-        return Globe;
+      return Globe;
 
     // API and data operations
     case 'call-data-provider':
@@ -212,14 +212,14 @@ export const getToolIcon = (toolName: string): ElementType => {
     case "spreadsheet_create":
       return Table2;
 
-    
+
     default:
       if (toolName?.startsWith('mcp_')) {
         const parts = toolName.split('_');
         if (parts.length >= 3) {
           const serverName = parts[1];
           const toolNamePart = parts.slice(2).join('_');
-          
+
           // Map specific MCP tools to appropriate icons
           if (toolNamePart.includes('search') || toolNamePart.includes('web')) {
             return Search;
@@ -231,7 +231,7 @@ export const getToolIcon = (toolName: string): ElementType => {
         }
         return PlugIcon; // Default icon for MCP tools
       }
-      
+
       // Add logging for debugging unhandled tool types
       return Wrench; // Default icon for tools
   }
@@ -246,7 +246,7 @@ export const extractPrimaryParam = (
 
   try {
     const parsed = JSON.parse(content);
-    
+
     if (parsed.query) {
       const query = Array.isArray(parsed.query) ? parsed.query[0] : parsed.query;
       return query.length > 30 ? query.substring(0, 27) + '...' : query;
@@ -255,7 +255,7 @@ export const extractPrimaryParam = (
       const query = Array.isArray(parsed.arguments.query) ? parsed.arguments.query[0] : parsed.arguments.query;
       return query.length > 30 ? query.substring(0, 27) + '...' : query;
     }
-    
+
     if (toolName?.toLowerCase().startsWith('browser_')) {
       if (parsed.url) return parsed.url;
       if (parsed.arguments?.url) return parsed.arguments.url;
@@ -387,7 +387,7 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['check-command-output', 'Checking Command Output'],
   ['terminate-command', 'Terminating Command'],
   ['list-commands', 'Listing Commands'],
-  
+
   ['create-file', 'Creating File'],
   ['delete-file', 'Deleting File'],
   ['full-file-rewrite', 'Rewriting File'],
@@ -407,7 +407,7 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['create_tasks', 'Creating Tasks'],
   ['update-tasks', 'Updating Tasks'],
   ['update_tasks', 'Updating Tasks'],
-  
+
   ['browser_navigate_to', 'Navigating to Page'],
   ['browser_act', 'Performing Action'],
   ['browser_extract_content', 'Extracting Content'],
@@ -416,7 +416,7 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['execute-data-provider-call', 'Calling data provider'],
   ['execute_data-provider_call', 'Calling data provider'],
   ['get-data-provider-endpoints', 'Getting endpoints'],
-  
+
   ['ask', 'Ask'],
   ['wait', 'Wait'],
   ['create-tasks', 'Creating Tasks'],
@@ -448,7 +448,7 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['spreadsheet_add_sheet', 'Adding Sheet'],
   ['spreadsheet-batch-update', 'Updating Spreadsheet'],
   ['spreadsheet_batch_update', 'Updating Spreadsheet'],
-  
+
 
   ['update-agent', 'Updating Worker'],
   ['get-current-agent-config', 'Getting Worker Config'],
@@ -472,19 +472,19 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['check_command_output', 'Checking Command Output'],
   ['terminate_command', 'Terminating Command'],
   ['list_commands', 'Listing Commands'],
-  
+
   ['create_file', 'Creating File'],
   ['delete_file', 'Deleting File'],
   ['full_file_rewrite', 'Rewriting File'],
   ['str_replace', 'Editing Text'],
   ['edit_file', 'Editing File'],
-  
+
   ['browser_navigate_to', 'Navigating to Page'],
   ['browser_act', 'Performing Action'],
   ['browser_extract_content', 'Extracting Content'],
   ['browser_screenshot', 'Taking Screenshot'],
 
-  
+
   ['get-paper-details', 'Getting Paper Details'],
   ['search-authors', 'Searching Authors'],
   ['get-author-details', 'Getting Author Details'],
@@ -492,15 +492,17 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['get-paper-citations', 'Getting Paper Citations'],
   ['get-paper-references', 'Getting Paper References'],
   ['paper-search', 'Searching for Papers'],
-  
+
   ['ask', 'Ask'],
   ['complete', 'Completing Task'],
   ['crawl_webpage', 'Crawling Website'],
   ['expose_port', 'Exposing Port'],
   ['scrape_webpage', 'Scraping Website'],
   ['web_search', 'Searching Web'],
+  ['perplexity-search', 'AI Search'],
+  ['perplexity_search', 'AI Search'],
   ['load_image', 'Loading Image'],
-  
+
   ['update_agent', 'Updating Worker'],
   ['get_current_agent_config', 'Getting Worker Config'],
   ['search_mcp_servers', 'Searching MCP Servers'],
@@ -555,7 +557,7 @@ function formatMCPToolName(serverName: string, toolName: string): string {
   const serverMappings: Record<string, string> = {
     'exa': 'Exa Search',
     'github': 'GitHub',
-    'notion': 'Notion', 
+    'notion': 'Notion',
     'slack': 'Slack',
     'filesystem': 'File System',
     'memory': 'Memory',
@@ -565,12 +567,12 @@ function formatMCPToolName(serverName: string, toolName: string): string {
     'langchain': 'LangChain',
     'llamaindex': 'LlamaIndex'
   };
-  
-  const formattedServerName = serverMappings[serverName.toLowerCase()] || 
+
+  const formattedServerName = serverMappings[serverName.toLowerCase()] ||
     serverName.charAt(0).toUpperCase() + serverName.slice(1).toLowerCase();
-  
+
   let formattedToolName = toolName;
-  
+
   if (toolName.includes('-')) {
     formattedToolName = toolName
       .split('-')
@@ -593,7 +595,7 @@ function formatMCPToolName(serverName: string, toolName: string): string {
   else {
     formattedToolName = toolName.charAt(0).toUpperCase() + toolName.slice(1).toLowerCase();
   }
-  
+
   return `${formattedServerName} ${formattedToolName}`;
 }
 
@@ -677,7 +679,7 @@ export function extractAppSlugFromToolCall(toolCall: any): string | null {
 
   if (toolCall.function_name) {
     const functionName = toolCall.function_name;
-    
+
     const knownApps = [
       'TWITTER', 'GITHUB', 'SLACK', 'GMAIL', 'GOOGLE', 'NOTION', 'ASANA', 'JIRA',
       'TRELLO', 'DISCORD', 'LINKEDIN', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'SPOTIFY',
@@ -686,13 +688,13 @@ export function extractAppSlugFromToolCall(toolCall: any): string | null {
       'FIGMA', 'MIRO', 'SHOPIFY', 'WOOCOMMERCE', 'WORDPRESS', 'MEDIUM', 'REDDIT',
       'TELEGRAM', 'WHATSAPP', 'ZOOM', 'CALENDAR', 'DRIVE', 'SHEETS', 'DOCS', 'SLIDES'
     ];
-    
+
     for (const app of knownApps) {
       if (functionName.startsWith(app + '_')) {
         return app.toLowerCase();
       }
     }
-    
+
     const parts = functionName.split('_');
     if (parts.length >= 2 && parts[0].length > 0 && parts[0] === parts[0].toUpperCase()) {
       return parts[0].toLowerCase();

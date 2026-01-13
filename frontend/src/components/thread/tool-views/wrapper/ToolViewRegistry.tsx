@@ -11,6 +11,7 @@ import { FileOperationToolView } from '../file-operation/FileOperationToolView';
 import { WebCrawlToolView } from '../WebCrawlToolView';
 import { WebScrapeToolView } from '../web-scrape-tool/WebScrapeToolView';
 import { WebSearchToolView } from '../web-search-tool/WebSearchToolView';
+import { PerplexitySearchToolView } from '../perplexity-search-tool/PerplexitySearchToolView';
 import { PeopleSearchToolView } from '../people-search-tool/PeopleSearchToolView';
 import { CompanySearchToolView } from '../company-search-tool/CompanySearchToolView';
 import { DocumentParserToolView } from '../document-parser-tool/DocumentParserToolView';
@@ -99,7 +100,7 @@ const defaultRegistry: ToolViewRegistryType = {
 
   'str-replace': FileOperationToolView,
 
-  
+
   'people-search': PeopleSearchToolView,
   'company-search': CompanySearchToolView,
   'crawl-webpage': WebCrawlToolView,
@@ -107,6 +108,8 @@ const defaultRegistry: ToolViewRegistryType = {
 
   'image-search': WebSearchToolView,
   'web-search': WebSearchToolView,
+  'perplexity-search': PerplexitySearchToolView,
+  'perplexity_search': PerplexitySearchToolView,
 
   'spreadsheet-create': SpreadsheetToolView,
   'spreadsheet_create': SpreadsheetToolView,
