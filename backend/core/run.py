@@ -358,7 +358,7 @@ class PromptManager:
                  elif isinstance(tool_conf, dict):
                      is_enabled = tool_conf.get('enabled', True)
                  
-                  if is_enabled:
+                 if is_enabled:
                       authorized_tools.append(key)
         
         # Resolve Skills
@@ -386,19 +386,19 @@ class PromptManager:
         else:
             system_content = default_system_content
         
-        # Check if agent has builder tools enabled - append the full builder prompt
-        if agent_config:
-            agentpress_tools = agent_config.get('agentpress_tools', {})
-            has_builder_tools = any(
-                agentpress_tools.get(tool, False) 
-                for tool in ['agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'trigger_tool']
-            )
-            
-            if has_builder_tools:
-                # Append the full agent builder prompt to the existing system prompt
-                builder_prompt = get_agent_builder_prompt()
-                system_content += f"\n\n{builder_prompt}"
-        
+#        # Check if agent has builder tools enabled - append the full builder prompt
+#        if agent_config:
+#            agentpress_tools = agent_config.get('agentpress_tools', {})
+#            has_builder_tools = any(
+#                agentpress_tools.get(tool, False) 
+#                for tool in ['agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'trigger_tool']
+#            )
+#            
+#            if has_builder_tools:
+#                # Append the full agent builder prompt to the existing system prompt
+#                builder_prompt = get_agent_builder_prompt()
+#                system_content += f"\n\n{builder_prompt}"
+#        
         # Add agent knowledge base context if available
         if agent_config and client and 'agent_id' in agent_config:
             try:
@@ -545,7 +545,7 @@ class AgentRunner:
             agent_config=self.config.agent_config
         )
         
-        self.client = await self.thread_manager.db.client
+        self.client = await self.thread_manager.db.get_client()
         
         response = await self.client.table('threads').select('account_id').eq('thread_id', self.config.thread_id).execute()
         
