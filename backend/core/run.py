@@ -29,12 +29,14 @@ from langfuse.client import StatefulTraceClient
 
 from core.tools.mcp_tool_wrapper import MCPToolWrapper
 from core.tools.task_list_tool import TaskListTool
+from core.tools.capability_tool import CapabilityTool
 from core.agentpress.tool import SchemaType
 from core.tools.people_search_tool import PeopleSearchTool
 from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
 from core.ai_models.manager import model_manager
 from core.tools.vapi_voice_tool import VapiVoiceTool
+from core.tools.intent_detector import detect_required_tools, detect_categories
 
 load_dotenv()
 
@@ -92,6 +94,7 @@ class ToolManager:
         self.thread_manager.add_tool(ExpandMessageTool, thread_id=self.thread_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(MessageTool)
         self.thread_manager.add_tool(TaskListTool, project_id=self.project_id, thread_manager=self.thread_manager, thread_id=self.thread_id)
+        self.thread_manager.add_tool(CapabilityTool)
     
     def _register_sandbox_tools(self, disabled_tools: List[str]):
         """Register sandbox-related tools with granular control."""
@@ -339,7 +342,8 @@ class PromptManager:
                                   mcp_wrapper_instance: Optional[MCPToolWrapper],
                                   client=None,
                                   tool_registry=None,
-                                  xml_tool_calling: bool = True) -> dict:
+                                  xml_tool_calling: bool = True,
+                                  latest_user_message: Optional[str] = None) -> dict:
         
         # Determine enabled tools for dynamic prompt
         authorized_tools = []
@@ -479,10 +483,41 @@ class PromptManager:
             system_content += mcp_info
         
         # Add XML tool calling instructions to system prompt if requested
+        logger.info(f"XML TOOL CHECK: xml_tool_calling={xml_tool_calling}, tool_registry={tool_registry is not None}")
         if xml_tool_calling and tool_registry:
             openapi_schemas = tool_registry.get_openapi_schemas()
             
+            logger.info(f"SCHEMAS CHECK: {len(openapi_schemas) if openapi_schemas else 0} schemas")
             if openapi_schemas:
+                # LAZY TOOL INJECTION: Filter schemas based on user intent
+                logger.info(f"LAZY TOOL DEBUG: latest_user_message={latest_user_message[:100] if latest_user_message else None}")
+                if latest_user_message:
+                    try:
+                        required_tools = detect_required_tools(latest_user_message)
+                        detected_cats, confidence = detect_categories(latest_user_message)
+                        logger.info(f"Intent detection: categories={detected_cats}, confidence={confidence:.2f}, tools={len(required_tools)}")
+                    except Exception as e:
+                        logger.error(f"INTENT DETECTION ERROR: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                        required_tools = []
+                    
+                    # Filter schemas to only include required tools
+                    filtered_schemas = [
+                        schema for schema in openapi_schemas 
+                        if schema.get("function", {}).get("name") in required_tools
+                    ]
+                    
+                    # Always include capability tools for runtime expansion
+                    capability_tools = ["request_capability", "list_capabilities"]
+                    for schema in openapi_schemas:
+                        func_name = schema.get("function", {}).get("name")
+                        if func_name in capability_tools and schema not in filtered_schemas:
+                            filtered_schemas.append(schema)
+                    
+                    logger.info(f"Tool filtering: {len(openapi_schemas)} total -> {len(filtered_schemas)} filtered")
+                    openapi_schemas = filtered_schemas
+                
                 # Convert schemas to JSON string
                 schemas_json = json.dumps(openapi_schemas, indent=2)
                 
@@ -678,18 +713,7 @@ class AgentRunner:
         await self.setup_tools()
         mcp_wrapper_instance = await self.setup_mcp_tools()
         
-        system_message = await PromptManager.build_system_prompt(
-            self.config.model_name, self.config.agent_config, 
-            self.config.thread_id, 
-            mcp_wrapper_instance, self.client,
-            tool_registry=self.thread_manager.tool_registry,
-            xml_tool_calling=True
-        )
-        logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
-        logger.debug(f"model_name received: {self.config.model_name}")
-        iteration_count = 0
-        continue_execution = True
-
+        # Fetch latest user message FIRST for intent detection
         latest_user_message = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).eq('type', 'user').order('created_at', desc=True).limit(1).execute()
         latest_user_message_content = None
         if latest_user_message.data and len(latest_user_message.data) > 0:
@@ -698,8 +722,22 @@ class AgentRunner:
                 data = json.loads(data)
             if self.config.trace:
                 self.config.trace.update(input=data['content'])
-            # Extract content for fast path optimization
+            # Extract content for intent detection AND fast path optimization
             latest_user_message_content = data.get('content') if isinstance(data, dict) else str(data)
+        
+        # Build system prompt with lazy tool injection based on user intent
+        system_message = await PromptManager.build_system_prompt(
+            self.config.model_name, self.config.agent_config, 
+            self.config.thread_id, 
+            mcp_wrapper_instance, self.client,
+            tool_registry=self.thread_manager.tool_registry,
+            xml_tool_calling=True,
+            latest_user_message=latest_user_message_content
+        )
+        logger.info(f"System message built: {len(str(system_message.get('content', '')))} chars")
+        logger.debug(f"model_name received: {self.config.model_name}")
+        iteration_count = 0
+        continue_execution = True
 
         while continue_execution and iteration_count < self.config.max_iterations:
             iteration_count += 1
