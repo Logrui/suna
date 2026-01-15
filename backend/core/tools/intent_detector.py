@@ -2,27 +2,33 @@
 Intent Detector for Lazy Tool Injection
 
 Analyzes user messages to determine which tool categories are needed.
-Uses keyword matching and simple NLP patterns.
+Uses keyword matching with word boundary patterns.
 """
 
-from typing import List, Set, Tuple
 import re
 from core.tools.tool_categories import ALL_CATEGORIES, get_core_tools
+
 
 class IntentDetector:
     """Detects user intent to determine which tool categories to load"""
     
-    def __init__(self):
-        # Build keyword index for fast lookup
-        self._keyword_to_categories: dict[str, Set[str]] = {}
+    def __init__(self) -> None:
+        # Build keyword index for fast lookup with word boundary patterns
+        self._keyword_to_categories: dict[str, set[str]] = {}
+        self._keyword_patterns: dict[str, re.Pattern[str]] = {}
+        
         for cat in ALL_CATEGORIES:
             for keyword in cat.keywords:
                 kw_lower = keyword.lower()
                 if kw_lower not in self._keyword_to_categories:
                     self._keyword_to_categories[kw_lower] = set()
+                    # Compile word boundary pattern for accurate matching
+                    self._keyword_patterns[kw_lower] = re.compile(
+                        rf'\b{re.escape(kw_lower)}\b', re.IGNORECASE
+                    )
                 self._keyword_to_categories[kw_lower].add(cat.name)
     
-    def detect_categories(self, message: str) -> Tuple[List[str], float]:
+    def detect_categories(self, message: str) -> tuple[list[str], float]:
         """
         Analyze message and return (categories, confidence).
         
@@ -33,12 +39,13 @@ class IntentDetector:
             return [], 0.0
         
         message_lower = message.lower()
-        detected_categories: Set[str] = set()
+        detected_categories: set[str] = set()
         matches = 0
         
-        # Check each keyword
-        for keyword, categories in self._keyword_to_categories.items():
-            if keyword in message_lower:
+        # Check each keyword using word boundary patterns
+        for keyword, pattern in self._keyword_patterns.items():
+            if pattern.search(message_lower):
+                categories = self._keyword_to_categories[keyword]
                 detected_categories.update(categories)
                 matches += 1
         
@@ -51,7 +58,7 @@ class IntentDetector:
         
         return list(detected_categories), confidence
     
-    def get_tools_for_message(self, message: str, include_conversational: bool = True) -> List[str]:
+    def get_tools_for_message(self, message: str, *, include_conversational: bool = True) -> list[str]:
         """
         Main entry point: returns list of tool names to inject based on message.
         
@@ -62,7 +69,7 @@ class IntentDetector:
         Returns:
             List of tool names to inject
         """
-        categories, confidence = self.detect_categories(message)
+        categories, _ = self.detect_categories(message)
         
         # Always include core tools
         tools = set(get_core_tools())
@@ -79,8 +86,12 @@ class IntentDetector:
         
         return list(tools)
 
+
+from typing import Optional
+
 # Singleton instance
-_detector = None
+_detector: Optional[IntentDetector] = None
+
 
 def get_intent_detector() -> IntentDetector:
     global _detector
@@ -88,11 +99,13 @@ def get_intent_detector() -> IntentDetector:
         _detector = IntentDetector()
     return _detector
 
-def detect_required_tools(message: str) -> List[str]:
+
+def detect_required_tools(message: str) -> list[str]:
     """Convenience function to detect tools for a message"""
     return get_intent_detector().get_tools_for_message(message)
 
-def detect_categories(message: str) -> Tuple[List[str], float]:
+
+def detect_categories(message: str) -> tuple[list[str], float]:
     """Convenience function to detect categories for a message"""
     return get_intent_detector().detect_categories(message)
 

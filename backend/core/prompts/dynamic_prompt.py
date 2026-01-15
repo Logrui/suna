@@ -1,6 +1,9 @@
 from typing import Optional, Any
 import datetime
+import logging
 from core.skills.base_skill import BaseSkill
+
+logger = logging.getLogger(__name__)
 
 # Keys for dynamic tool checking - centralized to avoid drift in run.py
 DYNAMIC_TOOL_KEYS = [
@@ -118,5 +121,9 @@ You are a full-spectrum autonomous agent capable of executing complex tasks acro
         """Inject prompt sections from active skills"""
         prompts = []
         for skill in self.skills:
-            prompts.append(skill.get_system_prompt_section())
+            try:
+                prompts.append(skill.get_system_prompt_section())
+            except Exception as e:
+                skill_name = getattr(skill, "name", repr(skill))
+                logger.warning(f"Failed to get prompt section for skill {skill_name}: {e}")
         return "\n\n".join(prompts)

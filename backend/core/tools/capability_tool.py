@@ -5,8 +5,8 @@ Allows the agent to request additional tool capabilities at runtime.
 This enables lazy loading of tools - start with minimal set and expand as needed.
 """
 
-from typing import List, Optional
-from core.agentpress.tool import Tool, tool_metadata, method_metadata, openapi_schema
+from typing import Any
+from core.agentpress.tool import Tool, ToolResult, tool_metadata, method_metadata, openapi_schema
 from core.tools.tool_categories import ALL_CATEGORIES, get_tools_for_categories
 
 @tool_metadata(
@@ -18,9 +18,9 @@ from core.tools.tool_categories import ALL_CATEGORIES, get_tools_for_categories
 class CapabilityTool(Tool):
     """Tool for requesting additional capabilities at runtime"""
     
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._loaded_categories: set = set(["core"])
+        self._loaded_categories: set[str] = {"core"}
     
     @method_metadata(
         display_name="Request Capability",
@@ -69,7 +69,7 @@ Use this tool when:
             }
         }
     })
-    def request_capability(self, capability: str, reason: str) -> str:
+    def request_capability(self, capability: str, reason: str) -> ToolResult:
         """
         Request a capability to be loaded.
         
@@ -79,7 +79,7 @@ Use this tool when:
         valid_capabilities = [cat.name for cat in ALL_CATEGORIES if cat.name != "core"]
         
         if capability not in valid_capabilities:
-            return self.error_response(
+            return self.fail_response(
                 f"Unknown capability: {capability}. Valid options: {', '.join(valid_capabilities)}"
             )
         
@@ -120,7 +120,7 @@ Use this tool when:
             }
         }
     })
-    def list_capabilities(self) -> str:
+    def list_capabilities(self) -> ToolResult:
         """List all available capabilities"""
         lines = ["Available capabilities:\n"]
         for cat in ALL_CATEGORIES:

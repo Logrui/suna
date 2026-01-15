@@ -111,8 +111,8 @@ class AgentCreationTool(Tool):
             
             if not limit_check["can_create"]:
                 return self.fail_response(
-                    f"Maximum of {limit_check[limit]} agents allowed for your plan. "
-                    f"You have {limit_check[current_count]} agents."
+                    f"Maximum of {limit_check['limit']} agents allowed for your plan. "
+                    f"You have {limit_check['current_count']} agents."
                 )
             
             # If setting as default, unset other defaults first
@@ -189,14 +189,14 @@ class AgentCreationTool(Tool):
                     "icon_background": icon_background,
                     "is_default": is_default,
                     "version_id": version.version_id,
-                    "tools_enabled": list(k for k, v in tools_config.items() if v)
+                    "tools_enabled": [k for k, v in tools_config.items() if v]
                 })
                 
             except Exception as e:
                 # Cleanup: delete the agent if version creation failed
-                logger.error(f"Failed to create version for agent {agent_id}: {e}")
+                logger.error(f"Failed to create version for agent {agent_id}: {e!r}")
                 await client.table("agents").delete().eq("agent_id", agent_id).execute()
-                return self.fail_response(f"Failed to create agent version: {str(e)}")
+                return self.fail_response(f"Failed to create agent version: {e!s}")
                 
         except Exception as e:
             logger.error(f"Error creating agent: {e}")

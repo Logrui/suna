@@ -1,5 +1,5 @@
-from typing import List
 from core.skills.base_skill import BaseSkill
+
 
 class ResearchSkill(BaseSkill):
     @property
@@ -11,7 +11,7 @@ class ResearchSkill(BaseSkill):
         return "Internet research capabilities including web search and browser automation."
 
     @property
-    def required_tools(self) -> List[str]:
+    def required_tools(self) -> list[str]:
         return [
             'web_search_tool',
             'browser_tool',

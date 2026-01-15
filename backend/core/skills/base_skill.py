@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+
 
 class BaseSkill(ABC):
     """
@@ -23,7 +23,7 @@ class BaseSkill(ABC):
 
     @property
     @abstractmethod
-    def required_tools(self) -> List[str]:
+    def required_tools(self) -> list[str]:
         """List of tool keys that this skill requires to function"""
         pass
 

@@ -342,6 +342,7 @@ class PromptManager:
                                   mcp_wrapper_instance: Optional[MCPToolWrapper],
                                   client=None,
                                   tool_registry=None,
+                                  *,
                                   xml_tool_calling: bool = True,
                                   latest_user_message: Optional[str] = None) -> dict:
         
@@ -390,19 +391,8 @@ class PromptManager:
         else:
             system_content = default_system_content
         
-#        # Check if agent has builder tools enabled - append the full builder prompt
-#        if agent_config:
-#            agentpress_tools = agent_config.get('agentpress_tools', {})
-#            has_builder_tools = any(
-#                agentpress_tools.get(tool, False) 
-#                for tool in ['agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'trigger_tool']
-#            )
-#            
-#            if has_builder_tools:
-#                # Append the full agent builder prompt to the existing system prompt
-#                builder_prompt = get_agent_builder_prompt()
-#                system_content += f"\n\n{builder_prompt}"
-#        
+        # NOTE: Builder prompt injection disabled to reduce token usage (~10k tokens).
+        # The lazy tool injection system now handles tool-specific prompts dynamically.
         # Add agent knowledge base context if available
         if agent_config and client and 'agent_id' in agent_config:
             try:
@@ -500,23 +490,27 @@ class PromptManager:
                         logger.error(f"INTENT DETECTION ERROR: {e}")
                         import traceback
                         logger.error(traceback.format_exc())
-                        required_tools = []
+                        # Signal to skip filtering - include all tools as fallback
+                        required_tools = None
                     
-                    # Filter schemas to only include required tools
-                    filtered_schemas = [
-                        schema for schema in openapi_schemas 
-                        if schema.get("function", {}).get("name") in required_tools
-                    ]
-                    
-                    # Always include capability tools for runtime expansion
-                    capability_tools = ["request_capability", "list_capabilities"]
-                    for schema in openapi_schemas:
-                        func_name = schema.get("function", {}).get("name")
-                        if func_name in capability_tools and schema not in filtered_schemas:
-                            filtered_schemas.append(schema)
-                    
-                    logger.info(f"Tool filtering: {len(openapi_schemas)} total -> {len(filtered_schemas)} filtered")
-                    openapi_schemas = filtered_schemas
+                    # Filter schemas only if intent detection succeeded
+                    if required_tools is not None:
+                        filtered_schemas = [
+                            schema for schema in openapi_schemas 
+                            if schema.get("function", {}).get("name") in required_tools
+                        ]
+                        
+                        # Always include capability tools for runtime expansion
+                        capability_tools = ["request_capability", "list_capabilities"]
+                        for schema in openapi_schemas:
+                            func_name = schema.get("function", {}).get("name")
+                            if func_name in capability_tools and schema not in filtered_schemas:
+                                filtered_schemas.append(schema)
+                        
+                        logger.info(f"Tool filtering: {len(openapi_schemas)} total -> {len(filtered_schemas)} filtered")
+                        openapi_schemas = filtered_schemas
+                    else:
+                        logger.warning("Intent detection failed - including all tools as fallback")
                 
                 # Convert schemas to JSON string
                 schemas_json = json.dumps(openapi_schemas, indent=2)

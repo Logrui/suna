@@ -1,15 +1,16 @@
-from typing import Dict, Type, List, Optional, ClassVar
+from typing import ClassVar, Optional
 from core.skills.base_skill import BaseSkill
 from core.utils.logger import logger
+
 
 class SkillRegistry:
     """
     Registry for managing available Agent Skills.
     """
-    _skills: ClassVar[Dict[str, Type[BaseSkill]]] = {}
+    _skills: ClassVar[dict[str, type[BaseSkill]]] = {}
 
     @classmethod
-    def register(cls, skill_class: Type[BaseSkill]):
+    def register(cls, skill_class: type[BaseSkill]) -> None:
         """Register a new skill class."""
         try:
             # Attempt to get name from class attribute or instantiate if property
@@ -24,21 +25,28 @@ class SkillRegistry:
             cls._skills[name] = skill_class
             logger.info(f"Registered skill: {name}")
         except (TypeError, ValueError, AttributeError) as e:
-            logger.error(f"Failed to register skill {skill_class}: {e}")
+            logger.error(f"Failed to register skill {skill_class.__name__}: {e}")
 
     @classmethod
     def get_skill(cls, name: str) -> Optional[BaseSkill]:
-        """Get a specific skill instance by name"""
+        """Get a specific skill instance by name."""
         skill_cls = cls._skills.get(name)
         if skill_cls:
             return skill_cls()
         return None
 
     @classmethod
-    def get_all_skills(cls) -> List[BaseSkill]:
-        """Get all registered skills"""
-        return [cls.get_skill(name) for name in cls._skills.keys()]
+    def get_all_skills(cls) -> list[BaseSkill]:
+        """Get all registered skill instances."""
+        skills = []
+        for skill_cls in cls._skills.values():
+            try:
+                skills.append(skill_cls())
+            except Exception as e:
+                logger.warning(f"Failed to instantiate skill {skill_cls.__name__}: {e}")
+        return skills
 
     @classmethod
-    def available_skill_names(cls) -> List[str]:
+    def available_skill_names(cls) -> list[str]:
+        """Returns list of all registered skill names."""
         return list(cls._skills.keys())

@@ -1,5 +1,5 @@
-from typing import List
 from core.skills.base_skill import BaseSkill
+
 
 class CodingSkill(BaseSkill):
     @property
@@ -11,12 +11,12 @@ class CodingSkill(BaseSkill):
         return "Software engineering capabilities including file management, shell execution, and code analysis."
 
     @property
-    def required_tools(self) -> List[str]:
+    def required_tools(self) -> list[str]:
         return [
             'sb_files_tool',
             'sb_shell_tool', 
             'sb_upload_file_tool',
-            'sb_expose_tool' # Often needed for viewing running apps
+            'sb_expose_tool'  # Often needed for viewing running apps
         ]
 
     def get_system_prompt_section(self) -> str:
