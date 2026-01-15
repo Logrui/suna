@@ -69,7 +69,7 @@ Use this tool when:
             }
         }
     })
-    def request_capability(self, capability: str, reason: str) -> ToolResult:
+    async def request_capability(self, capability: str, reason: str) -> ToolResult:
         """
         Request a capability to be loaded.
         
@@ -120,7 +120,7 @@ Use this tool when:
             }
         }
     })
-    def list_capabilities(self) -> ToolResult:
+    async def list_capabilities(self) -> ToolResult:
         """List all available capabilities"""
         lines = ["Available capabilities:\n"]
         for cat in ALL_CATEGORIES:
