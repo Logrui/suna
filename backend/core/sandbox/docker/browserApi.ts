@@ -44,7 +44,7 @@ class BrowserAutomation {
                     await this.shutdown();
                 }
                 
-                console.log("Initializing browser with api key");
+                console.log("Initializing browser with OpenRouter API");
                 this.stagehand = new Stagehand({
                     env: "LOCAL",
                     enableCaching: true,
@@ -52,9 +52,10 @@ class BrowserAutomation {
                     logger: (logLine: LogLine) => {
                         console.log(`[${logLine.category}] ${logLine.message}`);
                     },
-                    modelName: "google/gemini-2.5-pro",
+                    modelName: "anthropic/claude-haiku-4-5",
                     modelClientOptions: {
-                        apiKey
+                        apiKey,
+                        baseURL: "https://openrouter.ai/api/v1"
                     },
                     localBrowserLaunchOptions: {
                         headless: false,
@@ -100,7 +101,7 @@ class BrowserAutomation {
                 await this.page.goto('https://www.google.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
                 return {
                     status: "healthy",
-                    message: "Browser initialized"
+                    message: "Browser initialized with OpenRouter"
                 }
             }
             return {
