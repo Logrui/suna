@@ -17,6 +17,8 @@ from core.agentpress.error_processor import ErrorProcessor
 from core.tools.data_providers_tool import DataProvidersTool
 from core.tools.expand_msg_tool import ExpandMessageTool
 from core.prompts.dynamic_prompt import DynamicPromptBuilder
+from core.skills.registry import SkillRegistry
+from core.skills import initialize_skills
 
 from core.utils.logger import logger
 
@@ -27,12 +29,14 @@ from langfuse.client import StatefulTraceClient
 
 from core.tools.mcp_tool_wrapper import MCPToolWrapper
 from core.tools.task_list_tool import TaskListTool
+from core.tools.capability_tool import CapabilityTool
 from core.agentpress.tool import SchemaType
 from core.tools.people_search_tool import PeopleSearchTool
 from core.tools.company_search_tool import CompanySearchTool
 from core.tools.paper_search_tool import PaperSearchTool
 from core.ai_models.manager import model_manager
 from core.tools.vapi_voice_tool import VapiVoiceTool
+from core.tools.intent_detector import detect_required_tools, detect_categories
 
 load_dotenv()
 
@@ -90,6 +94,7 @@ class ToolManager:
         self.thread_manager.add_tool(ExpandMessageTool, thread_id=self.thread_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(MessageTool)
         self.thread_manager.add_tool(TaskListTool, project_id=self.project_id, thread_manager=self.thread_manager, thread_id=self.thread_id)
+        self.thread_manager.add_tool(CapabilityTool)
     
     def _register_sandbox_tools(self, disabled_tools: List[str]):
         """Register sandbox-related tools with granular control."""
@@ -337,7 +342,9 @@ class PromptManager:
                                   mcp_wrapper_instance: Optional[MCPToolWrapper],
                                   client=None,
                                   tool_registry=None,
-                                  xml_tool_calling: bool = True) -> dict:
+                                  *,
+                                  xml_tool_calling: bool = True,
+                                  latest_user_message: Optional[str] = None) -> dict:
         
         # Determine enabled tools for dynamic prompt
         authorized_tools = []
@@ -357,9 +364,25 @@ class PromptManager:
                      is_enabled = tool_conf.get('enabled', True)
                  
                  if is_enabled:
-                     authorized_tools.append(key)
+                      authorized_tools.append(key)
+        
+        # Resolve Skills
+        active_skills = []
+        if agent_config and 'skills' in agent_config:
+            # Ensure skills are registered
+            initialize_skills()
+            
+            for skill_name in agent_config['skills']:
+                skill = SkillRegistry.get_skill(skill_name)
+                if skill:
+                    active_skills.append(skill)
+                    # Automatically authorize tools required by the skill
+                    authorized_tools.extend(skill.required_tools)
+        
+        # Deduplicate tools list
+        authorized_tools = list(set(authorized_tools))
 
-        builder = DynamicPromptBuilder(authorized_tools)
+        builder = DynamicPromptBuilder(authorized_tools, skills=active_skills)
         default_system_content = builder.build()
         
         # Start with agent's normal system prompt or default
@@ -368,19 +391,8 @@ class PromptManager:
         else:
             system_content = default_system_content
         
-        # Check if agent has builder tools enabled - append the full builder prompt
-        if agent_config:
-            agentpress_tools = agent_config.get('agentpress_tools', {})
-            has_builder_tools = any(
-                agentpress_tools.get(tool, False) 
-                for tool in ['agent_config_tool', 'mcp_search_tool', 'credential_profile_tool', 'trigger_tool']
-            )
-            
-            if has_builder_tools:
-                # Append the full agent builder prompt to the existing system prompt
-                builder_prompt = get_agent_builder_prompt()
-                system_content += f"\n\n{builder_prompt}"
-        
+        # NOTE: Builder prompt injection disabled to reduce token usage (~10k tokens).
+        # The lazy tool injection system now handles tool-specific prompts dynamically.
         # Add agent knowledge base context if available
         if agent_config and client and 'agent_id' in agent_config:
             try:
@@ -461,10 +473,45 @@ class PromptManager:
             system_content += mcp_info
         
         # Add XML tool calling instructions to system prompt if requested
+        logger.info(f"XML TOOL CHECK: xml_tool_calling={xml_tool_calling}, tool_registry={tool_registry is not None}")
         if xml_tool_calling and tool_registry:
             openapi_schemas = tool_registry.get_openapi_schemas()
             
+            logger.info(f"SCHEMAS CHECK: {len(openapi_schemas) if openapi_schemas else 0} schemas")
             if openapi_schemas:
+                # LAZY TOOL INJECTION: Filter schemas based on user intent
+                logger.info(f"LAZY TOOL DEBUG: latest_user_message={latest_user_message[:100] if latest_user_message else None}")
+                if latest_user_message:
+                    try:
+                        required_tools = detect_required_tools(latest_user_message)
+                        detected_cats, confidence = detect_categories(latest_user_message)
+                        logger.info(f"Intent detection: categories={detected_cats}, confidence={confidence:.2f}, tools={len(required_tools)}")
+                    except Exception as e:
+                        logger.error(f"INTENT DETECTION ERROR: {e}")
+                        import traceback
+                        logger.error(traceback.format_exc())
+                        # Signal to skip filtering - include all tools as fallback
+                        required_tools = None
+                    
+                    # Filter schemas only if intent detection succeeded
+                    if required_tools is not None:
+                        filtered_schemas = [
+                            schema for schema in openapi_schemas 
+                            if schema.get("function", {}).get("name") in required_tools
+                        ]
+                        
+                        # Always include capability tools for runtime expansion
+                        capability_tools = ["request_capability", "list_capabilities"]
+                        for schema in openapi_schemas:
+                            func_name = schema.get("function", {}).get("name")
+                            if func_name in capability_tools and schema not in filtered_schemas:
+                                filtered_schemas.append(schema)
+                        
+                        logger.info(f"Tool filtering: {len(openapi_schemas)} total -> {len(filtered_schemas)} filtered")
+                        openapi_schemas = filtered_schemas
+                    else:
+                        logger.warning("Intent detection failed - including all tools as fallback")
+                
                 # Convert schemas to JSON string
                 schemas_json = json.dumps(openapi_schemas, indent=2)
                 
@@ -527,7 +574,7 @@ class AgentRunner:
             agent_config=self.config.agent_config
         )
         
-        self.client = await self.thread_manager.db.client
+        self.client = await self.thread_manager.db.get_client()
         
         response = await self.client.table('threads').select('account_id').eq('thread_id', self.config.thread_id).execute()
         
@@ -660,18 +707,7 @@ class AgentRunner:
         await self.setup_tools()
         mcp_wrapper_instance = await self.setup_mcp_tools()
         
-        system_message = await PromptManager.build_system_prompt(
-            self.config.model_name, self.config.agent_config, 
-            self.config.thread_id, 
-            mcp_wrapper_instance, self.client,
-            tool_registry=self.thread_manager.tool_registry,
-            xml_tool_calling=True
-        )
-        logger.info(f"📝 System message built once: {len(str(system_message.get('content', '')))} chars")
-        logger.debug(f"model_name received: {self.config.model_name}")
-        iteration_count = 0
-        continue_execution = True
-
+        # Fetch latest user message FIRST for intent detection
         latest_user_message = await self.client.table('messages').select('*').eq('thread_id', self.config.thread_id).eq('type', 'user').order('created_at', desc=True).limit(1).execute()
         latest_user_message_content = None
         if latest_user_message.data and len(latest_user_message.data) > 0:
@@ -680,8 +716,22 @@ class AgentRunner:
                 data = json.loads(data)
             if self.config.trace:
                 self.config.trace.update(input=data['content'])
-            # Extract content for fast path optimization
+            # Extract content for intent detection AND fast path optimization
             latest_user_message_content = data.get('content') if isinstance(data, dict) else str(data)
+        
+        # Build system prompt with lazy tool injection based on user intent
+        system_message = await PromptManager.build_system_prompt(
+            self.config.model_name, self.config.agent_config, 
+            self.config.thread_id, 
+            mcp_wrapper_instance, self.client,
+            tool_registry=self.thread_manager.tool_registry,
+            xml_tool_calling=True,
+            latest_user_message=latest_user_message_content
+        )
+        logger.info(f"System message built: {len(str(system_message.get('content', '')))} chars")
+        logger.debug(f"model_name received: {self.config.model_name}")
+        iteration_count = 0
+        continue_execution = True
 
         while continue_execution and iteration_count < self.config.max_iterations:
             iteration_count += 1

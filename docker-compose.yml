@@ -1,0 +1,72 @@
+version: "3.8"
+
+networks:
+  suna_default:
+    external:
+      name: suna_default
+  supabase_network_agentpress:
+    external:
+      name: supabase_network_agentpress
+
+volumes:
+  redis_data:
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: suna_redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - suna_default
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend/.env:/app/.env:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    command: uv run uvicorn api:app --host 0.0.0.0 --port 8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - suna_default
+      - supabase_network_agentpress
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend/.env:/app/.env:ro
+    command: uv run dramatiq run_agent_background --processes 1 --threads 1
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - suna_default
+      - supabase_network_agentpress
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - suna_default
+      - supabase_network_agentpress

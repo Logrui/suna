@@ -26,6 +26,7 @@ class AgentVersion:
     configured_mcps: List[Dict[str, Any]] = field(default_factory=list)
     custom_mcps: List[Dict[str, Any]] = field(default_factory=list)
     agentpress_tools: Dict[str, Any] = field(default_factory=dict)
+    skills: List[str] = field(default_factory=list)
     is_active: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -44,6 +45,7 @@ class AgentVersion:
             'configured_mcps': self.configured_mcps,
             'custom_mcps': self.custom_mcps,
             'agentpress_tools': self.agentpress_tools,
+            'skills': self.skills,
             'is_active': self.is_active,
             'status': VersionStatus.ACTIVE.value if self.is_active else VersionStatus.INACTIVE.value,
             'created_at': self.created_at.isoformat(),
@@ -152,6 +154,7 @@ class VersionService:
             configured_mcps=tools.get('mcp', []),
             custom_mcps=tools.get('custom_mcp', []),
             agentpress_tools=tools.get('agentpress', {}),
+            skills=config.get('skills', []),
             is_active=row.get('is_active', False),
             created_at=datetime.fromisoformat(row['created_at'].replace('Z', '+00:00')),
             updated_at=datetime.fromisoformat(row['updated_at'].replace('Z', '+00:00')),
@@ -190,6 +193,7 @@ class VersionService:
         configured_mcps: List[Dict[str, Any]],
         custom_mcps: List[Dict[str, Any]],
         agentpress_tools: Dict[str, Any],
+        skills: Optional[List[str]] = None,
         model: Optional[str] = None,
         version_name: Optional[str] = None,
         change_description: Optional[str] = None
@@ -244,6 +248,7 @@ class VersionService:
             configured_mcps=configured_mcps,
             custom_mcps=normalized_custom_mcps,
             agentpress_tools=agentpress_tools,
+            skills=skills or [],
             is_active=True,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
@@ -271,6 +276,7 @@ class VersionService:
                     'mcp': version.configured_mcps,
                     'custom_mcp': normalized_custom_mcps
                 },
+                'skills': version.skills,
                 'triggers': triggers
             }
         }
@@ -428,6 +434,23 @@ class VersionService:
                 'old_value': v1.agentpress_tools[tool]
             })
         
+        v1_skills = set(v1.skills)
+        v2_skills = set(v2.skills)
+
+        for skill in v2_skills - v1_skills:
+            differences.append({
+                'field': f'skill.{skill}',
+                'type': 'added',
+                'new_value': True
+            })
+
+        for skill in v1_skills - v2_skills:
+            differences.append({
+                'field': f'skill.{skill}',
+                'type': 'removed',
+                'old_value': True
+            })
+        
         for tool in v1_tools & v2_tools:
             if v1.agentpress_tools[tool] != v2.agentpress_tools[tool]:
                 differences.append({
@@ -458,6 +481,7 @@ class VersionService:
             configured_mcps=version_to_restore.configured_mcps,
             custom_mcps=version_to_restore.custom_mcps,
             agentpress_tools=version_to_restore.agentpress_tools,
+            skills=version_to_restore.skills,
             model=version_to_restore.model,
             change_description=f"Rolled back to version {version_to_restore.version_name}"
         )
