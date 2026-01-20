@@ -15,12 +15,13 @@ from core.utils.config import config, EnvMode
 from core.utils.logger import logger
 
 class ToolManager:
-    def __init__(self, thread_manager: ThreadManager, project_id: str, thread_id: str, agent_config: Optional[dict] = None):
+    def __init__(self, thread_manager: ThreadManager, project_id: str, thread_id: str, agent_config: Optional[dict] = None, browser_id: Optional[str] = None):
         self.thread_manager = thread_manager
         self.project_id = project_id
         self.thread_id = thread_id
         self.agent_config = agent_config
         self.account_id = agent_config.get('account_id') if agent_config else None
+        self.browser_id = browser_id  # Browser extension ID from thread metadata
     
     def register_all_tools(self, agent_id: Optional[str] = None, disabled_tools: Optional[List[str]] = None, use_spark: bool = True):
         start = time.time()
@@ -99,7 +100,8 @@ class ToolManager:
             function_names=enabled_methods, 
             project_id=self.project_id, 
             thread_id=self.thread_id, 
-            thread_manager=self.thread_manager
+            thread_manager=self.thread_manager,
+            browser_id=self.browser_id,  # Pass browser extension ID
         )
         
         core_sandbox_tools = [
@@ -266,7 +268,8 @@ class ToolManager:
                 function_names=enabled_methods, 
                 project_id=self.project_id, 
                 thread_id=self.thread_id, 
-                thread_manager=self.thread_manager
+                thread_manager=self.thread_manager,
+                browser_id=self.browser_id,  # Pass browser extension ID
             )
     
     def _get_migrated_tools_config(self) -> dict:

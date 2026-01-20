@@ -37,6 +37,7 @@ import { useComposioToolkitIcon } from '@/hooks/composio/use-composio';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
+import { BrowserSelector } from '@/components/browser';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAccountState, accountStateSelectors } from '@/hooks/billing';
 import { isStagingMode, isLocalMode } from '@/lib/config';
@@ -197,6 +198,7 @@ interface IntegrationsDropdownProps {
   disabled: boolean;
   isAgentRunning: boolean;
   isFreeTier: boolean;
+  threadId: string | null;
   quickIntegrations: Array<{ id: string; name: string; slug: string }>;
   integrationIcons: Record<string, string | undefined>;
   onOpenRegistry: (slug: string | null) => void;
@@ -350,6 +352,7 @@ const IntegrationsDropdown = memo(function IntegrationsDropdown({
   disabled,
   isAgentRunning,
   isFreeTier,
+  threadId,
   quickIntegrations,
   integrationIcons,
   onOpenRegistry,
@@ -384,6 +387,13 @@ const IntegrationsDropdown = memo(function IntegrationsDropdown({
         </TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start" className="w-[320px] px-0 py-3 border-[1.5px] border-border rounded-2xl" sideOffset={6}>
+        {/* Browser Selector - only show when thread exists */}
+        {threadId && (
+          <div className="px-2 mb-2">
+            <BrowserSelector threadId={threadId} />
+          </div>
+        )}
+
         <div className="px-3 mb-3">
           <span className="text-xs font-medium text-muted-foreground pl-1">Integrations</span>
         </div>
@@ -1383,6 +1393,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           disabled={disabled}
           isAgentRunning={isAgentRunning}
           isFreeTier={isFreeTier ?? false}
+          threadId={threadId}
           quickIntegrations={quickIntegrations}
           integrationIcons={integrationIcons}
           onOpenRegistry={handleOpenRegistry}

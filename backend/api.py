@@ -45,6 +45,7 @@ import sys
 from core.triggers import api as triggers_api
 from core.services import api_keys_api
 from core.notifications import api as notifications_api
+from core.services.browser_extension import router as browser_extension_router
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
@@ -398,6 +399,7 @@ api_router.include_router(mcp_api.router)
 api_router.include_router(credentials_api.router, prefix="/secure-mcp")
 api_router.include_router(template_api.router, prefix="/templates")
 api_router.include_router(presentations_api.router, prefix="/presentation-templates")
+api_router.include_router(browser_extension_router)  # Browser extension WebSocket and REST endpoints
 
 api_router.include_router(transcription_api.router)
 
@@ -440,6 +442,10 @@ api_router.include_router(workflows_api.router)
 # Advanced Workflows integration bridge
 from core.advanced_workflows_bridge import router as advanced_workflows_router
 api_router.include_router(advanced_workflows_router)
+
+# Browser Extension WebSocket service
+# from core.services.browser_extension import router as browser_extension_router
+# api_router.include_router(browser_extension_router) # Redundant, already included above
 
 # Dev auth API (for local development only)
 from core.dev_auth_api import router as dev_auth_router

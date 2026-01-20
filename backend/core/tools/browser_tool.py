@@ -11,6 +11,14 @@ import traceback
 from PIL import Image
 from core.utils.config import config
 
+# Browser extension support
+from core.services.browser_extension import (
+    session_manager,
+    send_browser_command,
+    CommandResult,
+)
+from core.tools.browser_ai import browser_interpreter
+
 @tool_metadata(
     display_name="Web Browser",
     description="Browse websites, click buttons, fill forms, and extract information from web pages",
@@ -76,9 +84,233 @@ class BrowserTool(SandboxToolsBase):
     """
 
 
-    def __init__(self, project_id: str, thread_id: str, thread_manager: ThreadManager):
+    def __init__(self, project_id: str, thread_id: str, thread_manager: ThreadManager, browser_id: str = None):
         super().__init__(project_id, thread_manager)
         self.thread_id = thread_id
+        self.browser_id = browser_id  # Extension browser ID from thread metadata
+        
+        # Debug: Log browser tool initialization
+        logger.info(f"🚨 [BROWSER_ROUTER] BrowserTool.__init__ called with browser_id={browser_id}")
+        logger.info(f"🚨 [BROWSER_ROUTER] thread_id={thread_id}, project_id={project_id}")
+        if browser_id:
+            logger.info(f"🌐 [BROWSER_TOOL] ✅ Initialized with extension browser_id={browser_id}")
+        else:
+            logger.warning(f"🌐 [BROWSER_TOOL] ⚠️ Initialized WITHOUT browser extension (browser_id=None)")
+    
+    async def _is_extension_available(self) -> bool:
+        """Check if browser extension is configured and online."""
+        logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() called. self.browser_id={self.browser_id}")
+        
+        if not self.browser_id:
+            logger.warning(f"🚨 [BROWSER_ROUTER] No browser_id → will use SANDBOX")
+            return False
+        
+        is_online = await session_manager.is_browser_online(self.browser_id)
+        logger.info(f"🚨 [BROWSER_ROUTER] is_browser_online({self.browser_id}) returned: {is_online}")
+        
+        if is_online:
+            logger.info(f"🌐 [BROWSER_TOOL] ✅ Extension is ONLINE → routing to EXTENSION")
+        else:
+            logger.warning(f"🌐 [BROWSER_TOOL] ❌ Extension is OFFLINE → routing to SANDBOX")
+        return is_online
+    
+    async def _execute_via_extension(self, action: str, params: dict = None) -> ToolResult:
+        """
+        Execute a browser action via the connected extension.
+        
+        This method mirrors _execute_stagehand_api behavior exactly:
+        - Saves browser_state message to thread
+        - Returns clean_result with message_id
+        - Uses consistent key names (image_url, not screenshot_url)
+        
+        Args:
+            action: Command action (navigate, act, extract, screenshot)
+            params: Command parameters
+            
+        Returns:
+            ToolResult with success/failure status, or None to signal fallback
+        """
+        logger.info(f"🌐 [BROWSER_TOOL] Executing via extension: action={action}, browser_id={self.browser_id}")
+        logger.debug(f"🌐 [BROWSER_TOOL] Extension command params: {params}")
+        
+        try:
+            import time
+            if action in ["act", "extract"]:
+                # Extension doesn't have AI capabilities locally, use Backend AI Interpreter
+                logger.info(f"🌐 [BROWSER_TOOL] Extension: AI-powered {action} requested. Fetching current page state...")
+                
+                # 1. Get current state (screenshot + URL)
+                state_res = await send_browser_command(
+                    browser_id=self.browser_id,
+                    action="screenshot",
+                    params={},
+                )
+                
+                if state_res is None or not state_res.success:
+                    logger.warning(f"🌐 [BROWSER_TOOL] Failed to get state for AI {action}, falling back to sandbox")
+                    return None
+                
+                screenshot_base64 = state_res.data.get("screenshot_base64")
+                current_url = state_res.data.get("url", "")
+                
+                if not screenshot_base64:
+                    logger.warning(f"🌐 [BROWSER_TOOL] No screenshot received for AI {action}, falling back to sandbox")
+                    return None
+                
+                # 2. Interpret command via Backend AI
+                instruction = params.get("action") if action == "act" else params.get("instruction")
+                
+                if action == "act":
+                    # For 'act', we might need a small loop, but for a single ToolResult 
+                    # we will do one step and return the result.
+                    ai_result = await browser_interpreter.interpret_act(instruction, screenshot_base64, current_url)
+                    logger.info(f"🌐 [BROWSER_TOOL] AI interpreted act: {ai_result.get('action')} - {ai_result.get('thought')}")
+                    
+                    if ai_result["action"] == "complete":
+                        result_data = {
+                            "success": True,
+                            "message": f"Instruction completed: {ai_result.get('thought')}",
+                            "url": current_url,
+                            "screenshot": screenshot_base64
+                        }
+                    elif ai_result["action"] in ["click", "type", "navigate", "scroll_down", "scroll_up"]:
+                        # 3. Execute primitive action via extension
+                        exec_res = await send_browser_command(
+                            browser_id=self.browser_id,
+                            action=ai_result["action"],
+                            params=ai_result.get("params", {}),
+                        )
+                        if exec_res and exec_res.success:
+                            # Extension returns current page state after action
+                            result_data = exec_res.data or {}
+                            result_data["success"] = True
+                            result_data["action_taken"] = f"{ai_result['action']} ({ai_result.get('thought')})"
+                        else:
+                            error_msg = exec_res.error if exec_res else "Command failed"
+                            return self.fail_response(f"Extension primitive action failed: {error_msg}")
+                    else:
+                        return self.fail_response(f"AI could not resolve action: {ai_result.get('error', 'unknown error')}")
+                
+                else:  # extract
+                    extract_data = await browser_interpreter.interpret_extract(instruction, screenshot_base64, current_url)
+                    result_data = {
+                        "success": True,
+                        "data": extract_data,
+                        "url": current_url,
+                        "screenshot": screenshot_base64
+                    }
+                
+                # Now we have result_data, proceed to processing like regular extension results
+                result = CommandResult(
+                    type="result",
+                    id="ai_internal",
+                    session_id="ai_internal",
+                    success=True,
+                    data=result_data,
+                    timestamp=int(time.time() * 1000)
+                )
+
+            else:
+                # Regular command execution (navigate, screenshot)
+                result = await send_browser_command(
+                    browser_id=self.browser_id,
+                    action=action,
+                    params=params or {},
+                )
+            
+            if result is None:
+                # Extension went offline, fall back to sandbox
+                logger.warning(f"🌐 [BROWSER_TOOL] send_browser_command returned None → extension offline, falling back to sandbox")
+                return None  # Signal to caller to use sandbox fallback
+            
+            logger.info(f"🌐 [BROWSER_TOOL] Extension result received: success={result.success}, has_data={result.data is not None}")
+            
+            if result.success:
+                # Build response data matching sandbox format
+                response_data = result.data or {}
+                
+                # Process screenshot if present (extension sends base64)
+                if "screenshot" in response_data:
+                    screenshot_base64 = response_data["screenshot"]
+                    is_valid, error_msg = self._validate_base64_image(screenshot_base64)
+                    if is_valid:
+                        image_url = await upload_base64_image(
+                            base64_data=screenshot_base64,
+                            project_id=self.project_id,
+                            thread_id=self.thread_id,
+                        )
+                        response_data["image_url"] = image_url  # Use same key as sandbox
+                        logger.debug(f"Extension screenshot uploaded: {image_url}")
+                    else:
+                        response_data["image_validation_error"] = error_msg
+                    # Remove raw base64 to avoid storing large data
+                    del response_data["screenshot"]
+                
+                # Also handle if extension sends screenshot_url directly
+                if "screenshot_url" in response_data and "image_url" not in response_data:
+                    response_data["image_url"] = response_data.pop("screenshot_url")
+                
+                # Add input params for browser_state record (like sandbox)
+                response_data["input"] = params
+                
+                # Save browser_state message to thread (exactly like sandbox)
+                added_message = await self.thread_manager.add_message(
+                    thread_id=self.thread_id,
+                    type="browser_state",
+                    content=response_data,
+                    is_llm_message=False
+                )
+                
+                # Build clean_result matching sandbox format EXACTLY
+                clean_result = {
+                    "success": response_data.get("success", True),
+                    "message": response_data.get("message", f"Browser {action} completed successfully")
+                }
+                
+                # Include standard fields (like sandbox)
+                if response_data.get("url"):
+                    clean_result["url"] = response_data["url"]
+                if response_data.get("title"):
+                    clean_result["title"] = response_data["title"]
+                if response_data.get("action"):
+                    clean_result["action"] = response_data["action"]
+                if response_data.get("image_url"):
+                    clean_result["image_url"] = response_data["image_url"]
+                
+                # Include screenshot error context (like sandbox)
+                if response_data.get("image_validation_error"):
+                    clean_result["screenshot_issue"] = f"Screenshot processing issue: {response_data['image_validation_error']}"
+                if response_data.get("image_upload_error"):
+                    clean_result["screenshot_issue"] = f"Screenshot upload issue: {response_data['image_upload_error']}"
+                
+                # Include message_id for agent reference (critical for parity)
+                clean_result["message_id"] = added_message.get("message_id")
+                
+                return self.success_response(clean_result)
+            else:
+                # Extension returned failure - still save to thread for debugging
+                error_data = {
+                    "success": False,
+                    "error": result.error,
+                    "input": params,
+                }
+                await self.thread_manager.add_message(
+                    thread_id=self.thread_id,
+                    type="browser_state",
+                    content=error_data,
+                    is_llm_message=False
+                )
+                return self.fail_response(f"Browser action failed: {result.error}")
+                
+        except TimeoutError as e:
+            # Timeout should trigger fallback to sandbox for resilience
+            logger.warning(f"Extension command timed out for browser {self.browser_id}, falling back to sandbox")
+            return None  # Signal fallback instead of failing
+        except Exception as e:
+            # Log error but allow fallback to sandbox for resilience
+            logger.warning(f"Extension command error for browser {self.browser_id}: {e}, falling back to sandbox")
+            logger.debug(traceback.format_exc())
+            return None  # Signal fallback instead of failing
     
     def _validate_base64_image(self, base64_string: str, max_size_mb: int = 10) -> tuple[bool, str]:
         """
@@ -396,8 +628,25 @@ class BrowserTool(SandboxToolsBase):
         }
     })
     async def browser_navigate_to(self, url: str) -> ToolResult:
-        """Navigate to a URL using Stagehand."""
-        logger.debug(f"Browser navigating to: {url}")
+        """Navigate to a URL using Stagehand or browser extension."""
+        logger.info(f"🚨 [BROWSER_ROUTER] browser_navigate_to() called with url={url}")
+        logger.info(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
+        
+        # Try extension first if available
+        extension_available = await self._is_extension_available()
+        logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
+        
+        if extension_available:
+            logger.info(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
+            result = await self._execute_via_extension("navigate", {"url": url})
+            if result is not None:
+                logger.info(f"🚨 [BROWSER_ROUTER] Extension returned result: {result}")
+                return result
+            # DEBUG: For now, FAIL instead of falling back to sandbox
+            logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
+            return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
+        
+        logger.info(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
         return await self._execute_stagehand_api("navigate", {"url": url})
     
     @openapi_schema({
@@ -434,8 +683,31 @@ class BrowserTool(SandboxToolsBase):
         }
     })
     async def browser_act(self, action: str, variables: dict = None, iframes: bool = False, filePath: dict = None) -> ToolResult:
-        """Perform any browser action using Stagehand."""
-        logger.debug(f"Browser acting: {action} (variables={'***' if variables else None}, iframes={iframes}), filePath={filePath}")
+        """Perform any browser action using Stagehand or browser extension."""
+        logger.info(f"🚨 [BROWSER_ROUTER] browser_act() called with action={action}")
+        logger.info(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
+        
+        # Try extension first if available
+        extension_available = await self._is_extension_available()
+        logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
+        
+        if extension_available:
+            logger.info(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
+            params = {
+                "action": action,
+                "variables": variables,
+                "iframes": iframes,
+                "filePath": filePath,
+            }
+            result = await self._execute_via_extension("act", params)
+            if result is not None:
+                logger.info(f"🚨 [BROWSER_ROUTER] Extension returned result")
+                return result
+            # DEBUG: For now, FAIL instead of falling back to sandbox
+            logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
+            return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
+        
+        logger.info(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
         params = {"action": action, "iframes": iframes, "variables": variables}
         if filePath:
             params["filePath"] = filePath
@@ -465,8 +737,17 @@ class BrowserTool(SandboxToolsBase):
         }
     })
     async def browser_extract_content(self, instruction: str, iframes: bool = False) -> ToolResult:
-        """Extract structured content from the current page using Stagehand."""
+        """Extract structured content from the current page using Stagehand or browser extension."""
         logger.debug(f"Browser extracting: {instruction} (iframes={iframes})")
+        
+        # Try extension first if available
+        if await self._is_extension_available():
+            params = {"instruction": instruction, "iframes": iframes}
+            result = await self._execute_via_extension("extract", params)
+            if result is not None:
+                return result
+            # Fall through to sandbox if extension failed
+        
         params = {"instruction": instruction, "iframes": iframes}
         return await self._execute_stagehand_api("extract", params)
     
@@ -490,6 +771,14 @@ class BrowserTool(SandboxToolsBase):
         }
     })
     async def browser_screenshot(self, name: str = "screenshot") -> ToolResult:
-        """Take a screenshot using Stagehand."""
+        """Take a screenshot using Stagehand or browser extension."""
         logger.debug(f"Browser taking screenshot: {name}")
+        
+        # Try extension first if available
+        if await self._is_extension_available():
+            result = await self._execute_via_extension("screenshot", {"name": name})
+            if result is not None:
+                return result
+            # Fall through to sandbox if extension failed
+        
         return await self._execute_stagehand_api("screenshot", {"name": name})

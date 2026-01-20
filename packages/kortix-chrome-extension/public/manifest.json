@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Kortix AI Browser Operator",
+  "name": "Kortix Browser Operator",
   "version": "1.0.0",
-  "description": "Enable Kortix AI agents to control your browser and extract data with a premium interface",
+  "description": "Connect your browser to your Kortix Workers to help you complete everyday tasks that require your personal context. Enable full browser internet access for Kortix Community Edition.",
   "permissions": [
     "scripting",
     "tabs",
+    "tabGroups",
     "storage",
     "activeTab",
     "webRequest"
@@ -19,15 +20,33 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_start",
       "all_frames": true
+    },
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "https://suna.syhc.dev/*",
+        "https://kortix.com/*",
+        "https://*.kortix.com/*",
+        "https://*.syhc.dev/*"
+      ],
+      "js": [
+        "connect-bridge.js"
+      ],
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Kortix AI Browser Operator",
+    "default_title": "Kortix Browser Operator",
     "default_icon": {
       "16": "images/icon-16.png",
       "48": "images/icon-48.png",
@@ -41,8 +60,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["content.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

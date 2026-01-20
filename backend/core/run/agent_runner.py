@@ -29,6 +29,7 @@ class AgentRunner:
         self.cancellation_event = None
         self.turn_number = 0
         self.mcp_wrapper_instance = None
+        self.browser_id = None  # Browser extension ID from thread metadata
     
     async def setup_bootstrap(self):
         from core.utils.config import config
@@ -84,6 +85,15 @@ class AgentRunner:
         
         if config.ENABLE_BOOTSTRAP_MODE:
             self.enrichment_task = asyncio.create_task(self.setup_enrichment())
+        
+        # Fetch browser extension ID from thread metadata for browser tool routing
+        try:
+            from core.services.browser_extension import get_thread_browser_id
+            self.browser_id = await get_thread_browser_id(self.config.thread_id)
+            if self.browser_id:
+                logger.info(f"🌐 Browser extension configured for thread: {self.browser_id}")
+        except Exception as e:
+            logger.debug(f"Could not fetch browser_id (non-fatal): {e}")
         
         logger.debug(f"⏱️ [TIMING] setup_bootstrap() total: {elapsed_ms:.1f}ms")
     
@@ -279,12 +289,27 @@ class AgentRunner:
         if not sandbox_info.get('id'):
             logger.debug(f"No sandbox found for project {self.config.project_id}; will create lazily when needed")
         
+        # Fetch browser extension ID from thread metadata for browser tool routing
+        try:
+            from core.services.browser_extension import get_thread_browser_id
+            self.browser_id = await get_thread_browser_id(self.config.thread_id)
+            if self.browser_id:
+                logger.info(f"🌐 Browser extension configured for thread: {self.browser_id}")
+        except Exception as e:
+            logger.debug(f"Could not fetch browser_id (non-fatal): {e}")
+        
         logger.debug(f"⏱️ [TIMING] setup() total: {(time.time() - setup_start) * 1000:.1f}ms")
     
     def setup_tools(self):
         start = time.time()
         
-        tool_manager = ToolManager(self.thread_manager, self.config.project_id, self.config.thread_id, self.config.agent_config)
+        tool_manager = ToolManager(
+            self.thread_manager, 
+            self.config.project_id, 
+            self.config.thread_id, 
+            self.config.agent_config,
+            browser_id=self.browser_id,  # Pass browser extension ID for local browser routing
+        )
         
         agent_id = None
         if self.config.agent_config:

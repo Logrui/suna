@@ -23,41 +23,97 @@ import { Button } from '@/components/ui/button';
 import { ImageLoader } from './shared/ImageLoader';
 import { JsonViewer } from './shared/JsonViewer';
 import { KortixComputerHeader } from '../kortix-computer/KortixComputerHeader';
+import { Monitor } from 'lucide-react';
+import { MyBrowserModal } from '@/components/browser/my-browser-modal';
 
 interface BrowserHeaderProps {
   isConnected: boolean;
   onRefresh?: () => void;
   viewToggle?: React.ReactNode;
+  url?: string;
+  title?: string;
+  /** If set, shows "My Browser" mode with computer name badge */
+  browserName?: string;
+  /** Thread ID for browser selection modal */
+  threadId?: string;
+  /** Current browser ID for browser selection modal */
+  browserId?: string;
 }
 
-export const BrowserHeader: React.FC<BrowserHeaderProps> = ({ isConnected, onRefresh, viewToggle }) => {
+export const BrowserHeader: React.FC<BrowserHeaderProps> = ({
+  isConnected,
+  onRefresh,
+  viewToggle,
+  url,
+  title,
+  browserName,
+  threadId,
+  browserId,
+}) => {
+  const [isBrowserModalOpen, setIsBrowserModalOpen] = useState(false);
+  const isMyBrowser = !!browserName;
+  const headerTitle = isMyBrowser ? "My Browser" : (title || "Browser");
+
   return (
-    <KortixComputerHeader
-      icon={Globe}
-      title="Browser"
-      actions={
-        <>
-          <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500/80 animate-pulse' : 'bg-gray-400'}`}></div>
-            <span className="sm:inline">Live Preview</span>
-          </Badge>
-          {viewToggle}
-          {isConnected && onRefresh && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRefresh}
-              className="h-7 w-7 p-0 hover:bg-muted rounded-xl"
-              title="Refresh browser view"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </>
-      }
-    />
+    <>
+      <KortixComputerHeader
+        icon={Globe}
+        title={headerTitle}
+        actions={
+          <>
+            {/* Computer name badge - clickable to open browser selector */}
+            {isMyBrowser && (
+              <Badge
+                variant="secondary"
+                className="gap-1.5 px-2 py-1 rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                onClick={() => setIsBrowserModalOpen(true)}
+                title="Click to change browser"
+              >
+                <Monitor className="h-3 w-3" />
+                <span className="text-xs font-medium">{browserName}</span>
+              </Badge>
+            )}
+            {url && (
+              <div className="hidden md:flex items-center px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 max-w-[300px]">
+                <span className="text-xs text-zinc-500 truncate">{url}</span>
+              </div>
+            )}
+            <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500/80 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span className="sm:inline">{isMyBrowser ? 'Live Extension' : 'Live Preview'}</span>
+            </Badge>
+            {viewToggle}
+            <div className="flex items-center gap-1">
+              {isConnected && onRefresh && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRefresh}
+                  className="h-7 w-7 p-0 hover:bg-muted rounded-xl"
+                  title="Refresh browser view"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </>
+        }
+      />
+
+      {/* Browser selection modal */}
+      {threadId && (
+        <MyBrowserModal
+          open={isBrowserModalOpen}
+          onOpenChange={setIsBrowserModalOpen}
+          threadId={threadId}
+          currentBrowserId={browserId}
+        />
+      )}
+    </>
   );
 };
+
+
 
 export function BrowserToolView({
   toolCall,
@@ -114,7 +170,7 @@ export function BrowserToolView({
 
     if (toolResult?.output) {
       let output = toolResult.output;
-      
+
       if (typeof output === 'string') {
         try {
           const parsed = JSON.parse(output);
@@ -129,7 +185,7 @@ export function BrowserToolView({
           output = null;
         }
       }
-      
+
       if (output && typeof output === 'object' && output !== null) {
         if (output.image_url) {
           screenshotUrlFinal = String(output.image_url).trim().replace(/\?+$/, '');
@@ -137,14 +193,14 @@ export function BrowserToolView({
         if (output.message_id) {
           browserStateMessageId = String(output.message_id).trim();
         }
-        
+
         result = Object.fromEntries(
-          Object.entries(output).filter(([k]) => 
-            k !== 'message_id' && 
+          Object.entries(output).filter(([k]) =>
+            k !== 'message_id' &&
             k !== 'image_url'
           )
         ) as Record<string, any>;
-        
+
         if (Object.keys(result).length === 0 && output.message) {
           result = { message: output.message };
         }
@@ -166,7 +222,7 @@ export function BrowserToolView({
           browserStateMessage.content,
           {},
         );
-        
+
         if (browserStateContent?.image_url) {
           screenshotUrlFinal = String(browserStateContent.image_url).trim().replace(/\?+$/, '');
         }
@@ -281,12 +337,12 @@ export function BrowserToolView({
           <div className='flex items-center gap-2'>
             {!isRunning && (
               <Badge
-              variant="secondary"
-              className={
-                isSuccess
-                ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
-                : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
-              }
+                variant="secondary"
+                className={
+                  isSuccess
+                    ? "bg-gradient-to-b from-emerald-200 to-emerald-100 text-emerald-700 dark:from-emerald-800/50 dark:to-emerald-900/60 dark:text-emerald-300"
+                    : "bg-gradient-to-b from-rose-200 to-rose-100 text-rose-700 dark:from-rose-800/50 dark:to-rose-900/60 dark:text-rose-300"
+                }
               >
                 {isSuccess ? (
                   <CheckCircle className="h-3.5 w-3.5 mr-1" />
@@ -314,7 +370,7 @@ export function BrowserToolView({
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 flex-1 overflow-hidden relative" style={{ height: 'calc(100vh - 150px)'}}>
+      <CardContent className="p-0 flex-1 overflow-hidden relative" style={{ height: 'calc(100vh - 150px)' }}>
         <div className="flex-1 flex h-full items-center overflow-scroll bg-white dark:bg-black">
           {showContext && (result || parameters) ? (
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -330,38 +386,38 @@ export function BrowserToolView({
               />}
             </div>
           )
-          : screenshotUrlFinal ? (
-            renderScreenshot()
-          ) : (
-            <div className="p-8 flex flex-col items-center justify-center w-full bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900 text-zinc-700 dark:text-zinc-400 min-h-600">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-purple-100 to-purple-50 shadow-inner dark:from-purple-800/40 dark:to-purple-900/60">
-                <MonitorPlay className="h-10 w-10 text-purple-400 dark:text-purple-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
-                {isRunning ? 'Browser action in progress' : 'Browser action completed'}
-              </h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 text-center">
-                {isRunning 
-                  ? 'Browser action in progress...'
-                  : 'Screenshot will appear here when available.'}
-              </p>
-              {url && (
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow"
-                    asChild
-                  >
-                    <a href={url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                      Visit URL
-                    </a>
-                  </Button>
+            : screenshotUrlFinal ? (
+              renderScreenshot()
+            ) : (
+              <div className="p-8 flex flex-col items-center justify-center w-full bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900 text-zinc-700 dark:text-zinc-400 min-h-600">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-purple-100 to-purple-50 shadow-inner dark:from-purple-800/40 dark:to-purple-900/60">
+                  <MonitorPlay className="h-10 w-10 text-purple-400 dark:text-purple-600" />
                 </div>
-              )}
-            </div>
-          )}
+                <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
+                  {isRunning ? 'Browser action in progress' : 'Browser action completed'}
+                </h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 text-center">
+                  {isRunning
+                    ? 'Browser action in progress...'
+                    : 'Screenshot will appear here when available.'}
+                </p>
+                {url && (
+                  <div className="mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow"
+                      asChild
+                    >
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                        Visit URL
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
         </div>
       </CardContent>
 

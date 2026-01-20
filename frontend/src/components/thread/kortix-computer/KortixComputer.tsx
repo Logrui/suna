@@ -12,6 +12,7 @@ import { ToolView } from '../tool-views/wrapper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HealthCheckedVncIframe } from '../HealthCheckedVncIframe';
 import { BrowserHeader } from '../tool-views/BrowserToolView';
+import { useBrowserScreenshot } from '@/hooks/browser/use-user-browsers';
 import { useTranslations } from 'next-intl';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { useDocumentModalStore } from '@/stores/use-document-modal-store';
@@ -68,6 +69,10 @@ interface KortixComputerProps {
   streamingText?: string;
   sandboxId?: string;
   projectId?: string;
+  threadId?: string;
+  browserId?: string;
+  /** Name of the connected browser (for display in header) */
+  browserName?: string;
   sidePanelRef?: React.RefObject<any>;
 }
 
@@ -100,6 +105,9 @@ export const KortixComputer = memo(function KortixComputer({
   streamingText,
   sandboxId,
   projectId,
+  threadId,
+  browserId,
+  browserName,
   sidePanelRef,
 }: KortixComputerProps) {
   const t = useTranslations('thread');
@@ -137,6 +145,31 @@ export const KortixComputer = memo(function KortixComputer({
     currentPath,
     { enabled: !!effectiveSandboxIdForQuery && isMaximized }
   );
+
+  // --- Browser Extension Screenshot Logic ---
+  const [screenshotRefreshInterval, setScreenshotRefreshInterval] = useState<number | false>(2000);
+  const {
+    data: extensionScreenshot,
+    isLoading: isScreenshotLoading,
+    error: screenshotError,
+    refetch: refetchScreenshot
+  } = useBrowserScreenshot(browserId, {
+    enabled: !!browserId && activeView === 'browser',
+    refetchInterval: screenshotRefreshInterval,
+  });
+
+  const handleScreenshotRefresh = useCallback(async () => {
+    await refetchScreenshot();
+  }, [refetchScreenshot]);
+
+  useEffect(() => {
+    if (screenshotError) {
+      setScreenshotRefreshInterval(false);
+    } else {
+      setScreenshotRefreshInterval(2000);
+    }
+  }, [screenshotError]);
+  // ------------------------------------------
 
   const currentViewRef = useRef(activeView);
 
@@ -554,35 +587,81 @@ export const KortixComputer = memo(function KortixComputer({
   };
 
   const renderBrowserView = () => {
-    if (persistentVncIframe) {
-
-      return (
-        <div className="h-full flex flex-col overflow-hidden">
-          <BrowserHeader isConnected={true} onRefresh={handleVncRefresh} />
-          <div className="flex-1 overflow-hidden grid items-center">
-            {persistentVncIframe}
-          </div>
-        </div>
-      );
-    }
+    const isConnected = !!browserId ? !screenshotError && !!extensionScreenshot : !!persistentVncIframe;
+    const onRefresh = !!browserId ? handleScreenshotRefresh : handleVncRefresh;
 
     return (
       <div className="h-full flex flex-col overflow-hidden">
-        <BrowserHeader isConnected={false} />
-        <div className="flex-1 overflow-auto flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-zinc-900/50">
-          <div className="flex flex-col items-center space-y-4 max-w-sm text-center">
-            <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-200 dark:border-zinc-700">
-              <Globe className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
+        <BrowserHeader
+          isConnected={isConnected}
+          onRefresh={onRefresh}
+          url={browserId ? extensionScreenshot?.url : undefined}
+          title={browserId ? extensionScreenshot?.title : undefined}
+          browserName={browserName}
+          threadId={threadId}
+          browserId={browserId}
+        />
+
+        <div className="flex-1 overflow-hidden grid items-center bg-zinc-50 dark:bg-zinc-950/20 relative">
+          {browserId ? (
+            <AnimatePresence mode="wait">
+              {extensionScreenshot?.screenshot_base64 ? (
+                <motion.div
+                  key={extensionScreenshot.screenshot_base64}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full h-full flex items-center justify-center p-4"
+                >
+                  <img
+                    src={`data:image/png;base64,${extensionScreenshot.screenshot_base64}`}
+                    alt="Browser extension view"
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-border/50"
+                  />
+                  <div className="absolute top-8 right-8 flex items-center space-x-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 z-10 transition-opacity">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Live Extension</span>
+                  </div>
+                </motion.div>
+              ) : screenshotError ? (
+                <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center border-2 border-red-200 dark:border-red-800/50">
+                    <Globe className="h-8 w-8 text-red-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-semibold">Connection Unavailable</h3>
+                    <p className="text-sm text-muted-foreground max-w-xs">
+                      Make sure your browser extension is active and the tab is connected.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <CircleDashed className="h-8 w-8 text-primary animate-spin" />
+                  <p className="text-sm text-muted-foreground">Connecting to extension...</p>
+                </div>
+              )}
+            </AnimatePresence>
+          ) : persistentVncIframe ? (
+            persistentVncIframe
+          ) : (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center border-2 border-zinc-200 dark:border-zinc-700 mb-4">
+                <Globe className="h-8 w-8 text-zinc-400 dark:text-zinc-500" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                  Browser not available
+                </h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-sm">
+                  {sandboxId || projectId
+                    ? "The sandbox browser will appear here once it finishes booting and tools are used."
+                    : "Connect a browser extension or create a sandbox to use the web browser."}
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                Browser not available
-              </h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                No active browser session available. The browser will appear here when a sandbox is created and Browser tools are used.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -892,4 +971,6 @@ export const KortixComputer = memo(function KortixComputer({
     </motion.div>
   );
 });
+
+
 

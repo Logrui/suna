@@ -47,13 +47,14 @@ import {
   useThreadAgent,
   useAgents,
 } from '@/hooks/agents/use-agents';
+import { useUserBrowsers } from '@/hooks/browser/use-user-browsers';
 import { AgentRunLimitBanner } from '@/components/thread/agent-run-limit-banner';
-import { 
-  useSelectedAgentId, 
-  useSetSelectedAgent, 
-  useInitializeFromAgents, 
-  useGetCurrentAgent, 
-  useIsSunaAgentFn 
+import {
+  useSelectedAgentId,
+  useSetSelectedAgent,
+  useInitializeFromAgents,
+  useGetCurrentAgent,
+  useIsSunaAgentFn
 } from '@/stores/agent-selection-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { threadKeys } from '@/hooks/threads/keys';
@@ -84,7 +85,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const { user } = useAuth();
   const isAuthenticated = !!user;
-  
+
   const isNewThread = searchParams?.get('new') === 'true';
 
   const [isSending, setIsSending] = useState(false);
@@ -95,8 +96,11 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const storeInitializeFromAgents = useInitializeFromAgents();
   const storeGetCurrentAgent = useGetCurrentAgent();
   const storeIsSunaAgentFn = useIsSunaAgentFn();
-  
+
   const agentsQuery = useAgents({}, { enabled: isAuthenticated && !isShared });
+
+  // Fetch user browsers to get browser name for display
+  const { data: browsersData } = useUserBrowsers();
 
   const selectedAgentId = isShared ? undefined : storeSelectedAgentId;
   const setSelectedAgent = isShared ? (() => { }) : storeSetSelectedAgent;
@@ -133,9 +137,9 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const removeQueuedMessage = useMessageQueueStore((state) => state.removeMessage);
   const clearQueue = useMessageQueueStore((state) => state.clearQueue);
   const allQueuedMessages = useMessageQueueStore((state) => state.queuedMessages);
-  
+
   // Filter messages for this thread using useMemo to avoid infinite loop
-  const queuedMessages = useMemo(() => 
+  const queuedMessages = useMemo(() =>
     allQueuedMessages.filter((msg) => msg.threadId === threadId),
     [allQueuedMessages, threadId]
   );
@@ -150,7 +154,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const [optimisticPrompt, setOptimisticPrompt] = useState<string | null>(null);
   const [showOptimisticUI, setShowOptimisticUI] = useState(false);
   const setStorePanelOpen = useSetIsSidePanelOpen();
-  
+
   const allOptimisticFiles = useOptimisticFilesStore((state) => state.files);
   const updateFileStatus = useOptimisticFilesStore((state) => state.updateFileStatus);
   const clearOptimisticFiles = useOptimisticFilesStore((state) => state.clearFilesForThread);
@@ -160,7 +164,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   );
   const [optimisticFilesUploading, setOptimisticFilesUploading] = useState(false);
   const optimisticFilesUploadedRef = useRef(false);
-  
+
   const {
     messages,
     setMessages,
@@ -182,10 +186,10 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     // Only actively poll for agent when: new thread + haven't found agent yet
     waitingForAgent: isNewThread && !hasDataLoaded.current,
   });
-  
+
   const threadStatus = threadQuery.data?.status;
   const threadInitializationError = threadQuery.data?.initialization_error;
-  
+
   const isThreadInitializing = false;
 
   const {
@@ -205,7 +209,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     handleSidePanelNavigate,
     userClosedPanelRef,
   } = useThreadToolCalls(messages, setLeftSidebarOpen, agentStatus, compact);
-  
+
   if (isNewThread && !optimisticPrompt) {
     try {
       const stored = sessionStorage.getItem('optimistic_prompt');
@@ -223,7 +227,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       // SessionStorage access error - silently fail
     }
   }
-  
+
   // Stop polling only when we have confirmed the agent is running (agentRunId exists)
   // This prevents the race condition where polling stops before the agent is detected
   useEffect(() => {
@@ -240,19 +244,19 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       }
     }
   }, [isNewThread, agentRunId]);
-  
+
   // Hide optimistic UI only when we have both agentRunId AND initialLoadCompleted
   // This ensures the stream is ready before transitioning
-  const shouldHideOptimisticUI = isNewThread 
+  const shouldHideOptimisticUI = isNewThread
     ? (agentRunId && initialLoadCompleted)
     : ((agentRunId || messages.length > 0 || threadStatus === 'ready') && initialLoadCompleted);
-  
+
   useEffect(() => {
     if (shouldHideOptimisticUI && showOptimisticUI) {
       setShowOptimisticUI(false);
     }
   }, [shouldHideOptimisticUI, showOptimisticUI]);
-  
+
   const effectivePanelOpen = isSidePanelOpen || (isNewThread && showOptimisticUI);
 
   const handleSidePanelClose = useCallback(() => {
@@ -322,7 +326,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   // This prevents infinite polling if the agent fails to start
   useEffect(() => {
     if (!isNewThread || hasDataLoaded.current || !showOptimisticUI) return;
-    
+
     const timeoutId = setTimeout(() => {
       if (!hasDataLoaded.current && showOptimisticUI) {
         console.warn('[ThreadComponent] Polling timeout reached, no agent detected after 30s');
@@ -339,7 +343,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         toast.error('Failed to start the conversation. Please try again.');
       }
     }, 30000); // 30 second timeout
-    
+
     return () => clearTimeout(timeoutId);
   }, [isNewThread, showOptimisticUI]);
 
@@ -379,7 +383,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       pendingFiles.forEach((f) => updateFileStatus(f.id, 'uploading'));
 
       const files = pendingFiles.map((f) => f.file);
-      
+
       try {
         await uploadPendingFilesToProject(files, projectId, (fileIndex, status, error) => {
           const file = pendingFiles[fileIndex];
@@ -387,7 +391,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             updateFileStatus(file.id, status, error);
           }
         });
-        
+
         setTimeout(() => {
           clearOptimisticFiles(threadId);
           sessionStorage.removeItem('optimistic_files');
@@ -653,12 +657,12 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const { appendOutput, markComplete } = useToolStreamStore();
   const processSpreadsheetOperation = useProcessStreamOperation();
-  
-  const handleToolOutputStream = useCallback((data: { 
-    tool_call_id: string; 
-    tool_name: string; 
-    output: string; 
-    is_final: boolean; 
+
+  const handleToolOutputStream = useCallback((data: {
+    tool_call_id: string;
+    tool_name: string;
+    output: string;
+    is_final: boolean;
   }) => {
     if (data.tool_name === 'spreadsheet' && data.output) {
       try {
@@ -669,7 +673,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       } catch (e) {
       }
     }
-    
+
     if (data.output) {
       appendOutput(data.tool_call_id, data.output);
     }
@@ -711,7 +715,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
       // Message queue feature flag - when disabled, don't queue messages while agent is running
       const ENABLE_MESSAGE_QUEUE = false;
-      
+
       // Check if agent is running - if so, queue the message instead (only if feature is enabled)
       if (ENABLE_MESSAGE_QUEUE && (agentStatus === 'running' || agentStatus === 'connecting')) {
         console.log('[ThreadComponent] Agent is running, queueing message:', { message, options, agentStatus });
@@ -720,12 +724,12 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agent_id: selectedAgentId,
         });
         console.log('[ThreadComponent] Queued message ID:', queuedId);
-        
+
         // Clear the input - the queue panel will show the message
         chatInputRef.current?.setValue('');
         return;
       }
-      
+
       // If agent is running and queue is disabled, don't do anything (keep text in input)
       if (agentStatus === 'running' || agentStatus === 'connecting') {
         return;
@@ -933,7 +937,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       initialLayoutAppliedRef.current = true;
     }
   }, [setLeftSidebarOpen]);
-  
+
   useEffect(() => {
     if (initialLoadCompleted && !initialPanelOpenAttempted) {
       setInitialPanelOpenAttempted(true);
@@ -1158,7 +1162,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const optimisticMessages: UnifiedMessage[] = useMemo(() => {
     if (!showOptimisticUI || !optimisticPrompt) return [];
-    
+
     return [{
       message_id: 'optimistic-user',
       thread_id: threadId,
@@ -1176,7 +1180,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const displayStreamHookStatus = showOptimisticUI ? 'connecting' : streamHookStatus;
   const displayStreamingText = showOptimisticUI ? '' : streamingTextContent;
   const displayProjectName = showOptimisticUI ? 'New Conversation' : projectName;
-  
+
   if (!hasDataLoaded.current && !showOptimisticUI && (!initialLoadCompleted || isLoading || isThreadInitializing)) {
     return <ThreadSkeleton isSidePanelOpen={isSidePanelOpen} compact={compact} initializingMessage={
       isThreadInitializing ? 'Setting up your conversation...' : undefined
@@ -1192,16 +1196,16 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         project={project}
         sandboxId={sandboxId}
         isSidePanelOpen={false}
-        onToggleSidePanel={() => {}}
-        onProjectRenamed={() => {}}
-        onViewFiles={() => {}}
+        onToggleSidePanel={() => { }}
+        onProjectRenamed={() => { }}
+        onViewFiles={() => { }}
         toolCalls={[]}
         messages={[]}
         externalNavIndex={0}
         agentStatus="idle"
         currentToolIndex={0}
-        onSidePanelNavigate={() => {}}
-        onSidePanelClose={() => {}}
+        onSidePanelNavigate={() => { }}
+        onSidePanelClose={() => { }}
         renderAssistantMessage={() => <></>}
         renderToolResult={() => <></>}
         isLoading={false}
@@ -1210,7 +1214,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         variant={isShared ? 'shared' : 'default'}
         leftSidebarState={leftSidebarState}
       >
-        <ThreadError 
+        <ThreadError
           error={threadInitializationError || "Thread initialization failed"}
         />
       </ThreadLayout>
@@ -1257,16 +1261,16 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           project={showOptimisticUI ? null : project}
           sandboxId={showOptimisticUI ? null : sandboxId}
           isSidePanelOpen={effectivePanelOpen}
-          onToggleSidePanel={showOptimisticUI ? () => {} : toggleSidePanel}
+          onToggleSidePanel={showOptimisticUI ? () => { } : toggleSidePanel}
           onProjectRenamed={handleProjectRenamed}
-          onViewFiles={showOptimisticUI ? () => {} : handleOpenFileViewer}
+          onViewFiles={showOptimisticUI ? () => { } : handleOpenFileViewer}
           toolCalls={showOptimisticUI ? [] : toolCalls}
           messages={displayMessages as ApiMessageType[]}
           externalNavIndex={showOptimisticUI ? 0 : externalNavIndex}
           agentStatus={displayAgentStatus}
           currentToolIndex={showOptimisticUI ? 0 : currentToolIndex}
-          onSidePanelNavigate={showOptimisticUI ? () => {} : handleSidePanelNavigate}
-          onSidePanelClose={showOptimisticUI ? () => {} : handleSidePanelClose}
+          onSidePanelNavigate={showOptimisticUI ? () => { } : handleSidePanelNavigate}
+          onSidePanelClose={showOptimisticUI ? () => { } : handleSidePanelClose}
           renderAssistantMessage={toolViewAssistant}
           renderToolResult={toolViewResult}
           isLoading={showOptimisticUI ? false : (!initialLoadCompleted || isLoading)}
@@ -1288,8 +1292,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
                 streamingTextContent={isShared ? '' : displayStreamingText}
                 streamingToolCall={isShared ? playback.playbackState.currentToolCall : (showOptimisticUI ? undefined : streamingToolCall)}
                 agentStatus={displayAgentStatus}
-                handleToolClick={showOptimisticUI ? () => {} : handleToolClick}
-                handleOpenFileViewer={showOptimisticUI ? () => {} : handleOpenFileViewer}
+                handleToolClick={showOptimisticUI ? () => { } : handleToolClick}
+                handleOpenFileViewer={showOptimisticUI ? () => { } : handleOpenFileViewer}
                 readOnly={isShared}
                 visibleMessages={isShared ? playback.playbackState.visibleMessages : undefined}
                 streamingText={isShared ? playback.playbackState.streamingText : ''}
@@ -1312,7 +1316,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             <div className="flex-shrink-0 border-t border-border/20 p-4">
               <ChatInput
                 ref={chatInputRef}
-                onSubmit={showOptimisticUI ? () => {} : handleSubmitMessage}
+                onSubmit={showOptimisticUI ? () => { } : handleSubmitMessage}
                 placeholder={t('describeWhatYouNeed')}
                 loading={showOptimisticUI ? false : isSending}
                 disabled={showOptimisticUI || isSending}
@@ -1362,19 +1366,19 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           creditsExhausted={creditsExhausted}
         />
 
-      {agentLimitData && (
-        <AgentRunLimitBanner
-          open={showAgentLimitBanner}
-          onOpenChange={(open) => {
-            setShowAgentLimitBanner(open);
-            if (!open) {
-              setAgentLimitData(null);
-            }
-          }}
-          runningCount={agentLimitData.runningCount}
-          runningThreadIds={agentLimitData.runningThreadIds}
-        />
-      )}
+        {agentLimitData && (
+          <AgentRunLimitBanner
+            open={showAgentLimitBanner}
+            onOpenChange={(open) => {
+              setShowAgentLimitBanner(open);
+              if (!open) {
+                setAgentLimitData(null);
+              }
+            }}
+            runningCount={agentLimitData.runningCount}
+            runningThreadIds={agentLimitData.runningThreadIds}
+          />
+        )}
       </>
     );
   }
@@ -1383,7 +1387,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     <div className={cn('mx-auto', isMobile ? 'w-full' : 'max-w-3xl')}>
       <ChatInput
         ref={chatInputRef}
-        onSubmit={showOptimisticUI ? () => {} : handleSubmitMessage}
+        onSubmit={showOptimisticUI ? () => { } : handleSubmitMessage}
         placeholder={t('describeWhatYouNeed')}
         loading={showOptimisticUI ? false : isSending}
         disabled={showOptimisticUI || isSending}
@@ -1423,16 +1427,16 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         project={showOptimisticUI ? null : project}
         sandboxId={showOptimisticUI ? null : sandboxId}
         isSidePanelOpen={effectivePanelOpen}
-        onToggleSidePanel={showOptimisticUI ? () => {} : toggleSidePanel}
+        onToggleSidePanel={showOptimisticUI ? () => { } : toggleSidePanel}
         onProjectRenamed={handleProjectRenamed}
-        onViewFiles={showOptimisticUI ? () => {} : handleOpenFileViewer}
+        onViewFiles={showOptimisticUI ? () => { } : handleOpenFileViewer}
         toolCalls={showOptimisticUI ? [] : toolCalls}
         messages={displayMessages as ApiMessageType[]}
         externalNavIndex={showOptimisticUI ? 0 : externalNavIndex}
         agentStatus={displayAgentStatus}
         currentToolIndex={showOptimisticUI ? 0 : currentToolIndex}
-        onSidePanelNavigate={showOptimisticUI ? () => {} : handleSidePanelNavigate}
-        onSidePanelClose={showOptimisticUI ? () => {} : handleSidePanelClose}
+        onSidePanelNavigate={showOptimisticUI ? () => { } : handleSidePanelNavigate}
+        onSidePanelClose={showOptimisticUI ? () => { } : handleSidePanelClose}
         renderAssistantMessage={toolViewAssistant}
         renderToolResult={toolViewResult}
         isLoading={showOptimisticUI ? false : (!initialLoadCompleted || isLoading)}
@@ -1445,14 +1449,23 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         leftSidebarState={leftSidebarState}
         streamingTextContent={isShared ? '' : displayStreamingText}
         streamingToolCall={isShared || showOptimisticUI ? undefined : streamingToolCall}
+        browserId={threadQuery.data?.metadata?.browser_id}
+        browserName={(() => {
+          const browserId = threadQuery.data?.metadata?.browser_id;
+          if (!browserId) return undefined;
+          // Note: browsers data comes from useUserBrowsers hook invoked earlier
+          const browser = browsersData?.find(b => b.id === browserId);
+          return browser?.name;
+        })()}
       >
+
         <ThreadContent
           messages={isShared ? playback.playbackState.visibleMessages : displayMessages}
           streamingTextContent={isShared ? '' : displayStreamingText}
           streamingToolCall={isShared ? playback.playbackState.currentToolCall : (showOptimisticUI ? undefined : streamingToolCall)}
           agentStatus={displayAgentStatus}
-          handleToolClick={showOptimisticUI ? () => {} : handleToolClick}
-          handleOpenFileViewer={showOptimisticUI ? () => {} : handleOpenFileViewer}
+          handleToolClick={showOptimisticUI ? () => { } : handleToolClick}
+          handleOpenFileViewer={showOptimisticUI ? () => { } : handleOpenFileViewer}
           readOnly={isShared}
           visibleMessages={isShared ? playback.playbackState.visibleMessages : undefined}
           streamingText={isShared ? playback.playbackState.streamingText : ''}

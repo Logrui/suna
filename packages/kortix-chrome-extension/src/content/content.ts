@@ -220,7 +220,7 @@ async function handleScreenshot(_params: any): Promise<any> {
       height: canvas.height,
     };
   } catch (error) {
-    console.warn('[Kortix] Screenshot failed, using fallback');
+    console.warn('[Kortix Extension - Content] Screenshot failed, using fallback');
 
     return {
       screenshot: null,
@@ -440,4 +440,4 @@ async function html2canvas(_element: HTMLElement): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
-console.log('[Kortix] Content script loaded');
+console.log('[Kortix Extension - Content] Content script loaded');

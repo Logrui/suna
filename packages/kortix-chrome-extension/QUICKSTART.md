@@ -22,7 +22,7 @@ pnpm build
 ### 3. Verify Installation
 
 - Extension appears in `chrome://extensions/`
-- Icon appears in Chrome toolbar
+- Icon appears in Chrome toolbarA
 - Click icon to open popup (shows "Listening for commands")
 
 ## First Command

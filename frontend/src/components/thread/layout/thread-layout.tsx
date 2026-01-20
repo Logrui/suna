@@ -44,6 +44,8 @@ interface ThreadLayoutProps {
   leftSidebarState?: 'collapsed' | 'expanded';
   streamingTextContent?: string;
   streamingToolCall?: any;
+  browserId?: string;
+  browserName?: string;
 }
 
 export const ThreadLayout = memo(function ThreadLayout({
@@ -77,6 +79,8 @@ export const ThreadLayout = memo(function ThreadLayout({
   leftSidebarState = 'collapsed',
   streamingTextContent,
   streamingToolCall,
+  browserId,
+  browserName,
 }: ThreadLayoutProps) {
   const isActuallyMobile = useIsMobile();
 
@@ -141,13 +145,13 @@ export const ThreadLayout = memo(function ThreadLayout({
 
   // Get selected file path from store
   const selectedFilePath = useKortixComputerStore((state) => state.selectedFilePath);
-  
+
   const SUITE_MODE_FILE_EXTENSIONS = [
-    'kanvax', 
-    'pptx', 
-    'ppt', 
-    'xlsx', 
-    'xls', 
+    'kanvax',
+    'pptx',
+    'ppt',
+    'xlsx',
+    'xls',
     'csv'
   ];
 
@@ -171,8 +175,8 @@ export const ThreadLayout = memo(function ThreadLayout({
         }, 100);
         return () => clearTimeout(timer);
       } else {
-      sidePanelRef.current?.resize(50);
-      mainPanelRef.current?.resize(50);
+        sidePanelRef.current?.resize(50);
+        mainPanelRef.current?.resize(50);
       }
     } else {
       sidePanelRef.current?.resize(0);
@@ -266,6 +270,9 @@ export const ThreadLayout = memo(function ThreadLayout({
           streamingText={streamingToolArgsJson}
           sandboxId={sandboxId || undefined}
           projectId={projectId}
+          threadId={threadId}
+          browserId={browserId}
+          browserName={browserName}
         />
       </div>
     );
@@ -350,8 +357,12 @@ export const ThreadLayout = memo(function ThreadLayout({
             streamingText={streamingToolArgsJson}
             sandboxId={sandboxId || undefined}
             projectId={projectId}
+            threadId={threadId}
+            browserId={browserId}
+            browserName={browserName}
             sidePanelRef={sidePanelRef}
           />
+
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
