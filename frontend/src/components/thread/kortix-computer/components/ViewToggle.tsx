@@ -10,7 +10,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { ViewType } from '@/stores/kortix-computer-store';
-import { HIDE_BROWSER_TAB } from '@/components/thread/utils';
 
 interface ViewToggleProps {
   currentView: ViewType;
@@ -23,10 +22,10 @@ export const ViewToggle = memo(function ViewToggle({
   onViewChange,
   showFilesTab = true
 }: ViewToggleProps) {
-  // Build view options - always include desktop
-  const viewOptions = HIDE_BROWSER_TAB
-    ? (showFilesTab ? ['tools', 'files', 'desktop'] as const : ['tools', 'desktop'] as const)
-    : (showFilesTab ? ['tools', 'files', 'browser', 'desktop'] as const : ['tools', 'browser', 'desktop'] as const);
+  // Build view options - always include all tabs
+  const viewOptions = showFilesTab
+    ? (['tools', 'files', 'browser', 'desktop'] as const)
+    : (['tools', 'browser', 'desktop'] as const);
 
   const getViewIndex = (view: ViewType) => {
     if (!showFilesTab && view === 'files') return 0;
@@ -57,8 +56,8 @@ export const ViewToggle = memo(function ViewToggle({
             size="sm"
             onClick={() => onViewChange('tools')}
             className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'tools'
-                ? 'text-black dark:text-white'
-                : 'text-gray-500 dark:text-gray-400'
+              ? 'text-black dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
               }`}
           >
             <Zap className="h-3.5 w-3.5" />
@@ -76,8 +75,8 @@ export const ViewToggle = memo(function ViewToggle({
               size="sm"
               onClick={() => onViewChange('files')}
               className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'files'
-                  ? 'text-black dark:text-white'
-                  : 'text-gray-500 dark:text-gray-400'
+                ? 'text-black dark:text-white'
+                : 'text-gray-500 dark:text-gray-400'
                 }`}
             >
               <FolderOpen className="h-3.5 w-3.5" />
@@ -89,25 +88,23 @@ export const ViewToggle = memo(function ViewToggle({
         </Tooltip>
       )}
 
-      {!HIDE_BROWSER_TAB && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              onClick={() => onViewChange('browser')}
-              className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'browser'
-                  ? 'text-black dark:text-white'
-                  : 'text-gray-500 dark:text-gray-400'
-                }`}
-            >
-              <Globe className="h-3.5 w-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Browser</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            size="sm"
+            onClick={() => onViewChange('browser')}
+            className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'browser'
+              ? 'text-black dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
+          >
+            <Globe className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>Browser</p>
+        </TooltipContent>
+      </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -115,8 +112,8 @@ export const ViewToggle = memo(function ViewToggle({
             size="sm"
             onClick={() => onViewChange('desktop')}
             className={`relative z-10 h-7 w-7 p-0 rounded-xl bg-transparent hover:bg-transparent shadow-none ${currentView === 'desktop'
-                ? 'text-black dark:text-white'
-                : 'text-gray-500 dark:text-gray-400'
+              ? 'text-black dark:text-white'
+              : 'text-gray-500 dark:text-gray-400'
               }`}
           >
             <Monitor className="h-3.5 w-3.5" />

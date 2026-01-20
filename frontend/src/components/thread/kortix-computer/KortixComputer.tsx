@@ -1,7 +1,7 @@
 'use client';
 
 import { Project } from '@/lib/api/threads';
-import { getUserFriendlyToolName, HIDE_BROWSER_TAB } from '@/components/thread/utils';
+import { getUserFriendlyToolName } from '@/components/thread/utils';
 import React, { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -165,77 +165,8 @@ export const KortixComputer = memo(function KortixComputer({
     );
   }, [sandbox, vncRefreshKey]);
 
-  const isBrowserTool = useCallback((toolName: string | undefined): boolean => {
-    if (!toolName) return false;
-    const lowerName = toolName.toLowerCase();
-    return [
-      'browser-navigate-to',
-      'browser-act',
-      'browser-extract-content',
-      'browser-screenshot'
-    ].includes(lowerName);
-  }, []);
-
-  useEffect(() => {
-    // Skip browser tab switching if flag is enabled
-    if (HIDE_BROWSER_TAB) return;
-
-    if (!isInitialized && toolCallSnapshots.length > 0) {
-      const streamingSnapshot = toolCallSnapshots.find(snapshot =>
-        snapshot.toolCall.toolResult === undefined
-      );
-
-      if (streamingSnapshot) {
-        const toolName = streamingSnapshot.toolCall.toolCall?.function_name?.replace(/_/g, '-');
-        const isStreamingBrowserTool = isBrowserTool(toolName);
-
-        if (isStreamingBrowserTool) {
-          setActiveView('browser');
-        }
-      } else if (agentStatus === 'running') {
-        const hasBrowserTool = toolCallSnapshots.some(snapshot => {
-          const toolName = snapshot.toolCall.toolCall?.function_name?.replace(/_/g, '-');
-          return isBrowserTool(toolName);
-        });
-
-        if (hasBrowserTool) {
-          setActiveView('browser');
-        }
-      }
-    }
-  }, [toolCallSnapshots, isInitialized, isBrowserTool, agentStatus, setActiveView]);
-
-  useEffect(() => {
-    // Skip browser tab switching if flag is enabled
-    if (HIDE_BROWSER_TAB) return;
-
-    if (activeView !== 'tools') return;
-
-    const safeIndex = Math.min(internalIndex, Math.max(0, toolCallSnapshots.length - 1));
-    const currentSnapshot = toolCallSnapshots[safeIndex];
-    const isCurrentSnapshotBrowserTool = isBrowserTool(currentSnapshot?.toolCall.toolCall?.function_name?.replace(/_/g, '-'));
-
-    if (agentStatus === 'idle') {
-      if (isCurrentSnapshotBrowserTool && safeIndex === toolCallSnapshots.length - 1) {
-        setActiveView('browser');
-      }
-    } else if (agentStatus === 'running') {
-      const streamingSnapshot = toolCallSnapshots.find(snapshot =>
-        snapshot.toolCall.toolResult === undefined
-      );
-
-      if (streamingSnapshot) {
-        const toolName = streamingSnapshot.toolCall.toolCall?.function_name?.replace(/_/g, '-');
-        const isStreamingBrowserTool = isBrowserTool(toolName);
-
-        if (isStreamingBrowserTool) {
-          setActiveView('browser');
-        }
-      }
-    }
-  }, [toolCallSnapshots, internalIndex, isBrowserTool, agentStatus, activeView, setActiveView]);
-
   const handleClose = useCallback(() => {
+
     setIsMaximized(false);
     onClose();
   }, [onClose]);
@@ -258,18 +189,8 @@ export const KortixComputer = memo(function KortixComputer({
     const hasNewSnapshots = newSnapshots.length > toolCallSnapshots.length;
     setToolCallSnapshots(newSnapshots);
 
-    // Skip browser tab switching if flag is enabled
-    if (!HIDE_BROWSER_TAB && hasNewSnapshots && agentStatus === 'running' && activeView === 'tools') {
-      const newSnapshot = newSnapshots[newSnapshots.length - 1];
-      const toolName = newSnapshot?.toolCall.toolCall?.function_name?.replace(/_/g, '-');
-      const isNewBrowserTool = isBrowserTool(toolName);
-
-      if (isNewBrowserTool && newSnapshot.toolCall.toolResult === undefined) {
-        setActiveView('browser');
-      }
-    }
-
     if (!isInitialized && newSnapshots.length > 0) {
+
       const completedCount = newSnapshots.filter(s =>
         s.toolCall.toolResult !== undefined
       ).length;
@@ -301,7 +222,7 @@ export const KortixComputer = memo(function KortixComputer({
         setInternalIndex(newSnapshots.length - 1);
       }
     }
-  }, [toolCalls, navigationMode, toolCallSnapshots.length, isInitialized, internalIndex, agentStatus, newSnapshots, isBrowserTool, activeView, setActiveView]);
+  }, [toolCalls, navigationMode, toolCallSnapshots.length, isInitialized, internalIndex, agentStatus, newSnapshots]);
 
   useEffect(() => {
     if ((!isInitialized || navigationMode === 'manual') && toolCallSnapshots.length > 0) {
@@ -503,10 +424,6 @@ export const KortixComputer = memo(function KortixComputer({
     return null;
   }
 
-  if (isLoading) {
-    return <LoadingState agentName={agentName} onClose={handleClose} isMobile={isMobile} />;
-  }
-
   const effectiveSandboxId = sandboxId || project?.sandbox?.id || '';
 
   const renderToolsView = () => {
@@ -637,12 +554,8 @@ export const KortixComputer = memo(function KortixComputer({
   };
 
   const renderBrowserView = () => {
-    // If browser tab is hidden, don't render browser view
-    if (HIDE_BROWSER_TAB) {
-      return null;
-    }
-
     if (persistentVncIframe) {
+
       return (
         <div className="h-full flex flex-col overflow-hidden">
           <BrowserHeader isConnected={true} onRefresh={handleVncRefresh} />
@@ -694,8 +607,9 @@ export const KortixComputer = memo(function KortixComputer({
         <div className="flex-1 overflow-hidden max-w-full max-h-full min-w-0 min-h-0" style={{ contain: 'strict' }}>
           {activeView === 'tools' && renderToolsView()}
           {activeView === 'files' && renderFilesView()}
-          {!HIDE_BROWSER_TAB && activeView === 'browser' && renderBrowserView()}
+          {activeView === 'browser' && renderBrowserView()}
           {activeView === 'desktop' && (
+
             <SandboxDesktop
               toolCalls={toolCallSnapshots.map(s => s.toolCall)}
               currentIndex={safeInternalIndex}
@@ -739,8 +653,9 @@ export const KortixComputer = memo(function KortixComputer({
           <div className="flex-1 flex flex-col overflow-hidden max-w-full max-h-full min-w-0 min-h-0" style={{ contain: 'strict' }}>
             {activeView === 'tools' && renderToolsView()}
             {activeView === 'files' && renderFilesView()}
-            {!HIDE_BROWSER_TAB && activeView === 'browser' && renderBrowserView()}
+            {activeView === 'browser' && renderBrowserView()}
             {activeView === 'desktop' && (
+
               <SandboxDesktop
                 toolCalls={toolCallSnapshots.map(s => s.toolCall)}
                 currentIndex={safeInternalIndex}

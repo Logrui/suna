@@ -4,6 +4,16 @@ import { ToolCallData, ToolResultData } from '../types';
  * Extract Perplexity search data from structured metadata props
  * Handles both single query and batch mode results, plus video categorization
  */
+
+/**
+ * Extract YouTube ID from various URL formats
+ */
+export function extractYouTubeId(url: string): string | null {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
+}
+
 export function extractPerplexitySearchData(
     toolCall: ToolCallData | undefined,
     toolResult?: ToolResultData,

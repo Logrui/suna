@@ -14,6 +14,8 @@ import {
     Loader2,
     Video,
     Play,
+    Copy,
+    Check,
 } from 'lucide-react';
 import { ToolViewProps } from '../types';
 import { cleanUrl, formatTimestamp, getToolTitle } from '../utils';
@@ -23,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingState } from '../shared/LoadingState';
-import { extractPerplexitySearchData } from './_utils';
+import { extractPerplexitySearchData, extractYouTubeId } from './_utils';
 
 export function PerplexitySearchToolView({
     toolCall,
@@ -36,6 +38,13 @@ export function PerplexitySearchToolView({
     const [expandedResults, setExpandedResults] = useState<Record<number, boolean>>({});
     const [currentQueryIndex, setCurrentQueryIndex] = useState(0);
     const [activeTab, setActiveTab] = useState<'results' | 'videos'>('results');
+    const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+    const handleCopy = (url: string) => {
+        navigator.clipboard.writeText(url);
+        setCopiedUrl(url);
+        setTimeout(() => setCopiedUrl(null), 2000);
+    };
 
     const {
         query,
@@ -117,16 +126,21 @@ export function PerplexitySearchToolView({
 
     return (
         <Card className="gap-0 flex border-0 shadow-none p-0 py-0 rounded-none flex-col h-full overflow-hidden bg-card">
-            <CardHeader className="h-14 bg-gradient-to-r from-violet-50/80 to-purple-50/80 dark:from-violet-900/20 dark:to-purple-900/20 backdrop-blur-sm border-b p-2 px-4 space-y-2">
+            <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
                 <div className="flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="relative p-2 rounded-lg border flex-shrink-0 bg-gradient-to-b from-violet-200/60 to-violet-100/60 dark:from-violet-800/40 dark:to-violet-900/50 border-violet-300 dark:border-violet-700">
-                            <Sparkles className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                        <div className="relative p-2 rounded-lg border flex-shrink-0 bg-gradient-to-b from-zinc-200/60 to-zinc-100/60 dark:from-zinc-800/40 dark:to-zinc-900/50 border-zinc-300 dark:border-zinc-700">
+                            <Sparkles className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
                         </div>
-                        <div>
+                        <div className="flex flex-col">
                             <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
                                 {toolTitle}
                             </CardTitle>
+                            {!isBatch && query && (
+                                <p className="text-[10px] text-zinc-500 font-medium truncate max-w-[200px] mt-0.5">
+                                    {query}
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -144,7 +158,7 @@ export function PerplexitySearchToolView({
                     )}
 
                     {isStreaming && (
-                        <Badge className="bg-gradient-to-b from-violet-200 to-violet-100 text-violet-700 dark:from-violet-800/50 dark:to-violet-900/60 dark:text-violet-300">
+                        <Badge className="bg-gradient-to-b from-zinc-200 to-zinc-100 text-zinc-700 dark:from-zinc-800/50 dark:to-zinc-900/60 dark:text-zinc-300">
                             <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
                             Searching
                         </Badge>
@@ -156,8 +170,8 @@ export function PerplexitySearchToolView({
                 {isStreaming && searchResults.length === 0 && videos.length === 0 ? (
                     <LoadingState
                         icon={Sparkles}
-                        iconColor="text-violet-500 dark:text-violet-400"
-                        bgColor="bg-gradient-to-b from-violet-100 to-violet-50 shadow-inner dark:from-violet-800/40 dark:to-violet-900/60 dark:shadow-violet-950/20"
+                        iconColor="text-zinc-500 dark:text-zinc-400"
+                        bgColor="bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60 dark:shadow-zinc-950/20"
                         title="Searching with Perplexity AI"
                         filePath={typeof query === 'string' ? query : query?.[0] || ''}
                         showProgress={true}
@@ -184,7 +198,7 @@ export function PerplexitySearchToolView({
                                                 </Badge>
                                             )}
                                             {currentBatchItem.videos?.length > 0 && (
-                                                <Badge variant="outline" className="text-xs font-normal h-4 px-1.5 bg-violet-50 dark:bg-violet-900/30">
+                                                <Badge variant="outline" className="text-xs font-normal h-4 px-1.5 bg-zinc-50 dark:bg-zinc-900/30">
                                                     <Video className="h-2.5 w-2.5 mr-0.5" />
                                                     {currentBatchItem.videos.length} videos
                                                 </Badge>
@@ -226,7 +240,7 @@ export function PerplexitySearchToolView({
                                         size="sm"
                                         onClick={() => setActiveTab('results')}
                                         className={activeTab === 'results'
-                                            ? 'bg-gradient-to-b from-violet-500 to-violet-600 text-white'
+                                            ? 'bg-gradient-to-b from-zinc-600 to-zinc-700 text-white'
                                             : ''}
                                     >
                                         <Globe className="h-3.5 w-3.5 mr-1.5" />
@@ -237,7 +251,7 @@ export function PerplexitySearchToolView({
                                         size="sm"
                                         onClick={() => setActiveTab('videos')}
                                         className={activeTab === 'videos'
-                                            ? 'bg-gradient-to-b from-rose-500 to-rose-600 text-white'
+                                            ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900'
                                             : ''}
                                     >
                                         <Video className="h-3.5 w-3.5 mr-1.5" />
@@ -302,6 +316,21 @@ export function PerplexitySearchToolView({
                                                                 </p>
                                                             )}
                                                         </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleCopy(result.url);
+                                                            }}
+                                                        >
+                                                            {copiedUrl === result.url ? (
+                                                                <Check className="h-4 w-4 text-emerald-500" />
+                                                            ) : (
+                                                                <Copy className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -321,16 +350,37 @@ export function PerplexitySearchToolView({
                                         return (
                                             <div
                                                 key={`video-${idx}`}
-                                                className="bg-gradient-to-r from-rose-50/50 to-orange-50/50 dark:from-rose-900/20 dark:to-orange-900/20 border border-rose-200/50 dark:border-rose-800/50 rounded-lg hover:shadow-sm transition-all"
+                                                className="bg-card border border-border rounded-lg hover:border-border/80 transition-colors hover:shadow-sm"
                                             >
                                                 <div className="p-3.5">
-                                                    <div className="flex items-start gap-2.5">
-                                                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-b from-rose-400 to-rose-500 flex items-center justify-center">
-                                                            <Play className="w-4 h-4 text-white" />
-                                                        </div>
+                                                    <div className="flex items-start gap-4">
+                                                        {/* Video Thumbnail */}
+                                                        {(() => {
+                                                            const ytId = extractYouTubeId(video.url);
+                                                            if (ytId) {
+                                                                return (
+                                                                    <div className="relative w-32 aspect-video rounded-md overflow-hidden bg-zinc-100 flex-shrink-0 group">
+                                                                        <img
+                                                                            src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`}
+                                                                            alt=""
+                                                                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                                                        />
+                                                                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                            <Play className="w-8 h-8 text-white fill-white" />
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                                                                    <Play className="w-4 h-4 text-zinc-500" />
+                                                                </div>
+                                                            );
+                                                        })()}
+
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-1.5 mb-1">
-                                                                <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 font-normal bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-700">
+                                                                <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 font-normal">
                                                                     <Video className="h-2.5 w-2.5 mr-1 opacity-70" />
                                                                     Video
                                                                 </Badge>
@@ -344,7 +394,7 @@ export function PerplexitySearchToolView({
                                                                 href={video.url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="text-sm font-medium text-rose-600 dark:text-rose-400 hover:underline line-clamp-1 mb-1 block"
+                                                                className="text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:underline line-clamp-1 mb-1 block"
                                                             >
                                                                 {truncateString(video.title, 60)}
                                                             </a>
@@ -358,6 +408,21 @@ export function PerplexitySearchToolView({
                                                                 </p>
                                                             )}
                                                         </div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleCopy(video.url);
+                                                            }}
+                                                        >
+                                                            {copiedUrl === video.url ? (
+                                                                <Check className="h-4 w-4 text-emerald-500" />
+                                                            ) : (
+                                                                <Copy className="h-4 w-4" />
+                                                            )}
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -368,17 +433,17 @@ export function PerplexitySearchToolView({
                         </div>
                     </ScrollArea>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-violet-50/30 dark:from-zinc-950 dark:to-violet-900/10">
-                        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-violet-100 to-violet-50 shadow-inner dark:from-violet-800/40 dark:to-violet-900/60">
-                            <Sparkles className="h-10 w-10 text-violet-400 dark:text-violet-500" />
+                    <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50/30 dark:from-zinc-950 dark:to-zinc-900/10">
+                        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60">
+                            <Sparkles className="h-10 w-10 text-zinc-400 dark:text-zinc-500" />
                         </div>
                         <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
                             No Results Found
                         </h3>
                         {query && (
-                            <div className="bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-800 rounded-lg p-4 w-full max-w-md text-center mb-4 shadow-sm">
-                                <code className="text-sm font-mono text-violet-700 dark:text-violet-300 break-all">
-                                    {typeof query === 'string' ? query : Array.isArray(query) ? query.join(', ') : 'Unknown query'}
+                            <div className="bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 w-full max-w-md text-center mb-4 shadow-sm">
+                                <code className="text-sm font-mono text-zinc-700 dark:text-zinc-300 break-all">
+                                    {query}
                                 </code>
                             </div>
                         )}
@@ -389,12 +454,12 @@ export function PerplexitySearchToolView({
                 )}
             </CardContent>
 
-            <div className="px-4 py-2 h-10 bg-gradient-to-r from-violet-50/90 to-purple-50/90 dark:from-violet-900/30 dark:to-purple-900/30 backdrop-blur-sm border-t border-violet-200 dark:border-violet-800 flex justify-between items-center gap-4">
+            <div className="px-4 py-2 h-10 bg-linear-to-r from-zinc-50/90 to-zinc-100/90 dark:from-zinc-900/90 dark:to-zinc-800/90 backdrop-blur-sm border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center gap-4">
                 <div className="h-full flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
                     {!isStreaming && (
                         <>
                             {isBatch && batchResults ? (
-                                <Badge variant="outline" className="h-6 py-0.5 bg-violet-50/50 dark:bg-violet-900/30 border-violet-200 dark:border-violet-700">
+                                <Badge variant="outline" className="h-6 py-0.5">
                                     <Globe className="h-3 w-3" />
                                     {batchResults.length} queries • {searchResults.length + videos.length} results
                                 </Badge>
@@ -407,7 +472,7 @@ export function PerplexitySearchToolView({
                                         </Badge>
                                     )}
                                     {videos.length > 0 && (
-                                        <Badge variant="outline" className="h-6 py-0.5 bg-rose-50/50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-700">
+                                        <Badge variant="outline" className="h-6 py-0.5">
                                             <Video className="h-3 w-3" />
                                             {videos.length} videos
                                         </Badge>

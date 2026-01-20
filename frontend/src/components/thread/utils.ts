@@ -499,8 +499,8 @@ const TOOL_DISPLAY_NAMES = new Map([
   ['expose_port', 'Exposing Port'],
   ['scrape_webpage', 'Scraping Website'],
   ['web_search', 'Searching Web'],
-  ['perplexity-search', 'AI Search'],
-  ['perplexity_search', 'AI Search'],
+  ['perplexity-search', 'Perplexity'],
+  ['perplexity_search', 'Perplexity'],
   ['load_image', 'Loading Image'],
 
   ['update_agent', 'Updating Worker'],
@@ -618,9 +618,6 @@ export function getUserFriendlyToolName(toolName: string): string {
   }
   return TOOL_DISPLAY_NAMES.get(toolName) || toolName;
 }
-
-// Feature flag to hide browser tab and use ToolView instead
-export const HIDE_BROWSER_TAB = true;
 
 export const HIDE_STREAMING_XML_TAGS = new Set([
   'create-tasks',
