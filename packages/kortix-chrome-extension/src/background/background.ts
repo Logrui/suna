@@ -41,6 +41,9 @@ async function handleBackendCommand(command: BrowserCommand): Promise<CommandRes
   state.commandCount++;
 
   try {
+    // Lazily ensure the Kortix tab group and a tab exist when any command is issued
+    await tabGroupManager.getOrCreateGroup();
+
     let data: Record<string, any> = {};
 
     switch (command.action) {
@@ -77,6 +80,23 @@ async function handleBackendCommand(command: BrowserCommand): Promise<CommandRes
           url: tab?.url || '',
           title: tab?.title || '',
         };
+        break;
+
+      case 'new_tab':
+        await tabGroupManager.createTab(command.params.url || '');
+        data = await getPageState();
+        break;
+
+      case 'close_tab':
+        await tabGroupManager.closeActiveTab();
+        data = await getPageState();
+        break;
+
+      case 'switch_tab':
+        const tabId = command.params.tabId || command.params.tab_id;
+        if (!tabId) throw new Error('Missing tabId parameter');
+        await tabGroupManager.switchTab(Number(tabId));
+        data = await getPageState();
         break;
 
       default:

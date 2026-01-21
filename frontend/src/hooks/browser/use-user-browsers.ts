@@ -12,6 +12,7 @@ import {
     getThreadBrowser,
     type UserBrowser,
 } from '@/lib/api/browsers';
+import { threadKeys } from '../threads/keys';
 
 // ========== Query Keys ==========
 
@@ -23,7 +24,6 @@ export const browserKeys = {
 };
 
 // ========== Hooks ==========
-
 /**
  * Hook to list all user browsers
  */
@@ -159,6 +159,7 @@ export function useSetThreadBrowser() {
         onSuccess: (_, { threadId, browserId }) => {
             console.debug('[BROWSER_HOOKS] 🌐 setThreadBrowser: onSuccess, invalidating queries', { threadId, browserId });
             queryClient.invalidateQueries({ queryKey: browserKeys.thread(threadId) });
+            queryClient.invalidateQueries({ queryKey: threadKeys.details(threadId) });
             toast.success('Browser connected to thread');
         },
         onError: (error, { threadId, browserId }) => {
@@ -178,7 +179,8 @@ export function useClearThreadBrowser() {
         mutationFn: clearThreadBrowser,
         onSuccess: (_, threadId) => {
             queryClient.invalidateQueries({ queryKey: browserKeys.thread(threadId) });
-            toast.success('Browser disconnected from thread');
+            queryClient.invalidateQueries({ queryKey: threadKeys.details(threadId) });
+            toast.success('Switched to Kortix Computer');
         },
         onError: (error) => {
             console.error('Failed to clear thread browser:', error);

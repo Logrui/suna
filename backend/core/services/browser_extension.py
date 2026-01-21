@@ -32,7 +32,11 @@ COMMAND_TIMEOUT_MS = 30000
 
 # Redis session management
 REDIS_SESSION_TTL = 60  # seconds, refreshed on heartbeat
-WORKER_ID = os.getenv("HOSTNAME", f"worker_{os.getpid()}")
+
+def get_worker_id():
+    """Get a unique ID for the current process/worker."""
+    hostname = os.getenv("HOSTNAME", "worker")
+    return f"{hostname}_{os.getpid()}"
 
 # ========== Router ==========
 
@@ -147,6 +151,96 @@ class ExtensionSessionManager:
         self._sessions: Dict[str, ExtensionSession] = {}  # session_id -> session (local only)
         self._extension_to_session: Dict[str, str] = {}  # extension_id -> session_id (local only)
         self._user_sessions: Dict[str, List[str]] = {}  # user_id -> [session_ids] (local only)
+        self._relay_task: Optional[asyncio.Task] = None
+        self._is_running = False
+        self.worker_id = get_worker_id()
+
+    async def start(self):
+        """Start the session manager and its background tasks."""
+        if self._is_running:
+            return
+        self._is_running = True
+        # Ensure worker_id is correct for this process (eval again at startup)
+        self.worker_id = get_worker_id()
+        self._relay_task = asyncio.create_task(self._listen_for_relayed_commands())
+        logger.info(f"🔌 [SESSION_MGR] Manager started (worker_id={self.worker_id})")
+
+    async def stop(self):
+        """Stop the session manager and its background tasks."""
+        self._is_running = False
+        if self._relay_task:
+            self._relay_task.cancel()
+            try:
+                await self._relay_task
+            except asyncio.CancelledError:
+                pass
+        logger.info(f"🔌 [SESSION_MGR] Manager stopped (worker_id={self.worker_id})")
+
+    async def _listen_for_relayed_commands(self):
+        """Listen for commands from other workers via Redis Pub/Sub."""
+        channel = f"browser:relay:commands:{self.worker_id}"
+        logger.debug(f"🔌 [SESSION_MGR] Listening for relayed commands on {channel}")
+        
+        while self._is_running:
+            try:
+                client = await redis_service.get_client()
+                pubsub = client.pubsub()
+                await pubsub.subscribe(channel)
+                
+                async for message in pubsub.listen():
+                    if not self._is_running:
+                        break
+                    
+                    if message['type'] == 'message':
+                        try:
+                            data = json.loads(message['data'])
+                            asyncio.create_task(self._handle_relayed_command(data))
+                        except Exception as e:
+                            logger.error(f"🔌 [SESSION_MGR] Error processing relayed command message: {e}")
+                
+                await pubsub.unsubscribe(channel)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"🔌 [SESSION_MGR] Command relay subscription failed, retrying: {e}")
+                await asyncio.sleep(5)
+
+    async def _handle_relayed_command(self, data: dict):
+        """Process a command received via relay and publish result back."""
+        browser_id = data.get("browser_id")
+        relay_id = data.get("relay_id")
+        action = data.get("action")
+        params = data.get("params")
+        timeout_ms = data.get("timeout_ms", COMMAND_TIMEOUT_MS)
+        
+        logger.debug(f"🔌 [SESSION_MGR] Handling relayed command {relay_id} for browser_id={browser_id}")
+        
+        session = self.get_session_by_browser_id(browser_id)
+        if not session:
+            logger.warning(f"🔌 [SESSION_MGR] Relayed command {relay_id}: No local session for browser {browser_id}")
+            return # Should we notify the sender? The sender has its own timeout.
+            
+        try:
+            command = BrowserCommand(
+                type="command",
+                id=str(uuid.uuid4()),
+                session_id=session.session_id,
+                action=action,
+                params=params or {},
+                timeout_ms=timeout_ms,
+                timestamp=int(time.time() * 1000),
+            )
+            
+            result = await session.send_command(command)
+            
+            # Send result back via another Pub/Sub channel
+            client = await redis_service.get_client()
+            await client.publish(f"browser:relay:results:{relay_id}", result.model_dump_json())
+            logger.debug(f"🔌 [SESSION_MGR] Published result for relayed command {relay_id}")
+            
+        except Exception as e:
+            logger.error(f"🔌 [SESSION_MGR] Error executing relayed command {relay_id}: {e}")
+            # If we fail, we could publish an error result, but the sender's wait_for will time out anyway.
     
     async def add_session(self, session: ExtensionSession):
         """Register a new session (local + Redis)."""
@@ -172,7 +266,7 @@ class ExtensionSessionManager:
                 "extension_id": session.extension_id,
                 "user_id": session.user_id,
                 "browser_id": session.browser_id,
-                "worker_id": WORKER_ID,
+                "worker_id": self.worker_id,
                 "connected_at": session.connected_at.isoformat(),
                 "last_heartbeat": session.last_heartbeat.isoformat(),
             }
@@ -276,9 +370,28 @@ class ExtensionSessionManager:
             logger.debug(f"🔌 [SESSION_MGR] is_browser_online({browser_id}) = {is_online} (local fallback)")
             return is_online
 
+    async def get_browser_worker_id(self, browser_id: str) -> Optional[str]:
+        """Get the ID of the worker that currently handles this browser's session."""
+        try:
+            key = f"browser:session:{browser_id}"
+            client = await redis_service.get_client()
+            data = await client.hgetall(key)
+            return data.get("worker_id") if data else None
+        except Exception as e:
+            logger.warning(f"🔌 [SESSION_MGR] Failed to get worker_id from Redis: {e}")
+            return None
+
 
 # Global session manager singleton
 session_manager = ExtensionSessionManager()
+
+@router.on_event("startup")
+async def startup_session_manager():
+    await session_manager.start()
+
+@router.on_event("shutdown")
+async def shutdown_session_manager():
+    await session_manager.stop()
 
 
 # ========== Command Sending Utility ==========
@@ -290,41 +403,78 @@ async def send_browser_command(
     timeout_ms: int = COMMAND_TIMEOUT_MS
 ) -> Optional[CommandResult]:
     """
-    Send a command to a connected browser extension.
-    
-    Args:
-        browser_id: The database ID of the browser (user_browsers.id)
-        action: The command action (navigate, click, type, screenshot)
-        params: Command parameters
-        timeout_ms: Timeout in milliseconds
-        
-    Returns:
-        CommandResult if successful, None if browser not connected
-        
-    Raises:
-        TimeoutError: If command times out
-        Exception: For other errors
+    Send a command to a connected browser extension, potentially across workers.
     """
+    # 1. Try local session first (optimization)
     session = session_manager.get_session_by_browser_id(browser_id)
-    if not session:
-        logger.warning(f"No active session for browser_id: {browser_id}")
+    if session:
+        command = BrowserCommand(
+            type="command",
+            id=str(uuid.uuid4()),
+            session_id=session.session_id,
+            action=action,
+            params=params or {},
+            timeout_ms=timeout_ms,
+            timestamp=int(time.time() * 1000),
+        )
+        
+        logger.info(f"🔌 Sending command {command.id} ({action}) to browser {browser_id} (local)")
+        result = await session.send_command(command)
+        logger.info(f"🔌 Command {command.id} completed: success={result.success}")
+        return result
+    
+    # 2. Not local? Try relaying via Redis Pub/Sub
+    target_worker_id = await session_manager.get_browser_worker_id(browser_id)
+    if not target_worker_id:
+        logger.warning(f"🔌 No active session found in Redis for browser_id: {browser_id}")
         return None
+        
+    local_worker_id = get_worker_id()
+    if target_worker_id == local_worker_id:
+        # Redis says it's ours, but local check failed - must be disconnecting
+        logger.warning(f"🔌 Redis says browser {browser_id} is on this worker ({local_worker_id}), but no local session found.")
+        return None
+
+    # Relay command to the target worker
+    relay_id = str(uuid.uuid4())
+    command_data = {
+        "relay_id": relay_id,
+        "browser_id": browser_id,
+        "action": action,
+        "params": params or {},
+        "timeout_ms": timeout_ms
+    }
     
-    command = BrowserCommand(
-        type="command",
-        id=str(uuid.uuid4()),
-        session_id=session.session_id,
-        action=action,
-        params=params or {},
-        timeout_ms=timeout_ms,
-        timestamp=int(time.time() * 1000),
-    )
+    logger.info(f"🔌 Relaying command {relay_id} ({action}) to browser {browser_id} on worker {target_worker_id}")
     
-    logger.info(f"Sending command {command.id} ({action}) to browser {browser_id}")
-    result = await session.send_command(command)
-    logger.info(f"Command {command.id} completed: success={result.success}")
+    client = await redis_service.get_client()
+    pubsub = client.pubsub()
+    result_channel = f"browser:relay:results:{relay_id}"
+    await pubsub.subscribe(result_channel)
     
-    return result
+    try:
+        # Publish command to target worker
+        await client.publish(f"browser:relay:commands:{target_worker_id}", json.dumps(command_data))
+        
+        # Wait for result message
+        timeout_seconds = (timeout_ms / 1000) + 1.0 # Buffer for relay
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout_seconds:
+            # Check for message with short sleep to avoid CPU spinning but responsiveness
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=timeout_seconds)
+            if message and message['type'] == 'message':
+                result_data = json.loads(message['data'])
+                result = CommandResult(**result_data)
+                logger.info(f"🔌 Relayed command {relay_id} completed: success={result.success}")
+                return result
+            
+        logger.warning(f"🔌 Relayed command {relay_id} timed out waiting for response from worker {target_worker_id}")
+        raise TimeoutError(f"Relayed command timed out after {timeout_ms}ms")
+        
+    finally:
+        await pubsub.unsubscribe(result_channel)
+        await pubsub.close()
 
 
 # ========== Token Utilities ==========
@@ -756,10 +906,20 @@ async def set_thread_browser_endpoint(
     if browser["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Update thread metadata
+    # Update thread metadata (merging to preserve existing keys)
     client = await _get_db_client()
+    
+    # Fetch current metadata
+    thread_res = await client.table("threads").select("metadata").eq("thread_id", thread_id).maybe_single().execute()
+    current_metadata = {}
+    if thread_res and thread_res.data:
+        current_metadata = thread_res.data.get("metadata") or {}
+    
+    # Update metadata with new browser_id
+    new_metadata = {**current_metadata, "browser_id": request.browser_id}
+    
     await client.table("threads").update({
-        "metadata": {"browser_id": request.browser_id}
+        "metadata": new_metadata
     }).eq("thread_id", thread_id).execute()
     
     return {"success": True, "browser_id": request.browser_id}
@@ -771,11 +931,19 @@ async def clear_thread_browser_endpoint(
     user: dict = Depends(get_current_user),
 ):
     """Clear the browser selection for a thread."""
-    # Update thread metadata to remove browser_id
+    # Fetch current metadata
     client = await _get_db_client()
-    await client.table("threads").update({
-        "metadata": {"browser_id": None}
-    }).eq("thread_id", thread_id).execute()
+    thread_res = await client.table("threads").select("metadata").eq("thread_id", thread_id).maybe_single().execute()
+    
+    if thread_res and thread_res.data:
+        current_metadata = thread_res.data.get("metadata") or {}
+        if "browser_id" in current_metadata:
+            # Remove browser_id
+            new_metadata = {k: v for k, v in current_metadata.items() if k != "browser_id"}
+            
+            await client.table("threads").update({
+                "metadata": new_metadata
+            }).eq("thread_id", thread_id).execute()
     
     return {"success": True}
 
@@ -810,10 +978,19 @@ async def get_browser_screenshot_endpoint(
         
         if result and result.success:
             return result.data
-        else:
-            error_msg = result.error if result else "Failed to get screenshot"
-            raise HTTPException(status_code=500, detail=error_msg)
+        
+        error_msg = result.error if result else "Failed to get screenshot"
+        
+        # Handle specific common errors from extension gracefully
+        if "No active tab" in error_msg:
+            logger.info(f"🔌 Browser {browser_id} has no active tab to capture")
+            raise HTTPException(status_code=404, detail="No active tab in browser")
             
+        raise HTTPException(status_code=500, detail=error_msg)
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions so FastAPI handles them correctly
+        raise
     except Exception as e:
         logger.error(f"Error relaying screenshot from extension: {e}")
         raise HTTPException(status_code=500, detail=str(e))

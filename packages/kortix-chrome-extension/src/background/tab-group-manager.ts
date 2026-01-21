@@ -48,7 +48,7 @@ class KortixTabGroupManager {
         }
 
         // Create a new group by first creating a tab
-        const tab = await chrome.tabs.create({ active: false, url: 'about:blank' });
+        const tab = await chrome.tabs.create({ active: false });
         if (!tab.id) throw new Error('Failed to create tab');
 
         // Group the tab
@@ -140,6 +140,29 @@ class KortixTabGroupManager {
     }
 
     /**
+     * Switch to a specific tab in the group
+     */
+    async switchTab(tabId: number): Promise<void> {
+        // Ensure it's one of ours
+        if (this.tabIds.has(tabId)) {
+            await chrome.tabs.update(tabId, { active: true });
+            this.activeTabId = tabId;
+            console.log('[Kortix Extension - Tabs] Switched to tab:', tabId);
+        } else {
+            // Find it in the group even if not in our Set (safety)
+            const tabs = await this.getGroupTabs();
+            const tab = tabs.find(t => t.id === tabId);
+            if (tab) {
+                await chrome.tabs.update(tabId, { active: true });
+                this.activeTabId = tabId;
+                this.tabIds.add(tabId);
+            } else {
+                throw new Error(`Tab ${tabId} not found in Kortix group`);
+            }
+        }
+    }
+
+    /**
      * Close the current active tab
      */
     async closeActiveTab(): Promise<void> {
@@ -174,7 +197,15 @@ class KortixTabGroupManager {
      * Capture screenshot of the active tab
      */
     async captureScreenshot(): Promise<string> {
-        const tab = await this.getActiveTab();
+        let tab = await this.getActiveTab();
+
+        // If no active tab, try to create/get group to ensure at least one tab exists
+        if (!tab || !tab.id) {
+            console.log('[Kortix Extension - Tabs] No active tab, attempting to create/get group');
+            await this.getOrCreateGroup();
+            tab = await this.getActiveTab();
+        }
+
         if (!tab || !tab.id) {
             throw new Error('No active tab to capture');
         }
