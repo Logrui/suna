@@ -15,7 +15,7 @@
 
 Easiest method:
 
-Railway Deployment:
+Railway Deployment: (WIP)
 (1) Sign up for a free Railway account
 (2) Deploy via Railway Template suna-community
 
