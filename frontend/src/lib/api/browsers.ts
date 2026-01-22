@@ -186,11 +186,13 @@ export async function getBrowserScreenshot(browserId: string): Promise<{
     screenshot_base64: string;
     url: string;
     title: string;
+    image_url?: string;
 }> {
     const response = await backendApi.get<{
         screenshot_base64: string;
         url: string;
         title: string;
+        image_url?: string;
     }>(`/user/browsers/${browserId}/screenshot`);
 
     if (!response.success || !response.data) {

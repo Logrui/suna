@@ -90,6 +90,26 @@ class HeartbeatMessage(BaseModel):
     timestamp: int
 
 
+class StreamChunkMessage(BaseModel):
+    """Extension → Backend: Real-time screenshot frame."""
+    type: str = "stream_chunk"
+    browser_id: str
+    screenshot_base64: str
+    url: Optional[str] = None
+    title: Optional[str] = None
+    timestamp: int
+
+
+class InteractionCommand(BaseModel):
+    """Backend → Extension: Real-time user interaction (click, key, etc.)."""
+    type: str = "interaction"
+    id: str
+    session_id: str
+    action: str  # click, key_down, key_up, mouse_move, scroll
+    params: Dict[str, Any]
+    timestamp: int
+
+
 # ========== Session Management ==========
 
 class ExtensionSession:
@@ -619,7 +639,85 @@ async def get_thread_browser_id(thread_id: str) -> Optional[str]:
 
 # ========== WebSocket Handler ==========
 
-# router = APIRouter() # Removed duplicate definition
+@router.websocket("/ws/browser/{browser_id}/stream")
+async def browser_stream_websocket(websocket: WebSocket, browser_id: str):
+    """Frontend WebSocket for receiving real-time browser stream frames."""
+    await websocket.accept()
+    
+    # Optional: Verify user session here (from cookie or token)
+    
+    logger.info(f"📹 Frontend connected to stream for browser {browser_id}")
+    
+    pubsub = None
+    listen_task = None
+    frame_count = 0
+    
+    try:
+        client = await redis_service.get_client()
+        pubsub = client.pubsub()
+        channel = f"browser:stream:{browser_id}"
+        await pubsub.subscribe(channel)
+        logger.debug(f"📹 Subscribed to Redis channel: {channel}")
+        
+        # Binary or text relay loop
+        async def listen_to_redis():
+            nonlocal frame_count
+            try:
+                async for message in pubsub.listen():
+                    if message['type'] == 'message':
+                        frame_count += 1
+                        if frame_count <= 5 or frame_count % 100 == 0:
+                            logger.debug(f"📹 Relaying frame #{frame_count} to frontend for browser {browser_id}")
+                        await websocket.send_text(message['data'])
+            except asyncio.CancelledError:
+                logger.debug(f"📹 Redis listener cancelled for browser {browser_id}")
+                raise
+            except Exception as e:
+                logger.error(f"📹 Error in Redis listener for browser {browser_id}: {e}")
+        
+        # Start listening in background
+        listen_task = asyncio.create_task(listen_to_redis())
+        
+        # Listen for messages from frontend (interactions and pings)
+        while True:
+            try:
+                # Use timeout to detect stale connections
+                data = await asyncio.wait_for(websocket.receive_json(), timeout=60.0)
+                msg_type = data.get("type")
+                
+                if msg_type == "ping":
+                    # Respond to keepalive ping
+                    await websocket.send_json({"type": "pong"})
+                elif msg_type == "interaction":
+                    # Route interaction to the extension
+                    logger.debug(f"📹 Routing interaction to extension for browser {browser_id}")
+                    await send_browser_command(
+                        browser_id=browser_id,
+                        action="interaction",
+                        params=data.get("params", {})
+                    )
+            except asyncio.TimeoutError:
+                # No message from frontend in 60s, send a ping to keep connection alive
+                try:
+                    await websocket.send_json({"type": "ping"})
+                except Exception:
+                    # Connection dead
+                    break
+                
+    except WebSocketDisconnect:
+        logger.info(f"📹 Frontend disconnected from stream for browser {browser_id} (frames sent: {frame_count})")
+    except Exception as e:
+        logger.error(f"📹 Error in browser stream WebSocket for {browser_id}: {e}")
+    finally:
+        if listen_task:
+            listen_task.cancel()
+            try:
+                await listen_task
+            except asyncio.CancelledError:
+                pass
+        if pubsub:
+            await pubsub.unsubscribe()
+            await pubsub.close()
 
 
 @router.websocket(EXTENSION_WS_PATH)
@@ -697,6 +795,13 @@ async def extension_websocket(websocket: WebSocket):
                 # Command result from extension
                 result = CommandResult(**message)
                 session.resolve_command(result)
+            
+            elif msg_type == "stream_chunk":
+                # Real-time frame from extension - broadcast via Redis
+                browser_id = session.browser_id
+                logger.debug(f"📹 Received stream_chunk from extension for browser {browser_id}")
+                client = await redis_service.get_client()
+                await client.publish(f"browser:stream:{browser_id}", json.dumps(message))
             
             elif msg_type == "error":
                 logger.error(f"Extension error: {message.get('message')}")
@@ -973,28 +1078,47 @@ async def get_browser_screenshot_endpoint(
             browser_id=browser_id,
             action="screenshot",
             params={},
-            timeout_ms=5000, # Fast timeout for UI polish
+            timeout_ms=10000, # Increased timeout
         )
         
         if result and result.success:
-            return result.data
+            data = result.data or {}
+            
+            # Optionally store in Supabase for persistence if base64 is present
+            screenshot_base64 = data.get("screenshot_base64") or data.get("screenshot")
+            if screenshot_base64:
+                try:
+                    from core.utils.s3_upload_utils import upload_base64_image
+                    image_url = await upload_base64_image(
+                        base64_data=screenshot_base64,
+                        bucket_name="browser-screenshots"
+                    )
+                    data["image_url"] = image_url
+                    logger.debug(f"📸 Live screenshot stored: {image_url}")
+                except Exception as upload_err:
+                    logger.warning(f"⚠️ Failed to store live screenshot: {upload_err}")
+            
+            return data
         
-        error_msg = result.error if result else "Failed to get screenshot"
+        error_msg = result.error if result else "Failed to get screenshot (timeout)"
         
         # Handle specific common errors from extension gracefully
         if "No active tab" in error_msg:
             logger.info(f"🔌 Browser {browser_id} has no active tab to capture")
             raise HTTPException(status_code=404, detail="No active tab in browser")
             
-        raise HTTPException(status_code=500, detail=error_msg)
+        logger.error(f"❌ Screenshot command failed for browser {browser_id}: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Extension error: {error_msg}")
             
     except HTTPException:
         # Re-raise HTTP exceptions so FastAPI handles them correctly
         raise
+    except asyncio.TimeoutError:
+        logger.error(f"⌛ Screenshot command timed out for browser {browser_id}")
+        raise HTTPException(status_code=504, detail="Browser extension timed out while taking screenshot")
     except Exception as e:
-        logger.error(f"Error relaying screenshot from extension: {e}")
+        logger.error(f"💥 Error relaying screenshot from extension: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 @router.get("/threads/{thread_id}/browser")

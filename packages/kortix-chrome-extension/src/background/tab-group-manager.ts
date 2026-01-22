@@ -24,48 +24,91 @@ class KortixTabGroupManager {
      * Get or create the Kortix tab group
      */
     async getOrCreateGroup(): Promise<number> {
-        // First check if our cached groupId still exists
+        // Try to find an existing Kortix group (cached or by query)
+        let group: chrome.tabGroups.TabGroup | null = null;
+
         if (this.groupId !== null) {
             try {
-                const groups = await chrome.tabGroups.query({ title: 'Kortix' });
-                if (groups.some((g) => g.id === this.groupId)) {
-                    return this.groupId;
+                const existing = await chrome.tabGroups.get(this.groupId);
+                if (existing.title === 'Kortix') {
+                    group = existing;
                 }
             } catch (e) {
-                // Group might not exist anymore
+                this.groupId = null;
             }
         }
 
-        // Check if there's an existing Kortix group
-        const existingGroups = await chrome.tabGroups.query({ title: 'Kortix' });
-        if (existingGroups.length > 0) {
-            this.groupId = existingGroups[0].id;
-            // Sync our tab list
-            const tabs = await chrome.tabs.query({ groupId: this.groupId });
+        if (!group) {
+            const existingGroups = await chrome.tabGroups.query({ title: 'Kortix' });
+            if (existingGroups.length > 0) {
+                group = existingGroups[0];
+                this.groupId = group.id;
+            }
+        }
+
+        if (group) {
+            // Found it - sync tab list and ENFORCE color
+            const tabs = await chrome.tabs.query({ groupId: group.id });
             this.tabIds = new Set(tabs.map((t) => t.id!));
-            console.log('[Kortix Extension - Tabs] Found existing group:', this.groupId);
-            return this.groupId;
+
+            // Persistent enforcement for browsers like Comet that might override extension settings
+            this.enforceGroupVisuals(group.id);
+            return group.id;
         }
 
         // Create a new group by first creating a tab
-        const tab = await chrome.tabs.create({ active: false });
+        // Default to Google instead of newtab to allow immediate capture
+        const tab = await chrome.tabs.create({
+            url: 'https://www.google.com',
+            active: false
+        });
         if (!tab.id) throw new Error('Failed to create tab');
+
+        // Wait a tiny bit for navigation to start
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Group the tab
         this.groupId = await chrome.tabs.group({ tabIds: [tab.id] });
+        console.log('[Kortix Extension - Tabs] Grouped tab into new group:', this.groupId);
 
-        // Update group properties
-        await chrome.tabGroups.update(this.groupId, {
-            title: 'Kortix',
-            color: 'purple',
-            collapsed: false,
-        });
+        // Small delay to ensure Chrome has registered the group
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Persistent enforcement
+        this.enforceGroupVisuals(this.groupId);
 
         this.tabIds.add(tab.id);
         this.activeTabId = tab.id;
 
-        console.log('[Kortix Extension - Tabs] Created new group:', this.groupId);
         return this.groupId;
+    }
+
+    /**
+     * Enforce group color and title with retries (Comet/Edge/AI-organizer safety)
+     */
+    private async enforceGroupVisuals(groupId: number, retries: number = 3): Promise<void> {
+        const apply = async () => {
+            try {
+                await chrome.tabGroups.update(groupId, {
+                    title: 'Kortix',
+                    color: 'purple',
+                    collapsed: false,
+                });
+
+                // Verify
+                const updated = await chrome.tabGroups.get(groupId);
+                console.log(`[Kortix Extension - Tabs] Group ${groupId} visuals: title="${updated.title}", color="${updated.color}"`);
+
+                if (updated.color !== 'purple' && retries > 0) {
+                    console.warn(`[Kortix Extension - Tabs] Color mismatch in Comet/Browser (expected purple, got ${updated.color}). Retrying...`);
+                    setTimeout(() => this.enforceGroupVisuals(groupId, retries - 1), 500);
+                }
+            } catch (e) {
+                console.error('[Kortix Extension - Tabs] Failed to update group visuals:', e);
+            }
+        };
+
+        apply();
     }
 
     /**
@@ -116,23 +159,29 @@ class KortixTabGroupManager {
      * Get the current active tab in the Kortix group
      */
     async getActiveTab(): Promise<chrome.tabs.Tab | null> {
-        if (this.activeTabId === null) return null;
-
-        try {
-            const tab = await chrome.tabs.get(this.activeTabId);
-            if (tab.groupId === this.groupId) {
-                return tab;
+        // Try cached ID first
+        if (this.activeTabId !== null) {
+            try {
+                const tab = await chrome.tabs.get(this.activeTabId);
+                if (tab.groupId === this.groupId) {
+                    return tab;
+                }
+            } catch (e) {
+                // Tab might have been closed
+                this.activeTabId = null;
             }
-        } catch (e) {
-            // Tab might have been closed
         }
 
-        // Try to find any tab in our group
+        // Fallback: Try to find any tab in our group
         if (this.groupId !== null) {
-            const tabs = await chrome.tabs.query({ groupId: this.groupId });
-            if (tabs.length > 0) {
-                this.activeTabId = tabs[0].id!;
-                return tabs[0];
+            try {
+                const tabs = await chrome.tabs.query({ groupId: this.groupId });
+                if (tabs.length > 0) {
+                    this.activeTabId = tabs[0].id!;
+                    return tabs[0];
+                }
+            } catch (e) {
+                console.error('[Kortix Extension - Tabs] Failed to query tabs in group:', e);
             }
         }
 
@@ -210,20 +259,41 @@ class KortixTabGroupManager {
             throw new Error('No active tab to capture');
         }
 
-        // Make sure tab is active
-        await chrome.tabs.update(tab.id, { active: true });
+        // Restricted URLs (chrome://, about:, extensions) - CANNOT capture these
+        if (tab.url?.startsWith('chrome://') || tab.url?.startsWith('about:') || !tab.url?.startsWith('http')) {
+            console.warn(`[Kortix Extension - Tabs] Cannot capture restricted URL: ${tab.url}`);
+            throw new Error(`Cannot capture restricted page (${tab.url}). Please navigate to a website.`);
+        }
 
-        // Small delay to ensure tab is rendered
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        try {
+            // Make sure tab is active in its window
+            await chrome.tabs.update(tab.id, { active: true });
 
-        // Capture visible area
-        const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-            format: 'png',
-        });
+            // Small delay to ensure tab is rendered/active
+            await new Promise((resolve) => setTimeout(resolve, 150));
 
-        // Extract base64 data (remove data:image/png;base64, prefix)
-        const base64 = dataUrl.split(',')[1];
-        return base64;
+            // Capture visible area
+            const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+                format: 'png',
+            });
+
+            if (!dataUrl) {
+                throw new Error('Capture returned empty result');
+            }
+
+            // Extract base64 data
+            const base64 = dataUrl.split(',')[1];
+            return base64;
+        } catch (e) {
+            const errorMsg = e instanceof Error ? e.message : String(e);
+            console.error(`[Kortix Extension - Tabs] Failed to capture screenshot for ${tab.url}:`, e);
+
+            if (errorMsg.includes('activeTab')) {
+                throw new Error(`Browser blocked screenshot capture for ${tab.url}. Ensure extension has permission to access all sites and the window is not minimized.`);
+            }
+
+            throw new Error(`Screenshot failed: ${errorMsg} (${tab.url})`);
+        }
     }
 
     /**

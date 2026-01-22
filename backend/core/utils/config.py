@@ -334,6 +334,7 @@ class Configuration:
     
     # Supabase configuration
     SUPABASE_URL: str
+    SUPABASE_PUBLIC_URL: Optional[str] = None
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_JWT_SECRET: str

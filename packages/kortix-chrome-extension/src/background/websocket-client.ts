@@ -39,6 +39,23 @@ export interface BrowserCommand {
     timestamp: number;
 }
 
+export interface InteractionCommand {
+    type: 'command';
+    id: string;
+    session_id: string;
+    action: 'interaction';
+    params: {
+        type: 'click' | 'key_down' | 'key_up' | 'mouse_move' | 'scroll';
+        x?: number;
+        y?: number;
+        key?: string;
+        deltaX?: number;
+        deltaY?: number;
+        button?: 'left' | 'right' | 'middle';
+    };
+    timestamp: number;
+}
+
 export interface CommandResult {
     type: 'result';
     id: string;
@@ -49,17 +66,26 @@ export interface CommandResult {
     timestamp: number;
 }
 
+export interface StreamChunkMessage {
+    type: 'stream_chunk';
+    browser_id: string;
+    screenshot_base64: string;
+    url?: string;
+    title?: string;
+    timestamp: number;
+}
+
 export interface HeartbeatMessage {
     type: 'heartbeat';
     timestamp: number;
 }
 
-export type WebSocketMessage = WelcomeMessage | BrowserCommand | HeartbeatMessage;
+export type WebSocketMessage = WelcomeMessage | BrowserCommand | HeartbeatMessage | InteractionCommand;
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'authenticated';
 
 export interface WebSocketClientOptions {
-    onCommand: (command: BrowserCommand) => Promise<CommandResult>;
+    onCommand: (command: BrowserCommand | InteractionCommand) => Promise<CommandResult>;
     onStateChange?: (state: ConnectionState) => void;
 }
 
@@ -214,7 +240,7 @@ class KortixWebSocketClient {
     /**
      * Handle command from backend
      */
-    private async handleCommand(command: BrowserCommand): Promise<void> {
+    private async handleCommand(command: BrowserCommand | InteractionCommand): Promise<void> {
         console.log('[Kortix Extension - WS] Received command:', command.action, command.id);
 
         if (!this.options?.onCommand) {
@@ -229,7 +255,7 @@ class KortixWebSocketClient {
             const errorResult: CommandResult = {
                 type: 'result',
                 id: command.id,
-                session_id: this.sessionId!,
+                session_id: command.session_id,
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error',
                 timestamp: Date.now(),
@@ -272,7 +298,7 @@ class KortixWebSocketClient {
     /**
      * Send message to server
      */
-    private send(message: object): void {
+    public send(message: object): void {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify(message));
         } else {

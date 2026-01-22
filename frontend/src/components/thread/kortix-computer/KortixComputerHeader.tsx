@@ -15,20 +15,21 @@ interface KortixComputerHeaderProps {
   onIconClick?: () => void;
   /** Tooltip/title for the icon button */
   iconTitle?: string;
-  
+
   /** Simple title to display (mutually exclusive with breadcrumbs and fileName) */
-  title?: string;
-  
+  title?: React.ReactNode;
   /** File name to display with chevron separator (for file viewer) */
   fileName?: string;
-  
+
   /** Breadcrumb segments to display (mutually exclusive with title and fileName) */
   breadcrumbs?: BreadcrumbSegment[];
   /** Click handler for breadcrumb navigation */
   onBreadcrumbClick?: (path: string) => void;
-  
+
   /** Actions to display on the right side */
   actions?: React.ReactNode;
+  /** Optional content to display in the center */
+  centerContent?: React.ReactNode;
 }
 
 /**
@@ -46,11 +47,12 @@ export function KortixComputerHeader({
   breadcrumbs,
   onBreadcrumbClick,
   actions,
+  centerContent,
 }: KortixComputerHeaderProps) {
   return (
     <div className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 flex items-center justify-between flex-shrink-0 max-w-full min-w-0">
       {/* Left section: Icon + Title/Breadcrumbs/FileName */}
-      <div className="flex items-center gap-3 overflow-x-auto min-w-0 scrollbar-hide max-w-full">
+      <div className="flex items-center gap-3 overflow-x-auto min-w-0 scrollbar-hide max-w-[33%]">
         {/* Icon Button - ALWAYS same styling */}
         {onIconClick ? (
           <button
@@ -68,7 +70,7 @@ export function KortixComputerHeader({
 
         {/* Simple Title */}
         {title && (
-          <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          <span className="text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
             {title}
           </span>
         )}
@@ -95,8 +97,8 @@ export function KortixComputerHeader({
                   onClick={() => onBreadcrumbClick?.(segment.path)}
                   className={cn(
                     "text-base transition-colors truncate max-w-[150px]",
-                    segment.isLast 
-                      ? "text-zinc-900 dark:text-zinc-100 font-medium" 
+                    segment.isLast
+                      ? "text-zinc-900 dark:text-zinc-100 font-medium"
                       : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                   )}
                 >
@@ -108,8 +110,15 @@ export function KortixComputerHeader({
         )}
       </div>
 
+      {/* Center section: URL or other content */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center max-w-[40%] pointer-events-none">
+        <div className="pointer-events-auto">
+          {centerContent}
+        </div>
+      </div>
+
       {/* Right section: Actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+      <div className="flex items-center gap-1.5 flex-shrink-0 ml-2 max-w-[33%]">
         {actions}
       </div>
     </div>

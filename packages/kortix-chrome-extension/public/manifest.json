@@ -8,10 +8,12 @@
     "tabs",
     "tabGroups",
     "storage",
-    "activeTab",
-    "webRequest"
+    "webRequest",
+    "debugger"
   ],
   "host_permissions": [
+    "http://*/*",
+    "https://*/*",
     "<all_urls>"
   ],
   "background": {

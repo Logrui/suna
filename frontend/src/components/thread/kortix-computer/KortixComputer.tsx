@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/utils';
 import { ToolView } from '../tool-views/wrapper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HealthCheckedVncIframe } from '../HealthCheckedVncIframe';
+import { ExtensionVncView } from '../ExtensionVncView';
 import { BrowserHeader } from '../tool-views/BrowserToolView';
 import { useBrowserScreenshot } from '@/hooks/browser/use-user-browsers';
 import { useTranslations } from 'next-intl';
@@ -147,7 +148,10 @@ export const KortixComputer = memo(function KortixComputer({
   );
 
   // --- Browser Extension Screenshot Logic ---
-  const [screenshotRefreshInterval, setScreenshotRefreshInterval] = useState<number | false>(2000);
+  // We disable automatic refetching because the VNC stream provides real-time frames and metadata.
+  // Screenshots are only taken on demand (manual refresh or tool use) to save bandwidth and backend storage.
+  const [streamMetadata, setStreamMetadata] = useState<{ url?: string; title?: string }>({});
+  const [isExtensionConnected, setIsExtensionConnected] = useState(false);
   const {
     data: extensionScreenshot,
     isLoading: isScreenshotLoading,
@@ -155,20 +159,15 @@ export const KortixComputer = memo(function KortixComputer({
     refetch: refetchScreenshot
   } = useBrowserScreenshot(browserId, {
     enabled: !!browserId && activeView === 'browser',
-    refetchInterval: screenshotRefreshInterval,
+    refetchInterval: false, // DISABLE PASSIVE REFRESH
   });
 
-  const handleScreenshotRefresh = useCallback(async () => {
-    await refetchScreenshot();
-  }, [refetchScreenshot]);
-
-  useEffect(() => {
-    if (screenshotError) {
-      setScreenshotRefreshInterval(false);
-    } else {
-      setScreenshotRefreshInterval(2000);
-    }
-  }, [screenshotError]);
+  const handleStreamMetadata = useCallback((metadata: { url?: string; title?: string }) => {
+    setStreamMetadata(prev => ({
+      ...prev,
+      ...metadata
+    }));
+  }, []);
   // ------------------------------------------
 
   const currentViewRef = useRef(activeView);
@@ -180,6 +179,10 @@ export const KortixComputer = memo(function KortixComputer({
   const handleVncRefresh = useCallback(() => {
     setVncRefreshKey(prev => prev + 1);
   }, []);
+
+  const handleScreenshotRefresh = useCallback(() => {
+    refetchScreenshot();
+  }, [refetchScreenshot]);
 
   const persistentVncIframe = useMemo(() => {
     if (!sandbox || !sandbox.vnc_preview || !sandbox.pass || !sandbox.id) return null;
@@ -587,7 +590,7 @@ export const KortixComputer = memo(function KortixComputer({
   };
 
   const renderBrowserView = () => {
-    const isConnected = !!browserId ? !screenshotError && !!extensionScreenshot : !!persistentVncIframe;
+    const isConnected = !!browserId ? isExtensionConnected : !!persistentVncIframe;
     const onRefresh = !!browserId ? handleScreenshotRefresh : handleVncRefresh;
 
     return (
@@ -595,8 +598,8 @@ export const KortixComputer = memo(function KortixComputer({
         <BrowserHeader
           isConnected={isConnected}
           onRefresh={onRefresh}
-          url={browserId ? extensionScreenshot?.url : undefined}
-          title={browserId ? extensionScreenshot?.title : undefined}
+          url={browserId ? (streamMetadata.url || extensionScreenshot?.url) : undefined}
+          title={browserId ? (streamMetadata.title || extensionScreenshot?.title) : undefined}
           browserName={browserName}
           threadId={threadId}
           browserId={browserId}
@@ -604,45 +607,12 @@ export const KortixComputer = memo(function KortixComputer({
 
         <div className="flex-1 overflow-hidden grid items-center bg-zinc-50 dark:bg-zinc-950/20 relative">
           {browserId ? (
-            <AnimatePresence mode="wait">
-              {extensionScreenshot?.screenshot_base64 ? (
-                <motion.div
-                  key={extensionScreenshot.screenshot_base64}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-full h-full flex items-center justify-center p-4"
-                >
-                  <img
-                    src={`data:image/png;base64,${extensionScreenshot.screenshot_base64}`}
-                    alt="Browser extension view"
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-border/50"
-                  />
-                  <div className="absolute top-8 right-8 flex items-center space-x-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 z-10 transition-opacity">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Live Extension</span>
-                  </div>
-                </motion.div>
-              ) : screenshotError ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-                  <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center border-2 border-red-200 dark:border-red-800/50">
-                    <Globe className="h-8 w-8 text-red-500" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-semibold">Connection Unavailable</h3>
-                    <p className="text-sm text-muted-foreground max-w-xs">
-                      Make sure your browser extension is active and the tab is connected.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center space-y-3">
-                  <CircleDashed className="h-8 w-8 text-primary animate-spin" />
-                  <p className="text-sm text-muted-foreground">Connecting to extension...</p>
-                </div>
-              )}
-            </AnimatePresence>
+            <ExtensionVncView
+              browserId={browserId}
+              className="w-full h-full"
+              onMetadata={handleStreamMetadata}
+              onConnectionChange={setIsExtensionConnected}
+            />
           ) : persistentVncIframe ? (
             persistentVncIframe
           ) : (

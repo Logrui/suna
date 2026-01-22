@@ -58,14 +58,14 @@ export const BrowserHeader: React.FC<BrowserHeaderProps> = ({
     <>
       <KortixComputerHeader
         icon={Globe}
-        title={headerTitle}
-        actions={
-          <>
-            {/* Computer name badge - clickable to open browser selector */}
+        title={
+          <div className="flex items-center gap-2">
+            <span>{headerTitle}</span>
+            {/* Computer name badge moved to left section */}
             {isMyBrowser && (
               <Badge
                 variant="secondary"
-                className="gap-1.5 px-2 py-1 rounded-lg cursor-pointer hover:bg-accent transition-colors"
+                className="gap-1.5 px-2 py-0.5 rounded-lg cursor-pointer hover:bg-accent transition-colors border-zinc-200 dark:border-zinc-700"
                 onClick={() => setIsBrowserModalOpen(true)}
                 title="Click to change browser"
               >
@@ -73,14 +73,21 @@ export const BrowserHeader: React.FC<BrowserHeaderProps> = ({
                 <span className="text-xs font-medium">{browserName}</span>
               </Badge>
             )}
-            {url && (
-              <div className="hidden md:flex items-center px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 max-w-[300px]">
-                <span className="text-xs text-zinc-500 truncate">{url}</span>
-              </div>
-            )}
-            <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl">
+          </div>
+        }
+        centerContent={
+          url && (
+            <div className="hidden md:flex items-center px-4 py-1.5 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-full border border-zinc-200 dark:border-zinc-700 shadow-inner w-full min-w-[200px] max-w-[500px]">
+              <Globe className="h-3 w-3 text-zinc-400 mr-2 flex-shrink-0" />
+              <span className="text-[11px] text-zinc-500 font-medium truncate select-all">{url}</span>
+            </div>
+          )
+        }
+        actions={
+          <>
+            <Badge variant="outline" className="gap-1.5 p-2 rounded-3xl border-zinc-200 dark:border-zinc-800">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500/80 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span className="sm:inline">{isMyBrowser ? 'Live Extension' : 'Live Preview'}</span>
+              <span className="sm:inline font-medium">{isMyBrowser ? 'Kortix Operator' : 'Live Preview'}</span>
             </Badge>
             {viewToggle}
             <div className="flex items-center gap-1">

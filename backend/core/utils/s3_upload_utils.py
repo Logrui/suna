@@ -43,6 +43,12 @@ async def upload_base64_image(base64_data: str, bucket_name: str = "image-upload
         # Get public URL
         public_url = await client.storage.from_(bucket_name).get_public_url(filename)
         
+        # If a public URL override is defined, replace the internal host
+        # This is useful when the backend uses host.docker.internal but the browser sees a public domain
+        from core.utils.config import config
+        if config.SUPABASE_PUBLIC_URL and config.SUPABASE_URL in public_url:
+            public_url = public_url.replace(config.SUPABASE_URL, config.SUPABASE_PUBLIC_URL)
+        
         logger.debug(f"Successfully uploaded image to {public_url}")
         return public_url
         
@@ -72,6 +78,12 @@ async def upload_image_bytes(image_bytes: bytes, content_type: str = "image/png"
         )
 
         public_url = await client.storage.from_(bucket_name).get_public_url(filename)
+
+        # If a public URL override is defined, replace the internal host
+        from core.utils.config import config
+        if config.SUPABASE_PUBLIC_URL and config.SUPABASE_URL in public_url:
+            public_url = public_url.replace(config.SUPABASE_URL, config.SUPABASE_PUBLIC_URL)
+
         logger.debug(f"Successfully uploaded agent profile image to {public_url}")
         return public_url
     except Exception as e:

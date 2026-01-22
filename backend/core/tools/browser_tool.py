@@ -230,14 +230,14 @@ class BrowserTool(SandboxToolsBase):
                 response_data = result.data or {}
                 
                 # Process screenshot if present (extension sends base64)
-                if "screenshot" in response_data:
-                    screenshot_base64 = response_data["screenshot"]
+                screenshot_base64 = response_data.get("screenshot") or response_data.get("screenshot_base64")
+                if screenshot_base64:
                     is_valid, error_msg = self._validate_base64_image(screenshot_base64)
                     if is_valid:
+                        # Use consistent bucket name 
                         image_url = await upload_base64_image(
                             base64_data=screenshot_base64,
-                            project_id=self.project_id,
-                            thread_id=self.thread_id,
+                            bucket_name="browser-screenshots"
                         )
                         response_data["image_url"] = image_url  # Use same key as sandbox
                         logger.debug(f"Extension screenshot uploaded: {image_url}")

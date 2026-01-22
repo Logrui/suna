@@ -7,9 +7,11 @@
  * - State persistence
  */
 
-import { wsClient, BrowserCommand, CommandResult } from './websocket-client';
+import { wsClient, BrowserCommand, CommandResult, InteractionCommand } from './websocket-client';
 import { tabGroupManager } from './tab-group-manager';
 import { getConnectBrowserUrl } from '../config';
+import { inputManager } from './input-manager';
+import { streamingManager } from './streaming-manager';
 
 // ========== Types ==========
 
@@ -36,8 +38,8 @@ let state: ExtensionState = {
 /**
  * Handle commands from the backend
  */
-async function handleBackendCommand(command: BrowserCommand): Promise<CommandResult> {
-  console.log('[Kortix Extension - Background] Handling command:', command.action, command.params);
+async function handleBackendCommand(command: BrowserCommand | InteractionCommand): Promise<CommandResult> {
+  console.log('[Kortix Extension - Background] Handling command:', command.action);
   state.commandCount++;
 
   try {
@@ -98,6 +100,16 @@ async function handleBackendCommand(command: BrowserCommand): Promise<CommandRes
         await tabGroupManager.switchTab(Number(tabId));
         data = await getPageState();
         break;
+
+      case 'interaction':
+        await handleInteraction(command as any);
+        return {
+          type: 'result',
+          id: command.id,
+          session_id: command.session_id,
+          success: true,
+          timestamp: Date.now(),
+        };
 
       default:
         throw new Error(`Unknown action: ${command.action}`);
@@ -175,6 +187,68 @@ async function handleType(params: Record<string, any>): Promise<void> {
     type: 'executeCommand',
     command: { action: 'type', params: { selector, text, clear } },
   });
+}
+
+/**
+ * Handle user interaction from the backend (Live Stream)
+ */
+async function handleInteraction(command: InteractionCommand): Promise<void> {
+  const { action, params } = command;
+  const tab = await tabGroupManager.getActiveTab();
+  if (!tab || !tab.id) return;
+
+  switch (params.type) {
+    case 'click':
+      await inputManager.dispatchMouseEvent(tab.id, {
+        type: 'mousePressed',
+        x: params.x,
+        y: params.y,
+        button: params.button || 'left',
+        clickCount: 1,
+      });
+      await inputManager.dispatchMouseEvent(tab.id, {
+        type: 'mouseReleased',
+        x: params.x,
+        y: params.y,
+        button: params.button || 'left',
+        clickCount: 1,
+      });
+      break;
+
+    case 'mouse_move':
+      await inputManager.dispatchMouseEvent(tab.id, {
+        type: 'mouseMoved',
+        x: params.x,
+        y: params.y,
+      });
+      break;
+
+    case 'key_down':
+      await inputManager.dispatchKeyEvent(tab.id, {
+        type: 'keyDown',
+        text: params.key,
+        unmodifiedText: params.key,
+        key: params.key,
+      });
+      break;
+
+    case 'key_up':
+      await inputManager.dispatchKeyEvent(tab.id, {
+        type: 'keyUp',
+        key: params.key,
+      });
+      break;
+
+    case 'scroll':
+      await inputManager.dispatchMouseEvent(tab.id, {
+        type: 'mouseWheel',
+        x: 0,
+        y: 0,
+        deltaX: params.deltaX || 0,
+        deltaY: params.deltaY || 0,
+      });
+      break;
+  }
 }
 
 /**
@@ -314,6 +388,13 @@ async function initialize(): Promise<void> {
       state.sessionId = wsClient.currentSessionId;
       state.extensionId = wsClient.currentExtensionId;
       console.log('[Kortix Extension - Background] Connection state:', connectionState);
+
+      // Start/stop stream based on connection
+      if (state.isConnected) {
+        streamingManager.start();
+      } else {
+        streamingManager.stop();
+      }
     },
   });
 
