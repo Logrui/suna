@@ -1,15 +1,14 @@
 ﻿<div align="center">
 
-# Community - Suna Kortix
+# Kortix- Community Edition
 
 ![Kortix Screenshot](frontend/public/banner.png)
 
 <div align="left">
 
 ## **Kortix Community - Kortix AI - Last Updated: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
-**This is a self hosted server build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker with some networking fixes and additional features. Networking is the primary issue with self-hosting Kortix AI - see set up instructions below and disclaimers to avoid issues.**
-
-
+**This is soft fork of kortix-ai/suna - a streamlined version of Suna Kortix optimized for self hosting via local a local docker container or one click deployment using Railway (experimental) w/ some networking optimizations and more.
+Networking is the primary issue with self-hosting Kortix AI - see set up instructions below and disclaimers to avoid issues.**
 
 ## **Getting Started:**
 
@@ -17,7 +16,7 @@ Easiest method:
 
 Railway Deployment: (WIP)
 (1) Sign up for a free Railway account
-(2) Deploy via Railway Template suna-community
+(2) Deploy via Railway Template ![suna-community](https://railway.com/deploy/5wut09?referralCode=3tMBLG&utm_medium=integration&utm_source=template&utm_campaign=generic) (WIP: Needs template optimizations, may need to adjust env vars)
 
 Self Hosted Docker Compose - see details below
 
@@ -32,14 +31,14 @@ Self Hosted Docker Compose - see details below
 | **Feature** | Library Implementation | Allows access to files and resources across different projects. |
 | **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
 | **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
-| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
+| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. | (Docker Compose Only)
 | **Feature** | Extended Model Support | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
 
 ## **Planned Features/WIP:**
 
 | Feature Category | Item | Dependencies/Notes |
 | :--- | :--- | :--- |
-| **Core Workflow** | Restored Workflow/Playbooks System | Currently a Work In Progress (WIP). |
+| **Core Workflow** | Restored Workflow/Playbooks System | Currently a Work In Progress (WIP). See dev branch for newest updates |
 | **Native Tool** | Subagent System | Depends on the Wide Research System being implemented. |
 | **Native Tool** | Manus like Wide Research System | Depends on the Subagent System being implemented. |
 | **Native Tool** | Gemini ComputerUse + BrowserUse Support | Depends on the Subagent System being implemented. |
