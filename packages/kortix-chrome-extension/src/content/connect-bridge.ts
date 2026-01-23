@@ -41,6 +41,32 @@ function getConfig(): KortixConfig {
     };
 }
 
+/**
+ * Check if the extension context is still valid.
+ * Returns false if the extension was reloaded and this content script is orphaned.
+ */
+function isExtensionContextValid(): boolean {
+    try {
+        // This will throw if context is invalidated
+        chrome.runtime.getManifest();
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Notify the page that a refresh is required because the extension was reloaded.
+ */
+function notifyRefreshRequired(origin: string = '*'): void {
+    window.postMessage({
+        type: 'KORTIX_EXTENSION_REFRESH_REQUIRED',
+        message: 'Extension was reloaded. Please refresh this page.',
+    }, origin);
+
+    console.warn('[Kortix Extension - Bridge] Extension context invalidated. Please refresh the page.');
+}
+
 // ========== Types ==========
 
 interface KortixTokenMessage {
@@ -67,6 +93,12 @@ interface KortixStatusMessage {
  */
 function setupTokenListener(): void {
     window.addEventListener('message', async (event) => {
+        // Check if extension context is still valid
+        if (!isExtensionContextValid()) {
+            notifyRefreshRequired(event.origin);
+            return;
+        }
+
         // Only accept messages from Kortix domains
         const config = getConfig();
         const allowedOrigins = [
@@ -111,12 +143,20 @@ function setupTokenListener(): void {
                     }, event.origin);
                 }
             } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+
+                // Check for context invalidation
+                if (errorMsg.includes('Extension context invalidated') || !isExtensionContextValid()) {
+                    notifyRefreshRequired(event.origin);
+                    return;
+                }
+
                 console.error('[Kortix Extension - Bridge] Error sending token:', error);
 
                 window.postMessage({
                     type: 'KORTIX_EXTENSION_CONNECTED',
                     success: false,
-                    error: error instanceof Error ? error.message : 'Unknown error',
+                    error: errorMsg,
                 }, event.origin);
             }
         }
@@ -154,13 +194,21 @@ function setupTokenListener(): void {
                     }, event.origin);
                 }
             } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+
+                // Check for context invalidation
+                if (errorMsg.includes('Extension context invalidated') || !isExtensionContextValid()) {
+                    notifyRefreshRequired(event.origin);
+                    return;
+                }
+
                 console.error('[Kortix Extension - Bridge] Error disconnecting:', error);
 
                 // Still notify page so it can proceed
                 window.postMessage({
                     type: 'KORTIX_EXTENSION_DISCONNECTED',
                     success: false,
-                    error: error instanceof Error ? error.message : 'Unknown error',
+                    error: errorMsg,
                 }, event.origin);
             }
         }
@@ -171,6 +219,17 @@ function setupTokenListener(): void {
  * Get current extension status
  */
 async function getExtensionStatus(): Promise<KortixStatusMessage> {
+    // Check if extension context is still valid first
+    if (!isExtensionContextValid()) {
+        return {
+            type: 'KORTIX_EXTENSION_STATUS',
+            installed: true,
+            connected: false,
+            extensionId: null,
+            needsRefresh: true,
+        } as KortixStatusMessage & { needsRefresh: boolean };
+    }
+
     try {
         const response = await chrome.runtime.sendMessage({ type: 'getStatus' });
 
@@ -181,6 +240,19 @@ async function getExtensionStatus(): Promise<KortixStatusMessage> {
             extensionId: response.extensionId,
         };
     } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : '';
+
+        // Check for context invalidation
+        if (errorMsg.includes('Extension context invalidated')) {
+            return {
+                type: 'KORTIX_EXTENSION_STATUS',
+                installed: true,
+                connected: false,
+                extensionId: null,
+                needsRefresh: true,
+            } as KortixStatusMessage & { needsRefresh: boolean };
+        }
+
         return {
             type: 'KORTIX_EXTENSION_STATUS',
             installed: true,

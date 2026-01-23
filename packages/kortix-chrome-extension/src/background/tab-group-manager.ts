@@ -5,10 +5,13 @@
  * This keeps agent tabs organized and separate from user's personal tabs.
  */
 
+import { debuggerCapture } from './debugger-capture';
+
 // ========== Types ==========
 
 export interface TabGroupState {
     groupId: number | null;
+    windowId: number | null;
     activeTabId: number | null;
     tabIds: number[];
 }
@@ -17,13 +20,67 @@ export interface TabGroupState {
 
 class KortixTabGroupManager {
     private groupId: number | null = null;
+    private windowId: number | null = null;
     private activeTabId: number | null = null;
     private tabIds: Set<number> = new Set();
+
+    /**
+     * Get or create a dedicated window for Kortix.
+     * Dimensions fixed to 1440x900 for consistency with Sandbox.
+     */
+    async getOrCreateWindow(): Promise<number> {
+        // 1. Check if we already have a valid window ID cached
+        if (this.windowId !== null) {
+            try {
+                const win = await chrome.windows.get(this.windowId);
+                return win.id!;
+            } catch (e) {
+                this.windowId = null;
+            }
+        }
+
+        // 2. Try to find a window that contains our specific tab group
+        if (this.groupId !== null) {
+            try {
+                const group = await chrome.tabGroups.get(this.groupId);
+                this.windowId = group.windowId;
+                return this.windowId;
+            } catch (e) {
+                this.groupId = null;
+            }
+        }
+
+        // 3. Fallback: query for any group titled 'Kortix'
+        const existingGroups = await chrome.tabGroups.query({ title: 'Kortix' });
+        if (existingGroups.length > 0) {
+            this.windowId = existingGroups[0].windowId;
+            this.groupId = existingGroups[0].id;
+            return this.windowId;
+        }
+
+        // 4. No dedicated window found, create a new one with fixed dimensions
+        const width = 1440;
+        const height = 900;
+
+        // Center the window roughly
+        const win = await chrome.windows.create({
+            focused: true, // Focus once on create so user sees it
+            type: 'normal',
+            width,
+            height,
+        });
+
+        this.windowId = win.id!;
+        console.log(`[Kortix Extension - Tabs] Created dedicated window (${width}x${height}):`, this.windowId);
+        return this.windowId;
+    }
 
     /**
      * Get or create the Kortix tab group
      */
     async getOrCreateGroup(): Promise<number> {
+        const windowId = await this.getOrCreateWindow();
+
         // Try to find an existing Kortix group (cached or by query)
         let group: chrome.tabGroups.TabGroup | null = null;
 
@@ -32,6 +89,15 @@ class KortixTabGroupManager {
                 const existing = await chrome.tabGroups.get(this.groupId);
                 if (existing.title === 'Kortix') {
                     group = existing;
+
+                    // Ensure it's in our dedicated window
+                    if (group.windowId !== windowId) {
+                        console.log('[Kortix Extension - Tabs] Moving group to dedicated window');
+                        // We can't move a group directly across windows in one call reliably, 
+                        // so we move the tabs and the group follows or we re-group
+                        const tabs = await chrome.tabs.query({ groupId: group.id });
+                        await chrome.tabs.move(tabs.map(t => t.id!), { windowId, index: -1 });
+                    }
                 }
             } catch (e) {
                 this.groupId = null;
@@ -43,6 +109,11 @@ class KortixTabGroupManager {
             if (existingGroups.length > 0) {
                 group = existingGroups[0];
                 this.groupId = group.id;
+
+                if (group.windowId !== windowId) {
+                    const tabs = await chrome.tabs.query({ groupId: group.id });
+                    await chrome.tabs.move(tabs.map(t => t.id!), { windowId, index: -1 });
+                }
             }
         }
 
@@ -56,9 +127,9 @@ class KortixTabGroupManager {
             return group.id;
         }
 
-        // Create a new group by first creating a tab
-        // Default to Google instead of newtab to allow immediate capture
+        // Create a new group by first creating a tab in our dedicated window
         const tab = await chrome.tabs.create({
+            windowId,
             url: 'https://www.google.com',
             active: false
         });
@@ -243,54 +314,62 @@ class KortixTabGroupManager {
     }
 
     /**
-     * Capture screenshot of the active tab
+     * Capture screenshot of a tab.
+     * 
+     * REFACTORED: Now uses chrome.debugger + Page.captureScreenshot
+     * which does NOT require the tab to be active/visible.
+     * This fixes the annoying tab-switching bug.
+     * 
+     * @param tabId - Optional specific tab ID. If not provided, uses active tab.
      */
-    async captureScreenshot(): Promise<string> {
-        let tab = await this.getActiveTab();
+    async captureScreenshot(tabId?: number): Promise<string> {
+        let targetTabId = tabId;
 
-        // If no active tab, try to create/get group to ensure at least one tab exists
-        if (!tab || !tab.id) {
-            console.log('[Kortix Extension - Tabs] No active tab, attempting to create/get group');
-            await this.getOrCreateGroup();
-            tab = await this.getActiveTab();
+        // If no specific tab, use active tab
+        if (!targetTabId) {
+            const tab = await this.getActiveTab();
+
+            // If no active tab, try to create/get group to ensure at least one tab exists
+            if (!tab || !tab.id) {
+                console.log('[Kortix Extension - Tabs] No active tab, attempting to create/get group');
+                await this.getOrCreateGroup();
+                const newTab = await this.getActiveTab();
+                if (!newTab?.id) {
+                    throw new Error('No active tab to capture');
+                }
+                targetTabId = newTab.id;
+            } else {
+                targetTabId = tab.id;
+            }
         }
 
-        if (!tab || !tab.id) {
-            throw new Error('No active tab to capture');
+        // Get tab info for URL check
+        let tab: chrome.tabs.Tab;
+        try {
+            tab = await chrome.tabs.get(targetTabId);
+        } catch (e) {
+            throw new Error(`Tab ${targetTabId} not found`);
         }
 
-        // Restricted URLs (chrome://, about:, extensions) - CANNOT capture these
+        // Restricted URLs (chrome://, about:, extensions) - debugger can sometimes capture these, 
+        // but it's unreliable. We'll warn but try anyway if using debugger.
         if (tab.url?.startsWith('chrome://') || tab.url?.startsWith('about:') || !tab.url?.startsWith('http')) {
-            console.warn(`[Kortix Extension - Tabs] Cannot capture restricted URL: ${tab.url}`);
-            throw new Error(`Cannot capture restricted page (${tab.url}). Please navigate to a website.`);
+            console.warn(`[Kortix Extension - Tabs] Attempting capture on potentially restricted URL: ${tab.url}`);
         }
 
         try {
-            // Make sure tab is active in its window
-            await chrome.tabs.update(tab.id, { active: true });
+            // Use debugger-based capture - NO TAB ACTIVATION REQUIRED!
+            // This is the key fix: we no longer call chrome.tabs.update(tab.id, { active: true })
+            const base64 = await debuggerCapture.captureTab(targetTabId, 'png');
 
-            // Small delay to ensure tab is rendered/active
-            await new Promise((resolve) => setTimeout(resolve, 150));
-
-            // Capture visible area
-            const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-                format: 'png',
-            });
-
-            if (!dataUrl) {
+            if (!base64) {
                 throw new Error('Capture returned empty result');
             }
 
-            // Extract base64 data
-            const base64 = dataUrl.split(',')[1];
             return base64;
         } catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
             console.error(`[Kortix Extension - Tabs] Failed to capture screenshot for ${tab.url}:`, e);
-
-            if (errorMsg.includes('activeTab')) {
-                throw new Error(`Browser blocked screenshot capture for ${tab.url}. Ensure extension has permission to access all sites and the window is not minimized.`);
-            }
 
             throw new Error(`Screenshot failed: ${errorMsg} (${tab.url})`);
         }
@@ -340,17 +419,22 @@ class KortixTabGroupManager {
     }
 
     /**
-     * Clean up all tabs in the group
+     * Clean up all tabs in the group and close the dedicated window
      */
     async cleanup(): Promise<void> {
-        const tabs = await this.getGroupTabs();
-        if (tabs.length > 0) {
-            await chrome.tabs.remove(tabs.map((t) => t.id!));
+        if (this.windowId !== null) {
+            try {
+                await chrome.windows.remove(this.windowId);
+            } catch (e) {
+                // Window might already be closed
+            }
         }
+
         this.tabIds.clear();
         this.activeTabId = null;
         this.groupId = null;
-        console.log('[Kortix Extension - Tabs] Cleaned up');
+        this.windowId = null;
+        console.log('[Kortix Extension - Tabs] Cleaned up and closed window');
     }
 
     // ========== State ==========
@@ -358,6 +442,7 @@ class KortixTabGroupManager {
     get state(): TabGroupState {
         return {
             groupId: this.groupId,
+            windowId: this.windowId,
             activeTabId: this.activeTabId,
             tabIds: Array.from(this.tabIds),
         };

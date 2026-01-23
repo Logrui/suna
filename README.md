@@ -1,49 +1,65 @@
-﻿<div align="center">
+﻿﻿<div align="center">
 
-# Self Hosted Build - Kortix – Open Source Platform to Build, Manage and Train AI Agents
+# Kortix - Community Edition
 
 ![Kortix Screenshot](frontend/public/banner.png)
 
 <div align="left">
 
-## **Soft Fork of kortix-ai/suna for railway builds and self hosted cloudflare tunnel self hosted servers. - Last Updated: <!-- DATE_START -->2025-12-13<!-- DATE_END -->**
-**This is a railway or docker container build of Kortix AI optimized for self-hosting via Cloudflare Tunnel/Local Docker and/or Railway with some networking fixes and additional features. Networking is the primary issue with self-hosting Kortix AI - see set up instructions below and disclaimers to avoid issues. Railway is the recommended method for self-hosting Kortix AI - it is the most cost effective and easiest to set up.**
+## **Kortix Community - Kortix AI - Last Updated: <!-- DATE_START -->2025-11-23<!-- DATE_END -->**
+**This is a soft fork of kortix-ai/suna optimized for self hosting via a local docker container or one click deployment using Railway (experimental)**
 
-## **Current Implemented Features:**
+**Networking is the primary issue with self-hosting Kortix AI - use Railway deployment to avoid networking headaches - see set up instructions below and disclaimers to avoid issues.**
+
+## **Getting Started:**
+
+**Easiest Setup: Use Kortix Cloud - it's a great deal compared to the 90%+ markup of platforms like Manus. For privacy - see self hosting instructions below**
+
+**Easy Setup: One Click Deployment:**
+Railway Deployment: (WIP - Variables need better descriptions and optimizations - please report bugs or request improvements)
+-(1) Sign up for a free ![Railway](https://railway.com?referralCode=3tMBLG) account and self host and upgrade plan as needed based on usage. Recommended to minimize memory usage - $20/Month Pro plan should account for personal usage easily
+-(2) Deploy via Railway Template ![suna-community](https://railway.com/deploy/5wut09?referralCode=3tMBLG&utm_medium=integration&utm_source=template&utm_campaign=generic) (WIP: Needs template optimizations, may need to adjust env vars)
+-(3) Fill out required environmental variables for the features you want to enable. Recommend using dev branch for unique features to this fork and most up to date syncs to kortix-ai/suna
+
+**Advanced Setup: Self Hosted Docker Compose - see details below**
+
+## **Current Implemented Unique Features of this fork:**
 
 | Category | Feature/Bugfix | Description |
 | :--- | :--- | :--- |
-
-| **Feature** | Custom Notifications System | Customizable notifications for users and admins for use in workflows and more. |
-| **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
-| **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
-| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. |
-| **Feature** | Extended Model Support | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
-| **Feature** | Dev Mode + New Dev Mode Button Toggle | Fixes and adds a toggle button for the Development Mode. |
-| **Feature** | New getAPI module | Updated all network calls to support localhost and cloudflare tunnel configurations. |
+| **Feature** | Native Ollama and LMStudio support | Integration with activation, and hot/cold startup capabilities. | (Docker Compose Only)
+| **Feature** | Admin Dev Mode + New Dev Mode Button Toggle | Fixes deprecated and adds a toggle button for the Development Mode. |
+| **Feature** | New getAPI module | Updated all network calls to optimize localhost and cloudflare tunnel configurations. |
 | **Feature** | Admin + User based Notifications/Inbox System | Centralized system for notifications and user-specific inboxes. |
 | **Feature** | Auto Continue Prompting System (MVP) | Minimal viable product for automatically continuing prompts/conversations. |
 | **Feature** | Library Implementation | Allows access to files and resources across different projects. |
+| **Feature** | KB Based Slash Commands | Knowledge Base (KB) .prompt.md commands (similar to Github Copilot) and text-based prompts. |
+| **Feature** | Left Sidebar with Inbox | Interface change for easy access to the Inbox system. |
+| **Feature** | Extended Model Support | Support for models via OpenRouter, LMStudio, Ollama, Google, and OpenAI. |
 
 ## **Planned Features/WIP:**
 
 | Feature Category | Item | Dependencies/Notes |
 | :--- | :--- | :--- |
-| **Teams of Agents** | Teams of Agents collaborating for | Currently a Work In Progress (WIP). |
-| **Advanced Workflows** | Advanceed Visual Workflow builder with Lexical, ReactFlow, and more | Currently a Work In Progress (WIP). |
-| **Core Workflow** | Restored Workflow/Playbooks System | Currently a Work In Progress (WIP). |
+| **Native Tool** | **Kortix Browser Operator** | Chrome extension w/ backend support to enable Kortix workers to control your own Browser | See dev branch for newest updates |
+| **Core Workflow** | Restored Workflow/Playbooks System | Currently a Work In Progress (WIP). See dev branch for newest updates |
 | **Native Tool** | Subagent System | Depends on the Wide Research System being implemented. |
 | **Native Tool** | Manus like Wide Research System | Depends on the Subagent System being implemented. |
-| **Native Tool** | Gemini ComputerUse + BrowserUse Support | Depends on the Subagent System being implemented. |
+| **Native Tool** | Gemini ComputerUse + BrowserUse Support | Depends on the Subagent System and Chrome Extension being implemented. |
 | **Data/Files** | RAG System Support/Embeddings/RAG as a Service module support | Likely depends on Google Drive/OneDrive Native File Support and Syncing. |
 | **Data/Files** | Google Drive/OneDrive Native File Support and Syncing | Direct integration for cloud file management. |
 | **Core Workflow** | Native Support for continuous prompting | For custom budget models. |
 | **Core Workflow** | Structured Output Workflows/Playbooks System | Depends on a working Restored Workflow/Playbooks System. |
 | **Platform Expansion** | Plugin System | Modularized code architecture for future expansion. |
 
+
 ## **Setup Instructions for Self Hosted: (Recommended only for Experienced Devs/Homelab Users)**
 
-**Note:** Self-hosting Kortix AI can be a bit of a process that requires a good understanding of Docker, Cloudflare Tunnels, and Supabase. If you are not comfortable with these technologies, it is recommended to use the cloud-hosted version of Kortix AI. After going through the setup process personally, I highly recommend using the cloud-hosted version of Kortix AI - its a really good deal compared to Manus. Self hosting w/ Cloudflare has a base cost of $10/mo minimum - Tunnel is free but you need TLS Total
+**Note:** Self-hosting Kortix AI can be a bit of a process that requires a good understanding of Docker, Cloudflare Tunnels, and Supabase. 
+
+**Self hosting w/ Cloudflare Tunnel (for easy remote access) has a base cost of $10/mo minimum - Cloudflare Tunnel is free but you'll likely need TLS Total to support subdomains such as api.yourdomain.com/v1**
+
+**Alternatives:** Tailscale to access self hosted localhost, Railway auto generated domains, etc
 
 **Git Clone + Docker Compose: (Recommended)**
 -Clone the repository to your local machine
@@ -64,48 +80,6 @@ docker compose up -d --build
 ```
 **Note:** Ensure your domain and subdomains are covered by Cloudflare TLS Total otherwise you will get errors with realtime streaming/HTTPS
 
-**Docker Container (Suna):**
-```
--suna-backend 8000:8000
--suna-frontend 9990:3000
--suna-redis 6380:6379
--suna-worker
-```
-**Docker Container (Supabase):**
-```
--realtime-dev.supabase-realtime 8002:4000
--supabase-db 5434:5432
--supabase-auth 8100:9999
--supabase-kong 8888:8000
-```
-**Docker Container (Daytona):**
-```
--Optional (highly recommend not running Daytona in Docker)
--Have tried this and it is not recommended - difficult to set up docker in docker correctly
--Recommend using Cloud based Daytona even while self hosted
--Even on powerful homelab or compute centers - Cloud Daytona is still much faster and more reliable
-```
-**Supabase Setup/Configuration:**
-```
--WIP - git clone supabase/supabase 
--Ensure to run migrations in Supabase once it is set up correctly
--Will try to add a guide for the below items in the future
-```
-**Env Configuration:** 
-```
--WIP
-```
-**Google/Github OAuth Configuration:**
-```
--WIP
-```
-**Composio Configuration:**
-```
--WIP
-```
-**Daytona Configuration:**
-```
--WIP
 ```
 
 </div>

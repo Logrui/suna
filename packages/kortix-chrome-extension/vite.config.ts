@@ -10,6 +10,8 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     copyPublicDir: true,
+    // Disable minification to avoid variable name collisions in content scripts
+    minify: false,
     // Use modulePreload false to prevent module preloading
     modulePreload: false,
     rollupOptions: {

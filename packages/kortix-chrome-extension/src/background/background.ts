@@ -43,8 +43,13 @@ async function handleBackendCommand(command: BrowserCommand | InteractionCommand
   state.commandCount++;
 
   try {
-    // Lazily ensure the Kortix tab group and a tab exist when any command is issued
+    // Ensure the Kortix tab group and dedicated window exist when any command is issued
     await tabGroupManager.getOrCreateGroup();
+
+    // Ensure streaming is active when commands are flowing
+    if (!streamingManager.streaming) {
+      await streamingManager.start();
+    }
 
     let data: Record<string, any> = {};
 
@@ -389,10 +394,9 @@ async function initialize(): Promise<void> {
       state.extensionId = wsClient.currentExtensionId;
       console.log('[Kortix Extension - Background] Connection state:', connectionState);
 
-      // Start/stop stream based on connection
-      if (state.isConnected) {
-        streamingManager.start();
-      } else {
+      // Start/stop stream based on connection - REMOVED AUTO-START
+      // We only want to stream when the user/agent is actually performing browser actions
+      if (!state.isConnected) {
         streamingManager.stop();
       }
     },
@@ -405,11 +409,18 @@ async function initialize(): Promise<void> {
  * Handle extension installation
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason === 'install') {
-    console.log('[Kortix Extension - Background] Extension installed');
+  console.log('[Kortix Extension - Background] onInstalled event:', details);
+
+  const isDev = !chrome.runtime.getManifest().update_url;
+  const shouldOpen = details.reason === 'install' || (isDev && details.reason === 'update');
+
+  if (shouldOpen) {
+    console.log('[Kortix Extension - Background] Opening connect page (Reason: ' + details.reason + ')');
 
     // Open welcome/login page
-    chrome.tabs.create({ url: getConnectBrowserUrl() });
+    const url = getConnectBrowserUrl();
+    console.log('[Kortix Extension - Background] Connect URL:', url);
+    chrome.tabs.create({ url });
   }
 
   if (details.reason === 'update') {
