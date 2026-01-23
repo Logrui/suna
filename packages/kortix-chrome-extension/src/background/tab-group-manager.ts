@@ -322,56 +322,53 @@ class KortixTabGroupManager {
      * 
      * @param tabId - Optional specific tab ID. If not provided, uses active tab.
      */
-    async captureScreenshot(tabId?: number): Promise<string> {
+    /**
+     * Capture screenshot of a tab.
+     * 
+     * @param tabId - Optional specific tab ID. If not provided, uses active tab.
+     * @param clean - If true, hides the overlay before capture to get a clean shot.
+     */
+    async captureScreenshot(tabId?: number, clean: boolean = true): Promise<string> {
         let targetTabId = tabId;
 
         // If no specific tab, use active tab
         if (!targetTabId) {
             const tab = await this.getActiveTab();
-
-            // If no active tab, try to create/get group to ensure at least one tab exists
-            if (!tab || !tab.id) {
-                console.log('[Kortix Extension - Tabs] No active tab, attempting to create/get group');
+            if (!tab?.id) {
                 await this.getOrCreateGroup();
                 const newTab = await this.getActiveTab();
-                if (!newTab?.id) {
-                    throw new Error('No active tab to capture');
-                }
+                if (!newTab?.id) throw new Error('No active tab to capture');
                 targetTabId = newTab.id;
             } else {
                 targetTabId = tab.id;
             }
         }
 
-        // Get tab info for URL check
-        let tab: chrome.tabs.Tab;
         try {
-            tab = await chrome.tabs.get(targetTabId);
-        } catch (e) {
-            throw new Error(`Tab ${targetTabId} not found`);
-        }
-
-        // Restricted URLs (chrome://, about:, extensions) - debugger can sometimes capture these, 
-        // but it's unreliable. We'll warn but try anyway if using debugger.
-        if (tab.url?.startsWith('chrome://') || tab.url?.startsWith('about:') || !tab.url?.startsWith('http')) {
-            console.warn(`[Kortix Extension - Tabs] Attempting capture on potentially restricted URL: ${tab.url}`);
-        }
-
-        try {
-            // Use debugger-based capture - NO TAB ACTIVATION REQUIRED!
-            // This is the key fix: we no longer call chrome.tabs.update(tab.id, { active: true })
-            const base64 = await debuggerCapture.captureTab(targetTabId, 'png');
-
-            if (!base64) {
-                throw new Error('Capture returned empty result');
+            if (clean) {
+                // Hide overlay for a 'clean' screenshot (will cause a brief flicker)
+                await chrome.tabs.sendMessage(targetTabId, {
+                    type: 'SET_OVERLAY_VISIBILITY',
+                    visible: false
+                }).catch(() => { });
             }
 
+            const base64 = await debuggerCapture.captureTab(targetTabId, 'png');
+
+            if (clean) {
+                // Restore overlay immediately
+                await chrome.tabs.sendMessage(targetTabId, {
+                    type: 'SET_OVERLAY_VISIBILITY',
+                    visible: true
+                }).catch(() => { });
+            }
+
+            if (!base64) throw new Error('Capture returned empty result');
             return base64;
         } catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);
-            console.error(`[Kortix Extension - Tabs] Failed to capture screenshot for ${tab.url}:`, e);
-
-            throw new Error(`Screenshot failed: ${errorMsg} (${tab.url})`);
+            console.error(`[Kortix Extension - Tabs] Failed to capture screenshot:`, e);
+            throw new Error(`Screenshot failed: ${errorMsg}`);
         }
     }
 

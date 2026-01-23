@@ -13,33 +13,29 @@
  * 6. Background connects to WebSocket with token
  */
 
-// ========== Inline Config (Content scripts can't use ES module imports) ==========
+// ========== Environment Logic (Content scripts cannot use ES module imports) ==========
 
-interface KortixConfig {
-    apiUrl: string;
-    wsUrl: string;
-    frontendUrl: string;
+const ENV = {
+    FRONTEND_URL: '__FRONTEND_URL__',
+    BACKEND_URL: '__BACKEND_URL__',
+};
+
+function getFrontendOrigin(): string {
+    try {
+        return new URL(ENV.FRONTEND_URL).origin;
+    } catch {
+        return ENV.FRONTEND_URL;
+    }
 }
 
-function getConfig(): KortixConfig {
-    // Development defaults - using suna.syhc.dev for self-hosted testing
-    const isDev = !chrome.runtime.getManifest().update_url;
-
-    if (isDev) {
-        return {
-            apiUrl: 'https://api.suna.syhc.dev',
-            wsUrl: 'wss://api.suna.syhc.dev/v1/ws/extension',
-            frontendUrl: 'https://suna.syhc.dev',
-        };
-    }
-
-    // Production defaults
+function getConfig() {
     return {
-        apiUrl: 'https://api.kortix.com',
-        wsUrl: 'wss://api.kortix.com/v1/ws/extension',
-        frontendUrl: 'https://kortix.com',
+        apiUrl: ENV.BACKEND_URL.endsWith('/v1') ? ENV.BACKEND_URL.slice(0, -3) : ENV.BACKEND_URL,
+        wsUrl: ENV.BACKEND_URL.replace(/^http/, 'wss://') + '/ws/extension',
+        frontendUrl: ENV.FRONTEND_URL,
     };
 }
+
 
 /**
  * Check if the extension context is still valid.
@@ -103,13 +99,21 @@ function setupTokenListener(): void {
         const config = getConfig();
         const allowedOrigins = [
             config.frontendUrl,
-            'https://suna.syhc.dev',
+            getFrontendOrigin(), // Ensure we have the base origin
             'http://localhost:3000',
-            'https://kortix.com',
-            'https://www.kortix.com',
         ];
 
-        if (!allowedOrigins.includes(event.origin)) {
+        // Ensure we handle URL objects or trailing slashes if necessary
+        const originUrl = new URL(event.origin).origin;
+        const isAllowed = allowedOrigins.some(allowed => {
+            try {
+                return new URL(allowed).origin === originUrl;
+            } catch {
+                return false;
+            }
+        });
+
+        if (!isAllowed) {
             return;
         }
 
@@ -292,12 +296,11 @@ console.log('[Kortix Extension - Bridge] Content script loaded on:', window.loca
 
 // Check if we're on a Kortix page
 const config = getConfig();
+const frontendOrigin = getFrontendOrigin();
 const isKortixPage =
     window.location.hostname === 'localhost' ||
-    window.location.hostname === 'suna.syhc.dev' ||
-    window.location.hostname === 'kortix.com' ||
-    window.location.hostname.endsWith('.kortix.com') ||
-    window.location.hostname.endsWith('.syhc.dev');
+    window.location.hostname === '127.0.0.1' ||
+    (frontendOrigin && window.location.origin === frontendOrigin);
 
 console.log('[Kortix Extension - Bridge] isKortixPage:', isKortixPage, 'hostname:', window.location.hostname);
 

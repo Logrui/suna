@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Loader2, Monitor, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card } from '@/components/ui/card';
 
 interface ExtensionVncViewProps {
     browserId: string;
@@ -16,7 +15,7 @@ interface ExtensionVncViewProps {
     isLiveMode?: boolean;
 }
 
-export function ExtensionVncView({ browserId, className, isLiveMode = true, onMetadata, onConnectionChange }: ExtensionVncViewProps) {
+export function ExtensionVncView({ browserId, className, onMetadata, onConnectionChange }: ExtensionVncViewProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isConnected, setIsConnected] = useState(false);
@@ -45,7 +44,6 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
         if (!browserId) return;
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Use the backend URL if defined, otherwise fallback to current host
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
         const host = backendUrl.replace(/^https?:\/\//, '') || window.location.host;
         const wsUrl = `${protocol}//${host}/ws/browser/${browserId}/stream`;
@@ -63,19 +61,83 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
             setError(null);
         };
 
-        // Keepalive ping to prevent proxy/load-balancer timeouts
         const pingInterval = setInterval(() => {
             if (socket.readyState === WebSocket.OPEN) {
-                console.log('[ExtensionVncView] Sending keepalive ping');
                 socket.send(JSON.stringify({ type: 'ping' }));
             }
-        }, 25000); // Every 25 seconds
+        }, 25000);
 
-        socket.onmessage = (event) => {
+        const decoderRef = { current: null as VideoDecoder | null };
+
+        socket.onmessage = async (event) => {
             try {
                 const message = JSON.parse(event.data);
-                if (message.type === 'stream_chunk') {
-                    // Update metadata if present
+
+                if (message.type === 'video_frame') {
+                    if (message.url || message.title) {
+                        onMetadata?.({ url: message.url, title: message.title });
+                    }
+
+                    const base64Data = message.data;
+                    const isKeyFrame = message.is_keyframe;
+                    const timestamp = message.timestamp;
+
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    if (!decoderRef.current || (isKeyFrame && decoderRef.current.state === 'closed')) {
+                        decoderRef.current = new VideoDecoder({
+                            output: (frame) => {
+                                const canvas = canvasRef.current;
+                                if (canvas) {
+                                    const ctx = canvas.getContext('2d');
+                                    if (ctx) {
+                                        if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
+                                            canvas.width = frame.displayWidth;
+                                            canvas.height = frame.displayHeight;
+                                        }
+                                        ctx.drawImage(frame, 0, 0);
+
+                                        // Track Accurate FPS
+                                        const now = Date.now();
+                                        frameCountRef.current++;
+                                        const delta = now - lastFpsUpdateRef.current;
+                                        if (delta >= 1000) {
+                                            const currentFps = Math.round((frameCountRef.current * 1000) / delta);
+                                            setFps(currentFps);
+                                            frameCountRef.current = 0;
+                                            lastFpsUpdateRef.current = now;
+                                        }
+                                    }
+                                }
+                                frame.close();
+                            },
+                            error: (e) => {
+                                console.error('[ExtensionVncView] VideoDecoder error:', e);
+                            }
+                        });
+
+                        decoderRef.current.configure({
+                            codec: 'avc1.42E01E',
+                            optimizeForLatency: true
+                        });
+                    }
+
+                    if (decoderRef.current.state === 'configured') {
+                        const chunk = new EncodedVideoChunk({
+                            type: isKeyFrame ? 'key' : 'delta',
+                            timestamp: timestamp,
+                            data: bytes
+                        });
+                        decoderRef.current.decode(chunk);
+                    }
+
+                    if (isLoading) setIsLoading(false);
+                }
+                else if (message.type === 'stream_chunk') {
                     if (message.url || message.title) {
                         onMetadata?.({ url: message.url, title: message.title });
                     }
@@ -87,18 +149,19 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
                             if (canvas) {
                                 const ctx = canvas.getContext('2d');
                                 if (ctx) {
-                                    // Ensure canvas size matches the incoming image aspect ratio
                                     if (canvas.width !== img.width || canvas.height !== img.height) {
                                         canvas.width = img.width;
                                         canvas.height = img.height;
                                     }
                                     ctx.drawImage(img, 0, 0);
 
-                                    // Track FPS
-                                    frameCountRef.current++;
+                                    // Track Accurate FPS
                                     const now = Date.now();
-                                    if (now - lastFpsUpdateRef.current >= 1000) {
-                                        setFps(frameCountRef.current);
+                                    frameCountRef.current++;
+                                    const delta = now - lastFpsUpdateRef.current;
+                                    if (delta >= 1000) {
+                                        const currentFps = Math.round((frameCountRef.current * 1000) / delta);
+                                        setFps(currentFps);
                                         frameCountRef.current = 0;
                                         lastFpsUpdateRef.current = now;
                                     }
@@ -115,7 +178,6 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
         };
 
         socket.onclose = (event) => {
-            console.log('[ExtensionVncView] Socket closed', event.code, event.reason);
             setIsConnected(false);
             onConnectionChange?.(false);
             if (!event.wasClean) {
@@ -132,6 +194,9 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
         return () => {
             clearInterval(pingInterval);
             socket.close();
+            if (decoderRef.current && decoderRef.current.state !== 'closed') {
+                decoderRef.current.close();
+            }
         };
     }, [browserId, onMetadata, onConnectionChange]);
 
@@ -157,15 +222,12 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
 
     const handleMouseDown = (e: React.MouseEvent) => {
         const { x, y } = getCoordinates(e);
-        // 0: Left, 1: Middle, 2: Right
         const button = e.button === 0 ? 'left' : e.button === 2 ? 'right' : 'middle';
         sendInteraction('click', { x, y, button });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        // Only capture if canvas or container is focused
         sendInteraction('key_down', { key: e.key });
-        // Prevent default common keys to avoid scrolling/navigating away
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].includes(e.key)) {
             e.preventDefault();
         }
@@ -187,12 +249,11 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
             )}
             ref={containerRef}
         >
-            {/* Background Grain/Noise Overlay */}
             <div
                 className="pointer-events-none absolute inset-0 opacity-[0.03] mix-blend-overlay z-0 bg-repeat"
                 style={{
                     backgroundImage: "var(--noise-pattern)",
-                    backgroundColor: 'rgba(255, 255, 255, 0.01)' // Fallback if image 404s
+                    backgroundColor: 'rgba(255, 255, 255, 0.01)'
                 }}
             />
 
@@ -253,8 +314,6 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
                             tabIndex={0}
                             className="max-w-full max-h-full object-contain cursor-none focus:outline-none shadow-2xl border border-white/5 active:border-primary/30 transition-colors"
                         />
-
-                        {/* Overlay Grid/Texture for the Canvas */}
                         <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-lg overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                         </div>
@@ -262,7 +321,6 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
                 )}
             </AnimatePresence>
 
-            {/* Stream Status Bar */}
             <div className="absolute top-4 left-4 flex items-center gap-3 z-20 pointer-events-none">
                 <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 shadow-lg">
                     {isConnected ? (
@@ -281,7 +339,6 @@ export function ExtensionVncView({ browserId, className, isLiveMode = true, onMe
                 </div>
             </div>
 
-            {/* Browser Badge */}
             <div className="absolute top-4 right-4 z-20 pointer-events-none">
                 <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg px-3 py-1.5 shadow-lg">
                     <Monitor className="w-3.5 h-3.5 text-primary" />

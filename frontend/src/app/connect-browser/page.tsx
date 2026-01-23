@@ -219,21 +219,49 @@ export default function ConnectBrowserPage() {
                                 <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mb-4">
                                     <Monitor className="w-6 h-6 text-amber-500" />
                                 </div>
-                                <h2 className="font-medium mb-2">Extension Not Found</h2>
+                                <h2 className="font-medium mb-2">Extension Required</h2>
                                 <p className="text-sm text-muted-foreground text-center mb-6">
-                                    Install the Kortix Browser Operator extension to connect your browser
+                                    The Kortix Browser Operator is required to connect your personal browser session.
                                 </p>
-                                <Button asChild>
-                                    <a
-                                        href="https://chrome.google.com/webstore"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="gap-2"
-                                    >
-                                        <ExternalLink className="w-4 h-4" />
-                                        Get Extension
-                                    </a>
-                                </Button>
+
+                                {process.env.NEXT_PUBLIC_EXTENSION_DOWNLOAD_URL ? (
+                                    <div className="w-full space-y-4">
+                                        <Button asChild className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+                                            <a
+                                                href={process.env.NEXT_PUBLIC_EXTENSION_DOWNLOAD_URL}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="gap-2"
+                                            >
+                                                <ExternalLink className="w-4 h-4" />
+                                                Download Extension (.zip)
+                                            </a>
+                                        </Button>
+                                        <p className="text-[10px] text-center text-muted-foreground px-4">
+                                            Download the ZIP, extract it, and go to <code className="bg-muted px-1 rounded">chrome://extensions</code> to load the unpacked extension.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="w-full space-y-4">
+                                        <div className="p-4 rounded-xl bg-muted/50 border border-border/50 text-center">
+                                            <p className="text-xs font-medium mb-1">Local / Manual Setup</p>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                No download link configured. Please build the extension from the repository and load it manually.
+                                            </p>
+                                        </div>
+                                        <Button variant="outline" asChild className="w-full">
+                                            <a
+                                                href="https://github.com/Logrui/suna/tree/main/packages/kortix-chrome-extension#self-hosted-windows--cloudflare-tunnels"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="gap-2"
+                                            >
+                                                <Info className="w-4 h-4" />
+                                                View Setup Guide
+                                            </a>
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         )}
 

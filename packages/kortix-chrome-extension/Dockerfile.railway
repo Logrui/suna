@@ -1,0 +1,59 @@
+# Build Stage
+FROM node:20-slim AS builder
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# --- LOCAL EXTENSION BUILD ---
+# This Dockerfile EXPECTS to be run from the extension directory.
+# Railway Settings: 
+#   Root Directory: packages/kortix-chrome-extension
+#   Dockerfile Path: Dockerfile.railway
+
+# 1. Copy necessary bits (Vite + build tools)
+COPY package.json pnpm-lock.yaml* ./
+
+# 2. Since this is likely a flat-context build now, we copy everything from current dir
+COPY . .
+
+# 3. Install dependencies
+# If pnpm-lock is missing (flat copy), it will generate/install
+RUN pnpm install
+
+# 4. Set Build Variables
+ARG NEXT_PUBLIC_URL
+ARG NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_URL=$NEXT_PUBLIC_URL
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+
+# 5. Build and Pack
+RUN pnpm run build
+RUN pnpm run pack
+
+# Production Stage (A tiny server to host the zip)
+FROM node:20-slim
+WORKDIR /app
+RUN npm install -g serve
+
+# Copy the built zip from the builder stage
+COPY --from=builder /app/out/kortix-extension-latest.zip ./extension.zip
+
+# Landing page
+RUN echo '<html><body style="font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#0f172a; color:white; text-align:center; padding: 20px;">' > index.html && \
+    echo '<h1>Kortix Browser Operator</h1>' >> index.html && \
+    echo '<p style="color: #94a3b8;">Built for: '$NEXT_PUBLIC_URL'</p>' >> index.html && \
+    echo '<div style="background: #1e293b; padding: 24px; border-radius: 16px; border: 1px solid #334155; margin-top: 20px; max-width: 400px; width: 100%; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">' >> index.html && \
+    echo '<a href="/extension.zip" style="display: block; padding:12px 24px; background:linear-gradient(to right, #a855f7, #ec4899); color:white; border-radius:8px; text-decoration:none; font-weight:bold; transition: opacity 0.2s;">Download Extension (.zip)</a>' >> index.html && \
+    echo '</div>' >> index.html && \
+    echo '<div style="margin-top: 30px; line-height: 1.6; font-size: 0.85rem; color: #94a3b8;">' >> index.html && \
+    echo '<p><strong>How to install:</strong></p>' >> index.html && \
+    echo '<ol style="text-align: left; display: inline-block; padding-left: 20px;">' >> index.html && \
+    echo '<li>Download and unzip the file</li>' >> index.html && \
+    echo '<li>Open Chrome and go to <code>chrome://extensions</code></li>' >> index.html && \
+    echo '<li>Enable <strong>Developer Mode</strong> (top right toggle)</li>' >> index.html && \
+    echo '<li>Click <strong>Load Unpacked</strong> and select the unzipped folder</li>' >> index.html && \
+    echo '</ol></div></body></html>' >> index.html
+
+EXPOSE 3000
+CMD ["serve", "-s", ".", "-p", "3000"]

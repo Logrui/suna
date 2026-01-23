@@ -307,6 +307,33 @@ class KortixWebSocketClient {
     }
 
     /**
+     * Send an encoded video frame to the backend.
+     * Uses base64 for now to maintain compatibility with JSON protocol,
+     * but much more efficient than full screenshots.
+     */
+    public sendVideoFrame(data: ArrayBuffer, isKeyFrame: boolean, timestamp: number): void {
+        if (!this.isConnected || !this.ws) return;
+
+        // Convert ArrayBuffer to Base64
+        const bytes = new Uint8Array(data);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        const base64 = btoa(binary);
+
+        const message = {
+            type: 'video_frame',
+            browser_id: this.sessionId || 'unknown',
+            data: base64,
+            is_keyframe: isKeyFrame,
+            timestamp: timestamp
+        };
+
+        this.send(message);
+    }
+
+    /**
      * Update connection state
      */
     private setState(state: ConnectionState): void {

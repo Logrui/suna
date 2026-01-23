@@ -9,7 +9,9 @@
     "tabGroups",
     "storage",
     "webRequest",
-    "debugger"
+    "debugger",
+    "offscreen",
+    "tabCapture"
   ],
   "host_permissions": [
     "http://*/*",
@@ -34,10 +36,7 @@
     {
       "matches": [
         "http://localhost:3000/*",
-        "https://suna.syhc.dev/*",
-        "https://kortix.com/*",
-        "https://*.kortix.com/*",
-        "https://*.syhc.dev/*"
+        "__FRONTEND_URL__/*"
       ],
       "js": [
         "connect-bridge.js"
@@ -63,7 +62,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "content.js"
+        "content.js",
+        "fonts/roobert/*.woff2"
       ],
       "matches": [
         "<all_urls>"

@@ -9,16 +9,7 @@
  * - Element inspection
  */
 
-interface CommandRequest {
-  type: string;
-  command: {
-    id: string;
-    action: string;
-    params?: Record<string, any>;
-  };
-  commandId: string;
-  sessionId: string;
-}
+import { overlayManager } from './overlay-manager';
 
 interface CommandResponse {
   success: boolean;
@@ -27,10 +18,28 @@ interface CommandResponse {
 }
 
 /**
- * Main command handler
+ * Message listener for UI and commands
  */
 chrome.runtime.onMessage.addListener(
-  (request: CommandRequest, _sender, sendResponse) => {
+  (request: any, _sender, sendResponse) => {
+    // Handle Overlay State
+    if (request.type === 'SET_OVERLAY_STATE') {
+      if (request.visible) {
+        overlayManager.show();
+      } else {
+        overlayManager.hide();
+      }
+      sendResponse({ success: true });
+      return false;
+    }
+
+    if (request.type === 'SET_OVERLAY_VISIBILITY') {
+      overlayManager.setStreamVisibility(request.visible);
+      sendResponse({ success: true });
+      return false;
+    }
+
+    // Handle Commands
     if (request.type === 'executeCommand') {
       executeCommand(request.command)
         .then((result) => {

@@ -100,6 +100,15 @@ class StreamChunkMessage(BaseModel):
     timestamp: int
 
 
+class VideoFrameMessage(BaseModel):
+    """Extension → Backend: Real-time H.264 video frame chunk."""
+    type: str = "video_frame"
+    browser_id: str
+    data: str  # Base64 encoded chunk
+    is_keyframe: bool
+    timestamp: int
+
+
 class InteractionCommand(BaseModel):
     """Backend → Extension: Real-time user interaction (click, key, etc.)."""
     type: str = "interaction"
@@ -800,6 +809,13 @@ async def extension_websocket(websocket: WebSocket):
                 # Real-time frame from extension - broadcast via Redis
                 browser_id = session.browser_id
                 logger.debug(f"📹 Received stream_chunk from extension for browser {browser_id}")
+                client = await redis_service.get_client()
+                await client.publish(f"browser:stream:{browser_id}", json.dumps(message))
+            
+            elif msg_type == "video_frame":
+                # Real-time HIGH PERFORMANCE frame from extension - broadcast via Redis
+                browser_id = session.browser_id
+                # Note: keeping debug logs light for video frames as they are frequent
                 client = await redis_service.get_client()
                 await client.publish(f"browser:stream:{browser_id}", json.dumps(message))
             

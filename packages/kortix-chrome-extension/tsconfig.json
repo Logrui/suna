@@ -21,7 +21,8 @@
     "noEmit": true,
     "types": [
       "chrome",
-      "node"
+      "node",
+      "vite/client"
     ]
   },
   "include": [

@@ -49,6 +49,7 @@ async function handleBackendCommand(command: BrowserCommand | InteractionCommand
     // Ensure streaming is active when commands are flowing
     if (!streamingManager.streaming) {
       await streamingManager.start();
+      setOverlayState(true);
     }
 
     let data: Record<string, any> = {};
@@ -273,10 +274,12 @@ async function handleScroll(params: Record<string, any>): Promise<void> {
 
 /**
  * Get current page state (URL, title, screenshot)
+ * We use a 'dirty' screenshot (clean: false) here to avoid flickering the overlay
+ * after every action, since the live video stream already provide clarity.u
  */
 async function getPageState(): Promise<Record<string, any>> {
   const tab = await tabGroupManager.getActiveTab();
-  const screenshot = await tabGroupManager.captureScreenshot();
+  const screenshot = await tabGroupManager.captureScreenshot(undefined, false);
 
   return {
     url: tab?.url || '',
@@ -377,6 +380,56 @@ async function handleLegacyCommand(
   };
 }
 
+// ========== UI Helpers ==========
+
+/**
+ * Update the overlay state on all tabs in the Kortix window
+ */
+async function setOverlayState(visible: boolean): Promise<void> {
+  const groupState = tabGroupManager.state;
+  if (!groupState.windowId) return;
+
+  try {
+    const tabs = await chrome.tabs.query({ windowId: groupState.windowId });
+    const promises = tabs.map(tab => {
+      if (tab.id) {
+        return chrome.tabs.sendMessage(tab.id, {
+          type: 'SET_OVERLAY_STATE',
+          visible
+        }).catch(() => {
+          // Ignore errors for tabs that don't have the content script loaded yet
+        });
+      }
+    });
+    await Promise.all(promises);
+  } catch (e) {
+    console.error('[Kortix Extension - Background] Failed to set overlay state:', e);
+  }
+}
+
+/**
+ * Update the overlay visibility specifically for stream capture (hiding it from snapshots)
+ */
+async function setStreamVisibility(visible: boolean): Promise<void> {
+  const groupState = tabGroupManager.state;
+  if (!groupState.windowId) return;
+
+  try {
+    const tabs = await chrome.tabs.query({ windowId: groupState.windowId });
+    const promises = tabs.map(tab => {
+      if (tab.id) {
+        return chrome.tabs.sendMessage(tab.id, {
+          type: 'SET_OVERLAY_VISIBILITY',
+          visible
+        }).catch(() => { });
+      }
+    });
+    await Promise.all(promises);
+  } catch (e) {
+    console.error('[Kortix Extension - Background] Failed to set stream visibility:', e);
+  }
+}
+
 // ========== Lifecycle ==========
 
 /**
@@ -384,6 +437,24 @@ async function handleLegacyCommand(
  */
 async function initialize(): Promise<void> {
   console.log('[Kortix Extension - Background] Initializing extension...');
+
+  // Handle takeover message from content script overlay
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'USER_TAKEOVER') {
+      console.log('[Kortix Extension - Background] Takeover requested by user (Pausing stream)');
+      streamingManager.stop();
+      // Keep window and tabs open, but stop capturing and control
+      setOverlayState(false);
+    }
+
+    // Handle high-performance video chunks from offscreen document
+    if (message.type === 'VIDEO_CHUNK') {
+      const { data, isKeyFrame, timestamp } = message;
+      // Relay to WebSocket as a binary frame/message
+      // We'll need a new message type for binary video frames
+      wsClient.sendVideoFrame(data, isKeyFrame, timestamp);
+    }
+  });
 
   // Initialize WebSocket client with command handler
   await wsClient.initialize({
@@ -398,6 +469,7 @@ async function initialize(): Promise<void> {
       // We only want to stream when the user/agent is actually performing browser actions
       if (!state.isConnected) {
         streamingManager.stop();
+        setOverlayState(false);
       }
     },
   });

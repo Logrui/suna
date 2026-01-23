@@ -151,6 +151,10 @@ For full comparison, see [Git Command Comparison Table](https://docs.jj-vcs.dev/
 
 In `jj`, the working copy is always an implicit commit (`@`). There is no "staging area" index. All files changes are tracked in the working copy.
 
+Always use `jj bookmark set dev -r "@"` to update the dev bookmark (or any other bookmark) to the current working copy. Don't forget the "@" for powershell environments. This is the eqquivalent of git commit when using jj.
+
+To push to origin use `jj git push --bookmark dev` or any other bookmark name.
+
 **Scenario: You modified `FileA` and `FileB`, but only want to commit `FileA`.**
 
 1. **Split the working copy:**

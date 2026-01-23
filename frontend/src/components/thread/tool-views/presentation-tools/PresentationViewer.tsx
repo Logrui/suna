@@ -28,15 +28,16 @@ import {
   ExternalLink,
   ChevronDown,
 } from 'lucide-react';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 import { ToolViewProps } from '../types';
 import { formatTimestamp, getToolTitle } from '../utils';
 import { downloadPresentation, handleGoogleSlidesUpload } from '../utils/presentation-utils';
 import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import { CodeBlockCode } from '@/components/ui/code-block';
-import { LoadingState } from '../shared/LoadingState';
 import { FullScreenPresentationViewer } from './FullScreenPresentationViewer';
 import { DownloadFormat } from '../utils/presentation-utils';
 import { PresentationSlideCard } from './PresentationSlideCard';
+import { PresentationSlideSkeleton } from './PresentationSlideSkeleton';
 import { usePresentationViewerStore } from '@/stores/presentation-viewer-store';
 import { backendApi } from '@/lib/api-client';
 import { useDownloadRestriction } from '@/hooks/billing';
@@ -83,19 +84,19 @@ export function PresentationViewer({
   const hasLoadedRef = useRef(false);
   const sandboxCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isEnsuringSandboxRef = useRef(false);
-  
+
   // Cache metadata by presentation name to avoid re-loading when switching between tool calls
   const metadataCacheRef = useRef<Map<string, PresentationMetadata>>(new Map());
   const lastPresentationNameRef = useRef<string | null>(null);
 
   const [visibleSlide, setVisibleSlide] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  
+
   // Download restriction for free tier users
   const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
     featureName: 'presentations',
   });
-  
+
   // Use shared modal store for full screen viewer
   const { isOpen, presentationName, sandboxUrl, initialSlide, openPresentation, closePresentation } = usePresentationViewerStore();
   const viewerState = { isOpen, presentationName, sandboxUrl, initialSlide };
@@ -104,6 +105,83 @@ export function PresentationViewer({
   const sanitizeFilename = (name: string): string => {
     return name.replace(/[^a-zA-Z0-9\-_]/g, '').toLowerCase();
   };
+
+  // Parse streaming arguments - handle both string (streaming) and object (completed) cases
+  const parsedStreamingArgs = useMemo(() => {
+    const args = toolCall?.arguments;
+    if (!args) return {};
+    if (typeof args === 'object' && args !== null) return args as Record<string, unknown>;
+    if (typeof args !== 'string') return {};
+
+    // args is now typed as string
+    const argsStr: string = args;
+
+    // Try to parse string arguments
+    try {
+      return JSON.parse(argsStr);
+    } catch {
+      // Try to extract from partial/streaming JSON using regex
+      const presentationMatch = argsStr.match(/"presentation_name"\s*:\s*"([^"]+)"/);
+      const slideMatch = argsStr.match(/"slide_number"\s*:\s*(\d+)/);
+      const titleMatch = argsStr.match(/"slide_title"\s*:\s*"([^"]+)"/);
+      // Extract content - this is trickier due to HTML/special chars
+      let contentValue: string | undefined;
+      const contentStart = argsStr.indexOf('"content"');
+      if (contentStart !== -1) {
+        // Find the start of the content value
+        const colonPos = argsStr.indexOf(':', contentStart);
+        if (colonPos !== -1) {
+          const quoteStart = argsStr.indexOf('"', colonPos);
+          if (quoteStart !== -1) {
+            // Extract from the opening quote, handling escapes
+            let i = quoteStart + 1;
+            let value = '';
+            let escaped = false;
+            while (i < argsStr.length) {
+              const char = argsStr[i];
+              if (escaped) {
+                switch (char) {
+                  case 'n': value += '\n'; break;
+                  case 't': value += '\t'; break;
+                  case 'r': value += '\r'; break;
+                  case '"': value += '"'; break;
+                  case '\\': value += '\\'; break;
+                  default: value += char;
+                }
+                escaped = false;
+              } else if (char === '\\') {
+                escaped = true;
+              } else if (char === '"') {
+                // End of string
+                contentValue = value;
+                break;
+              } else {
+                value += char;
+              }
+              i++;
+            }
+            // If no closing quote, still use partial value
+            if (contentValue === undefined && value.length > 0) {
+              contentValue = value;
+            }
+          }
+        }
+      }
+      return {
+        presentation_name: presentationMatch?.[1],
+        slide_number: slideMatch ? parseInt(slideMatch[1]) : undefined,
+        slide_title: titleMatch?.[1],
+        content: contentValue,
+      };
+    }
+  }, [toolCall?.arguments]);
+
+  // Extract presentation info from parsed streaming arguments
+  const streamingSlideNumber = parsedStreamingArgs.slide_number as number | undefined;
+  const streamingPresentationName = parsedStreamingArgs.presentation_name as string | undefined;
+  const streamingSlideTitle = parsedStreamingArgs.slide_title as string | undefined;
+  // Extract the HTML content being streamed for real-time preview
+  const streamingContent = parsedStreamingArgs.content as string | undefined;
 
   // Extract presentation info from toolResult.output (from metadata)
   let extractedPresentationName: string | undefined;
@@ -115,7 +193,7 @@ export function PresentationViewer({
   if (toolResult?.output) {
     try {
       let output = toolResult.output;
-      
+
       // Handle string output
       if (typeof output === 'string') {
         // Check if the string looks like an error message
@@ -133,14 +211,14 @@ export function PresentationViewer({
           }
         }
       }
-      
+
       // Only extract data if we have a valid parsed object
       if (output && typeof output === 'object' && !toolExecutionError) {
         extractedPresentationName = output.presentation_name;
         extractedPresentationPath = output.presentation_path;
         currentSlideNumber = output.slide_number;
         presentationTitle = output.presentation_title || output.title;
-        
+
         console.log('[PresentationViewer] Extracted presentation data:', {
           presentationName: extractedPresentationName,
           presentationPath: extractedPresentationPath,
@@ -168,7 +246,7 @@ export function PresentationViewer({
     }
 
     isEnsuringSandboxRef.current = true;
-    
+
     try {
       const response = await backendApi.post(
         `/project/${project.id}/sandbox/ensure-active`,
@@ -181,12 +259,12 @@ export function PresentationViewer({
         isEnsuringSandboxRef.current = false;
         return;
       }
-      
+
       // Dispatch event for other components
       window.dispatchEvent(new CustomEvent('sandbox-active', {
         detail: { sandboxId: project.sandbox.id, projectId: project.id }
       }));
-      
+
       isEnsuringSandboxRef.current = false;
     } catch (err) {
       console.error('Error ensuring sandbox is active:', err);
@@ -202,10 +280,10 @@ export function PresentationViewer({
     }
 
     const sanitizedPresentationName = sanitizeFilename(extractedPresentationName);
-    
+
     // Check if we have cached metadata for this presentation FIRST
     const cachedMetadata = metadataCacheRef.current.get(sanitizedPresentationName);
-    
+
     // If we have cached data and this is not a force refresh, use it immediately
     if (cachedMetadata && !forceRefresh) {
       setMetadata(cachedMetadata);
@@ -217,66 +295,66 @@ export function PresentationViewer({
       }
       return;
     }
-    
+
     // If sandbox URL isn't available yet, wait and don't set loading state
     // But if we have cached data, we already returned above
     if (!project?.sandbox?.sandbox_url) {
       setIsLoadingMetadata(false);
       return;
     }
-    
+
     // Only show loading if we don't have any cached data
     if (!cachedMetadata) {
       setIsLoadingMetadata(true);
     }
     setError(null);
     setRetryAttempt(retryCount);
-    
+
     try {
       const metadataUrl = constructHtmlPreviewUrl(
-        project.sandbox.sandbox_url, 
+        project.sandbox.sandbox_url,
         `presentations/${sanitizedPresentationName}/metadata.json`
       );
-      
+
       // Add cache-busting parameter to ensure fresh data
       const urlWithCacheBust = `${metadataUrl}?t=${Date.now()}`;
-      
+
       const response = await fetch(urlWithCacheBust, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        
+
         console.log('[PresentationViewer] Metadata loaded successfully:', {
           presentationName: sanitizedPresentationName,
           slideCount: Object.keys(data.slides || {}).length,
           metadata: data
         });
-        
+
         // Cache the metadata
         metadataCacheRef.current.set(sanitizedPresentationName, data);
-        
+
         setMetadata(data);
         hasLoadedRef.current = true;
         setIsLoadingMetadata(false);
-        
+
         // Clear any pending retry timeout on success
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
           retryTimeoutRef.current = null;
         }
-        
+
         return; // Success, exit early
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (err) {
       console.error(`Error loading metadata (attempt ${retryCount + 1}):`, err);
-      
+
       // If we get HTTP 400 or 502, the sandbox might be stopped - try to wake it up
       const errorMessage = err instanceof Error ? err.message : String(err);
       if (errorMessage.includes('400') || errorMessage.includes('502') || errorMessage.includes('503')) {
@@ -285,22 +363,22 @@ export function PresentationViewer({
         // Trigger sandbox wake-up
         ensureSandboxActive();
       }
-      
+
       // If we have cached data, don't show loading state during retries
       if (cachedMetadata) {
         setIsLoadingMetadata(false);
       }
-      
+
       // Calculate delay with exponential backoff, capped at 10 seconds
-      const delay = retryCount < 5 
+      const delay = retryCount < 5
         ? Math.min(1000 * Math.pow(2, retryCount), 10000)
         : 5000;
-      
+
       // Keep retrying indefinitely - don't set error state
       retryTimeoutRef.current = setTimeout(() => {
         loadMetadata(retryCount + 1, maxRetries, forceRefresh);
       }, delay);
-      
+
       return;
     }
   }, [extractedPresentationName, project?.sandbox?.sandbox_url, ensureSandboxActive]);
@@ -347,19 +425,19 @@ export function PresentationViewer({
     // Check if presentation changed
     const sanitizedName = extractedPresentationName ? sanitizeFilename(extractedPresentationName) : null;
     const presentationChanged = sanitizedName !== lastPresentationNameRef.current;
-    
+
     // Only reset loaded flag if presentation actually changed
     if (presentationChanged) {
       hasLoadedRef.current = false;
       lastPresentationNameRef.current = sanitizedName;
     }
-    
+
     // Clear any existing retry timeout when dependencies change
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
-    
+
     // FIRST: Check for cached metadata and use it immediately if available
     if (sanitizedName) {
       const cachedMetadata = metadataCacheRef.current.get(sanitizedName);
@@ -375,7 +453,7 @@ export function PresentationViewer({
         hasLoadedRef.current = true;
       }
     }
-    
+
     // THEN: Start loading fresh data if we have the required data
     if (extractedPresentationName && project?.sandbox?.sandbox_url) {
       console.log('[PresentationViewer] Starting metadata load:', {
@@ -412,6 +490,59 @@ export function PresentationViewer({
     };
   }, []);
 
+  // Poll for metadata updates during streaming to replace skeletons with real slides
+  const streamingPollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Only poll during streaming when we have a presentation name and sandbox URL
+    const presentationToLoad = streamingPresentationName || extractedPresentationName;
+
+    if (isStreaming && presentationToLoad && project?.sandbox?.sandbox_url) {
+      // Poll every 2 seconds during streaming
+      const pollMetadata = async () => {
+        const sanitizedName = sanitizeFilename(presentationToLoad);
+        const metadataUrl = constructHtmlPreviewUrl(
+          project.sandbox!.sandbox_url!,
+          `presentations/${sanitizedName}/metadata.json`
+        );
+
+        try {
+          const response = await fetch(`${metadataUrl}?t=${Date.now()}`, {
+            cache: 'no-cache',
+            headers: { 'Cache-Control': 'no-cache' }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Update metadata and cache
+            metadataCacheRef.current.set(sanitizedName, data);
+            setMetadata(data);
+            hasLoadedRef.current = true;
+          }
+        } catch (err) {
+          // Silently ignore errors during polling - will retry
+        }
+      };
+
+      // Initial load
+      pollMetadata();
+
+      // Poll every 2 seconds
+      streamingPollingRef.current = setInterval(pollMetadata, 2000);
+
+      return () => {
+        if (streamingPollingRef.current) {
+          clearInterval(streamingPollingRef.current);
+          streamingPollingRef.current = null;
+        }
+      };
+    } else if (!isStreaming && streamingPollingRef.current) {
+      // Stop polling when streaming ends
+      clearInterval(streamingPollingRef.current);
+      streamingPollingRef.current = null;
+    }
+  }, [isStreaming, streamingPresentationName, extractedPresentationName, project?.sandbox?.sandbox_url]);
+
   // Create a unique key for this tool call to track scroll state
   const toolCallKey = useMemo(() => {
     return `${toolCall?.tool_call_id || ''}-${currentSlideNumber || ''}-${extractedPresentationName || ''}`;
@@ -423,7 +554,7 @@ export function PresentationViewer({
   }, [toolCallKey]);
 
   const slides = metadata ? Object.entries(metadata.slides)
-      .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
+    .map(([num, slide]) => ({ number: parseInt(num), ...slide }))
     .sort((a, b) => a.number - b.number) : [];
 
   // Scroll to current slide when metadata loads or when tool content changes
@@ -447,7 +578,7 @@ export function PresentationViewer({
     setVisibleSlide(slides[0].number);
 
     const handleScroll = () => {
-      
+
       const scrollArea = document.querySelector('[data-radix-scroll-area-viewport]');
       if (!scrollArea || slides.length === 0) return;
 
@@ -480,8 +611,8 @@ export function PresentationViewer({
         const distanceFromCenter = Math.abs(slideCenter - viewportCenter);
 
         // Only consider slides that are at least partially visible
-        const isPartiallyVisible = slideRect.bottom > scrollViewportRect.top && 
-                                 slideRect.top < scrollViewportRect.bottom;
+        const isPartiallyVisible = slideRect.bottom > scrollViewportRect.top &&
+          slideRect.top < scrollViewportRect.bottom;
 
         if (isPartiallyVisible && distanceFromCenter < smallestDistance) {
           smallestDistance = distanceFromCenter;
@@ -517,13 +648,13 @@ export function PresentationViewer({
   // Helper function to scroll to current slide
   const scrollToCurrentSlide = (delay: number = 200) => {
     if (!currentSlideNumber || !metadata) return;
-    
+
     setTimeout(() => {
       const slideElement = document.getElementById(`slide-${currentSlideNumber}`);
-      
+
       if (slideElement) {
-        slideElement.scrollIntoView({ 
-          behavior: 'smooth', 
+        slideElement.scrollIntoView({
+          behavior: 'smooth',
           block: 'center',
           inline: 'nearest'
         });
@@ -532,8 +663,8 @@ export function PresentationViewer({
         setTimeout(() => {
           const retryElement = document.getElementById(`slide-${currentSlideNumber}`);
           if (retryElement) {
-            retryElement.scrollIntoView({ 
-              behavior: 'smooth', 
+            retryElement.scrollIntoView({
+              behavior: 'smooth',
               block: 'center',
               inline: 'nearest'
             });
@@ -549,19 +680,22 @@ export function PresentationViewer({
       openUpgradeModal();
       return;
     }
-    
+
     if (!project?.sandbox?.sandbox_url || !extractedPresentationName) return;
 
     setIsDownloading(true);
-    try{
-      if (format === DownloadFormat.GOOGLE_SLIDES){
-        const result = await handleGoogleSlidesUpload(project!.sandbox!.sandbox_url, `/workspace/presentations/${extractedPresentationName}`);
+    try {
+      // Use sanitized name for the path (matching backend directory structure)
+      const sanitizedName = sanitizeFilename(extractedPresentationName);
+
+      if (format === DownloadFormat.GOOGLE_SLIDES) {
+        const result = await handleGoogleSlidesUpload(project!.sandbox!.sandbox_url, `/workspace/presentations/${sanitizedName}`);
         // If redirected to auth, don't show error
         if (result?.redirected_to_auth) {
           return; // Don't set loading false, user is being redirected
         }
-      } else{
-        await downloadPresentation(format, project.sandbox.sandbox_url, `/workspace/presentations/${extractedPresentationName}`, extractedPresentationName);
+      } else {
+        await downloadPresentation(format, project.sandbox.sandbox_url, `/workspace/presentations/${sanitizedName}`, extractedPresentationName);
       }
     } catch (error) {
       console.error('Error downloading PDF:', error);
@@ -569,7 +703,7 @@ export function PresentationViewer({
       setIsDownloading(false);
     }
   };
-  
+
 
   return (
     <Card className="gap-0 flex border-0 shadow-none p-0 py-0 rounded-none flex-col h-full overflow-hidden bg-card">
@@ -579,10 +713,13 @@ export function PresentationViewer({
             <div className="relative p-2 rounded-lg border flex-shrink-0 bg-zinc-200/60 dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700">
               <Presentation className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               <CardTitle className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                {metadata?.title || metadata?.presentation_name || toolTitle}
+                {metadata?.title || metadata?.presentation_name || streamingPresentationName || toolTitle}
               </CardTitle>
+              {isStreaming && (
+                <span className="inline-block h-3 w-3 rounded-full border border-blue-300 border-t-blue-500 animate-spin" />
+              )}
             </div>
           </div>
 
@@ -607,25 +744,25 @@ export function PresentationViewer({
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
-                
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="h-8 w-8 p-0"
                       title="Export presentation"
                       disabled={isDownloading}
                     >
                       {isDownloading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <KortixLoader customSize={14} />
                       ) : (
                         <Download className="h-3.5 w-3.5" />
                       )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-32">
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={() => handleDownload(setIsDownloading, DownloadFormat.PDF)}
                       className="cursor-pointer"
                       disabled={isDownloading}
@@ -633,7 +770,7 @@ export function PresentationViewer({
                       <FileText className="h-4 w-4 mr-2" />
                       PDF
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={() => handleDownload(setIsDownloading, DownloadFormat.PPTX)}
                       className="cursor-pointer"
                       disabled={isDownloading}
@@ -641,7 +778,7 @@ export function PresentationViewer({
                       <Presentation className="h-4 w-4 mr-2" />
                       PPTX
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={() => handleDownload(setIsDownloading, DownloadFormat.GOOGLE_SLIDES)}
                       className="cursor-pointer"
                       disabled={isDownloading}
@@ -666,7 +803,7 @@ export function PresentationViewer({
 
             {isStreaming && (
               <Badge className="bg-gradient-to-b from-blue-200 to-blue-100 text-blue-700 dark:from-blue-800/50 dark:to-blue-900/60 dark:text-blue-300">
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                <KortixLoader customSize={14} className="mr-1" />
                 Loading
               </Badge>
             )}
@@ -677,19 +814,54 @@ export function PresentationViewer({
 
 
       <CardContent className="p-0 h-full flex-1 overflow-hidden relative">
-        {(isStreaming || (isLoadingMetadata && !metadata) || (!metadata && !toolExecutionError && extractedPresentationName)) ? (
-          <LoadingState
-            icon={Presentation}
-            iconColor="text-blue-500 dark:text-blue-400"
-            bgColor="bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60 dark:shadow-blue-950/20"
-            title="Loading presentation"
-            filePath={retryAttempt > 0 ? `Retrying... (attempt ${retryAttempt + 1})` : "Loading slides..."}
-            showProgress={true}
-          />
+        {isStreaming ? (
+          <ScrollArea className="h-full">
+            <div className="space-y-4 p-4">
+              {/* Show real slides from metadata */}
+              {slides.map((slide) => (
+                <div key={slide.number} id={`slide-${slide.number}`}>
+                  <PresentationSlideCard
+                    slide={slide}
+                    project={project}
+                    onFullScreenClick={(slideNumber) => {
+                      if (openPresentation && project?.sandbox?.sandbox_url && (extractedPresentationName || streamingPresentationName)) {
+                        openPresentation(extractedPresentationName || streamingPresentationName!, project.sandbox.sandbox_url, slideNumber);
+                      }
+                    }}
+                    className={currentSlideNumber === slide.number ? 'ring-2 ring-blue-500/20 shadow-md' : ''}
+                    refreshTimestamp={metadata?.updated_at ? new Date(metadata.updated_at).getTime() : undefined}
+                  />
+                </div>
+              ))}
+
+              {/* Show skeleton for the slide currently being generated (if it's not in metadata yet) */}
+              {streamingSlideNumber && !slides.find(s => s.number === streamingSlideNumber) && (
+                <div key={streamingSlideNumber} id={`slide-${streamingSlideNumber}`}>
+                  <PresentationSlideSkeleton
+                    slideNumber={streamingSlideNumber}
+                    isGenerating={true}
+                    slideTitle={streamingSlideTitle}
+                    streamingContent={streamingContent}
+                  />
+                </div>
+              )}
+
+              {/* If no slides and no streaming slide number, show a single generating placeholder */}
+              {slides.length === 0 && !streamingSlideNumber && (
+                <div key="generating" id="slide-generating">
+                  <PresentationSlideSkeleton
+                    slideNumber={1}
+                    isGenerating={true}
+                    slideTitle={streamingSlideTitle}
+                  />
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         ) : toolExecutionError ? (
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-rose-100 to-rose-50 shadow-inner dark:from-rose-800/40 dark:to-rose-900/60">
-              <AlertTriangle className="h-10 w-10 text-rose-400 dark:text-rose-600" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60">
+              <AlertTriangle className="h-10 w-10 text-zinc-500 dark:text-zinc-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
               Tool Execution Error
@@ -698,17 +870,34 @@ export function PresentationViewer({
               The presentation tool encountered an error during execution:
             </p>
             <div className="w-full max-w-2xl">
-              <CodeBlockCode 
-                code={toolExecutionError} 
+              <CodeBlockCode
+                code={toolExecutionError}
                 language="text"
                 className="text-xs bg-zinc-100 dark:bg-zinc-800 p-3 rounded-md border"
               />
             </div>
           </div>
+        ) : isLoadingMetadata || (extractedPresentationName && !metadata && !toolExecutionError) || (!toolResult && !isStreaming) ? (
+          // Loading state - show skeleton slides while:
+          // 1. Fetching metadata, OR
+          // 2. Have presentation name but no metadata yet, OR
+          // 3. Tool result hasn't arrived yet from stream (waiting for data)
+          <ScrollArea className="h-full">
+            <div className="space-y-4 p-4">
+              {Array.from({ length: 3 }, (_, i) => (
+                <PresentationSlideSkeleton
+                  key={i + 1}
+                  slideNumber={i + 1}
+                  isGenerating={false}
+                />
+              ))}
+            </div>
+          </ScrollArea>
         ) : slides.length === 0 ? (
+          // Empty state - only show after loading is complete and we have no slides
           <div className="flex flex-col items-center justify-center h-full py-12 px-6 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-950 dark:to-zinc-900">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-blue-100 to-blue-50 shadow-inner dark:from-blue-800/40 dark:to-blue-900/60">
-              <Presentation className="h-10 w-10 text-blue-400 dark:text-blue-600" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6 bg-gradient-to-b from-zinc-100 to-zinc-50 shadow-inner dark:from-zinc-800/40 dark:to-zinc-900/60">
+              <Presentation className="h-10 w-10 text-zinc-500 dark:text-zinc-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-zinc-100">
               No slides found
@@ -741,12 +930,15 @@ export function PresentationViewer({
       </CardContent>
 
       <div className="px-4 py-2 h-9 bg-muted/20 border-t border-border/40 flex justify-between items-center">
-        <div className="text-xs text-muted-foreground">
-          {slides.length > 0 && visibleSlide && (
-            <span className="font-mono">
-              {visibleSlide}/{slides.length}
+        <div className="text-xs text-muted-foreground font-mono">
+          {isStreaming ? (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full border border-blue-300 border-t-blue-500 animate-spin" />
+              {streamingSlideNumber ? `Slide ${streamingSlideNumber}` : 'Generating...'}
             </span>
-          )}
+          ) : slides.length > 0 && visibleSlide ? (
+            <span>{visibleSlide}/{slides.length}</span>
+          ) : null}
         </div>
         <div className="text-xs text-muted-foreground">
           {formatTimestamp(toolTimestamp)}
