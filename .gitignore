@@ -279,3 +279,5 @@ apps/mobile/
 .env.local
 .docs
 .jj/
+packages/kortix-chrome-extension/dist.crx
+packages/kortix-chrome-extension/dist.pem

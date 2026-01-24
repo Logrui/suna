@@ -1,6 +1,6 @@
 /**
  * Kortix AI Browser Operator - Content Script
- * 
+ *
  * Executes commands in the page context:
  * - DOM manipulation (click, type, scroll)
  * - Data extraction (emails, text, attributes)
@@ -9,7 +9,8 @@
  * - Element inspection
  */
 
-import { overlayManager } from './overlay-manager';
+import { overlayManager } from "./overlay-manager";
+import { InputHelper } from "./input-helper";
 
 interface CommandResponse {
   success: boolean;
@@ -20,42 +21,40 @@ interface CommandResponse {
 /**
  * Message listener for UI and commands
  */
-chrome.runtime.onMessage.addListener(
-  (request: any, _sender, sendResponse) => {
-    // Handle Overlay State
-    if (request.type === 'SET_OVERLAY_STATE') {
-      if (request.visible) {
-        overlayManager.show();
-      } else {
-        overlayManager.hide();
-      }
-      sendResponse({ success: true });
-      return false;
+chrome.runtime.onMessage.addListener((request: any, _sender, sendResponse) => {
+  // Handle Overlay State
+  if (request.type === "SET_OVERLAY_STATE") {
+    if (request.visible) {
+      overlayManager.show();
+    } else {
+      overlayManager.hide();
     }
-
-    if (request.type === 'SET_OVERLAY_VISIBILITY') {
-      overlayManager.setStreamVisibility(request.visible);
-      sendResponse({ success: true });
-      return false;
-    }
-
-    // Handle Commands
-    if (request.type === 'executeCommand') {
-      executeCommand(request.command)
-        .then((result) => {
-          sendResponse({ success: true, data: result });
-        })
-        .catch((error) => {
-          sendResponse({
-            success: false,
-            error: error.message,
-          });
-        });
-
-      return true; // Keep channel open for async response
-    }
+    sendResponse({ success: true });
+    return false;
   }
-);
+
+  if (request.type === "SET_OVERLAY_VISIBILITY") {
+    overlayManager.setStreamVisibility(request.visible);
+    sendResponse({ success: true });
+    return false;
+  }
+
+  // Handle Commands
+  if (request.type === "executeCommand") {
+    executeCommand(request.command)
+      .then((result) => {
+        sendResponse({ success: true, data: result });
+      })
+      .catch((error) => {
+        sendResponse({
+          success: false,
+          error: error.message,
+        });
+      });
+
+    return true; // Keep channel open for async response
+  }
+});
 
 /**
  * Execute command based on action type
@@ -64,40 +63,40 @@ async function executeCommand(command: any): Promise<any> {
   const { action, params } = command;
 
   switch (action) {
-    case 'navigate':
+    case "navigate":
       return handleNavigate(params);
 
-    case 'click':
+    case "click":
       return handleClick(params);
 
-    case 'type':
+    case "type":
       return handleType(params);
 
-    case 'scroll':
+    case "scroll":
       return handleScroll(params);
 
-    case 'screenshot':
+    case "screenshot":
       return handleScreenshot(params);
 
-    case 'extractEmails':
+    case "extractEmails":
       return handleExtractEmails(params);
 
-    case 'extractContent':
+    case "extractContent":
       return handleExtractContent(params);
 
-    case 'getElements':
+    case "getElements":
       return handleGetElements(params);
 
-    case 'fillForm':
+    case "fillForm":
       return handleFillForm(params);
 
-    case 'submitForm':
+    case "submitForm":
       return handleSubmitForm(params);
 
-    case 'getPageInfo':
+    case "getPageInfo":
       return handleGetPageInfo(params);
 
-    case 'executeScript':
+    case "executeScript":
       return handleExecuteScript(params);
 
     default:
@@ -112,7 +111,7 @@ async function handleNavigate(params: any): Promise<any> {
   const { url } = params;
 
   if (!url) {
-    throw new Error('URL parameter required');
+    throw new Error("URL parameter required");
   }
 
   window.location.href = url;
@@ -139,12 +138,14 @@ async function handleClick(params: any): Promise<any> {
   if (selector) {
     element = document.querySelector(selector);
   } else if (index !== undefined) {
-    const elements = document.querySelectorAll('a, button, input, [role="button"]');
+    const elements = document.querySelectorAll(
+      'a, button, input, [role="button"]',
+    );
     element = elements[index];
   }
 
   if (!element) {
-    throw new Error('Element not found');
+    throw new Error("Element not found");
   }
 
   (element as HTMLElement).click();
@@ -162,32 +163,41 @@ async function handleClick(params: any): Promise<any> {
  * Type text into element
  */
 async function handleType(params: any): Promise<any> {
-  const { selector, text, index } = params;
+  const { selector, text, index, clear = true } = params;
 
   let element: Element | null = null;
 
   if (selector) {
     element = document.querySelector(selector);
   } else if (index !== undefined) {
-    const elements = document.querySelectorAll('input, textarea');
+    const elements = document.querySelectorAll(
+      'input, textarea, [contenteditable="true"]',
+    );
     element = elements[index];
   }
 
   if (!element) {
-    throw new Error('Element not found');
+    throw new Error("Element not found");
   }
 
-  const input = element as HTMLInputElement | HTMLTextAreaElement;
-  input.focus();
-  input.value = text;
+  // Check if element can receive text input
+  if (!InputHelper.isTypeable(element)) {
+    throw new Error("Element is not a valid input target");
+  }
 
-  // Trigger input event
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  input.dispatchEvent(new Event('change', { bubbles: true }));
+  // Use InputHelper for React-aware typing
+  InputHelper.type(element as HTMLElement, text, clear);
+
+  // Return the resulting value
+  const resultValue =
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement
+      ? element.value
+      : (element as HTMLElement).textContent || "";
 
   return {
     typed: true,
-    value: input.value,
+    value: resultValue,
   };
 }
 
@@ -197,13 +207,13 @@ async function handleType(params: any): Promise<any> {
 async function handleScroll(params: any): Promise<any> {
   const { direction, amount = 500 } = params;
 
-  if (direction === 'down') {
+  if (direction === "down") {
     window.scrollBy(0, amount);
-  } else if (direction === 'up') {
+  } else if (direction === "up") {
     window.scrollBy(0, -amount);
-  } else if (direction === 'top') {
+  } else if (direction === "top") {
     window.scrollTo(0, 0);
-  } else if (direction === 'bottom') {
+  } else if (direction === "bottom") {
     window.scrollTo(0, document.body.scrollHeight);
   }
 
@@ -221,7 +231,7 @@ async function handleScroll(params: any): Promise<any> {
 async function handleScreenshot(_params: any): Promise<any> {
   try {
     const canvas = await html2canvas(document.body);
-    const dataUrl = canvas.toDataURL('image/png');
+    const dataUrl = canvas.toDataURL("image/png");
 
     return {
       screenshot: dataUrl,
@@ -229,11 +239,13 @@ async function handleScreenshot(_params: any): Promise<any> {
       height: canvas.height,
     };
   } catch (error) {
-    console.warn('[Kortix Extension - Content] Screenshot failed, using fallback');
+    console.warn(
+      "[Kortix Extension - Content] Screenshot failed, using fallback",
+    );
 
     return {
       screenshot: null,
-      error: 'Screenshot not available',
+      error: "Screenshot not available",
       fallback: true,
     };
   }
@@ -250,21 +262,24 @@ async function handleExtractEmails(_params: any): Promise<any> {
   const emailsFromText = bodyText.match(emailRegex) || [];
 
   // Extract from mailto links
-  const mailtoLinks = Array.from(document.querySelectorAll('a[href^="mailto:"]'))
-    .map((a) => {
-      const href = (a as HTMLAnchorElement).href;
-      return href.replace('mailto:', '').split('?')[0];
-    });
+  const mailtoLinks = Array.from(
+    document.querySelectorAll('a[href^="mailto:"]'),
+  ).map((a) => {
+    const href = (a as HTMLAnchorElement).href;
+    return href.replace("mailto:", "").split("?")[0];
+  });
 
   // Extract from data attributes
   const dataAttributeEmails = Array.from(
-    document.querySelectorAll('[data-email]')
+    document.querySelectorAll("[data-email]"),
   )
-    .map((el) => el.getAttribute('data-email'))
-    .filter((email): email is string => email !== null && email !== '');
+    .map((el) => el.getAttribute("data-email"))
+    .filter((email): email is string => email !== null && email !== "");
 
   // Combine and deduplicate
-  const allEmails = [...new Set([...emailsFromText, ...mailtoLinks, ...dataAttributeEmails])];
+  const allEmails = [
+    ...new Set([...emailsFromText, ...mailtoLinks, ...dataAttributeEmails]),
+  ];
 
   return {
     emails: allEmails,
@@ -283,11 +298,11 @@ async function handleExtractEmails(_params: any): Promise<any> {
 async function handleExtractContent(params: any): Promise<any> {
   const { selector } = params;
 
-  let content = '';
+  let content = "";
 
   if (selector) {
     const element = document.querySelector(selector);
-    content = element?.textContent || '';
+    content = element?.textContent || "";
   } else {
     content = document.body.innerText;
   }
@@ -303,7 +318,7 @@ async function handleExtractContent(params: any): Promise<any> {
  */
 async function handleGetElements(_params: any): Promise<any> {
   const elements = document.querySelectorAll(
-    'a, button, input, textarea, select, [role="button"], [role="link"]'
+    'a, button, input, textarea, select, [role="button"], [role="link"]',
   );
 
   const elementsList = Array.from(elements)
@@ -311,11 +326,11 @@ async function handleGetElements(_params: any): Promise<any> {
     .map((el, index) => ({
       index,
       tag: el.tagName.toLowerCase(),
-      text: el.textContent?.substring(0, 100) || '',
-      type: (el as HTMLInputElement).type || '',
-      href: (el as HTMLAnchorElement).href || '',
-      id: el.id || '',
-      className: el.className || '',
+      text: el.textContent?.substring(0, 100) || "",
+      type: (el as HTMLInputElement).type || "",
+      href: (el as HTMLAnchorElement).href || "",
+      id: el.id || "",
+      className: el.className || "",
     }));
 
   return {
@@ -330,8 +345,8 @@ async function handleGetElements(_params: any): Promise<any> {
 async function handleFillForm(params: any): Promise<any> {
   const { fields } = params;
 
-  if (!fields || typeof fields !== 'object') {
-    throw new Error('Fields parameter required');
+  if (!fields || typeof fields !== "object") {
+    throw new Error("Fields parameter required");
   }
 
   const results: any = {};
@@ -340,7 +355,7 @@ async function handleFillForm(params: any): Promise<any> {
     const element = document.querySelector(selector);
 
     if (!element) {
-      results[selector] = { success: false, error: 'Element not found' };
+      results[selector] = { success: false, error: "Element not found" };
       continue;
     }
 
@@ -348,8 +363,8 @@ async function handleFillForm(params: any): Promise<any> {
     input.focus();
     input.value = String(value);
 
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
 
     results[selector] = { success: true, value: input.value };
   }
@@ -365,10 +380,10 @@ async function handleSubmitForm(params: any): Promise<any> {
 
   const form = selector
     ? document.querySelector(selector)
-    : document.querySelector('form');
+    : document.querySelector("form");
 
   if (!form) {
-    throw new Error('Form not found');
+    throw new Error("Form not found");
   }
 
   (form as HTMLFormElement).submit();
@@ -406,7 +421,7 @@ async function handleExecuteScript(params: any): Promise<any> {
   const { code } = params;
 
   if (!code) {
-    throw new Error('Code parameter required');
+    throw new Error("Code parameter required");
   }
 
   try {
@@ -420,7 +435,7 @@ async function handleExecuteScript(params: any): Promise<any> {
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Script execution failed',
+      error: error instanceof Error ? error.message : "Script execution failed",
     };
   }
 }
@@ -432,21 +447,21 @@ async function handleExecuteScript(params: any): Promise<any> {
 async function html2canvas(_element: HTMLElement): Promise<HTMLCanvasElement> {
   // This is a placeholder - in production, include the html2canvas library
   // For now, return a simple canvas with page info
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
   if (ctx) {
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#000000';
-    ctx.font = '16px Arial';
+    ctx.fillStyle = "#000000";
+    ctx.font = "16px Arial";
     ctx.fillText(`Screenshot: ${document.title}`, 10, 30);
   }
 
   return canvas;
 }
 
-console.log('[Kortix Extension - Content] Content script loaded');
+console.log("[Kortix Extension - Content] Content script loaded");

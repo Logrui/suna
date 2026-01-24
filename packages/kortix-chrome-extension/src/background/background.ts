@@ -1,17 +1,22 @@
 /**
  * Kortix AI Browser Operator - Background Service Worker
- * 
+ *
  * Main entry point for the extension. Handles:
  * - WebSocket connection to Kortix backend
  * - Command execution via tab group manager
  * - State persistence
  */
 
-import { wsClient, BrowserCommand, CommandResult, InteractionCommand } from './websocket-client';
-import { tabGroupManager } from './tab-group-manager';
-import { getConnectBrowserUrl } from '../config';
-import { inputManager } from './input-manager';
-import { streamingManager } from './streaming-manager';
+import {
+  wsClient,
+  BrowserCommand,
+  CommandResult,
+  InteractionCommand,
+} from "./websocket-client";
+import { tabGroupManager } from "./tab-group-manager";
+import { getConnectBrowserUrl } from "../config";
+import { inputManager } from "./input-manager";
+import { streamingManager } from "./streaming-manager";
 
 // ========== Types ==========
 
@@ -38,8 +43,13 @@ let state: ExtensionState = {
 /**
  * Handle commands from the backend
  */
-async function handleBackendCommand(command: BrowserCommand | InteractionCommand): Promise<CommandResult> {
-  console.log('[Kortix Extension - Background] Handling command:', command.action);
+async function handleBackendCommand(
+  command: BrowserCommand | InteractionCommand,
+): Promise<CommandResult> {
+  console.log(
+    "[Kortix Extension - Background] Handling command:",
+    command.action,
+  );
   state.commandCount++;
 
   try {
@@ -55,62 +65,62 @@ async function handleBackendCommand(command: BrowserCommand | InteractionCommand
     let data: Record<string, any> = {};
 
     switch (command.action) {
-      case 'navigate':
+      case "navigate":
         await handleNavigate(command.params);
         data = await getPageState();
         break;
 
-      case 'click':
+      case "click":
         await handleClick(command.params);
         data = await getPageState();
         break;
 
-      case 'type':
+      case "type":
         await handleType(command.params);
         data = await getPageState();
         break;
 
-      case 'scroll_down':
-        await handleScroll({ direction: 'down' });
+      case "scroll_down":
+        await handleScroll({ direction: "down" });
         data = await getPageState();
         break;
 
-      case 'scroll_up':
-        await handleScroll({ direction: 'up' });
+      case "scroll_up":
+        await handleScroll({ direction: "up" });
         data = await getPageState();
         break;
 
-      case 'screenshot':
+      case "screenshot":
         const screenshot = await tabGroupManager.captureScreenshot();
         const tab = await tabGroupManager.getActiveTab();
         data = {
           screenshot_base64: screenshot,
-          url: tab?.url || '',
-          title: tab?.title || '',
+          url: tab?.url || "",
+          title: tab?.title || "",
         };
         break;
 
-      case 'new_tab':
-        await tabGroupManager.createTab(command.params.url || '');
+      case "new_tab":
+        await tabGroupManager.createTab(command.params.url || "");
         data = await getPageState();
         break;
 
-      case 'close_tab':
+      case "close_tab":
         await tabGroupManager.closeActiveTab();
         data = await getPageState();
         break;
 
-      case 'switch_tab':
+      case "switch_tab":
         const tabId = command.params.tabId || command.params.tab_id;
-        if (!tabId) throw new Error('Missing tabId parameter');
+        if (!tabId) throw new Error("Missing tabId parameter");
         await tabGroupManager.switchTab(Number(tabId));
         data = await getPageState();
         break;
 
-      case 'interaction':
+      case "interaction":
         await handleInteraction(command as any);
         return {
-          type: 'result',
+          type: "result",
           id: command.id,
           session_id: command.session_id,
           success: true,
@@ -121,9 +131,8 @@ async function handleBackendCommand(command: BrowserCommand | InteractionCommand
         throw new Error(`Unknown action: ${command.action}`);
     }
 
-
     return {
-      type: 'result',
+      type: "result",
       id: command.id,
       session_id: command.session_id,
       success: true,
@@ -131,13 +140,13 @@ async function handleBackendCommand(command: BrowserCommand | InteractionCommand
       timestamp: Date.now(),
     };
   } catch (error) {
-    console.error('[Kortix Extension - Background] Command error:', error);
+    console.error("[Kortix Extension - Background] Command error:", error);
     return {
-      type: 'result',
+      type: "result",
       id: command.id,
       session_id: command.session_id,
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
       timestamp: Date.now(),
     };
   }
@@ -148,7 +157,7 @@ async function handleBackendCommand(command: BrowserCommand | InteractionCommand
  */
 async function handleNavigate(params: Record<string, any>): Promise<void> {
   const { url } = params;
-  if (!url) throw new Error('Missing url parameter');
+  if (!url) throw new Error("Missing url parameter");
 
   await tabGroupManager.navigate(url);
 
@@ -165,8 +174,8 @@ async function handleClick(params: Record<string, any>): Promise<void> {
   if (selector) {
     // Click by selector - send to content script
     await tabGroupManager.sendToActiveTab({
-      type: 'executeCommand',
-      command: { action: 'click', params: { selector } },
+      type: "executeCommand",
+      command: { action: "click", params: { selector } },
     });
   } else if (x !== undefined && y !== undefined) {
     // Click by coordinates
@@ -177,7 +186,7 @@ async function handleClick(params: Record<string, any>): Promise<void> {
       }
     });
   } else {
-    throw new Error('Missing selector or coordinates');
+    throw new Error("Missing selector or coordinates");
   }
 }
 
@@ -186,12 +195,12 @@ async function handleClick(params: Record<string, any>): Promise<void> {
  */
 async function handleType(params: Record<string, any>): Promise<void> {
   const { selector, text, clear = true } = params;
-  if (!selector) throw new Error('Missing selector parameter');
-  if (!text) throw new Error('Missing text parameter');
+  if (!selector) throw new Error("Missing selector parameter");
+  if (!text) throw new Error("Missing text parameter");
 
   await tabGroupManager.sendToActiveTab({
-    type: 'executeCommand',
-    command: { action: 'type', params: { selector, text, clear } },
+    type: "executeCommand",
+    command: { action: "type", params: { selector, text, clear } },
   });
 }
 
@@ -204,50 +213,50 @@ async function handleInteraction(command: InteractionCommand): Promise<void> {
   if (!tab || !tab.id) return;
 
   switch (params.type) {
-    case 'click':
+    case "click":
       await inputManager.dispatchMouseEvent(tab.id, {
-        type: 'mousePressed',
+        type: "mousePressed",
         x: params.x,
         y: params.y,
-        button: params.button || 'left',
+        button: params.button || "left",
         clickCount: 1,
       });
       await inputManager.dispatchMouseEvent(tab.id, {
-        type: 'mouseReleased',
+        type: "mouseReleased",
         x: params.x,
         y: params.y,
-        button: params.button || 'left',
+        button: params.button || "left",
         clickCount: 1,
       });
       break;
 
-    case 'mouse_move':
+    case "mouse_move":
       await inputManager.dispatchMouseEvent(tab.id, {
-        type: 'mouseMoved',
+        type: "mouseMoved",
         x: params.x,
         y: params.y,
       });
       break;
 
-    case 'key_down':
+    case "key_down":
       await inputManager.dispatchKeyEvent(tab.id, {
-        type: 'keyDown',
+        type: "keyDown",
         text: params.key,
         unmodifiedText: params.key,
         key: params.key,
       });
       break;
 
-    case 'key_up':
+    case "key_up":
       await inputManager.dispatchKeyEvent(tab.id, {
-        type: 'keyUp',
+        type: "keyUp",
         key: params.key,
       });
       break;
 
-    case 'scroll':
+    case "scroll":
       await inputManager.dispatchMouseEvent(tab.id, {
-        type: 'mouseWheel',
+        type: "mouseWheel",
         x: 0,
         y: 0,
         deltaX: params.deltaX || 0,
@@ -264,8 +273,8 @@ async function handleScroll(params: Record<string, any>): Promise<void> {
   const { direction, amount = 500 } = params;
 
   await tabGroupManager.sendToActiveTab({
-    type: 'executeCommand',
-    command: { action: 'scroll', params: { direction, amount } },
+    type: "executeCommand",
+    command: { action: "scroll", params: { direction, amount } },
   });
 
   // Wait for scroll animation
@@ -282,12 +291,11 @@ async function getPageState(): Promise<Record<string, any>> {
   const screenshot = await tabGroupManager.captureScreenshot(undefined, false);
 
   return {
-    url: tab?.url || '',
-    title: tab?.title || '',
+    url: tab?.url || "",
+    title: tab?.title || "",
     screenshot_base64: screenshot,
   };
 }
-
 
 // ========== Extension Messaging ==========
 
@@ -297,7 +305,7 @@ async function getPageState(): Promise<Record<string, any>> {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const { type } = request;
 
-  if (type === 'getStatus') {
+  if (type === "getStatus") {
     sendResponse({
       isConnected: wsClient.isConnected,
       state: wsClient.currentState,
@@ -309,47 +317,52 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  if (type === 'connect') {
+  if (type === "connect") {
     const { token } = request;
     if (token) {
-      wsClient.connect(token).then(() => {
-        sendResponse({ success: true });
-      }).catch((error) => {
-        sendResponse({ success: false, error: error.message });
-      });
+      wsClient
+        .connect(token)
+        .then(() => {
+          sendResponse({ success: true });
+        })
+        .catch((error) => {
+          sendResponse({ success: false, error: error.message });
+        });
     } else {
-      sendResponse({ success: false, error: 'No token provided' });
+      sendResponse({ success: false, error: "No token provided" });
     }
     return true;
   }
 
-  if (type === 'disconnect') {
+  if (type === "disconnect") {
     wsClient.disconnect();
     sendResponse({ success: true });
     return true;
   }
 
-  if (type === 'openLoginPage') {
+  if (type === "openLoginPage") {
     chrome.tabs.create({ url: getConnectBrowserUrl() });
     sendResponse({ success: true });
     return true;
   }
 
   // Legacy command execution (for testing)
-  if (type === 'executeCommand') {
+  if (type === "executeCommand") {
     const { command, commandId } = request;
     handleLegacyCommand(command, commandId)
       .then((result) => sendResponse(result))
-      .catch((error) => sendResponse({
-        commandId,
-        success: false,
-        error: error.message,
-        timestamp: Date.now(),
-      }));
+      .catch((error) =>
+        sendResponse({
+          commandId,
+          success: false,
+          error: error.message,
+          timestamp: Date.now(),
+        }),
+      );
     return true;
   }
 
-  sendResponse({ success: false, error: 'Unknown message type' });
+  sendResponse({ success: false, error: "Unknown message type" });
   return true;
 });
 
@@ -358,12 +371,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  */
 async function handleLegacyCommand(
   command: { action: string; params?: Record<string, any> },
-  commandId: string
+  commandId: string,
 ): Promise<any> {
   const backendCommand: BrowserCommand = {
-    type: 'command',
+    type: "command",
     id: commandId,
-    session_id: 'local',
+    session_id: "local",
     action: command.action,
     params: command.params || {},
     timeout_ms: 30000,
@@ -391,19 +404,24 @@ async function setOverlayState(visible: boolean): Promise<void> {
 
   try {
     const tabs = await chrome.tabs.query({ windowId: groupState.windowId });
-    const promises = tabs.map(tab => {
+    const promises = tabs.map((tab) => {
       if (tab.id) {
-        return chrome.tabs.sendMessage(tab.id, {
-          type: 'SET_OVERLAY_STATE',
-          visible
-        }).catch(() => {
-          // Ignore errors for tabs that don't have the content script loaded yet
-        });
+        return chrome.tabs
+          .sendMessage(tab.id, {
+            type: "SET_OVERLAY_STATE",
+            visible,
+          })
+          .catch(() => {
+            // Ignore errors for tabs that don't have the content script loaded yet
+          });
       }
     });
     await Promise.all(promises);
   } catch (e) {
-    console.error('[Kortix Extension - Background] Failed to set overlay state:', e);
+    console.error(
+      "[Kortix Extension - Background] Failed to set overlay state:",
+      e,
+    );
   }
 }
 
@@ -416,17 +434,22 @@ async function setStreamVisibility(visible: boolean): Promise<void> {
 
   try {
     const tabs = await chrome.tabs.query({ windowId: groupState.windowId });
-    const promises = tabs.map(tab => {
+    const promises = tabs.map((tab) => {
       if (tab.id) {
-        return chrome.tabs.sendMessage(tab.id, {
-          type: 'SET_OVERLAY_VISIBILITY',
-          visible
-        }).catch(() => { });
+        return chrome.tabs
+          .sendMessage(tab.id, {
+            type: "SET_OVERLAY_VISIBILITY",
+            visible,
+          })
+          .catch(() => {});
       }
     });
     await Promise.all(promises);
   } catch (e) {
-    console.error('[Kortix Extension - Background] Failed to set stream visibility:', e);
+    console.error(
+      "[Kortix Extension - Background] Failed to set stream visibility:",
+      e,
+    );
   }
 }
 
@@ -436,19 +459,58 @@ async function setStreamVisibility(visible: boolean): Promise<void> {
  * Initialize extension
  */
 async function initialize(): Promise<void> {
-  console.log('[Kortix Extension - Background] Initializing extension...');
+  console.log("[Kortix Extension - Background] Initializing extension...");
 
-  // Handle takeover message from content script overlay
+  // Handle takeover and resume messages from content script overlay
   chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'USER_TAKEOVER') {
-      console.log('[Kortix Extension - Background] Takeover requested by user (Pausing stream)');
+    if (message.type === "USER_TAKEOVER") {
+      console.log(
+        "[Kortix Extension - Background] Takeover requested by user (Pausing stream)",
+      );
+      // Pause streaming but keep window and tabs open
+      // User is now in control, overlay switches to takeover mode
       streamingManager.stop();
-      // Keep window and tabs open, but stop capturing and control
-      setOverlayState(false);
+
+      // Notify backend that user has taken over
+      if (wsClient.isConnected) {
+        wsClient.send({
+          type: "user_takeover",
+          session_id: wsClient.currentSessionId || "unknown",
+          timestamp: Date.now(),
+        });
+      }
+    }
+
+    if (message.type === "RESUME_TASK") {
+      console.log("[Kortix Extension - Background] Resume requested by user");
+      const { summary } = message;
+
+      // Restart streaming
+      streamingManager
+        .start()
+        .then(() => {
+          setOverlayState(true);
+        })
+        .catch(console.error);
+
+      // Send resume message to backend with user's summary
+      if (wsClient.isConnected) {
+        wsClient.send({
+          type: "user_resume",
+          session_id: wsClient.currentSessionId || "unknown",
+          summary: summary || "",
+          timestamp: Date.now(),
+        });
+      }
+
+      console.log(
+        "[Kortix Extension - Background] Sent resume with summary:",
+        summary,
+      );
     }
 
     // Handle high-performance video chunks from offscreen document
-    if (message.type === 'VIDEO_CHUNK') {
+    if (message.type === "VIDEO_CHUNK") {
       const { data, isKeyFrame, timestamp } = message;
       // Relay to WebSocket as a binary frame/message
       // We'll need a new message type for binary video frames
@@ -460,10 +522,13 @@ async function initialize(): Promise<void> {
   await wsClient.initialize({
     onCommand: handleBackendCommand,
     onStateChange: (connectionState) => {
-      state.isConnected = connectionState === 'authenticated';
+      state.isConnected = connectionState === "authenticated";
       state.sessionId = wsClient.currentSessionId;
       state.extensionId = wsClient.currentExtensionId;
-      console.log('[Kortix Extension - Background] Connection state:', connectionState);
+      console.log(
+        "[Kortix Extension - Background] Connection state:",
+        connectionState,
+      );
 
       // Start/stop stream based on connection - REMOVED AUTO-START
       // We only want to stream when the user/agent is actually performing browser actions
@@ -474,29 +539,37 @@ async function initialize(): Promise<void> {
     },
   });
 
-  console.log('[Kortix Extension - Background] Extension initialized');
+  console.log("[Kortix Extension - Background] Extension initialized");
 }
 
 /**
  * Handle extension installation
  */
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('[Kortix Extension - Background] onInstalled event:', details);
+  console.log("[Kortix Extension - Background] onInstalled event:", details);
 
   const isDev = !chrome.runtime.getManifest().update_url;
-  const shouldOpen = details.reason === 'install' || (isDev && details.reason === 'update');
+  const shouldOpen =
+    details.reason === "install" || (isDev && details.reason === "update");
 
   if (shouldOpen) {
-    console.log('[Kortix Extension - Background] Opening connect page (Reason: ' + details.reason + ')');
+    console.log(
+      "[Kortix Extension - Background] Opening connect page (Reason: " +
+        details.reason +
+        ")",
+    );
 
     // Open welcome/login page
     const url = getConnectBrowserUrl();
-    console.log('[Kortix Extension - Background] Connect URL:', url);
+    console.log("[Kortix Extension - Background] Connect URL:", url);
     chrome.tabs.create({ url });
   }
 
-  if (details.reason === 'update') {
-    console.log('[Kortix Extension - Background] Extension updated to version', chrome.runtime.getManifest().version);
+  if (details.reason === "update") {
+    console.log(
+      "[Kortix Extension - Background] Extension updated to version",
+      chrome.runtime.getManifest().version,
+    );
   }
 });
 
@@ -504,7 +577,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
  * Handle browser startup
  */
 chrome.runtime.onStartup.addListener(() => {
-  console.log('[Kortix Extension - Background] Browser started, reinitializing...');
+  console.log(
+    "[Kortix Extension - Background] Browser started, reinitializing...",
+  );
   initialize().catch(console.error);
 });
 

@@ -11,24 +11,24 @@ WORKDIR /app
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  python3 \
-  make \
-  g++ \
-  build-essential \
-  pkg-config \
-  libcairo2-dev \
-  libpango1.0-dev \
-  libjpeg-dev \
-  libgif-dev \
-  librsvg2-dev \
-  && rm -rf /var/lib/apt/lists/*
+    python3 \
+    make \
+    g++ \
+    build-essential \
+    pkg-config \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+    if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+    elif [ -f package-lock.json ]; then npm ci; \
+    elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+    else echo "Lockfile not found." && exit 1; \
+    fi
 
 
 # ---- Builder Stage ----
@@ -49,6 +49,7 @@ ARG NEXT_PUBLIC_NOVU_APP_IDENTIFIER
 ARG NEXT_PUBLIC_DISABLE_MOBILE_ADVERTISING
 ARG NEXT_PUBLIC_DISABLE_PRESENCE
 ARG NEXT_PUBLIC_DISABLE_REFERRALS
+ARG NEXT_PUBLIC_EXTENSION_DOWNLOAD_URL
 
 # Set them as environment variables for the build
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
@@ -62,6 +63,7 @@ ENV NEXT_PUBLIC_NOVU_APP_IDENTIFIER=$NEXT_PUBLIC_NOVU_APP_IDENTIFIER
 ENV NEXT_PUBLIC_DISABLE_MOBILE_ADVERTISING=$NEXT_PUBLIC_DISABLE_MOBILE_ADVERTISING
 ENV NEXT_PUBLIC_DISABLE_PRESENCE=$NEXT_PUBLIC_DISABLE_PRESENCE
 ENV NEXT_PUBLIC_DISABLE_REFERRALS=$NEXT_PUBLIC_DISABLE_REFERRALS
+ENV NEXT_PUBLIC_EXTENSION_DOWNLOAD_URL=$NEXT_PUBLIC_EXTENSION_DOWNLOAD_URL
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
@@ -69,11 +71,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_OUTPUT=standalone
 
 RUN \
-  if [ -f yarn.lock ]; then yarn run build; \
-  elif [ -f package-lock.json ]; then npm run build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
+    if [ -f yarn.lock ]; then yarn run build; \
+    elif [ -f package-lock.json ]; then npm run build; \
+    elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+    else echo "Lockfile not found." && exit 1; \
+    fi
 
 # ---- Runner Stage ----
 FROM base AS runner
