@@ -137,23 +137,29 @@ For full comparison, see [Git Command Comparison Table](https://docs.jj-vcs.dev/
 
 | Task | Git Equivalent | Jujutsu Command | Notes |
 | :--- | :--- | :--- | :--- |
-| **Status/Log** | `git status`, `git log` | `jj st`, `jj log` | `@` is your working copy |
+| **Status/Log** | `git status`, `git log` | `jj st`, `jj log` | `"@"` is your working copy |
 | **Fetch** | `git fetch` | `jj git fetch` |  |
-| **Commit** | `git commit -m "msg"` | `jj describe -m "msg"` then `jj new` | Describes current change, starts new one |
+| **Commit** | `git commit -m "msg"` | `jj describe -m "msg"` | Describes current change |
 | **Push** | `git push origin feature` | `jj git push --bookmark feature` | Pushes bookmark to origin |
+| **New Change** | `git commit` | `jj new` | Starts a fresh change on top of current |
+| **Update Parent**| `git commit --amend` | `jj describe -m "msg"` | Updates descriptive info of `@` |
 | **New Branch** | `git checkout -b feature` | `jj bookmark create feature -r @` | Creates bookmark on current commit |
 | **Switch Branch** | `git switch feature` | `jj edit feature` | Updates working copy to bookmark |
 | **Amend** | `git commit --amend` | `jj squash` | Folds working copy changes into parent |
 | **Undo** | *10 hours of reflog magic* | `jj undo` | Reverts last operation safely |
 | **Untrack (Keep file)** | `git rm --cached <file>` | `jj file untrack <file>` | Stops tracking file, keeps on disk |
 
-#### Managing Changes (Partial File Commits)
+#### Jujutsu Semantic Rules & Workflow (Critical)
 
-In `jj`, the working copy is always an implicit commit (`@`). There is no "staging area" index. All files changes are tracked in the working copy.
-
-Always use `jj bookmark set dev -r "@"` to update the dev bookmark (or any other bookmark) to the current working copy. Don't forget the "@" for powershell environments. This is the eqquivalent of git commit when using jj.
-
-To push to origin use `jj git push --bookmark dev` or any other bookmark name.
+1.  **Always Quote the At-Sign**: In PowerShell and Windows environments, the `@` character has special meaning. You MUST encapsulate it in double quotes: **`"@"`**.
+    *   ❌ `jj bookmark set dev -r @` (May fail or behave unexpectedly)
+    *   ✅ `jj bookmark set dev -r "@"`
+2.  **State Isolation (jj new)**: Never run destructive operations (like `restore` or `sync`) directly on a commit with existing work if you want to keep them separate.
+    *   **Anti-Pattern**: Editing a file, then running `jj restore --from main` on the same `@`. (This merges the "restore" into your previous edits).
+    *   **Pro-Pattern**: Run `jj new` FIRST to "save" your current work in the parent, then perform the next action (like `restore`) in the new `@`.
+3.  **Clean Descriptions**: Use `jj describe -m "message"` to set the commit message.
+4.  **Bookmark Advancement**: Use `jj bookmark move dev --to "@"` to advance your bookmark to the current working copy.
+5.  **Git Pushing**: Use `jj git push --bookmark dev` to sync with origin.
 
 **Scenario: You modified `FileA` and `FileB`, but only want to commit `FileA`.**
 

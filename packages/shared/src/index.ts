@@ -27,4 +27,6 @@ export * from './streaming';
 export * from './tools';
 export * from './utils';
 export * from './animations';
+export * from './constants/upload-limits';
+export * from './errors';
 
