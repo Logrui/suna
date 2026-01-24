@@ -2,8 +2,11 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import { View, ScrollView, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
-import { CircleDashed, CheckCircle2 } from 'lucide-react-native';
-import { getToolIcon, getUserFriendlyToolName } from '@/lib/utils/tool-display';
+import { CheckCircle2, CircleDashed, AlertCircle } from 'lucide-react-native';
+import { KortixLoader } from '@/components/ui/kortix-loader';
+import { getUserFriendlyToolName } from '@agentpress/shared';
+// NOTE: useSmoothText removed - displaying content immediately (following frontend pattern)
+import { getToolIcon } from '@/lib/icons/tool-icons';
 
 const STREAMABLE_TOOLS = {
   FILE_OPERATIONS: new Set([
@@ -169,18 +172,21 @@ export const StreamingToolCard = React.memo(function StreamingToolCard({ content
     const displayName = getUserFriendlyToolName(rawToolName);
     const IconComponent = getToolIcon(rawToolName);
     const primaryParam = extractPrimaryParameter(content);
-    const streamingContent = extractStreamingContent(content, displayName);
-    const shouldShowContent = isStreamableTool(displayName) && streamingContent.length > 0;
+    const rawStreamingContent = extractStreamingContent(content, displayName);
+    const shouldShowContent = isStreamableTool(displayName) && rawStreamingContent.length > 0;
 
     return {
       rawToolName,
       displayName,
       IconComponent,
       primaryParam,
-      streamingContent,
+      rawStreamingContent,
       shouldShowContent,
     };
   }, [content]);
+
+  // Display tool streaming content immediately (following frontend pattern - no artificial delay)
+  const smoothStreamingContent = toolInfo?.rawStreamingContent || '';
 
   // Track if user has scrolled away from bottom
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -192,10 +198,10 @@ export const StreamingToolCard = React.memo(function StreamingToolCard({ content
 
   // Only auto-scroll if user hasn't scrolled up
   useEffect(() => {
-    if (scrollViewRef.current && toolInfo?.streamingContent && !isUserScrolledUp) {
+    if (scrollViewRef.current && smoothStreamingContent && !isUserScrolledUp) {
       scrollViewRef.current.scrollToEnd({ animated: false });
     }
-  }, [toolInfo?.streamingContent, isUserScrolledUp]);
+  }, [smoothStreamingContent, isUserScrolledUp]);
 
   if (!toolInfo) {
     const fallbackIsCompleted = propIsCompleted || 
@@ -214,13 +220,13 @@ export const StreamingToolCard = React.memo(function StreamingToolCard({ content
         {fallbackIsCompleted ? (
           <Icon as={CheckCircle2} size={16} className="text-emerald-500" />
         ) : (
-          <Icon as={CircleDashed} size={16} className="text-primary animate-spin" />
+          <KortixLoader size="small" />
         )}
       </View>
     );
   }
 
-  const { displayName, IconComponent, primaryParam, streamingContent, shouldShowContent } = toolInfo;
+  const { displayName, IconComponent, primaryParam, shouldShowContent } = toolInfo;
   
   // Check if tool is completed (from prop or toolCall)
   const isCompleted = propIsCompleted || 
@@ -229,67 +235,130 @@ export const StreamingToolCard = React.memo(function StreamingToolCard({ content
                       toolCall?.tool_result !== null &&
                       (typeof toolCall.tool_result === 'object' || Boolean(toolCall.tool_result)));
 
+  // Check if tool execution failed
+  const isError = useMemo(() => {
+    const toolResult = toolCall?.tool_result;
+    if (!toolResult || !isCompleted) return false;
+    
+    // Check explicit success: false
+    if (typeof toolResult === 'object' && toolResult !== null) {
+      if (toolResult.success === false) return true;
+      if (toolResult.error) return true;
+      // Check for error strings in output
+      if (typeof toolResult.output === 'string') {
+        const output = toolResult.output.toLowerCase();
+        if (output.startsWith('error:') || output.includes('failed') || output.includes('exception')) {
+          return true;
+        }
+      }
+    }
+    
+    // Check if string result indicates error
+    if (typeof toolResult === 'string') {
+      const result = toolResult.toLowerCase();
+      if (result.startsWith('error:') || result.includes('failed') || result.includes('exception')) {
+        return true;
+      }
+    }
+    
+    return false;
+  }, [toolCall?.tool_result, isCompleted]);
+
+  // Extract error message if available
+  const errorMessage = useMemo(() => {
+    const toolResult = toolCall?.tool_result;
+    if (!toolResult || !isError) return undefined;
+    
+    if (typeof toolResult === 'object' && toolResult !== null) {
+      if (toolResult.error) return String(toolResult.error);
+      if (toolResult.message) return String(toolResult.message);
+      if (typeof toolResult.output === 'string') return toolResult.output;
+    }
+    
+    if (typeof toolResult === 'string') return toolResult;
+    
+    return undefined;
+  }, [toolCall?.tool_result, isError]);
+
   if (!shouldShowContent) {
     return (
-      <View className="flex-row items-center gap-3 p-3 rounded-3xl border border-border bg-card">
-        <View className="h-8 w-8 rounded-xl border border-border bg-background items-center justify-center">
-          <Icon as={IconComponent} size={16} className="text-primary" />
+      <View className={`flex-row items-center gap-3 p-3 rounded-3xl border bg-card ${isError ? 'border-rose-300 dark:border-rose-700' : 'border-border'}`}>
+        <View className={`h-8 w-8 rounded-xl border bg-background items-center justify-center ${isError ? 'border-rose-300 dark:border-rose-700' : 'border-border'}`}>
+          <Icon as={isError ? AlertCircle : IconComponent} size={16} className={isError ? 'text-rose-500' : 'text-primary'} />
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-roobert-medium text-foreground mb-0.5">
-            {displayName}
+          <Text className={`text-sm font-roobert-medium mb-0.5 ${isError ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
+            {isError ? `${displayName} failed` : displayName}
           </Text>
-          {primaryParam && (
+          {primaryParam && !isError && (
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
               {primaryParam}
             </Text>
           )}
+          {isError && errorMessage && (
+            <Text className="text-xs text-rose-500 dark:text-rose-400" numberOfLines={1}>
+              {errorMessage.substring(0, 100)}{errorMessage.length > 100 ? '...' : ''}
+            </Text>
+          )}
         </View>
         {isCompleted ? (
-          <Icon as={CheckCircle2} size={16} className="text-emerald-500" />
+          isError ? (
+            <Icon as={AlertCircle} size={16} className="text-rose-500" />
+          ) : (
+            <Icon as={CheckCircle2} size={16} className="text-emerald-500" />
+          )
         ) : (
-          <Icon as={CircleDashed} size={16} className="text-primary animate-spin" />
+          <KortixLoader size="small" />
         )}
       </View>
     );
   }
 
   return (
-    <View className="rounded-3xl border border-border bg-card overflow-hidden">
-      <View className="flex-row items-center gap-3 p-3 border-b border-border">
-        <View className="h-8 w-8 rounded-xl border border-border bg-background items-center justify-center">
-          <Icon as={IconComponent} size={16} className="text-primary" />
+    <View className={`rounded-3xl border bg-card overflow-hidden ${isError ? 'border-rose-300 dark:border-rose-700' : 'border-border'}`}>
+      <View className={`flex-row items-center gap-3 p-3 border-b ${isError ? 'border-rose-300 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/20' : 'border-border'}`}>
+        <View className={`h-8 w-8 rounded-xl border bg-background items-center justify-center ${isError ? 'border-rose-300 dark:border-rose-700' : 'border-border'}`}>
+          <Icon as={isError ? AlertCircle : IconComponent} size={16} className={isError ? 'text-rose-500' : 'text-primary'} />
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-roobert-medium text-foreground mb-0.5">
-            {displayName}
+          <Text className={`text-sm font-roobert-medium mb-0.5 ${isError ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
+            {isError ? `${displayName} failed` : displayName}
           </Text>
-          {primaryParam && (
+          {primaryParam && !isError && (
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
               {primaryParam}
             </Text>
           )}
+          {isError && errorMessage && (
+            <Text className="text-xs text-rose-500 dark:text-rose-400" numberOfLines={1}>
+              {errorMessage.substring(0, 100)}{errorMessage.length > 100 ? '...' : ''}
+            </Text>
+          )}
         </View>
         {isCompleted ? (
-          <Icon as={CheckCircle2} size={16} className="text-emerald-500" />
+          isError ? (
+            <Icon as={AlertCircle} size={16} className="text-rose-500" />
+          ) : (
+            <Icon as={CheckCircle2} size={16} className="text-emerald-500" />
+          )
         ) : (
-          <Icon as={CircleDashed} size={16} className="text-primary animate-spin" />
+          <KortixLoader size="small" />
         )}
       </View>
 
       <ScrollView
         ref={scrollViewRef}
-        className="max-h-[300px] bg-card"
+        className={`max-h-[300px] ${isError ? 'bg-rose-50/50 dark:bg-rose-900/10' : 'bg-card'}`}
         showsVerticalScrollIndicator={true}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
         <View className="p-3">
           <Text
-            className="text-xs text-foreground font-roobert-mono"
+            className={`text-xs font-roobert-mono ${isError ? 'text-rose-700 dark:text-rose-300' : 'text-foreground'}`}
             style={{ fontFamily: 'monospace' }}
           >
-            {streamingContent}
+            {smoothStreamingContent}
           </Text>
         </View>
       </ScrollView>

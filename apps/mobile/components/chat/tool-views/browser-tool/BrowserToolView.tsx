@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Pressable, Linking, Dimensions } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 import {
   Globe,
   MonitorPlay,
   ExternalLink,
   Code2,
   ImageIcon,
-  Loader2,
   AlertTriangle,
 } from 'lucide-react-native';
 import type { ToolViewProps } from '../types';
@@ -16,6 +16,7 @@ import type { UnifiedMessage } from '@/api/types';
 import { ToolViewCard, StatusBadge, LoadingState, JsonViewer, ImageLoader } from '../shared';
 import * as Haptics from 'expo-haptics';
 import { useColorScheme } from 'nativewind';
+import { log } from '@/lib/logger';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -187,16 +188,16 @@ export function BrowserToolView({
           }
         }
         
-        console.log('[BrowserToolView] Found browser_state message:', {
+        log.log('[BrowserToolView] Found browser_state message:', {
           messageId: browserStateMessageId,
           hasImageUrl: !!screenshotUrlFinal,
           hasBase64: !!screenshotBase64Final,
         });
       } catch (e) {
-        console.log('[BrowserToolView] Error parsing browser_state message:', e);
+        log.log('[BrowserToolView] Error parsing browser_state message:', e);
       }
     } else {
-      console.log('[BrowserToolView] Browser state message not found:', {
+      log.log('[BrowserToolView] Browser state message not found:', {
         messageId: browserStateMessageId,
         availableMessages: messages.map(m => ({ type: m.type, id: m.message_id })),
       });
@@ -205,7 +206,7 @@ export function BrowserToolView({
 
   // Log extracted data for debugging
   useEffect(() => {
-    console.log('[BrowserToolView] Extracted data:', {
+    log.log('[BrowserToolView] Extracted data:', {
       screenshotUrl: screenshotUrlFinal,
       screenshotBase64: screenshotBase64Final ? 'present' : null,
       browserStateMessageId,
@@ -264,7 +265,7 @@ export function BrowserToolView({
         await Linking.openURL(url);
       }
     } catch (err) {
-      console.error('Failed to open URL:', err);
+      log.error('Failed to open URL:', err);
     }
   };
 
@@ -474,7 +475,7 @@ export function BrowserToolView({
                   }}
                 >
                   <View className="flex-row items-center gap-2">
-                    <Icon as={Loader2} size={14} className="text-primary" />
+                    <KortixLoader size="small" customSize={14} />
                     <Text className="text-xs text-muted-foreground">
                       Browser action in progress...
                     </Text>

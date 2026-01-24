@@ -1,0 +1,15 @@
+const sandboxKeysBase = ['sandbox'] as const;
+const healthKeysBase = ['health'] as const;
+
+export const sandboxKeys = {
+  all: sandboxKeysBase,
+  files: (sandboxId: string, path: string) => [...sandboxKeysBase, sandboxId, 'files', path] as const,
+  fileContent: (sandboxId: string, path: string) => [...sandboxKeysBase, sandboxId, 'content', path] as const,
+  details: (projectId: string) => [...sandboxKeysBase, 'details', projectId] as const,
+  status: (projectId: string) => [...sandboxKeysBase, 'status', projectId] as const,
+} as const;
+
+export const healthKeys = {
+  all: healthKeysBase,
+  api: () => [...healthKeysBase, 'api'] as const,
+} as const;

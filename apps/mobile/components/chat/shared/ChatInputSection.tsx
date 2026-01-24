@@ -6,11 +6,13 @@ import { useColorScheme } from 'nativewind';
 import { KeyboardStickyView, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
 import { ChatInput, type ChatInputRef } from '../ChatInput';
+import { ToolSnack, type ToolSnackData } from '../ToolSnack';
 import { AttachmentBar } from '@/components/attachments';
 import { QuickActionBar, QuickActionExpandedView, QUICK_ACTIONS } from '@/components/quick-actions';
 import { useLanguage } from '@/contexts';
 import type { Agent } from '@/api/types';
 import type { Attachment } from '@/hooks/useChat';
+import { log } from '@/lib/logger';
 
 export interface ChatInputSectionProps {
   // Chat input props
@@ -30,6 +32,9 @@ export interface ChatInputSectionProps {
   onAgentPress: () => void;
 
   style?: ViewStyle;
+
+  // Whether this is a new/optimistic thread (disables keyboard tracking briefly)
+  isNewThread?: boolean;
 
   // Audio recording
   onAudioRecord: () => Promise<void>;
@@ -64,6 +69,16 @@ export interface ChatInputSectionProps {
 
   // Show quick actions (mode selector)
   showQuickActions?: boolean;
+
+  // Tool Snack props (only shown in thread view, not home)
+  /** Current/last tool data for the snack display (persisted by parent) */
+  activeToolData?: ToolSnackData | null;
+  /** Agent name for the snack status text */
+  agentName?: string;
+  /** Callback when pressing the tool snack to expand */
+  onToolSnackPress?: () => void;
+  /** Callback when user swipes to dismiss the tool snack */
+  onToolSnackDismiss?: () => void;
 }
 
 export interface ChatInputSectionRef {
@@ -159,12 +174,34 @@ export const ChatInputSection = React.memo(React.forwardRef<ChatInputSectionRef,
   isTranscribing,
   containerClassName = "mx-3 mb-4",
   showQuickActions = false,
+  activeToolData,
+  agentName,
+  onToolSnackPress,
+  onToolSnackDismiss,
+  isNewThread = false,
 }, ref) => {
   const { colorScheme } = useColorScheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const chatInputRef = React.useRef<ChatInputRef>(null);
-  
+
+  // For new threads, briefly disable keyboard tracking to ensure correct initial position
+  // This prevents stale keyboard metrics from HomePage affecting the initial layout
+  const [keyboardTrackingEnabled, setKeyboardTrackingEnabled] = React.useState(() => !isNewThread);
+
+  React.useEffect(() => {
+    if (isNewThread) {
+      // Disable immediately, re-enable after keyboard fully closes
+      setKeyboardTrackingEnabled(false);
+      const timer = setTimeout(() => {
+        setKeyboardTrackingEnabled(true);
+      }, 350); // iOS keyboard animation is ~250ms, add buffer
+      return () => clearTimeout(timer);
+    } else {
+      setKeyboardTrackingEnabled(true);
+    }
+  }, [isNewThread]);
+
   // Get keyboard animation progress for smooth padding transitions
   // progress goes from 0 (closed) to 1 (open)
   const { progress } = useReanimatedKeyboardAnimation();
@@ -222,8 +259,13 @@ export const ChatInputSection = React.memo(React.forwardRef<ChatInputSectionRef,
   // Get background color based on theme
   const backgroundColor = colorScheme === 'dark' ? DARK_BACKGROUND : LIGHT_BACKGROUND;
 
+  // Use key to force remount when enabled changes - this resets stale animation values
+  const stickyViewKey = keyboardTrackingEnabled ? 'kb-enabled' : 'kb-disabled';
+
   return (
     <KeyboardStickyView
+      key={stickyViewKey}
+      enabled={keyboardTrackingEnabled}
       style={[
         // Base positioning - absolute at bottom of screen
         {
@@ -254,6 +296,21 @@ export const ChatInputSection = React.memo(React.forwardRef<ChatInputSectionRef,
           attachments={attachments}
           onRemove={onRemoveAttachment}
         />
+
+        {/* Tool Snack - Above Input (only in thread view, not home) */}
+        {(() => {
+          log.log('[ChatInputSection] ToolSnack check - showQuickActions:', showQuickActions, 'activeToolData:', activeToolData?.toolName || 'null');
+          return null;
+        })()}
+        {!showQuickActions && (
+          <ToolSnack
+            toolData={activeToolData || null}
+            isAgentRunning={isAgentRunning}
+            agentName={agentName}
+            onPress={onToolSnackPress}
+            onDismiss={onToolSnackDismiss}
+          />
+        )}
 
         {/* Quick Action Expanded Content - Above Input (only on home) */}
         {showQuickActions && selectedQuickAction && selectedAction && (

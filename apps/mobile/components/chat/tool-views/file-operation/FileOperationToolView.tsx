@@ -3,13 +3,13 @@ import { View, ScrollView, Pressable, NativeScrollEvent, NativeSyntheticEvent } 
 import { WebView } from 'react-native-webview';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
+import { KortixLoader } from '@/components/ui/kortix-loader';
 import {
   Code,
   Eye,
   FileText,
   Presentation,
   Pencil,
-  Loader2,
   Copy,
   Check,
   FileDiff,
@@ -42,6 +42,7 @@ import { constructHtmlPreviewUrl } from '@/lib/utils/url';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { PresentationSlideCard } from '../presentation-tool/PresentationSlideCard';
+import { log } from '@/lib/logger';
 
 // Helper functions for presentation slide detection
 function isPresentationSlideFile(filepath: string): boolean {
@@ -299,7 +300,7 @@ export function FileOperationToolView({
 
   // Debug: Log content extraction
   if (operation === 'create' || operation === 'edit' || operation === 'rewrite' || isStrReplace) {
-    console.log('[FileOperationToolView] Content extraction:', {
+    log.log('[FileOperationToolView] Content extraction:', {
       operation,
       isStrReplace,
       hasFileContent: !!fileContent,
@@ -384,7 +385,7 @@ export function FileOperationToolView({
       await Clipboard.setStringAsync(fileContent);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      log.error('Failed to copy text: ', err);
     }
     setTimeout(() => setIsCopyingContent(false), 500);
   };
@@ -461,7 +462,7 @@ export function FileOperationToolView({
               {presentationName}{slideNumber ? ` - Slide ${slideNumber}` : ''}
             </Text>
             <View className="flex-row items-center gap-2">
-              <Icon as={Loader2} size={16} className="text-primary" />
+              <KortixLoader size="small" customSize={16} />
               <Text className="text-sm text-primary">Writing slide content...</Text>
             </View>
           </View>

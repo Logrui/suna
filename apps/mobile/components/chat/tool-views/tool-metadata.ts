@@ -575,8 +575,8 @@ export const toolMetadataMap: Record<string, ToolMetadata> = {
     icon: Settings,
     iconColor: 'text-purple-600',
     iconBgColor: 'bg-purple-50',
-    subtitle: 'Tools',
-    defaultTitle: 'Tools Initialized',
+    subtitle: 'Mode',
+    defaultTitle: 'Mode Activated',
   },
 
   // Agent Tool
@@ -644,7 +644,7 @@ export const toolMetadataMap: Record<string, ToolMetadata> = {
     iconColor: 'text-blue-600',
     iconBgColor: 'bg-blue-50',
     subtitle: 'Image',
-    defaultTitle: 'Load Image',
+    defaultTitle: 'Image Loaded',
   },
 
   // Presentation Tools

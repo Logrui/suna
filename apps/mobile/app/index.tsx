@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { View, Text } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { KortixLoader } from '@/components/ui';
 import { useAuthContext, useBillingContext } from '@/contexts';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { log } from '@/lib/logger';
 
 // Safely import and configure expo-notifications
 let Notifications: typeof import('expo-notifications') | null = null;
@@ -13,7 +14,7 @@ try {
   if (Notifications && Notifications.setNotificationHandler) {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
-        shouldPlaySound: true,
+        shouldPlaySound: false, // Commented out: was true
         shouldSetBadge: true,
         shouldShowBanner: true,
         shouldShowList: true,
@@ -21,7 +22,7 @@ try {
     });
   }
 } catch (error) {
-  console.warn('expo-notifications module not available:', error);
+  log.warn('expo-notifications module not available:', error);
 }
 
 /**
@@ -37,7 +38,15 @@ export default function SplashScreen() {
   const { hasCompletedOnboarding, isLoading: onboardingLoading } = useOnboarding();
   const { hasActiveSubscription, isLoading: billingLoading, subscriptionData } = useBillingContext();
   const { expoPushToken } = usePushNotifications();
-  console.log('expoPushToken', expoPushToken);
+  
+  // Log token status when it changes
+  React.useEffect(() => {
+    if (expoPushToken) {
+      log.log('[SPLASH] ✅ expoPushToken available:', expoPushToken);
+    } else {
+      log.log('[SPLASH] ⚠️ expoPushToken is undefined (check [PUSH] logs for details)');
+    }
+  }, [expoPushToken]);
   
   // Track navigation to prevent double navigation
   const [hasNavigated, setHasNavigated] = React.useState(false);
@@ -56,9 +65,19 @@ export default function SplashScreen() {
   const onboardingReady = !isAuthenticated || !onboardingLoading;
   const allDataReady = authReady && billingReady && onboardingReady;
 
+  // Status text for debugging
+  const getStatusText = () => {
+    if (!authReady) return 'Checking session...';
+    if (!isAuthenticated) return 'Redirecting...';
+    if (billingLoading) return 'Loading account...';
+    if (!subscriptionData) return 'Fetching subscription...';
+    if (onboardingLoading) return 'Checking setup...';
+    return 'Almost there...';
+  };
+
   // Debug logging
   React.useEffect(() => {
-    console.log('📊 Splash:', {
+    log.log('📊 Splash:', {
       authLoading,
       isAuthenticated,
       billingLoading,
@@ -85,7 +104,7 @@ export default function SplashScreen() {
 
       // ROUTING DECISION
       if (!isAuthenticated) {
-        console.log('🚀 → /auth (not authenticated)');
+        log.log('🚀 → /auth (not authenticated)');
         router.replace('/auth');
         return;
       }
@@ -95,16 +114,16 @@ export default function SplashScreen() {
       // the full setup flow - go straight to home, regardless of subscription status.
       // This prevents showing "Initializing Account" to users who already completed setup.
       if (hasCompletedOnboarding) {
-        console.log('🚀 → /home (onboarding completed)');
+        log.log('🚀 → /home (onboarding completed)');
         router.replace('/home');
       } else if (!hasActiveSubscription) {
         // New user: Account initialization happens automatically via webhook on signup.
         // Only show setting-up as a fallback if webhook failed or user signed up before this change.
-        console.log('🚀 → /setting-up (fallback: no subscription detected)');
+        log.log('🚀 → /setting-up (fallback: no subscription detected)');
         router.replace('/setting-up');
       } else {
         // Has subscription but hasn't completed onboarding
-        console.log('🚀 → /onboarding');
+        log.log('🚀 → /onboarding');
         router.replace('/onboarding');
       }
     }, 100);
@@ -116,7 +135,10 @@ export default function SplashScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1 bg-background items-center justify-center">
-        <KortixLoader size="large" />
+        <KortixLoader customSize={56} />
+        <Text className="text-muted-foreground text-sm mt-4">
+          {getStatusText()}
+        </Text>
       </View>
     </>
   );

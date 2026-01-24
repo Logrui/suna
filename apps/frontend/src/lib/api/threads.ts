@@ -1,0 +1,563 @@
+import { createClient } from '@/lib/supabase/client';
+import { handleApiError } from '../error-handler';
+import { backendApi } from '../api-client';
+
+export type ThreadStatus = 'pending' | 'initializing' | 'ready' | 'error';
+
+export type Thread = {
+  thread_id: string;
+  project_id?: string | null;
+  name?: string;
+  is_public?: boolean;
+  created_at: string;
+  updated_at: string;
+  status?: ThreadStatus;
+  initialization_error?: string | null;
+  initialization_started_at?: string | null;
+  initialization_completed_at?: string | null;
+  [key: string]: any;
+};
+
+export type Message = {
+  role: string;
+  content: string;
+  type: string;
+  agent_id?: string;
+  agents?: {
+    name: string;
+  };
+};
+
+export interface ThreadsResponse {
+  threads: Thread[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+// Project type and API functions (moved from projects.ts)
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at?: string;
+  sandbox: {
+    vnc_preview?: string;
+    sandbox_url?: string;
+    id?: string;
+    pass?: string;
+  };
+  is_public?: boolean;
+  icon_name?: string | null;
+  [key: string]: any;
+};
+
+// Direct API call for getting a project - used by React Query hooks
+export const getProject = async (projectId: string): Promise<Project> => {
+  const response = await backendApi.get<{
+    project_id: string;
+    name: string;
+    description: string;
+    created_at: string;
+    updated_at?: string;
+    sandbox: any;
+    is_public?: boolean;
+    icon_name?: string | null;
+  }>(`/projects/${projectId}`, {
+    showErrors: true
+  });
+
+  if (response.error) {
+    handleApiError(response.error, { operation: 'load project', resource: `project ${projectId}` });
+    throw new Error(response.error.message || `Project not found: ${projectId}`);
+  }
+
+  if (!response.data) {
+    throw new Error(`Project not found: ${projectId}`);
+  }
+
+  const projectData = response.data;
+
+  // Map backend response to frontend Project type
+  return {
+    id: projectData.project_id,
+    name: projectData.name || '',
+    description: projectData.description || '',
+    is_public: projectData.is_public || false,
+    created_at: projectData.created_at,
+    updated_at: projectData.updated_at || projectData.created_at,
+    sandbox: projectData.sandbox || {
+      id: '',
+      pass: '',
+      vnc_preview: '',
+      sandbox_url: '',
+    },
+    icon_name: projectData.icon_name,
+  };
+};
+
+// Get threads for a specific project
+export const getProjectThreads = async (projectId: string, page: number = 1, limit: number = 100): Promise<ThreadsResponse> => {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    
+    const response = await backendApi.get<{ threads: any[]; pagination: any }>(`/projects/${projectId}/threads?${params.toString()}`, {
+      showErrors: false,
+    });
+
+    if (response.error) {
+      console.error('Error getting project threads:', response.error);
+      handleApiError(response.error, { 
+        operation: 'load project threads', 
+        resource: `threads for project ${projectId}` 
+      });
+      return {
+        threads: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          pages: 0,
+        }
+      };
+    }
+
+    if (!response.data?.threads) {
+      return {
+        threads: [],
+        pagination: response.data?.pagination || {
+          page: 1,
+          limit: 20,
+          total: 0,
+          pages: 0,
+        }
+      };
+    }
+
+    const threads = response.data.threads.map((thread: any) => ({
+      thread_id: thread.thread_id,
+      project_id: thread.project_id,
+      created_at: thread.created_at,
+      updated_at: thread.updated_at,
+      metadata: thread.metadata || {},
+    }));
+
+    return {
+      threads,
+      pagination: response.data.pagination || {
+        page,
+        limit,
+        total: threads.length,
+        pages: 1,
+      }
+    };
+  } catch (err) {
+    console.error('Error fetching project threads:', err);
+    handleApiError(err, { 
+      operation: 'load project threads', 
+      resource: `threads for project ${projectId}` 
+    });
+    return {
+      threads: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        pages: 0,
+      }
+    };
+  }
+};
+
+// Create a thread in an existing project
+export const createThreadInProject = async (projectId: string): Promise<{ thread_id: string; project_id: string }> => {
+  const supabase = createClient();
+
+  // If user is not logged in, redirect to login
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('You must be logged in to create a thread');
+  }
+
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const response = await fetch(`${API_URL}/projects/${projectId}/threads`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error');
+    handleApiError(new Error(errorText), { operation: 'create thread in project', resource: 'thread' });
+    throw new Error(errorText);
+  }
+
+  const data = await response.json();
+  return data;
+};
+
+// Delete project (now uses dedicated DELETE /projects/{project_id} endpoint)
+export const deleteProject = async (projectId: string): Promise<void> => {
+  const deleteResponse = await backendApi.delete(`/projects/${projectId}`, {
+    showErrors: true,
+  });
+
+  if (deleteResponse.error) {
+    handleApiError(deleteResponse.error, { operation: 'delete project', resource: `project ${projectId}` });
+    throw new Error(deleteResponse.error.message || 'Failed to delete project');
+  }
+};
+
+// Update project (via thread PATCH endpoint)
+export const updateProject = async (
+  projectId: string,
+  data: Partial<Project>,
+): Promise<Project> => {
+  if (!projectId || projectId === '') {
+    throw new Error('Cannot update project: Invalid project ID');
+  }
+
+  // Find thread with this project_id
+  const threadsResponse = await getThreadsPaginated(undefined, 1, 20);
+
+  if (!threadsResponse?.threads) {
+    throw new Error('Failed to find thread for project');
+  }
+
+  const threadWithProject = threadsResponse.threads.find(
+    (thread: any) => thread.project_id === projectId
+  );
+
+  if (!threadWithProject) {
+    throw new Error(`No thread found for project ${projectId}`);
+  }
+
+  // Update project via thread PATCH endpoint
+  const updatePayload: any = {};
+  if (data.name !== undefined) {
+    updatePayload.title = data.name;
+  }
+  if (data.is_public !== undefined) {
+    updatePayload.is_public = data.is_public;
+  }
+
+  const updateResponse = await backendApi.patch(
+    `/threads/${threadWithProject.thread_id}`,
+    updatePayload,
+    { showErrors: true }
+  );
+
+  if (updateResponse.error) {
+    throw new Error(updateResponse.error.message || 'Failed to update project');
+  }
+
+  // Return updated project data (will be refetched by React Query via invalidation)
+  return {
+    id: projectId,
+    name: data.name !== undefined ? data.name : threadWithProject.project?.name || '',
+    description: threadWithProject.project?.description || '',
+    is_public: data.is_public !== undefined ? data.is_public : threadWithProject.project?.is_public || false,
+    created_at: threadWithProject.project?.created_at || '',
+    updated_at: threadWithProject.project?.updated_at,
+    sandbox: threadWithProject.project?.sandbox || { id: '', pass: '', vnc_preview: '', sandbox_url: '' },
+    icon_name: threadWithProject.project?.icon_name,
+  } as Project;
+};
+
+export const getThreads = async (projectId?: string): Promise<Thread[]> => {
+  try {
+    const response = await backendApi.get<{ threads: any[] }>('/threads', {
+      showErrors: false,
+    });
+
+    if (response.error) {
+      console.error('Error getting threads:', response.error);
+      handleApiError(response.error, { 
+        operation: 'load threads', 
+        resource: projectId ? `threads for project ${projectId}` : 'threads' 
+      });
+      return [];
+    }
+
+    if (!response.data?.threads) {
+      return [];
+    }
+
+    let threads = response.data.threads.map((thread: any) => ({
+      thread_id: thread.thread_id,
+      project_id: thread.project_id,
+      created_at: thread.created_at,
+      updated_at: thread.updated_at,
+      metadata: thread.metadata || {},
+    }));
+
+    if (projectId) {
+      threads = threads.filter((thread: Thread) => thread.project_id === projectId);
+    }
+
+    return threads;
+  } catch (err) {
+    console.error('Error fetching threads:', err);
+    handleApiError(err, { 
+      operation: 'load threads', 
+      resource: projectId ? `threads for project ${projectId}` : 'threads' 
+    });
+    return [];
+  }
+};
+
+export const getThreadsPaginated = async (projectId?: string, page: number = 1, limit: number = 20): Promise<ThreadsResponse> => {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    
+    const response = await backendApi.get<{ threads: any[]; pagination: any }>(`/threads?${params.toString()}`, {
+      showErrors: false,
+    });
+
+    if (response.error) {
+      console.error('Error getting paginated threads:', response.error);
+      handleApiError(response.error, { 
+        operation: 'load threads', 
+        resource: projectId ? `threads for project ${projectId}` : 'threads' 
+      });
+      return {
+        threads: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          pages: 0,
+        }
+      };
+    }
+
+    if (!response.data?.threads) {
+      return {
+        threads: [],
+        pagination: response.data?.pagination || {
+          page: 1,
+          limit: 50,
+          total: 0,
+          pages: 0,
+        }
+      };
+    }
+
+    let threads = response.data.threads.map((thread: any) => ({
+      thread_id: thread.thread_id,
+      project_id: thread.project_id,
+      created_at: thread.created_at,
+      updated_at: thread.updated_at,
+      metadata: thread.metadata || {},
+      project: thread.project, // Preserve project data for getProjects to use
+    }));
+
+    if (projectId) {
+      threads = threads.filter((thread: Thread) => thread.project_id === projectId);
+    }
+
+    return {
+      threads,
+      pagination: response.data.pagination || {
+        page,
+        limit,
+        total: threads.length,
+        pages: 1,
+      }
+    };
+  } catch (err) {
+    console.error('Error fetching paginated threads:', err);
+    handleApiError(err, { 
+      operation: 'load threads', 
+      resource: projectId ? `threads for project ${projectId}` : 'threads' 
+    });
+    return {
+      threads: [],
+      pagination: {
+        page: 1,
+        limit: 50,
+        total: 0,
+        pages: 0,
+      }
+    };
+  }
+};
+
+export const getThread = async (threadId: string): Promise<Thread> => {
+  try {
+    const response = await backendApi.get<Thread>(`/threads/${threadId}`, {
+      showErrors: false,
+    });
+
+    if (response.error) {
+      const error = new Error(response.error.message || 'Failed to fetch thread');
+      (error as any).status = response.error.status;
+      throw error;
+    }
+
+    if (!response.data) {
+      const error = new Error('Thread not found');
+      (error as any).status = 404;
+      throw error;
+    }
+
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Create a new thread (creates both project and thread - legacy endpoint for backwards compatibility)
+export const createThread = async (projectId?: string): Promise<Thread> => {
+  const supabase = createClient();
+
+  // If user is not logged in, redirect to login
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('You must be logged in to create a thread');
+  }
+
+  const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  // Use backend API endpoint - it handles project creation as well
+  // If projectId is provided, use the new endpoint to create thread in existing project
+  if (projectId) {
+    const result = await createThreadInProject(projectId);
+    return {
+      thread_id: result.thread_id,
+      project_id: result.project_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as Thread;
+  }
+
+  // Otherwise, create new project + thread (legacy behavior)
+  const response = await fetch(`${API_URL}/threads`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error');
+    handleApiError(new Error(errorText), { operation: 'create thread', resource: 'thread' });
+    throw new Error(errorText);
+  }
+
+  const data = await response.json();
+  return data;
+};
+
+export class NoAccessTokenAvailableError extends Error {
+  constructor() {
+    super('No access token available');
+    this.name = 'NoAccessTokenAvailableError';
+  }
+}
+
+export const addUserMessage = async (
+  threadId: string,
+  content: string,
+): Promise<void> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new NoAccessTokenAvailableError();
+    }
+
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    // Use backend API endpoint with auth handling
+    const response = await fetch(`${API_URL}/threads/${threadId}/messages/add`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ message: content }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('Error adding user message:', errorText);
+      handleApiError(new Error(errorText), { operation: 'add message', resource: 'message' });
+      throw new Error(`Error adding message: ${errorText}`);
+    }
+  } catch (error) {
+    if (error instanceof NoAccessTokenAvailableError) {
+      throw error;
+    }
+    console.error('Failed to add user message:', error);
+    handleApiError(error, { operation: 'add message', resource: 'message' });
+    throw error;
+  }
+};
+
+// Flag to toggle optimized messages endpoint (set to false for debugging, true for production)
+const USE_OPTIMIZED_MESSAGES = true;
+
+// Helper to check if debug mode is enabled via URL query param
+// Add ?debug_messages to URL to get unoptimized (full) messages for debugging
+const shouldUseOptimizedMessages = (): boolean => {
+  if (typeof window === 'undefined') return USE_OPTIMIZED_MESSAGES;
+  const urlParams = new URLSearchParams(window.location.search);
+  // If debug_messages param exists (with any value or no value), return false to disable optimization
+  return !urlParams.has('debug_messages');
+};
+
+export const getMessages = async (threadId: string): Promise<Message[]> => {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+
+    const useOptimized = shouldUseOptimizedMessages();
+
+    const response = await fetch(
+      `${API_URL}/threads/${threadId}/messages?order=asc&optimized=${useOptimized}`,
+      {
+      headers,
+      cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      const error = new Error(`Error getting messages: ${errorText}`);
+      (error as any).status = response.status;
+      throw error;
+    }
+
+    const data = await response.json();
+    return data.messages || [];
+  } catch (error) {
+    throw error;
+  }
+};
+

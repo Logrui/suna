@@ -12,6 +12,7 @@ import {
   type UseMutationOptions,
   type UseQueryOptions,
 } from '@tanstack/react-query';
+import { log } from '@/lib/logger';
 import { Share } from 'react-native';
 import { API_URL, FRONTEND_SHARE_URL, getAuthHeaders, getAuthToken } from '@/api/config';
 import type {
@@ -137,31 +138,32 @@ export function useShareThread(
 
   return useMutation({
     mutationFn: async (threadId) => {
-      const headers = await getAuthHeaders();
-      
-      // Make thread public
-      const updateRes = await fetch(`${API_URL}/threads/${threadId}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ is_public: true }),
-      });
-      
-      if (!updateRes.ok) throw new Error(`Failed to share thread: ${updateRes.status}`);
-      
-      // Generate share URL using frontend URL
+      // Generate share URL immediately - it's deterministic
       const shareUrl = `${FRONTEND_SHARE_URL}/share/${threadId}`;
-      
-      // Open native share menu
+
+      // Open native share menu right away for instant UX
       // Use message instead of url to prevent iOS duplication issue
       await Share.share({
         message: shareUrl,
       });
-      
+
+      // Make thread public in background (fire-and-forget)
+      getAuthHeaders().then((headers) => {
+        fetch(`${API_URL}/threads/${threadId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ is_public: true }),
+        }).then((res) => {
+          if (res.ok) {
+            queryClient.invalidateQueries({ queryKey: chatKeys.threads() });
+            queryClient.invalidateQueries({ queryKey: chatKeys.thread(threadId) });
+          }
+        }).catch((err) => {
+          log.error('Failed to make thread public:', err);
+        });
+      });
+
       return { shareUrl };
-    },
-    onSuccess: (_, threadId) => {
-      queryClient.invalidateQueries({ queryKey: chatKeys.threads() });
-      queryClient.invalidateQueries({ queryKey: chatKeys.thread(threadId) });
     },
     ...options,
   });
@@ -228,9 +230,9 @@ export function useAddMessage(
 
 export function useUnifiedAgentStart(
   options?: UseMutationOptions<
-    { thread_id: string; agent_run_id: string; status: string },
+    { thread_id: string; agent_run_id: string; project_id?: string; sandbox_id?: string; status: string },
     Error,
-    { threadId?: string; prompt?: string; files?: any[]; modelName?: string; agentId?: string; threadMetadata?: Record<string, any> }
+    { threadId?: string; prompt?: string; files?: Array<{ uri: string; name: string; type: string }>; modelName?: string; agentId?: string; threadMetadata?: Record<string, any> }
   >
 ) {
   const queryClient = useQueryClient();
@@ -245,8 +247,15 @@ export function useUnifiedAgentStart(
       if (agentId) formData.append('agent_id', agentId);
       if (threadMetadata) formData.append('thread_metadata', JSON.stringify(threadMetadata));
       
-      if (files?.length) {
-        files.forEach((file) => formData.append('files', file as any));
+      // Append files if present (uploaded directly with agent start)
+      if (files && files.length > 0) {
+        for (const file of files) {
+          formData.append('files', {
+            uri: file.uri,
+            name: file.name,
+            type: file.type || 'application/octet-stream',
+          } as any);
+        }
       }
 
       const authHeaders = await getAuthHeaders();
@@ -344,23 +353,24 @@ export function useSendMessage(
 
   return useMutation({
     mutationFn: async (input) => {
-      console.log('🚀 [useSendMessage] Step 1: Adding message to thread', input.threadId);
+      log.log('🚀 [useSendMessage] Step 1: Adding message to thread', input.threadId);
 
       const message = await addMessage.mutateAsync({
         threadId: input.threadId,
         message: input.message,
       });
 
-      console.log('✅ [useSendMessage] Step 1 complete: Message added', message);
-      console.log('🚀 [useSendMessage] Step 2: Starting agent run');
+      log.log('✅ [useSendMessage] Step 1 complete: Message added', message);
+      log.log('🚀 [useSendMessage] Step 2: Starting agent run');
 
       const agentRun = await unifiedAgentStart.mutateAsync({
         threadId: input.threadId,
         modelName: input.modelName,
         agentId: input.agentId,
+        files: input.files,
       });
 
-      console.log('✅ [useSendMessage] Step 2 complete: Agent started', agentRun);
+      log.log('✅ [useSendMessage] Step 2 complete: Agent started', agentRun);
 
       return {
         message,
@@ -487,24 +497,26 @@ export function useActiveAgentRuns(
       try {
         const res = await fetch(`${API_URL}/agent-runs/active`, { headers });
         if (!res.ok) {
-          console.warn(`Failed to fetch active runs: ${res.status}`);
+          log.warn(`Failed to fetch active runs: ${res.status}`);
           return [];
         }
         const data = await res.json();
         return data.active_runs || [];
       } catch (error) {
-        console.error('Error fetching active runs:', error);
-        return [];
+        // IMPORTANT: Re-throw network errors so fetchQuery catches them for retry logic
+        // This allows retryLastMessage to detect network failures
+        log.error('Error fetching active runs:', error);
+        throw error;
       }
     },
+    // Don't retry on error for this query - let the UI handle retry
+    retry: false,
     staleTime: 10 * 1000, // Cache for 10 seconds
     refetchInterval: (query) => {
       // Smart polling: only poll every 15 seconds if there are active runs
       const hasActiveRuns = query.state.data && query.state.data.length > 0;
       return hasActiveRuns ? 15000 : false;
     },
-    retry: 1,
-    retryDelay: 5000,
     ...options,
   });
 }

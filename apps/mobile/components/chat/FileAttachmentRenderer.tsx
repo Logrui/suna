@@ -21,7 +21,7 @@ import { Icon } from '@/components/ui/icon';
 import { FileText, File, Download, ExternalLink, Image as ImageIcon, Play, Presentation } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { SelectableMarkdownText } from '@/components/ui/selectable-markdown';
-import { autoLinkUrls } from '@/lib/utils/url-autolink';
+import { autoLinkUrls } from '@agentpress/shared';
 import {
   isImageExtension,
   isDocumentExtension,
@@ -29,6 +29,7 @@ import {
   isJsonExtension,
   isMarkdownExtension,
   isHtmlExtension,
+  isDocxExtension,
 } from '@/lib/utils/file-types';
 import { WebView } from 'react-native-webview';
 import { getAuthToken } from '@/api/config';
@@ -39,6 +40,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { FullScreenPresentationViewer } from './tool-views/presentation-tool/FullScreenPresentationViewer';
+import { log } from '@/lib/logger';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -86,6 +88,135 @@ function constructHtmlPreviewUrl(sandboxUrl: string, filePath: string): string {
   const pathSegments = processedPath.split('/').map(segment => encodeURIComponent(segment));
   const encodedPath = pathSegments.join('/');
   return `${sandboxUrl}/${encodedPath}`;
+}
+
+/**
+ * Generates HTML with embedded mammoth.js for rendering DOCX files
+ * mammoth.js works reliably in WebView and converts DOCX to clean HTML
+ */
+function generateDocxPreviewHtml(base64Data: string, isDark: boolean): string {
+  const bgColor = isDark ? '#121215' : '#ffffff';
+  const textColor = isDark ? '#f8f8f8' : '#121215';
+
+  // Extract just the base64 part if it's a data URL
+  const base64Content = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      background: ${bgColor};
+      color: ${textColor};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-size: 14px;
+    }
+    #error {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #ef4444;
+      padding: 20px;
+    }
+    #container {
+      padding: 16px;
+      max-width: 100%;
+    }
+    /* Document styling */
+    #container h1 { font-size: 1.8em; font-weight: bold; margin: 0.67em 0; }
+    #container h2 { font-size: 1.4em; font-weight: bold; margin: 0.83em 0; }
+    #container h3 { font-size: 1.17em; font-weight: bold; margin: 1em 0; }
+    #container p { margin: 0.8em 0; }
+    #container ul, #container ol { margin: 0.8em 0; padding-left: 1.8em; }
+    #container li { margin: 0.4em 0; }
+    #container table {
+      border-collapse: collapse;
+      margin: 1em 0;
+      width: 100%;
+      font-size: 13px;
+    }
+    #container th, #container td {
+      border: 1px solid ${isDark ? 'rgba(248,248,248,0.3)' : '#d1d5db'};
+      padding: 8px 10px;
+      text-align: left;
+    }
+    #container th {
+      background: ${isDark ? 'rgba(248,248,248,0.1)' : '#f3f4f6'};
+      font-weight: 600;
+    }
+    #container img { max-width: 100%; height: auto; margin: 0.8em 0; }
+    #container a { color: ${isDark ? '#60a5fa' : '#2563eb'}; }
+    #container blockquote {
+      border-left: 3px solid ${isDark ? 'rgba(248,248,248,0.3)' : '#d1d5db'};
+      padding-left: 1em;
+      margin: 0.8em 0;
+      color: ${isDark ? 'rgba(248,248,248,0.7)' : '#6b7280'};
+    }
+    #container strong, #container b { font-weight: 600; }
+    #container em, #container i { font-style: italic; }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading...</div>
+  <div id="error">Failed to load document</div>
+  <div id="container"></div>
+  <script>
+    async function renderDocx() {
+      try {
+        const base64 = '${base64Content}';
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('container').innerHTML = result.value;
+      } catch (err) {
+        console.error('DOCX error:', err);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = 'Failed to load: ' + (err.message || err);
+      }
+    }
+
+    if (typeof mammoth !== 'undefined') {
+      renderDocx();
+    } else {
+      window.onload = function() {
+        if (typeof mammoth !== 'undefined') {
+          renderDocx();
+        } else {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('error').style.display = 'block';
+          document.getElementById('error').textContent = 'Failed to load library';
+        }
+      };
+    }
+  </script>
+</body>
+</html>`;
 }
 
 interface FileAttachment {
@@ -259,7 +390,7 @@ function ImageAttachment({
       setHasError(false);
       setIsLoading(true);
 
-      console.log('[ImageAttachment] Starting image load:', {
+      log.log('[ImageAttachment] Starting image load:', {
         filePath: file.path,
         fileType: file.type,
         fileExtension: file.extension,
@@ -271,7 +402,7 @@ function ImageAttachment({
       // Don't try to render directly - wait for sandboxId
       const isUploadedFile = file.path.includes('/uploads/') || file.path.includes('/workspace');
       if (!sandboxId && isUploadedFile) {
-        console.log('[ImageAttachment] ⏳ Waiting for sandboxId for uploaded file...');
+        log.log('[ImageAttachment] ⏳ Waiting for sandboxId for uploaded file...');
         setIsLoading(true);
         // Don't set error, just keep loading - sandboxId might come in next render
         return;
@@ -279,7 +410,7 @@ function ImageAttachment({
 
       // Non-sandbox, non-uploaded images can render directly (e.g., external URLs)
       if (!sandboxId && !isUploadedFile) {
-        console.log('[ImageAttachment] Non-sandbox image, using direct path');
+        log.log('[ImageAttachment] Non-sandbox image, using direct path');
         setBlobUrl(file.path);
         setIsLoading(false);
         return;
@@ -287,7 +418,7 @@ function ImageAttachment({
 
       // If we already have a blob URL for this sandboxId, don't refetch.
       if (blobUrl && blobUrl.startsWith('data:')) {
-        console.log('[ImageAttachment] Already have blob URL, skipping fetch');
+        log.log('[ImageAttachment] Already have blob URL, skipping fetch');
         return;
       }
 
@@ -295,7 +426,7 @@ function ImageAttachment({
       const normalizedPath = normalizeSandboxWorkspacePath(file.path);
       const url = `${apiUrl}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(normalizedPath)}`;
 
-      console.log('[ImageAttachment] Fetching sandbox image:', {
+      log.log('[ImageAttachment] Fetching sandbox image:', {
         file,
         originalPath: file.path,
         normalizedPath,
@@ -324,14 +455,14 @@ function ImageAttachment({
             file,
             retryCount,
           };
-          console.error('[ImageAttachment] ❌ HTTP error fetching image:', errorInfo);
+          log.error('[ImageAttachment] ❌ HTTP error fetching image:', errorInfo);
 
           // Retry on 404, 500, 502, 503 (sandbox might be warming up or file not ready yet)
           const shouldRetry = [404, 500, 502, 503].includes(response.status);
           if (shouldRetry && retryCount < MAX_RETRIES && !isCancelled) {
             retryCount++;
             const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000); // Exponential backoff: 1s, 2s, 4s
-            console.log(`[ImageAttachment] 🔄 Retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})...`);
+            log.log(`[ImageAttachment] 🔄 Retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})...`);
             await new Promise(resolve => setTimeout(resolve, delay));
             if (!isCancelled) {
               return run(); // Retry
@@ -346,15 +477,15 @@ function ImageAttachment({
         }
 
         const blob = await response.blob();
-        console.log('[ImageAttachment] ✅ Blob received:', {
+        log.log('[ImageAttachment] ✅ Blob received:', {
           size: blob.size,
           type: blob.type,
           normalizedPath,
         });
 
         const { blobToDataURL } = await import('@/lib/files/hooks');
-        const dataUrl = await blobToDataURL(blob);
-        console.log('[ImageAttachment] ✅ Data URL created successfully');
+        const dataUrl = await blobToDataURL(blob, file.path);
+        log.log('[ImageAttachment] ✅ Data URL created successfully, mime fixed for:', file.extension);
         if (!isCancelled) {
           setBlobUrl(dataUrl);
           setIsLoading(false);
@@ -362,11 +493,11 @@ function ImageAttachment({
       } catch (error) {
         // Abort is expected on unmount; don't treat as an error.
         if ((error as any)?.name === 'AbortError') {
-          console.log('[ImageAttachment] Fetch aborted (component unmounted)');
+          log.log('[ImageAttachment] Fetch aborted (component unmounted)');
           return;
         }
 
-        console.error('[ImageAttachment] ❌ Network error fetching image:', {
+        log.error('[ImageAttachment] ❌ Network error fetching image:', {
           error,
           errorMessage: (error as any)?.message,
           url,
@@ -380,7 +511,7 @@ function ImageAttachment({
         if (retryCount < MAX_RETRIES && !isCancelled) {
           retryCount++;
           const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000); // Exponential backoff
-          console.log(`[ImageAttachment] 🔄 Retrying after network error in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})...`);
+          log.log(`[ImageAttachment] 🔄 Retrying after network error in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           if (!isCancelled) {
             return run(); // Retry
@@ -404,7 +535,7 @@ function ImageAttachment({
   // Reset blob URL when sandboxId changes (sandbox becomes available)
   useEffect(() => {
     if (sandboxId && blobUrl && !blobUrl.startsWith('data:')) {
-      console.log('[ImageAttachment] SandboxId changed, resetting blob URL to refetch');
+      log.log('[ImageAttachment] SandboxId changed, resetting blob URL to refetch');
       setBlobUrl(undefined);
     }
   }, [sandboxId]);
@@ -447,22 +578,19 @@ function ImageAttachment({
                 source={{ uri: imageUrl }}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
-                onLoadStart={() => {
-                  console.log('[ImageAttachment] Image loading started:', imageUrl?.substring(0, 50));
-                  setIsLoading(true);
-                }}
                 onLoadEnd={() => {
-                  console.log('[ImageAttachment] Image loaded successfully');
+                  log.log('[ImageAttachment] Image loaded successfully');
                   setIsLoading(false);
                 }}
                 onError={(error) => {
-                  console.error('[ImageAttachment] Image onError:', error.nativeEvent);
+                  log.error('[ImageAttachment] Image onError:', error.nativeEvent);
                   setIsLoading(false);
                   setHasError(true);
                 }}
               />
 
-              {isLoading && (
+              {/* Only show spinner for network URLs, not data URLs (which load instantly) */}
+              {isLoading && imageUrl && !imageUrl.startsWith('data:') && (
                 <View className="absolute inset-0 bg-muted/50 items-center justify-center">
                   <ActivityIndicator
                     size="small"
@@ -484,7 +612,7 @@ function ImageAttachment({
           ) : (
             <Pressable
               onPress={() => {
-                console.log('[ImageAttachment] Manual retry triggered');
+                log.log('[ImageAttachment] Manual retry triggered');
                 setHasError(false);
                 setBlobUrl(undefined); // Reset to trigger refetch
               }}
@@ -553,6 +681,7 @@ function DocumentAttachment({
   const { colorScheme } = useColorScheme();
   const scale = useSharedValue(1);
   const [fileContent, setFileContent] = useState<string | null>(null);
+  const [docxBlobUrl, setDocxBlobUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
 
@@ -565,6 +694,9 @@ function DocumentAttachment({
       onPress(file.path);
     }
   };
+
+  const ext = file.extension?.toLowerCase() || '';
+  const isDocx = isDocxExtension(ext);
 
   const isPreviewable = useMemo(() => {
     if (!showPreview || !file.extension) return false;
@@ -592,6 +724,38 @@ function DocumentAttachment({
           }
 
           const url = `${apiUrl}/sandboxes/${sandboxId}/files/content?path=${encodeURIComponent(filePath)}`;
+
+          // DOCX files need to be fetched as blob
+          if (isDocx) {
+            const response = await fetch(url, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to fetch file: ${response.status}`);
+            }
+
+            const blob = await response.blob();
+            // Convert blob to base64 data URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64 = reader.result as string;
+              log.log('[DocumentAttachment] DOCX blob converted to base64, length:', base64.length);
+              setDocxBlobUrl(base64);
+              setIsLoading(false);
+            };
+            reader.onerror = () => {
+              log.error('[DocumentAttachment] Failed to read DOCX blob');
+              setHasError(true);
+              setIsLoading(false);
+            };
+            reader.readAsDataURL(blob);
+            return;
+          }
+
+          // Text-based files
           const response = await fetch(url, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -603,19 +767,21 @@ function DocumentAttachment({
           }
 
           const text = await response.text();
-          console.log('[DocumentAttachment] Fetched content length:', text.length);
+          log.log('[DocumentAttachment] Fetched content length:', text.length);
           setFileContent(text);
         } catch (error) {
-          console.error('[DocumentAttachment] Failed to fetch file content:', error);
+          log.error('[DocumentAttachment] Failed to fetch file content:', error);
           setHasError(true);
         } finally {
-          setIsLoading(false);
+          if (!isDocx) {
+            setIsLoading(false);
+          }
         }
       };
 
       fetchFileContent();
     }
-  }, [isPreviewable, sandboxId, file.path]);
+  }, [isPreviewable, sandboxId, file.path, isDocx]);
 
   if (showPreview && isPreviewable) {
     const ext = file.extension?.toLowerCase() || '';
@@ -623,7 +789,7 @@ function DocumentAttachment({
     const isJson = isJsonExtension(ext);
     const isHtml = isHtmlExtension(ext);
 
-    console.log('[DocumentAttachment] Render state:', {
+    log.log('[DocumentAttachment] Render state:', {
       isLoading,
       hasError,
       hasFileContent: !!fileContent,
@@ -662,6 +828,16 @@ function DocumentAttachment({
                 <Text className="text-xs text-primary font-medium">Open file</Text>
               </Pressable>
             </View>
+          ) : isDocx && docxBlobUrl ? (
+            <WebView
+              source={{ html: generateDocxPreviewHtml(docxBlobUrl, colorScheme === 'dark') }}
+              style={{ width: '100%', height: 400 }}
+              scrollEnabled={true}
+              originWhitelist={['*']}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              mixedContentMode="compatibility"
+            />
           ) : fileContent ? (
             isHtml ? (
               <WebView

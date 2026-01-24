@@ -24,6 +24,22 @@ export * from './media';
 // Animation hooks
 export { useBackgroundScale } from './useBackgroundScale';
 
+// Smooth streaming animation hooks (from shared package)
+export { 
+  useSmoothText, 
+  useSmoothToolArguments, 
+  useSmoothToolField, 
+  useSmoothToolContent,
+  useSmoothAnimation,
+  extractFieldFromArguments,
+  type SmoothTextResult,
+  type SmoothToolArgumentsResult,
+  type SmoothToolFieldResult,
+  type SmoothAnimationConfig,
+  type SmoothAnimationState,
+  type SmoothAnimationResult,
+} from '@agentpress/shared/animations';
+
 // Keyboard hooks (using react-native-keyboard-controller for native animations)
 export {
   useKeyboard,
@@ -54,6 +70,13 @@ export { useChatCommons } from './useChatCommons';
 // Account setup hooks
 export { useAccountInitialization } from './useAccountInitialization';
 export { useAccountSetup } from './useAccountSetup';
+
+// System status hooks
+export { useSystemStatus, useMaintenanceNotice, useTechnicalIssue } from './useSystemStatus';
+export type { SystemStatus, MaintenanceNotice, TechnicalIssue } from './useSystemStatus';
+
+// Admin hooks
+export { useAdminRole } from './useAdminRole';
 
 // Billing hooks
 export {

@@ -17,7 +17,6 @@ import {
   Clock,
   ChevronDown,
   X,
-  Loader2,
   Pencil,
 } from 'lucide-react-native';
 import { MarkdownTextInput } from '@expensify/react-native-live-markdown';
@@ -30,6 +29,8 @@ import {
 import { HybridMarkdownEditor } from './HybridMarkdownEditor';
 import { useColorScheme } from 'nativewind';
 import * as Haptics from 'expo-haptics';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { FilePreview, FilePreviewType, getFilePreviewType } from '@/components/files/FilePreviewRenderers';
 import {
   useSandboxFileContent,
@@ -39,6 +40,9 @@ import {
   useRevertToCommit,
   fetchCommitInfo,
   blobToDataURL,
+  useSandboxStatusWithAutoStart,
+  useSandboxStatusByIdWithAutoStart,
+  isSandboxUsable,
   type FileVersion,
   type CommitInfo,
 } from '@/lib/files/hooks';
@@ -46,10 +50,12 @@ import { useKortixComputerStore } from '@/stores/kortix-computer-store';
 import { API_URL, getAuthToken } from '@/api/config';
 import { KortixComputerHeader } from './KortixComputerHeader';
 import { VersionBanner } from './VersionBanner';
+import { log } from '@/lib/logger';
 
 interface FileViewerViewProps {
   sandboxId: string;
   filePath: string;
+  projectId?: string;
   project?: {
     id: string;
     name: string;
@@ -65,6 +71,7 @@ interface FileViewerViewProps {
 export function FileViewerView({
   sandboxId,
   filePath,
+  projectId,
   project,
 }: FileViewerViewProps) {
   const insets = useSafeAreaInsets();
@@ -85,6 +92,34 @@ export function FileViewerView({
     setSelectedVersion,
     clearSelectedVersion,
   } = useKortixComputerStore();
+
+  // Get the effective project ID
+  const effectiveProjectId = projectId || project?.id;
+
+  // Get unified sandbox status with auto-start
+  // If we have a projectId, use that; otherwise fall back to sandboxId
+  const projectStatusQuery = useSandboxStatusWithAutoStart(effectiveProjectId, {
+    enabled: !!effectiveProjectId,
+  });
+
+  const sandboxIdStatusQuery = useSandboxStatusByIdWithAutoStart(sandboxId, {
+    enabled: !effectiveProjectId && !!sandboxId,
+  });
+
+  // Use whichever query is active
+  const statusQuery = effectiveProjectId ? projectStatusQuery : sandboxIdStatusQuery;
+  const {
+    data: sandboxStatusData,
+    isAutoStarting,
+    isLoading: isLoadingSandboxStatus,
+    isFetching: isFetchingSandboxStatus,
+    isError: isSandboxStatusError,
+    error: sandboxStatusError,
+  } = statusQuery;
+
+  const sandboxStatus = sandboxStatusData?.status;
+  const isSandboxReady = sandboxStatus ? isSandboxUsable(sandboxStatus) : false;
+  const isLoadingStatus = isLoadingSandboxStatus || isFetchingSandboxStatus;
 
   const [blobUrl, setBlobUrl] = useState<string | undefined>();
   const [versionBlobUrl, setVersionBlobUrl] = useState<string | undefined>();
@@ -110,10 +145,16 @@ export function FileViewerView({
   const isText = previewType === FilePreviewType.TEXT || previewType === FilePreviewType.CODE;
   const canEdit = (isMarkdown || isText) && !selectedVersion;
 
-  const shouldFetchText = !isImage && !selectedVersion;
-  const shouldFetchBlob = isImage && !selectedVersion;
+  // Binary file types that should be fetched as blob, not text
+  const isBinaryFile = previewType === FilePreviewType.IMAGE ||
+                       previewType === FilePreviewType.PDF ||
+                       previewType === FilePreviewType.XLSX ||
+                       previewType === FilePreviewType.DOCX ||
+                       previewType === FilePreviewType.BINARY;
+  const shouldFetchText = !isBinaryFile && !selectedVersion && isSandboxReady;
+  const shouldFetchBlob = isBinaryFile && !selectedVersion && isSandboxReady;
 
-  // Current file content
+  // Current file content - only fetch when sandbox is ready
   const {
     data: textContent,
     isLoading: isLoadingText,
@@ -175,7 +216,7 @@ export function FileViewerView({
         versionBlob.text().then((text) => {
           setLocalContent(text);
         }).catch((error) => {
-          console.error('Failed to convert version blob to text:', error);
+          log.error('Failed to convert version blob to text:', error);
           setLocalContent('');
         });
       }
@@ -246,7 +287,7 @@ export function FileViewerView({
         setSaveStatus('idle');
       }, 2000);
     } catch (error) {
-      console.error('Save error:', error);
+      log.error('Save error:', error);
       setSaveStatus('error');
       Alert.alert('Error', 'Failed to save file');
     } finally {
@@ -254,29 +295,73 @@ export function FileViewerView({
     }
   }, [filePath, sandboxId, localContent, canEdit, clearUnsavedContent, setUnsavedState, refetchFile]);
 
+  const [isDownloading, setIsDownloading] = useState(false);
+  
   const handleDownload = useCallback(async () => {
+    setIsDownloading(true);
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const currentBlobUrl = selectedVersion ? versionBlobUrl : blobUrl;
+      const currentBlob = selectedVersion ? versionBlob : imageBlob;
       const currentContent = selectedVersion ? localContent : (localContent || textContent);
 
-      if (isImage && currentBlobUrl) {
-        await Share.share({
-          url: currentBlobUrl,
-          title: fileName,
+      // For binary files (images, PDFs, etc.) write to file and share
+      if (currentBlob && isBinaryFile) {
+        // Convert blob to base64
+        const reader = new FileReader();
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            // Extract base64 data from data URL
+            const base64 = result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(currentBlob);
         });
+
+        // Write to temporary file
+        const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Share the file
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(fileUri, {
+            dialogTitle: `Download ${fileName}`,
+          });
+        } else {
+          Alert.alert('Error', 'Sharing is not available on this device');
+        }
       } else if (currentContent) {
-        await Share.share({
-          message: currentContent,
-          title: fileName,
-        });
+        // For text files, write to file and share
+        const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+        await FileSystem.writeAsStringAsync(fileUri, currentContent);
+        
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(fileUri, {
+            dialogTitle: `Download ${fileName}`,
+          });
+        } else {
+          // Fallback to Share API for text
+          await Share.share({
+            message: currentContent,
+            title: fileName,
+          });
+        }
+      } else {
+        Alert.alert('Error', 'No content available to download');
       }
     } catch (error) {
-      console.error('Download failed:', error);
+      log.error('Download failed:', error);
       Alert.alert('Error', 'Failed to download file');
+    } finally {
+      setIsDownloading(false);
     }
-  }, [isImage, blobUrl, versionBlobUrl, textContent, localContent, fileName, selectedVersion]);
+  }, [imageBlob, versionBlob, textContent, localContent, fileName, selectedVersion, isBinaryFile]);
 
   const handleDiscard = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -559,12 +644,16 @@ export function FileViewerView({
                       disabled={!hasUnsavedChanges || saveStatus === 'saving'}
                       className={`h-9 w-9 items-center justify-center rounded-xl bg-card border border-border active:opacity-70 ${!hasUnsavedChanges ? 'opacity-50' : ''}`}
                     >
-                      <Icon
-                        as={saveStatus === 'saving' ? Loader2 : saveStatus === 'saved' ? Check : saveStatus === 'error' ? AlertCircle : Save}
-                        size={17}
-                        className="text-primary"
-                        strokeWidth={2}
-                      />
+                      {saveStatus === 'saving' ? (
+                        <KortixLoader size="small" customSize={17} />
+                      ) : (
+                        <Icon
+                          as={saveStatus === 'saved' ? Check : saveStatus === 'error' ? AlertCircle : Save}
+                          size={17}
+                          className="text-primary"
+                          strokeWidth={2}
+                        />
+                      )}
                     </Pressable>
                   </>
                 ) : (
@@ -607,14 +696,19 @@ export function FileViewerView({
             {!canEdit && (
               <Pressable
                 onPress={handleDownload}
-                className="h-9 w-9 items-center justify-center rounded-xl bg-card border border-border active:opacity-70"
+                disabled={isDownloading}
+                className={`h-9 w-9 items-center justify-center rounded-xl bg-card border border-border active:opacity-70 ${isDownloading ? 'opacity-60' : ''}`}
               >
-                <Icon
-                  as={Download}
-                  size={17}
-                  className="text-primary"
-                  strokeWidth={2}
-                />
+                {isDownloading ? (
+                  <KortixLoader size="small" customSize={17} />
+                ) : (
+                  <Icon
+                    as={Download}
+                    size={17}
+                    className="text-primary"
+                    strokeWidth={2}
+                  />
+                )}
               </Pressable>
             )}
           </View>
@@ -631,7 +725,48 @@ export function FileViewerView({
 
       {/* Content */}
       <View className="flex-1">
-        {isLoading ? (
+        {/* Show loading while fetching sandbox status */}
+        {isLoadingStatus && !sandboxStatus ? (
+          <View className="flex-1 items-center justify-center p-8">
+            <KortixLoader size="large" />
+            <Text className="text-sm text-primary opacity-50 mt-4">
+              Checking computer status...
+            </Text>
+          </View>
+        ) : isSandboxStatusError ? (
+          /* Show error when status check failed */
+          <View className="flex-1 items-center justify-center p-8">
+            <Icon
+              as={AlertTriangle}
+              size={48}
+              className="text-destructive"
+              strokeWidth={1.5}
+            />
+            <Text className="text-sm text-destructive mt-4">
+              Failed to check computer status
+            </Text>
+            <Text className="text-xs text-primary opacity-50 mt-2 text-center max-w-xs">
+              {sandboxStatusError?.message || 'Unknown error'}
+            </Text>
+          </View>
+        ) : !isSandboxReady && (sandboxStatus || isAutoStarting) ? (
+          /* Show sandbox status when not ready */
+          <View className="flex-1 items-center justify-center p-8">
+            <KortixLoader size="large" />
+            <Text className="text-sm text-primary opacity-50 mt-4">
+              {(sandboxStatus === 'STARTING' || isAutoStarting) && (isAutoStarting ? 'Waking up computer...' : 'Computer starting...')}
+              {sandboxStatus === 'OFFLINE' && !isAutoStarting && 'Computer offline'}
+              {sandboxStatus === 'FAILED' && 'Computer unavailable'}
+              {sandboxStatus === 'UNKNOWN' && 'Initializing...'}
+            </Text>
+            <Text className="text-xs text-primary opacity-30 mt-2 text-center">
+              {(sandboxStatus === 'STARTING' || isAutoStarting) && 'File will load once the computer is ready'}
+              {sandboxStatus === 'OFFLINE' && !isAutoStarting && 'Attempting to start the computer...'}
+              {sandboxStatus === 'FAILED' && 'There was an issue starting the computer'}
+              {sandboxStatus === 'UNKNOWN' && 'Setting up your workspace...'}
+            </Text>
+          </View>
+        ) : isLoading ? (
           <View className="flex-1 items-center justify-center">
             <KortixLoader size="large" />
             <Text className="text-sm text-primary opacity-50 mt-4">
@@ -867,7 +1002,7 @@ export function FileViewerView({
               >
                 {isReverting ? (
                   <View className="flex-row items-center gap-2">
-                    <Icon as={Loader2} size={14} className="text-background" />
+                    <KortixLoader size="small" customSize={14} forceTheme="dark" />
                     <Text className="text-sm font-roobert-medium text-background">Restoring...</Text>
                   </View>
                 ) : (

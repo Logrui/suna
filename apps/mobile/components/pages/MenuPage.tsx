@@ -31,11 +31,12 @@ import { SettingsPage } from '@/components/settings/SettingsPage';
 import { useAuthContext, useLanguage } from '@/contexts';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { AgentList } from '@/components/agents/AgentList';
+import { LibrarySection } from '@/components/agents/LibrarySection';
 import { useAgent } from '@/contexts/AgentContext';
 import { useSearch } from '@/lib/utils/search';
 import { useThreads } from '@/lib/chat';
 import { useAllTriggers } from '@/lib/triggers';
-import { groupThreadsByMonth } from '@/lib/utils/thread-utils';
+import { groupThreadsByMonth, groupAgentsByTimePeriod } from '@/lib/utils/thread-utils';
 import { TriggerCreationDrawer, TriggerList } from '@/components/triggers';
 import { WorkerCreationDrawer } from '@/components/workers/WorkerCreationDrawer';
 import { WorkerConfigDrawer } from '@/components/workers/WorkerConfigDrawer';
@@ -50,6 +51,7 @@ import type { Agent, TriggerWithAgent } from '@/api/types';
 import { ProfilePicture } from '../settings/ProfilePicture';
 import { TierBadge } from '@/components/billing/TierBadge';
 import { cn } from '@/lib/utils';
+import { log } from '@/lib/logger';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
@@ -181,8 +183,8 @@ function BackButton({ onPress }: BackButtonProps) {
   };
 
   const handlePress = () => {
-    console.log('🎯 Close button pressed');
-    console.log('📱 Returning to Home');
+    log.log('🎯 Close button pressed');
+    log.log('📱 Returning to Home');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress?.();
   };
@@ -273,8 +275,8 @@ function FloatingActionButton({
         : activeTab === 'workers'
           ? t('menu.newWorker')
           : t('menu.newTrigger');
-    console.log('🎯 FAB pressed:', action);
-    console.log('⏰ Timestamp:', new Date().toISOString());
+    log.log('🎯 FAB pressed:', action);
+    log.log('⏰ Timestamp:', new Date().toISOString());
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     rotate.value = withSpring(rotate.value + 90, { damping: 15, stiffness: 400 });
@@ -385,7 +387,7 @@ export function MenuPage({
   workerConfigInitialView,
   onCloseWorkerConfigDrawer,
 }: MenuPageProps) {
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
   const { colorScheme } = useColorScheme();
   const { user } = useAuthContext();
   const router = useRouter();
@@ -400,7 +402,7 @@ export function MenuPage({
 
   // Debug trigger drawer visibility
   React.useEffect(() => {
-    console.log('🔧 TriggerCreationDrawer visible changed to:', isTriggerDrawerVisible);
+    log.log('🔧 TriggerCreationDrawer visible changed to:', isTriggerDrawerVisible);
   }, [isTriggerDrawerVisible]);
 
   const isGuest = !user;
@@ -500,7 +502,7 @@ export function MenuPage({
    * Handle profile press - Opens settings drawer
    */
   const handleProfilePress = () => {
-    console.log('🎯 Opening settings drawer');
+    log.log('🎯 Opening settings drawer');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsSettingsVisible(true);
   };
@@ -517,7 +519,7 @@ export function MenuPage({
    * Handle settings drawer close
    */
   const handleCloseSettings = () => {
-    console.log('🎯 Closing settings drawer');
+    log.log('🎯 Closing settings drawer');
     setIsSettingsVisible(false);
   };
 
@@ -525,10 +527,10 @@ export function MenuPage({
    * Handle trigger creation
    */
   const handleTriggerCreate = () => {
-    console.log('🔧 Opening trigger creation drawer');
-    console.log('🔧 Current isTriggerDrawerVisible:', isTriggerDrawerVisible);
+    log.log('🔧 Opening trigger creation drawer');
+    log.log('🔧 Current isTriggerDrawerVisible:', isTriggerDrawerVisible);
     setIsTriggerDrawerVisible(true);
-    console.log('🔧 Set isTriggerDrawerVisible to true');
+    log.log('🔧 Set isTriggerDrawerVisible to true');
   };
 
   /**
@@ -542,7 +544,7 @@ export function MenuPage({
    * Handle trigger created
    */
   const handleTriggerCreated = (triggerId: string) => {
-    console.log('🔧 Trigger created:', triggerId);
+    log.log('🔧 Trigger created:', triggerId);
     setIsTriggerDrawerVisible(false);
     // Refetch triggers to show the new one
     refetchTriggers();
@@ -552,7 +554,7 @@ export function MenuPage({
    * Handle worker creation
    */
   const handleWorkerCreate = () => {
-    console.log('🤖 Opening worker creation drawer');
+    log.log('🤖 Opening worker creation drawer');
     setIsWorkerCreationDrawerVisible(true);
   };
 
@@ -567,7 +569,7 @@ export function MenuPage({
    * Handle worker created
    */
   const handleWorkerCreated = (workerId: string) => {
-    console.log('🤖 Worker created:', workerId);
+    log.log('🤖 Worker created:', workerId);
     setIsWorkerCreationDrawerVisible(false);
     // Navigate to config page for the new worker
     router.push({
@@ -580,7 +582,7 @@ export function MenuPage({
    * Handle worker press - navigates to config page
    */
   const handleWorkerPress = (agent: Agent) => {
-    console.log('🤖 Opening worker config for:', agent.agent_id);
+    log.log('🤖 Opening worker config for:', agent.agent_id);
     router.push({
       pathname: '/worker-config',
       params: { workerId: agent.agent_id },
@@ -757,13 +759,30 @@ export function MenuPage({
                       }
                     />
                   ) : (
-                    <AgentList
-                      agents={agentResults}
-                      selectedAgentId={selectedAgentId}
-                      onAgentPress={handleWorkerPress}
-                      showChevron={false}
-                      compact={false}
-                    />
+                    <View className="gap-8">
+                      {groupAgentsByTimePeriod(agentResults, currentLanguage).map((section) => {
+                        // Filter agents in section based on search
+                        const filteredAgents = workersSearch.isSearching
+                          ? section.agents.filter((agent) =>
+                              workersSearch.results.some((result) => result.id === agent.agent_id)
+                            )
+                          : section.agents;
+
+                        if (filteredAgents.length === 0 && workersSearch.isSearching) {
+                          return null;
+                        }
+
+                        return (
+                          <LibrarySection
+                            key={section.id}
+                            label={section.label}
+                            agents={filteredAgents}
+                            selectedAgentId={selectedAgentId}
+                            onAgentPress={handleWorkerPress}
+                          />
+                        );
+                      })}
+                    </View>
                   )}
                 </>
               )}
@@ -812,7 +831,7 @@ export function MenuPage({
                       error={triggersError}
                       searchQuery={triggersSearch.query}
                       onTriggerPress={(selectedTrigger) => {
-                        console.log('🔧 Trigger selected:', selectedTrigger.name);
+                        log.log('🔧 Trigger selected:', selectedTrigger.name);
                         // Navigate to trigger detail page
                         router.push({
                           pathname: '/trigger-detail',

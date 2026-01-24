@@ -1,23 +1,31 @@
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, ScrollView } from 'react-native';
 import { PlanPage } from '@/components/settings/PlanPage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { billingKeys } from '@/lib/billing';
 import { useLanguage } from '@/contexts';
-import { useLocalSearchParams } from 'expo-router';
 import { useUpgradePaywall } from '@/hooks/useUpgradePaywall';
 import { Text } from '@/components/ui/text';
+import { Icon } from '@/components/ui/icon';
+import { AlertCircle } from 'lucide-react-native';
+import { log } from '@/lib/logger';
+import { usePricingModalStore } from '@/stores/billing-modal-store';
+import Animated, { FadeIn } from 'react-native-reanimated';
+
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 export default function PlansScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { t } = useLanguage();
-  const { creditsExhausted } = useLocalSearchParams<{ creditsExhausted?: string }>();
   const { useNativePaywall, presentUpgradePaywall } = useUpgradePaywall();
+  const { alertTitle, alertSubtitle } = usePricingModalStore();
   const [hasPresented, setHasPresented] = useState(false);
+  // Track if we should fall back to custom page (e.g., no paywall template configured)
+  const [showCustomPage, setShowCustomPage] = useState(false);
 
   const handleClose = () => {
     if (router.canGoBack()) {
@@ -40,15 +48,19 @@ export default function PlansScreen() {
 
   // If RevenueCat is available, present the native paywall immediately
   useEffect(() => {
-    if (useNativePaywall && !hasPresented) {
+    if (useNativePaywall && !hasPresented && !showCustomPage) {
       setHasPresented(true);
       const presentPaywall = async () => {
-        console.log('📱 Plans screen: Using native RevenueCat paywall');
-        const result = await presentUpgradePaywall();
+        log.log('📱 Plans screen: Using native RevenueCat paywall');
+        const result = await presentUpgradePaywall() as any;
 
         if (result.purchased) {
           // Purchase successful - handle subscription update
           handleSubscriptionUpdate();
+        } else if (result.needsCustomPage) {
+          // RevenueCat paywall not available (no template configured) - show custom page
+          log.log('📱 Plans screen: Falling back to custom plan page');
+          setShowCustomPage(true);
         } else {
           // Cancelled or dismissed - go back
           handleClose();
@@ -58,33 +70,61 @@ export default function PlansScreen() {
       // Small delay to ensure navigation is complete
       setTimeout(presentPaywall, 300);
     }
-  }, [useNativePaywall, hasPresented, presentUpgradePaywall]);
+  }, [useNativePaywall, hasPresented, presentUpgradePaywall, showCustomPage]);
 
-  // If RevenueCat is available, show loading while we present the paywall
-  if (useNativePaywall) {
+  // If we need to show the custom page as fallback, show it
+  if (showCustomPage || !useNativePaywall) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View className="flex-1 items-center justify-center bg-background">
-          <ActivityIndicator size="large" />
-          <Text className="mt-4 text-muted-foreground">
-            {t('billing.loadingPaywall', 'Loading plans...')}
-          </Text>
-        </View>
+        <PlanPage
+          visible={true}
+          onClose={handleClose}
+          onPurchaseComplete={handleSubscriptionUpdate}
+        />
       </GestureHandlerRootView>
     );
   }
 
-  // Otherwise show the custom PlanPage
+  // Show loading while we present the RevenueCat paywall
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <PlanPage
-        visible={true}
-        onClose={handleClose}
-        onPurchaseComplete={handleSubscriptionUpdate}
-        customTitle={creditsExhausted === 'true' ? t('billing.ranOutOfCredits') : undefined}
-      />
+      <ScrollView 
+        className="flex-1 bg-background" 
+        contentContainerClassName="flex-grow items-center justify-center px-6 py-8"
+        showsVerticalScrollIndicator={false}>
+        {/* Alert Message */}
+        {alertTitle && (
+          <AnimatedView 
+            entering={FadeIn.duration(400)}
+            className="w-full max-w-md mb-6 p-4 rounded-xl bg-warning/10 dark:bg-warning/20 border border-warning/30">
+            <View className="flex-row items-start gap-3">
+              <Icon 
+                as={AlertCircle} 
+                size={20} 
+                className="text-warning mt-0.5 flex-shrink-0" 
+                strokeWidth={2} 
+              />
+              <View className="flex-1 gap-1">
+                <Text className="font-roobert-semibold text-base text-foreground">
+                  {alertTitle}
+                </Text>
+                {alertSubtitle && (
+                  <Text className="text-sm leading-5 text-muted-foreground">
+                    {alertSubtitle}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </AnimatedView>
+        )}
+        
+        <ActivityIndicator size="large" />
+        <Text className="mt-4 text-muted-foreground">
+          {t('billing.loadingPaywall', 'Loading plans...')}
+        </Text>
+      </ScrollView>
     </GestureHandlerRootView>
   );
 }

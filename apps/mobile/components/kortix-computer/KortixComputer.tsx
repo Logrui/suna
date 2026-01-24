@@ -15,6 +15,7 @@ import { BrowserView } from './BrowserView';
 import { extractToolCallAndResult } from '@/lib/utils/tool-data-extractor';
 import type { UnifiedMessage } from '@/api/types';
 import type { ToolMessagePair } from '@/components/chat';
+import { log } from '@/lib/logger';
 
 interface KortixComputerProps {
   toolMessages: ToolMessagePair[];
@@ -54,6 +55,10 @@ export function KortixComputer({
   streamingText,
   sandboxId,
 }: KortixComputerProps) {
+  log.log('[KortixComputer] Render - toolMessages:', toolMessages.length, 'currentIndex:', currentIndex);
+  log.log('[KortixComputer] project:', project ? { id: project.id, name: project.name, hasSandbox: !!project.sandbox } : 'undefined');
+  log.log('[KortixComputer] sandboxId prop:', sandboxId);
+  
   const insets = useSafeAreaInsets();
 
   const {
@@ -91,10 +96,17 @@ export function KortixComputer({
   const currentPair = toolMessages.length > 0 && safeIndex >= 0 && safeIndex < toolMessages.length
     ? toolMessages[safeIndex]
     : undefined;
+  
+  log.log('[KortixComputer] currentPair:', currentPair ? 'has pair' : 'undefined');
+  log.log('[KortixComputer] currentPair.toolMessage:', currentPair?.toolMessage?.message_id || 'null');
+  log.log('[KortixComputer] currentPair.assistantMessage:', currentPair?.assistantMessage?.message_id || 'null');
+  
   const { toolCall, toolResult, isSuccess, assistantTimestamp, toolTimestamp } = useMemo(() => {
     if (!currentPair?.toolMessage) {
+      log.log('[KortixComputer] No toolMessage in currentPair, returning null');
       return { toolCall: null, toolResult: null, isSuccess: false, assistantTimestamp: undefined, toolTimestamp: undefined };
     }
+    log.log('[KortixComputer] Calling extractToolCallAndResult');
     return extractToolCallAndResult(currentPair.assistantMessage, currentPair.toolMessage);
   }, [currentPair]);
 
@@ -171,14 +183,6 @@ export function KortixComputer({
             <Text className="text-lg font-roobert-semibold text-primary">
               Kortix Computer
             </Text>
-            {isStreaming && activeView === 'tools' && (
-              <View className="px-2.5 py-0.5 rounded-full bg-card border border-border flex-row items-center gap-1.5">
-                <View className="w-1.5 h-1.5 rounded-full bg-primary" />
-                <Text className="text-xs font-roobert-medium text-primary">
-                  Running
-                </Text>
-              </View>
-            )}
           </View>
 
           <View className="flex-row items-center gap-2">
@@ -227,11 +231,13 @@ export function KortixComputer({
                 <FileViewerView
                   sandboxId={effectiveSandboxId}
                   filePath={selectedFilePath}
+                  projectId={project?.id}
                   project={project}
                 />
               ) : (
                 <FileBrowserView
                   sandboxId={effectiveSandboxId}
+                  projectId={project?.id}
                   project={project}
                 />
               )}

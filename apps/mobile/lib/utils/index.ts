@@ -6,6 +6,7 @@
 
 // Core utilities
 export * from './utils';
+export * from './uuid';
 export * from './date';
 export * from './search';
 
@@ -15,13 +16,14 @@ export * from './fonts';
 export * from './icon-mapping';
 
 // Parsing & formatting
-export * from './message-grouping';
-export * from './tool-parser';
-export * from './tool-display';
-export * from './credit-formatter';
+// message-grouping moved to @agentpress/shared/utils
+// tool-parser moved to @agentpress/shared/tools
+// tool-display moved to @agentpress/shared/tools
+// credit-formatter moved to @agentpress/shared
+export { formatCredits, formatCreditsWithSign, dollarsToCredits, creditsToDollars, formatDollarsAsCredits, CREDITS_PER_DOLLAR } from '@agentpress/shared';
 
 // Streaming & tool call utilities (portable from frontend)
-export * from './streaming-utils';
+// streaming-utils moved to @agentpress/shared/streaming
 export * from './tool-call-utils';
 export * from './tool-data-extractor';
 

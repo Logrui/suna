@@ -3,8 +3,8 @@
  * Components for previewing different file types
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, Image, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Image, ScrollView, Dimensions, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
@@ -12,7 +12,9 @@ import { KortixLoader } from '@/components/ui';
 import { AlertCircle, FileText } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { SelectableMarkdownText } from '@/components/ui/selectable-markdown';
-import { autoLinkUrls } from '@/lib/utils/url-autolink';
+import { autoLinkUrls } from '@agentpress/shared';
+import * as FileSystem from 'expo-file-system/legacy';
+import { log } from '@/lib/logger';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -49,6 +51,7 @@ export enum FilePreviewType {
   MARKDOWN = 'markdown',
   CSV = 'csv',
   XLSX = 'xlsx',
+  DOCX = 'docx',
   HTML = 'html',
   JSON = 'json',
   CODE = 'code',
@@ -66,6 +69,7 @@ export function getFilePreviewType(filename: string): FilePreviewType {
   const markdownExtensions = ['md', 'markdown', 'mdx'];
   const csvExtensions = ['csv', 'tsv'];
   const xlsxExtensions = ['xlsx', 'xls'];
+  const docxExtensions = ['docx'];
   const htmlExtensions = ['html', 'htm'];
   const jsonExtensions = ['json', 'jsonc', 'json5'];
   const codeExtensions = [
@@ -84,6 +88,7 @@ export function getFilePreviewType(filename: string): FilePreviewType {
   if (markdownExtensions.includes(ext)) return FilePreviewType.MARKDOWN;
   if (csvExtensions.includes(ext)) return FilePreviewType.CSV;
   if (xlsxExtensions.includes(ext)) return FilePreviewType.XLSX;
+  if (docxExtensions.includes(ext)) return FilePreviewType.DOCX;
   if (htmlExtensions.includes(ext)) return FilePreviewType.HTML;
   if (jsonExtensions.includes(ext)) return FilePreviewType.JSON;
   if (codeExtensions.includes(ext)) return FilePreviewType.CODE;
@@ -531,6 +536,609 @@ function CsvPreview({ content }: { content: string }) {
 }
 
 /**
+ * Generates HTML with embedded pdf.js for rendering PDFs on Android
+ * Android WebView doesn't support native PDF rendering, so we use pdf.js
+ */
+function generatePdfJsHtml(base64Data: string, isDark: boolean): string {
+  const bgColor = isDark ? '#121215' : '#ffffff';
+  const textColor = isDark ? '#f8f8f8' : '#121215';
+  
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { 
+      width: 100%; 
+      height: 100%; 
+      background: ${bgColor};
+      overflow-x: hidden;
+    }
+    #container {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px;
+      gap: 8px;
+    }
+    canvas {
+      max-width: 100%;
+      height: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      background: white;
+    }
+    #loading, #error {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: ${textColor};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+    }
+    #error { color: #ef4444; display: none; }
+    .page-num {
+      color: ${isDark ? 'rgba(248,248,248,0.5)' : 'rgba(18,18,21,0.5)'};
+      font-size: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin-top: 4px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading PDF...</div>
+  <div id="error">Failed to load PDF</div>
+  <div id="container"></div>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    
+    async function renderPDF() {
+      try {
+        const base64 = '${base64Data}';
+        const binaryData = atob(base64);
+        const bytes = new Uint8Array(binaryData.length);
+        for (let i = 0; i < binaryData.length; i++) {
+          bytes[i] = binaryData.charCodeAt(i);
+        }
+        
+        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+        document.getElementById('loading').style.display = 'none';
+        
+        const container = document.getElementById('container');
+        const containerWidth = window.innerWidth - 16;
+        
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 1 });
+          const scale = Math.min(containerWidth / viewport.width, 2.5);
+          const scaledViewport = page.getViewport({ scale });
+          
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.width = scaledViewport.width;
+          canvas.height = scaledViewport.height;
+          
+          await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
+          container.appendChild(canvas);
+          
+          const pageLabel = document.createElement('div');
+          pageLabel.className = 'page-num';
+          pageLabel.textContent = 'Page ' + pageNum + ' of ' + pdf.numPages;
+          container.appendChild(pageLabel);
+        }
+      } catch (err) {
+        console.error('PDF render error:', err);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+      }
+    }
+    
+    renderPDF();
+  </script>
+</body>
+</html>`;
+}
+
+/**
+ * PDF Preview Component using WebView
+ * - iOS: Uses native WebView PDF support with file:// URLs
+ * - Android: Uses pdf.js for rendering since Android WebView lacks native PDF support
+ */
+function PdfPreview({ blobUrl, fileName }: { blobUrl?: string; fileName: string }) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [pdfFileUri, setPdfFileUri] = useState<string | null>(null);
+  const [pdfHtml, setPdfHtml] = useState<string | null>(null);
+  
+  const isAndroid = Platform.OS === 'android';
+
+  // Process the PDF data based on platform
+  useEffect(() => {
+    if (!blobUrl) return;
+
+    const processPdf = async () => {
+      try {
+        setIsLoading(true);
+        setHasError(false);
+
+        // Extract base64 data from data URL
+        const base64Match = blobUrl.match(/^data:[^;]+;base64,(.+)$/);
+        if (!base64Match) {
+          log.error('Invalid PDF data URL format');
+          setHasError(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const base64Data = base64Match[1];
+
+        if (isAndroid) {
+          // Android: Generate HTML with pdf.js
+          const html = generatePdfJsHtml(base64Data, isDark);
+          setPdfHtml(html);
+          setIsLoading(false);
+        } else {
+          // iOS: Write to temp file for native WebView rendering
+          const tempFilePath = `${FileSystem.cacheDirectory}temp_${Date.now()}_${fileName}`;
+          await FileSystem.writeAsStringAsync(tempFilePath, base64Data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          setPdfFileUri(tempFilePath);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        log.error('Failed to process PDF:', error);
+        setHasError(true);
+        setIsLoading(false);
+      }
+    };
+
+    processPdf();
+
+    // Cleanup temp file on unmount (iOS only)
+    return () => {
+      if (pdfFileUri) {
+        FileSystem.deleteAsync(pdfFileUri, { idempotent: true }).catch(() => {});
+      }
+    };
+  }, [blobUrl, fileName, isAndroid, isDark]);
+
+  if (!blobUrl) {
+    return (
+      <View className="flex-1 items-center justify-center p-8">
+        <KortixLoader size="large" />
+        <Text className="text-sm text-muted-foreground mt-4">
+          Loading PDF...
+        </Text>
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+        <KortixLoader size="large" />
+        <Text className="text-sm text-muted-foreground mt-4">
+          Preparing PDF...
+        </Text>
+      </View>
+    );
+  }
+
+  if (hasError || (!pdfFileUri && !pdfHtml)) {
+    return (
+      <View className="flex-1 items-center justify-center p-8">
+        <Icon
+          as={AlertCircle}
+          size={48}
+          className="text-destructive mb-4"
+          strokeWidth={1.5}
+        />
+        <Text className="text-sm text-muted-foreground text-center mb-2">
+          Failed to load PDF
+        </Text>
+        <Text className="text-xs text-muted-foreground text-center">
+          Try downloading the file instead
+        </Text>
+      </View>
+    );
+  }
+
+  // Android: Use pdf.js HTML
+  if (isAndroid && pdfHtml) {
+    return (
+      <View className="flex-1" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+        <WebView
+          source={{ html: pdfHtml }}
+          style={{ flex: 1, backgroundColor: 'transparent' }}
+          originWhitelist={['*']}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          mixedContentMode="compatibility"
+          allowFileAccess={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View className="absolute inset-0 items-center justify-center" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+              <KortixLoader size="large" />
+              <Text className="text-sm text-muted-foreground mt-4">
+                Rendering PDF...
+              </Text>
+            </View>
+          )}
+          onError={(e) => {
+            log.error('WebView PDF error (Android):', e.nativeEvent);
+            setHasError(true);
+          }}
+        />
+      </View>
+    );
+  }
+
+  // iOS: Use native file:// URL rendering
+  return (
+    <View className="flex-1" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+      <WebView
+        source={{ uri: pdfFileUri! }}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+        originWhitelist={['*']}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        allowFileAccess={true}
+        allowFileAccessFromFileURLs={true}
+        allowUniversalAccessFromFileURLs={true}
+        startInLoadingState={true}
+        renderLoading={() => (
+          <View className="absolute inset-0 items-center justify-center" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+            <KortixLoader size="large" />
+            <Text className="text-sm text-muted-foreground mt-4">
+              Rendering PDF...
+            </Text>
+          </View>
+        )}
+        onError={(e) => {
+          log.error('WebView PDF error (iOS):', e.nativeEvent);
+          setHasError(true);
+        }}
+        onHttpError={(e) => {
+          log.error('WebView PDF HTTP error:', e.nativeEvent);
+          setHasError(true);
+        }}
+      />
+    </View>
+  );
+}
+
+/**
+ * Generates HTML with embedded mammoth.js for rendering DOCX files
+ * mammoth.js works reliably in WebView and converts DOCX to clean HTML
+ */
+function generateDocxHtml(base64Data: string, isDark: boolean): string {
+  const bgColor = isDark ? '#121215' : '#ffffff';
+  const textColor = isDark ? '#f8f8f8' : '#121215';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      background: ${bgColor};
+      color: ${textColor};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-size: 14px;
+    }
+    #error {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #ef4444;
+      display: none;
+      padding: 20px;
+    }
+    #container {
+      padding: 20px;
+      max-width: 100%;
+    }
+    /* Document styling to match Word appearance */
+    #container h1 {
+      font-size: 2em;
+      font-weight: bold;
+      margin: 0.67em 0;
+      color: ${textColor};
+    }
+    #container h2 {
+      font-size: 1.5em;
+      font-weight: bold;
+      margin: 0.83em 0;
+      color: ${textColor};
+    }
+    #container h3 {
+      font-size: 1.17em;
+      font-weight: bold;
+      margin: 1em 0;
+      color: ${textColor};
+    }
+    #container h4 {
+      font-size: 1em;
+      font-weight: bold;
+      margin: 1.33em 0;
+      color: ${textColor};
+    }
+    #container p {
+      margin: 1em 0;
+    }
+    #container ul, #container ol {
+      margin: 1em 0;
+      padding-left: 2em;
+    }
+    #container li {
+      margin: 0.5em 0;
+    }
+    #container table {
+      border-collapse: collapse;
+      margin: 1em 0;
+      width: 100%;
+      font-size: 14px;
+    }
+    #container th, #container td {
+      border: 1px solid ${isDark ? 'rgba(248,248,248,0.3)' : '#d1d5db'};
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    #container th {
+      background: ${isDark ? 'rgba(248,248,248,0.1)' : '#f3f4f6'};
+      font-weight: 600;
+    }
+    #container tr:nth-child(even) {
+      background: ${isDark ? 'rgba(248,248,248,0.03)' : '#f9fafb'};
+    }
+    #container img {
+      max-width: 100%;
+      height: auto;
+      margin: 1em 0;
+    }
+    #container a {
+      color: ${isDark ? '#60a5fa' : '#2563eb'};
+      text-decoration: underline;
+    }
+    #container blockquote {
+      border-left: 4px solid ${isDark ? 'rgba(248,248,248,0.3)' : '#d1d5db'};
+      padding-left: 1em;
+      margin: 1em 0;
+      color: ${isDark ? 'rgba(248,248,248,0.7)' : '#6b7280'};
+      font-style: italic;
+    }
+    #container strong, #container b {
+      font-weight: 600;
+    }
+    #container em, #container i {
+      font-style: italic;
+    }
+    #container u {
+      text-decoration: underline;
+    }
+    #container code {
+      background: ${isDark ? 'rgba(248,248,248,0.1)' : '#f3f4f6'};
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.9em;
+    }
+    #container pre {
+      background: ${isDark ? 'rgba(248,248,248,0.1)' : '#f3f4f6'};
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 1em 0;
+    }
+    #container hr {
+      border: none;
+      border-top: 1px solid ${isDark ? 'rgba(248,248,248,0.2)' : '#e5e7eb'};
+      margin: 2em 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading document...</div>
+  <div id="error">Failed to load document</div>
+  <div id="container"></div>
+  <script>
+    async function renderDocx() {
+      try {
+        const base64 = '${base64Data}';
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const result = await mammoth.convertToHtml(
+          { arrayBuffer: bytes.buffer },
+          {
+            styleMap: [
+              "p[style-name='Heading 1'] => h1:fresh",
+              "p[style-name='Heading 2'] => h2:fresh",
+              "p[style-name='Heading 3'] => h3:fresh",
+              "p[style-name='Heading 4'] => h4:fresh",
+              "r[style-name='Strong'] => strong",
+              "r[style-name='Emphasis'] => em",
+            ]
+          }
+        );
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('container').innerHTML = result.value;
+
+        if (result.messages && result.messages.length > 0) {
+          console.log('Mammoth messages:', result.messages);
+        }
+      } catch (err) {
+        console.error('DOCX render error:', err);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = 'Failed to load document: ' + (err.message || err);
+      }
+    }
+
+    // Wait for mammoth to load
+    if (typeof mammoth !== 'undefined') {
+      renderDocx();
+    } else {
+      document.getElementById('loading').textContent = 'Loading library...';
+      window.onload = function() {
+        if (typeof mammoth !== 'undefined') {
+          renderDocx();
+        } else {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('error').style.display = 'block';
+          document.getElementById('error').textContent = 'Failed to load document library';
+        }
+      };
+    }
+  </script>
+</body>
+</html>`;
+}
+
+/**
+ * DOCX Preview Component using WebView and mammoth.js
+ * Converts DOCX to HTML for rendering
+ */
+function DocxPreview({ blobUrl, fileName }: { blobUrl?: string; fileName: string }) {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [docxHtml, setDocxHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!blobUrl) return;
+
+    const processDocx = async () => {
+      try {
+        setIsLoading(true);
+        setHasError(false);
+
+        // Extract base64 data from data URL
+        const base64Match = blobUrl.match(/^data:[^;]+;base64,(.+)$/);
+        if (!base64Match) {
+          log.error('[DocxPreview] Invalid data URL format');
+          setHasError(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const base64Data = base64Match[1];
+        const html = generateDocxHtml(base64Data, isDark);
+        setDocxHtml(html);
+        setIsLoading(false);
+      } catch (error) {
+        log.error('[DocxPreview] Failed to process DOCX:', error);
+        setHasError(true);
+        setIsLoading(false);
+      }
+    };
+
+    processDocx();
+  }, [blobUrl, isDark]);
+
+  if (!blobUrl) {
+    return (
+      <View className="flex-1 items-center justify-center p-8">
+        <KortixLoader size="large" />
+        <Text className="text-sm text-muted-foreground mt-4">
+          Loading document...
+        </Text>
+      </View>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+        <KortixLoader size="large" />
+        <Text className="text-sm text-muted-foreground mt-4">
+          Preparing document...
+        </Text>
+      </View>
+    );
+  }
+
+  if (hasError || !docxHtml) {
+    return (
+      <View className="flex-1 items-center justify-center p-8">
+        <Icon
+          as={AlertCircle}
+          size={48}
+          className="text-destructive mb-4"
+          strokeWidth={1.5}
+        />
+        <Text className="text-sm text-muted-foreground text-center mb-2">
+          Failed to load document
+        </Text>
+        <Text className="text-xs text-muted-foreground text-center">
+          Try downloading the file instead
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+      <WebView
+        source={{ html: docxHtml }}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+        originWhitelist={['*']}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        mixedContentMode="compatibility"
+        startInLoadingState={true}
+        renderLoading={() => (
+          <View className="absolute inset-0 items-center justify-center" style={{ backgroundColor: isDark ? '#121215' : '#ffffff' }}>
+            <KortixLoader size="large" />
+            <Text className="text-sm text-muted-foreground mt-4">
+              Rendering document...
+            </Text>
+          </View>
+        )}
+        onError={(e) => {
+          log.error('[DocxPreview] WebView error:', e.nativeEvent);
+          setHasError(true);
+        }}
+      />
+    </View>
+  );
+}
+
+/**
  * Fallback Preview Component
  */
 function FallbackPreview({ fileName, previewType }: { fileName: string; previewType: FilePreviewType }) {
@@ -538,9 +1146,7 @@ function FallbackPreview({ fileName, previewType }: { fileName: string; previewT
   const isDark = colorScheme === 'dark';
 
   let message = 'Preview not available';
-  if (previewType === FilePreviewType.PDF) {
-    message = 'PDF preview requires download';
-  } else if (previewType === FilePreviewType.XLSX) {
+  if (previewType === FilePreviewType.XLSX) {
     message = 'Spreadsheet preview requires download';
   }
 
@@ -579,6 +1185,16 @@ export function FilePreview({
     return <ImagePreview blobUrl={blobUrl} fileName={fileName} />;
   }
 
+  // For PDFs, we need the blob URL
+  if (previewType === FilePreviewType.PDF) {
+    return <PdfPreview blobUrl={blobUrl} fileName={fileName} />;
+  }
+
+  // For DOCX, we need the blob URL
+  if (previewType === FilePreviewType.DOCX) {
+    return <DocxPreview blobUrl={blobUrl} fileName={fileName} />;
+  }
+
   // For other types, we need text content
   if (!content || typeof content !== 'string') {
     return <FallbackPreview fileName={fileName} previewType={previewType} />;
@@ -603,7 +1219,6 @@ export function FilePreview({
     case FilePreviewType.CSV:
       return <CsvPreview content={content} />;
 
-    case FilePreviewType.PDF:
     case FilePreviewType.XLSX:
     case FilePreviewType.BINARY:
     default:

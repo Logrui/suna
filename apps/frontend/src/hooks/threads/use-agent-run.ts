@@ -1,0 +1,74 @@
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { threadKeys } from "./keys";
+import { getAgentRuns, unifiedAgentStart, stopAgent, type AgentRun } from "@/lib/api/agents";
+import { AgentRunLimitError, BillingError } from "@/lib/api/errors";
+import { useQueryClient } from "@tanstack/react-query";
+
+export const useAgentRunsQuery = (threadId: string, options?) => {
+  return useQuery<AgentRun[]>({
+    queryKey: threadKeys.agentRuns(threadId),
+    queryFn: () => getAgentRuns(threadId),
+    enabled: !!threadId,
+    retry: (failureCount, error: any) => {
+      if (error?.status === 404 && failureCount < 5) {
+        return true;
+      }
+      return failureCount < 1;
+    },
+    retryDelay: (attemptIndex, error: any) => {
+      if (error?.status === 404) {
+        return Math.min(500 * (attemptIndex + 1), 2000);
+      }
+      return 1000;
+    },
+    ...options,
+  });
+};
+
+export const useStartAgentMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      threadId,
+      prompt,
+      options,
+    }: {
+      threadId: string;
+      prompt?: string;
+      options?: {
+        model_name?: string;
+        agent_id?: string;
+        files?: File[];
+      };
+    }) => unifiedAgentStart({
+      threadId,
+      prompt,
+      model_name: options?.model_name && options.model_name.trim() ? options.model_name.trim() : undefined,
+      agent_id: options?.agent_id,
+      files: options?.files,
+    }),
+    onSuccess: () => {
+      // Invalidate active agent runs to update the sidebar status indicators
+      queryClient.invalidateQueries({ queryKey: ['active-agent-runs'] });
+    },
+    onError: (error) => {
+      // Only silently handle BillingError - let AgentRunLimitError bubble up to be handled by the page component
+      if (!(error instanceof BillingError)) {
+        throw error;
+      }
+    },
+  });
+};
+
+export const useStopAgentMutation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (agentRunId: string) => stopAgent(agentRunId),
+    onSuccess: () => {
+      // Invalidate active agent runs to update the sidebar status indicators
+      queryClient.invalidateQueries({ queryKey: ['active-agent-runs'] });
+    },
+  });
+};
