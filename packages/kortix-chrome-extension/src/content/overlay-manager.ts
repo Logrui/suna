@@ -59,6 +59,11 @@ export class OverlayManager {
       return;
     }
 
+    // Allow events on the overlay host itself (so Take Over button works)
+    if (this.shadowHost && e.composedPath().includes(this.shadowHost)) {
+      return;
+    }
+
     // Block all user-initiated events when in ongoing state
     if (this.state === "ongoing") {
       e.preventDefault();
@@ -73,6 +78,11 @@ export class OverlayManager {
   private blockKeyEvent(e: Event): void {
     // Allow simulated events (CDP commands) to pass through
     if (this.cdpAllowed && !e.isTrusted) {
+      return;
+    }
+
+    // Allow events on the overlay host itself
+    if (this.shadowHost && e.composedPath().includes(this.shadowHost)) {
       return;
     }
 
@@ -126,15 +136,28 @@ export class OverlayManager {
     this.cdpAllowed = false;
   }
 
-  /**
-   * Show overlay in "ongoing" state (agent is working)
-   */
-  public show(): void {
-    if (this.state !== "hidden") return;
 
-    this.createOverlay();
-    this.setState("ongoing");
-    this.enableInputBlocking();
+  /**
+   * Show overlay in a specific state
+   * @param initialState - The state to initialize with (default: "ongoing")
+   */
+  public show(initialState: OverlayState = "ongoing"): void {
+    // If already showing and in the same state, do nothing
+    if (this.state === initialState) return;
+
+    // Create overlay if not already present
+    if (this.state === "hidden") {
+      this.createOverlay();
+    }
+
+    this.setState(initialState);
+
+    // Manage input blocking based on state
+    if (initialState === "ongoing") {
+      this.enableInputBlocking();
+    } else {
+      this.disableInputBlocking();
+    }
   }
 
   /**
@@ -159,7 +182,7 @@ export class OverlayManager {
     const statusText = this.shadowRoot.querySelector(
       ".status-text",
     ) as HTMLElement;
-    const pulseDot = this.shadowRoot.querySelector(".pulse-dot") as HTMLElement;
+    const statusIndicator = this.shadowRoot.querySelector(".status-indicator") as HTMLElement;
     const takeoverBtn = this.shadowRoot.querySelector(
       "#takeover-btn",
     ) as HTMLElement;
@@ -175,10 +198,10 @@ export class OverlayManager {
         // Agent is working - full blocking enabled
         if (aura) aura.classList.remove("paused");
         if (container) container.classList.remove("takeover-mode");
-        if (statusText) statusText.textContent = "Kortix Worker is browsing...";
-        if (pulseDot) {
-          pulseDot.classList.remove("paused");
-          pulseDot.style.background = "oklch(0.72 0.18 150)";
+        if (statusText) statusText.textContent = "Kortix is browsing...";
+        if (statusIndicator) {
+          statusIndicator.style.background = "oklch(0.72 0.18 150)";
+          statusIndicator.style.boxShadow = "0 0 12px oklch(0.72 0.18 150 / 0.5)";
         }
         if (takeoverBtn) takeoverBtn.style.display = "block";
         if (resumeBtn) resumeBtn.style.display = "none";
@@ -191,10 +214,10 @@ export class OverlayManager {
         if (container) container.classList.add("takeover-mode");
         if (statusText)
           statusText.textContent =
-            "You are in control. Click Resume when done.";
-        if (pulseDot) {
-          pulseDot.classList.add("paused");
-          pulseDot.style.background = "oklch(0.7 0.15 60)"; // Orange/amber
+            "User in Control";
+        if (statusIndicator) {
+          statusIndicator.style.background = "oklch(0.7 0.15 60)"; // Amber
+          statusIndicator.style.boxShadow = "0 0 12px oklch(0.7 0.15 60 / 0.5)";
         }
         if (takeoverBtn) takeoverBtn.style.display = "none";
         if (resumeBtn) resumeBtn.style.display = "block";
@@ -321,220 +344,238 @@ export class OverlayManager {
 
                 /* ========== Animations ========== */
 
-                @keyframes breathe {
-                    0%, 100% {
-                        opacity: 0.5;
-                        transform: scale(1);
-                    }
-                    50% {
-                        opacity: 0.85;
-                        transform: scale(1.02);
-                    }
-                }
-
                 @keyframes slideUp {
-                    from {
-                        transform: translate(-50%, 30px);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translate(-50%, 0);
-                        opacity: 1;
-                    }
+                    from { transform: translate(-50%, 60px); opacity: 0; }
+                    to { transform: translate(-50%, 0); opacity: 1; }
                 }
 
-                @keyframes pulse {
-                    0% {
-                        transform: scale(1);
-                        opacity: 1;
-                    }
-                    50% {
-                        transform: scale(3.5);
-                        opacity: 0;
-                    }
-                    100% {
-                        transform: scale(1);
-                        opacity: 0;
-                    }
+                @keyframes auraBreath {
+                    0%, 100% { transform: scale(1); opacity: 0.6; }
+                    50% { transform: scale(1.15); opacity: 0.8; }
+                }
+
+                @keyframes auraRotate {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
 
                 @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                        transform: scale(0.95);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: scale(1);
-                    }
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
 
-                @keyframes fadeOut {
-                    from {
-                        opacity: 1;
-                    }
-                    to {
-                        opacity: 0;
-                    }
+                @keyframes scanlineMove {
+                    0% { transform: translateY(-100%); }
+                    100% { transform: translateY(100%); }
                 }
 
                 /* ========== Atmospheric Aura ========== */
 
                 .kortix-aura {
                     position: fixed;
-                    inset: 0;
-                    /* Soft glowing perimeter with signature Kortix OKLCH colors */
+                    inset: -50%;
+                    width: 200%;
+                    height: 200%;
                     background: radial-gradient(
                         circle at center,
-                        transparent 45%,
-                        oklch(0.65 0.3 260 / 0.1) 75%,
-                        oklch(0.6 0.25 285 / 0.3) 100%
+                        transparent 20%,
+                        oklch(0.12 0.02 285 / 0.15) 50%,
+                        oklch(0.1 0.02 285 / 0.4) 100%
                     );
                     pointer-events: none;
-                    animation: breathe 8s cubic-bezier(0.4, 0, 0.4, 1) infinite;
                     z-index: 2147483641;
-                    transition: opacity 0.5s ease;
+                    transition: opacity 3s cubic-bezier(0.16, 1, 0.3, 1);
+                    overflow: hidden;
+                    opacity: 1;
+                }
+
+                .aura-blobs {
+                    position: absolute;
+                    inset: 0;
+                    animation: auraRotate 80s linear infinite;
+                    opacity: 0.3;
+                    filter: blur(140px);
+                }
+
+                .aura-blob {
+                    position: absolute;
+                    border-radius: 50%;
+                    mix-blend-mode: screen;
+                    animation: auraBreath 20s ease-in-out infinite alternate;
+                }
+
+                .aura-blob-1 {
+                    width: 50%;
+                    height: 50%;
+                    top: 10%;
+                    left: 20%;
+                    background: radial-gradient(circle, oklch(0.65 0.3 265 / 0.4), transparent 70%);
+                }
+
+                .aura-blob-2 {
+                    width: 60%;
+                    height: 60%;
+                    bottom: 15%;
+                    right: 15%;
+                    background: radial-gradient(circle, oklch(0.7 0.25 195 / 0.3), transparent 70%);
+                    animation-delay: -7s;
+                }
+
+                .aura-blob-3 {
+                    width: 45%;
+                    height: 45%;
+                    top: 40%;
+                    left: 40%;
+                    background: radial-gradient(circle, oklch(0.6 0.25 315 / 0.3), transparent 70%);
+                    animation-delay: -14s;
+                }
+
+                /* Techy Overlay Layers */
+                .tech-overlays {
+                    position: fixed;
+                    inset: 0;
+                    pointer-events: none;
+                    z-index: 2147483642;
+                }
+
+                .scanlines {
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(
+                        to bottom,
+                        transparent,
+                        oklch(1 0 0 / 0.02) 50%,
+                        transparent
+                    );
+                    background-size: 100% 2px;
+                    opacity: 0.2;
+                }
+
+                .vignette {
+                    position: absolute;
+                    inset: 0;
+                    background: radial-gradient(
+                        circle at center,
+                        transparent 40%,
+                        oklch(0 0 0 / 0.2) 100%
+                    );
                 }
 
                 .kortix-aura.paused {
-                    animation-play-state: paused;
-                    opacity: 0.3;
-                    background: radial-gradient(
-                        circle at center,
-                        transparent 45%,
-                        oklch(0.6 0.15 60 / 0.08) 75%,
-                        oklch(0.55 0.12 45 / 0.2) 100%
-                    );
+                    opacity: 0.2;
+                    filter: grayscale(0.8);
+                }
+                
+                .kortix-aura.paused .aura-blobs {
+                   animation-play-state: paused;
                 }
 
-                /* ========== Interaction Blocker (visual feedback) ========== */
-
-                .kortix-interaction-layer {
-                    position: fixed;
-                    inset: 0;
-                    z-index: 2147483642;
-                    pointer-events: none;
-                    cursor: not-allowed;
-                }
-
-                /* ========== Status Pill ========== */
+                /* ========== Status Pill (Antigravity Style) ========== */
 
                 .kortix-overlay-container {
                     position: fixed;
-                    bottom: 32px;
+                    bottom: 48px;
                     left: 50%;
                     transform: translateX(-50%);
                     pointer-events: auto;
                     font-family: 'Roobert', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    background: oklch(0.2 0.005 285.823 / 0.85);
-                    -webkit-backdrop-filter: blur(28px) saturate(180%);
-                    backdrop-filter: blur(28px) saturate(180%);
-                    border: 1.5px solid oklch(1 0 0 / 0.1);
-                    border-radius: 1rem;
-                    padding: 10px 10px 10px 20px;
+                    background: oklch(0.18 0.01 285 / 0.75);
+                    -webkit-backdrop-filter: blur(32px) saturate(180%);
+                    backdrop-filter: blur(32px) saturate(180%);
+                    border: 1px solid oklch(1 0 0 / 0.1);
+                    border-radius: 9999px;
+                    padding: 8px 8px 8px 22px;
                     display: flex;
                     align-items: center;
                     gap: 24px;
                     box-shadow:
-                        0 20px 40px -12px oklch(0 0 0 / 0.6),
-                        0 0 0 1px oklch(1 0 0 / 0.05) inset;
+                        0 32px 64px -16px oklch(0 0 0 / 0.6),
+                        0 0 0 1px oklch(1 0 0 / 0.04) inset;
                     user-select: none;
-                    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    animation: slideUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                     overflow: hidden;
                     white-space: nowrap;
                     z-index: 2147483645;
-                    transition: all 0.3s ease;
+                    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
                 .kortix-overlay-container.takeover-mode {
-                    border-color: oklch(0.7 0.15 60 / 0.3);
+                    border-color: oklch(0.7 0.15 60 / 0.25);
+                    background: oklch(0.22 0.02 65 / 0.8);
                 }
 
                 .grain {
                     position: absolute;
                     inset: 0;
-                    opacity: 0.3;
+                    opacity: 0.12;
                     pointer-events: none;
                     mix-blend-mode: overlay;
-                    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+                    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
                 }
 
                 .status-group {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: 14px;
                     z-index: 2;
                 }
 
-                .pulse-dot {
-                    width: 6px;
-                    height: 6px;
-                    background: oklch(0.72 0.18 150);
+                .status-indicator {
+                    width: 10px;
+                    height: 10px;
                     border-radius: 50%;
-                    box-shadow: 0 0 12px oklch(0.72 0.18 150);
+                    background: oklch(0.75 0.25 150);
+                    box-shadow: 0 0 16px oklch(0.75 0.25 150 / 0.6);
                     position: relative;
-                    transition: background 0.3s ease, box-shadow 0.3s ease;
                 }
 
-                .pulse-dot::after {
-                    content: '';
-                    position: absolute;
-                    inset: -3px;
-                    border-radius: 50%;
-                    border: 1px solid oklch(0.72 0.18 150);
-                    animation: pulse 3s infinite;
-                }
-
-                .pulse-dot.paused {
-                    box-shadow: 0 0 12px oklch(0.7 0.15 60);
-                }
-
-                .pulse-dot.paused::after {
-                    animation: none;
-                    border-color: oklch(0.7 0.15 60);
+                .takeover-mode .status-indicator {
+                    background: oklch(0.75 0.2 65);
+                    box-shadow: 0 0 16px oklch(0.75 0.2 65 / 0.6);
                 }
 
                 .status-text {
-                    color: oklch(0.985 0 0);
-                    font-size: 13px;
+                    color: oklch(0.98 0 0);
+                    font-size: 14px;
                     font-weight: 500;
-                    letter-spacing: -0.02em;
-                    transition: color 0.3s ease;
+                    letter-spacing: -0.015em;
                 }
 
                 .action-btn {
-                    background: oklch(0.985 0 0);
-                    color: oklch(0.205 0 0);
+                    background: oklch(0.98 0 0);
+                    color: oklch(0.15 0 0);
                     border: none;
-                    padding: 7px 16px;
-                    border-radius: 0.625rem;
-                    font-size: 12px;
+                    padding: 10px 22px;
+                    border-radius: 9999px;
+                    font-size: 13px;
                     font-weight: 600;
                     cursor: pointer;
-                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                     z-index: 2;
                     letter-spacing: -0.01em;
-                    box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
                     font-family: inherit;
+                    box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
                 }
 
                 .action-btn:hover {
-                    transform: translateY(-1px) scale(1.02);
-                    background: oklch(1 0 0);
-                    box-shadow: 0 6px 16px oklch(0 0 0 / 0.2);
+                    transform: scale(1.04) translateY(-1px);
+                    background: white;
+                    box-shadow: 0 12px 32px -8px oklch(0 0 0 / 0.4);
                 }
 
                 .action-btn:active {
-                    transform: translateY(0) scale(0.98);
+                    transform: scale(0.96);
                 }
 
                 #resume-btn {
-                    background: oklch(0.65 0.2 260);
+                    background: oklch(0.65 0.25 265);
                     color: white;
+                    box-shadow: 0 4px 16px oklch(0.65 0.25 265 / 0.3);
                 }
 
                 #resume-btn:hover {
-                    background: oklch(0.7 0.22 260);
+                    background: oklch(0.7 0.28 265);
+                    box-shadow: 0 16px 32px -8px oklch(0.65 0.25 265 / 0.5);
                 }
 
                 /* ========== Resume Modal ========== */
@@ -545,12 +586,12 @@ export class OverlayManager {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: oklch(0 0 0 / 0.5);
-                    -webkit-backdrop-filter: blur(12px);
-                    backdrop-filter: blur(12px);
+                    background: oklch(0.05 0 0 / 0.4);
+                    -webkit-backdrop-filter: blur(24px);
+                    backdrop-filter: blur(24px);
                     z-index: 2147483647;
                     pointer-events: auto;
-                    animation: fadeIn 0.3s ease forwards;
+                    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
 
                 .kortix-resume-modal.hidden {
@@ -558,115 +599,115 @@ export class OverlayManager {
                 }
 
                 .modal-content {
-                    background: oklch(0.18 0.01 285 / 0.95);
-                    -webkit-backdrop-filter: blur(20px);
-                    backdrop-filter: blur(20px);
-                    border: 1.5px solid oklch(1 0 0 / 0.12);
-                    border-radius: 1.25rem;
-                    padding: 28px;
-                    max-width: 420px;
+                    background: oklch(0.15 0.01 285 / 0.85);
+                    border: 1px solid oklch(1 0 0 / 0.1);
+                    border-radius: 28px;
+                    padding: 36px;
+                    max-width: 480px;
                     width: 90%;
-                    box-shadow:
-                        0 25px 50px -12px oklch(0 0 0 / 0.7),
-                        0 0 0 1px oklch(1 0 0 / 0.05) inset;
-                    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                    font-family: 'Roobert', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    box-shadow: 0 48px 96px -24px oklch(0 0 0 / 0.6);
+                    font-family: inherit;
+                    position: relative;
+                    overflow: hidden;
                 }
 
                 .modal-content h3 {
-                    margin: 0 0 8px 0;
-                    color: oklch(0.985 0 0);
-                    font-size: 18px;
+                    margin: 0 0 14px 0;
+                    color: oklch(1 0 0);
+                    font-size: 22px;
                     font-weight: 600;
-                    letter-spacing: -0.02em;
+                    letter-spacing: -0.025em;
                 }
 
                 .modal-content p {
-                    margin: 0 0 16px 0;
-                    color: oklch(0.7 0 0);
-                    font-size: 14px;
-                    line-height: 1.5;
+                    margin: 0 0 24px 0;
+                    color: oklch(0.85 0 0);
+                    font-size: 15px;
+                    line-height: 1.6;
                 }
 
                 .modal-content textarea {
                     width: 100%;
-                    min-height: 100px;
-                    padding: 12px 14px;
-                    border: 1.5px solid oklch(1 0 0 / 0.1);
-                    border-radius: 0.75rem;
-                    background: oklch(0.12 0.005 285);
-                    color: oklch(0.95 0 0);
-                    font-size: 14px;
+                    min-height: 140px;
+                    padding: 18px;
+                    border: 1px solid oklch(1 0 0 / 0.08);
+                    border-radius: 20px;
+                    background: oklch(1 0 0 / 0.03);
+                    color: oklch(1 0 0);
+                    font-size: 15px;
                     font-family: inherit;
-                    resize: vertical;
+                    resize: none;
                     outline: none;
-                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-                }
-
-                .modal-content textarea::placeholder {
-                    color: oklch(0.5 0 0);
+                    transition: border-color 0.3s ease, background 0.3s ease;
                 }
 
                 .modal-content textarea:focus {
-                    border-color: oklch(0.65 0.2 260 / 0.5);
-                    box-shadow: 0 0 0 3px oklch(0.65 0.2 260 / 0.15);
+                    border-color: oklch(0.65 0.25 265 / 0.4);
+                    background: oklch(1 0 0 / 0.05);
                 }
 
                 .modal-actions {
                     display: flex;
-                    gap: 12px;
-                    margin-top: 20px;
+                    gap: 14px;
+                    margin-top: 32px;
                     justify-content: flex-end;
                 }
 
                 .modal-btn {
-                    padding: 10px 20px;
-                    border-radius: 0.625rem;
-                    font-size: 14px;
+                    padding: 12px 28px;
+                    border-radius: 9999px;
+                    font-size: 15px;
                     font-weight: 600;
                     cursor: pointer;
-                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                     font-family: inherit;
                     border: none;
                 }
 
                 .modal-btn-secondary {
-                    background: oklch(1 0 0 / 0.1);
+                    background: oklch(1 0 0 / 0.04);
                     color: oklch(0.85 0 0);
                     border: 1px solid oklch(1 0 0 / 0.1);
                 }
 
                 .modal-btn-secondary:hover {
-                    background: oklch(1 0 0 / 0.15);
+                    background: oklch(1 0 0 / 0.08);
+                    transform: translateY(-2px);
                 }
 
                 .modal-btn-primary {
-                    background: oklch(0.65 0.2 260);
-                    color: white;
-                    box-shadow: 0 4px 12px oklch(0.65 0.2 260 / 0.3);
+                    background: oklch(0.98 0 0);
+                    color: oklch(0.15 0 0);
+                    box-shadow: 0 8px 20px -4px oklch(0.98 0 0 / 0.2);
                 }
 
                 .modal-btn-primary:hover {
-                    background: oklch(0.7 0.22 260);
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 16px oklch(0.65 0.2 260 / 0.4);
-                }
-
-                .modal-btn-primary:active {
-                    transform: translateY(0);
+                    background: white;
+                    transform: translateY(-2px);
+                    box-shadow: 0 16px 32px -8px oklch(0 0 0 / 0.4);
                 }
             </style>
 
-            <!-- Atmospheric Aura -->
-            <div class="kortix-aura"></div>
+            <div class="kortix-aura">
+                <div class="aura-blobs">
+                    <div class="aura-blob aura-blob-1"></div>
+                    <div class="aura-blob aura-blob-2"></div>
+                    <div class="aura-blob aura-blob-3"></div>
+                </div>
+            </div>
+
+            <div class="tech-overlays">
+                <div class="scanlines"></div>
+                <div class="vignette"></div>
+            </div>
 
             <!-- Status Pill -->
             <div class="kortix-overlay-container">
                 <div class="grain"></div>
 
                 <div class="status-group">
-                    <div class="pulse-dot"></div>
-                    <span class="status-text">Kortix Worker is browsing...</span>
+                    <div class="status-indicator"></div>
+                    <span class="status-text">Kortix is browsing...</span>
                 </div>
 
                 <button class="action-btn" id="takeover-btn">
@@ -674,25 +715,26 @@ export class OverlayManager {
                 </button>
 
                 <button class="action-btn" id="resume-btn" style="display: none;">
-                    Resume
+                    Resume Task
                 </button>
             </div>
 
             <!-- Resume Modal -->
             <div class="kortix-resume-modal hidden">
                 <div class="modal-content">
+                    <div class="grain"></div>
                     <h3>Resume Task</h3>
-                    <p>Let Kortix know what you changed during the takeover. This helps the agent understand the current state.</p>
+                    <p>Briefly describe what you changed. This helps your Kortix Worker maintain continuity.</p>
                     <textarea
                         id="resume-summary"
-                        placeholder="I logged in, navigated to the dashboard, and updated my profile settings..."
+                        placeholder="I updated the shipping address and saved the form..."
                     ></textarea>
                     <div class="modal-actions">
                         <button class="modal-btn modal-btn-secondary" id="cancel-resume-btn">
                             Cancel
                         </button>
                         <button class="modal-btn modal-btn-primary" id="confirm-resume-btn">
-                            Resume Agent
+                            Confirm & Resume
                         </button>
                     </div>
                 </div>

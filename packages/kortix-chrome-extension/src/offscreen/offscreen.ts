@@ -47,8 +47,8 @@ async function startCapture(streamId: string) {
                 mandatory: {
                     chromeMediaSource: 'tab',
                     chromeMediaSourceId: streamId,
-                    maxWidth: 1280,
-                    maxHeight: 720,
+                    maxWidth: 1440,
+                    maxHeight: 900,
                     maxFrameRate: 30
                 }
             } as any
@@ -83,8 +83,8 @@ function setupEncoder() {
 
     const config: VideoEncoderConfig = {
         codec: 'avc1.42E01E', // Baseline profile for low latency
-        width: 1280, // Default target width
-        height: 720, // Default target height
+        width: 1440, // Match debugger
+        height: 900, // Match debugger
         bitrate: 2_000_000, // 2 Mbps
         framerate: 30,
         latencyMode: 'realtime',

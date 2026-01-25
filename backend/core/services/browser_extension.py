@@ -109,13 +109,18 @@ class VideoFrameMessage(BaseModel):
     timestamp: int
 
 
-class InteractionCommand(BaseModel):
-    """Backend → Extension: Real-time user interaction (click, key, etc.)."""
-    type: str = "interaction"
-    id: str
+class UserTakeoverMessage(BaseModel):
+    """Extension → Backend: User has taken control of the browser."""
+    type: str = "user_takeover"
     session_id: str
-    action: str  # click, key_down, key_up, mouse_move, scroll
-    params: Dict[str, Any]
+    timestamp: int
+
+
+class UserResumeMessage(BaseModel):
+    """Extension → Backend: User wants to hand back control to the agent."""
+    type: str = "user_resume"
+    session_id: str
+    summary: str
     timestamp: int
 
 
@@ -192,7 +197,7 @@ class ExtensionSessionManager:
         # Ensure worker_id is correct for this process (eval again at startup)
         self.worker_id = get_worker_id()
         self._relay_task = asyncio.create_task(self._listen_for_relayed_commands())
-        logger.info(f"🔌 [SESSION_MGR] Manager started (worker_id={self.worker_id})")
+        # logger.info(f"🔌 [SESSION_MGR] Manager started (worker_id={self.worker_id})")
 
     async def stop(self):
         """Stop the session manager and its background tasks."""
@@ -203,12 +208,12 @@ class ExtensionSessionManager:
                 await self._relay_task
             except asyncio.CancelledError:
                 pass
-        logger.info(f"🔌 [SESSION_MGR] Manager stopped (worker_id={self.worker_id})")
+        # logger.info(f"🔌 [SESSION_MGR] Manager stopped (worker_id={self.worker_id})")
 
     async def _listen_for_relayed_commands(self):
         """Listen for commands from other workers via Redis Pub/Sub."""
         channel = f"browser:relay:commands:{self.worker_id}"
-        logger.debug(f"🔌 [SESSION_MGR] Listening for relayed commands on {channel}")
+        # logger.debug(f"🔌 [SESSION_MGR] Listening for relayed commands on {channel}")
         
         while self._is_running:
             try:
@@ -242,7 +247,7 @@ class ExtensionSessionManager:
         params = data.get("params")
         timeout_ms = data.get("timeout_ms", COMMAND_TIMEOUT_MS)
         
-        logger.debug(f"🔌 [SESSION_MGR] Handling relayed command {relay_id} for browser_id={browser_id}")
+        # logger.debug(f"🔌 [SESSION_MGR] Handling relayed command {relay_id} for browser_id={browser_id}")
         
         session = self.get_session_by_browser_id(browser_id)
         if not session:
@@ -265,7 +270,7 @@ class ExtensionSessionManager:
             # Send result back via another Pub/Sub channel
             client = await redis_service.get_client()
             await client.publish(f"browser:relay:results:{relay_id}", result.model_dump_json())
-            logger.debug(f"🔌 [SESSION_MGR] Published result for relayed command {relay_id}")
+            # logger.debug(f"🔌 [SESSION_MGR] Published result for relayed command {relay_id}")
             
         except Exception as e:
             logger.error(f"🔌 [SESSION_MGR] Error executing relayed command {relay_id}: {e}")
@@ -307,7 +312,7 @@ class ExtensionSessionManager:
             user_key = f"browser:sessions:user:{session.user_id}"
             await client.sadd(user_key, session.browser_id)
             
-            logger.debug(f"🔌 [SESSION_MGR] Registered presence in Redis for browser_id={session.browser_id}")
+            # logger.debug(f"🔌 [SESSION_MGR] Registered presence in Redis for browser_id={session.browser_id}")
         except Exception as e:
             logger.warning(f"🔌 [SESSION_MGR] Failed to register presence in Redis: {e}")
     
@@ -338,7 +343,7 @@ class ExtensionSessionManager:
             user_key = f"browser:sessions:user:{session.user_id}"
             await client.srem(user_key, session.browser_id)
             
-            logger.debug(f"🔌 [SESSION_MGR] Removed presence from Redis for browser_id={session.browser_id}")
+            # logger.debug(f"🔌 [SESSION_MGR] Removed presence from Redis for browser_id={session.browser_id}")
         except Exception as e:
             logger.warning(f"🔌 [SESSION_MGR] Failed to remove presence from Redis: {e}")
     
@@ -351,7 +356,7 @@ class ExtensionSessionManager:
                 client = await redis_service.get_client()
                 await client.expire(key, REDIS_SESSION_TTL)
                 await client.hset(key, "last_heartbeat", datetime.now(timezone.utc).isoformat())
-                logger.debug(f"🔌 [SESSION_MGR] Refreshed heartbeat in Redis for browser_id={session.browser_id}")
+                # logger.debug(f"🔌 [SESSION_MGR] Refreshed heartbeat in Redis for browser_id={session.browser_id}")
             except Exception as e:
                 logger.warning(f"🔌 [SESSION_MGR] Failed to refresh heartbeat in Redis: {e}")
     
@@ -366,12 +371,12 @@ class ExtensionSessionManager:
     
     def get_session_by_browser_id(self, browser_id: str) -> Optional[ExtensionSession]:
         """Get session by browser database ID (local only - for command routing)."""
-        logger.debug(f"🔌 [SESSION_MGR] Looking up local session for browser_id={browser_id}")
+        # logger.debug(f"🔌 [SESSION_MGR] Looking up local session for browser_id={browser_id}")
         for session in self._sessions.values():
             if session.browser_id == browser_id:
-                logger.debug(f"🔌 [SESSION_MGR] Found local session: {session.session_id} for browser_id={browser_id}")
+                # logger.debug(f"🔌 [SESSION_MGR] Found local session: {session.session_id} for browser_id={browser_id}")
                 return session
-        logger.debug(f"🔌 [SESSION_MGR] No local session found for browser_id={browser_id}")
+        # logger.debug(f"🔌 [SESSION_MGR] No local session found for browser_id={browser_id}")
         return None
     
     def get_user_sessions(self, user_id: str) -> List[ExtensionSession]:
@@ -390,13 +395,13 @@ class ExtensionSessionManager:
             client = await redis_service.get_client()
             exists = await client.exists(key)
             is_online = exists > 0
-            logger.debug(f"🔌 [SESSION_MGR] is_browser_online({browser_id}) = {is_online} (Redis)")
+            # logger.debug(f"🔌 [SESSION_MGR] is_browser_online({browser_id}) = {is_online} (Redis)")
             return is_online
         except Exception as e:
             logger.warning(f"🔌 [SESSION_MGR] Redis check failed, falling back to local: {e}")
             # Fallback to local check if Redis fails
             is_online = self.get_session_by_browser_id(browser_id) is not None
-            logger.debug(f"🔌 [SESSION_MGR] is_browser_online({browser_id}) = {is_online} (local fallback)")
+            # logger.debug(f"🔌 [SESSION_MGR] is_browser_online({browser_id}) = {is_online} (local fallback)")
             return is_online
 
     async def get_browser_worker_id(self, browser_id: str) -> Optional[str]:
@@ -447,9 +452,12 @@ async def send_browser_command(
             timestamp=int(time.time() * 1000),
         )
         
-        logger.info(f"🔌 Sending command {command.id} ({action}) to browser {browser_id} (local)")
+        logger.info(f"🔌 Sending command {command.id} ({action}) to browser {browser_id} (local) params={params}")
         result = await session.send_command(command)
-        logger.info(f"🔌 Command {command.id} completed: success={result.success}")
+        if result.success:
+            logger.info(f"🔌 Command {command.id} completed: success={result.success}")
+        else:
+            logger.error(f"🔌 Command {command.id} failed: {result.error}")
         return result
     
     # 2. Not local? Try relaying via Redis Pub/Sub
@@ -474,7 +482,7 @@ async def send_browser_command(
         "timeout_ms": timeout_ms
     }
     
-    logger.info(f"🔌 Relaying command {relay_id} ({action}) to browser {browser_id} on worker {target_worker_id}")
+    logger.info(f"🔌 Relaying command {relay_id} ({action}) to browser {browser_id} on worker {target_worker_id} params={params}")
     
     client = await redis_service.get_client()
     pubsub = client.pubsub()
@@ -495,7 +503,10 @@ async def send_browser_command(
             if message and message['type'] == 'message':
                 result_data = json.loads(message['data'])
                 result = CommandResult(**result_data)
-                logger.info(f"🔌 Relayed command {relay_id} completed: success={result.success}")
+                if result.success:
+                    logger.info(f"🔌 Relayed command {relay_id} completed: success={result.success}")
+                else:
+                    logger.error(f"🔌 Relayed command {relay_id} failed: {result.error}")
                 return result
             
         logger.warning(f"🔌 Relayed command {relay_id} timed out waiting for response from worker {target_worker_id}")
@@ -550,7 +561,7 @@ async def get_browser_by_extension_id(extension_id: str) -> Optional[Dict]:
     """Fetch browser record by extension_id."""
     client = await _get_db_client()
     result = await client.table("user_browsers").select("*").eq("extension_id", extension_id).maybe_single().execute()
-    logger.debug(f"🔌 [BROWSER_EXT] get_browser_by_extension_id result: {result}")
+    # logger.debug(f"🔌 [BROWSER_EXT] get_browser_by_extension_id result: {result}")
     if result is None:
         logger.error("🔌 [BROWSER_EXT] get_browser_by_extension_id: execute() returned None")
         return None
@@ -589,7 +600,7 @@ async def register_browser(user_id: str, extension_id: str, browser_info: Dict, 
     if name:
         insert_data["name"] = name
     result = await client.table("user_browsers").insert(insert_data).execute()
-    logger.debug(f"🔌 [BROWSER_EXT] register_browser result: {result}")
+    # logger.debug(f"🔌 [BROWSER_EXT] register_browser result: {result}")
     if result is None:
         logger.error("🔌 [BROWSER_EXT] register_browser: execute() returned None")
         return None
@@ -619,7 +630,7 @@ async def get_thread_browser_id(thread_id: str) -> Optional[str]:
     Returns:
         The browser_id if set, None otherwise
     """
-    logger.debug(f"🔌 [BROWSER_EXT] get_thread_browser_id: looking up thread_id={thread_id}")
+    # logger.debug(f"🔌 [BROWSER_EXT] get_thread_browser_id: looking up thread_id={thread_id}")
     try:
         client = await _get_db_client()
         result = await client.table("threads").select("metadata").eq("thread_id", thread_id).maybe_single().execute()
@@ -629,7 +640,7 @@ async def get_thread_browser_id(thread_id: str) -> Optional[str]:
             return None
             
         if result is None or result.data is None:
-            logger.debug(f"🔌 [BROWSER_EXT] get_thread_browser_id: thread {thread_id} not found or no metadata")
+            # logger.debug(f"🔌 [BROWSER_EXT] get_thread_browser_id: thread {thread_id} not found or no metadata")
             return None
         
         metadata = result.data.get("metadata") or {}
@@ -638,7 +649,8 @@ async def get_thread_browser_id(thread_id: str) -> Optional[str]:
         if browser_id:
             logger.info(f"🔌 [BROWSER_EXT] get_thread_browser_id: found browser_id={browser_id} for thread {thread_id}")
         else:
-            logger.debug(f"🔌 [BROWSER_EXT] get_thread_browser_id: no browser_id in thread {thread_id} metadata")
+            # logger.debug(f"🔌 [BROWSER_EXT] get_thread_browser_id: no browser_id in thread {thread_id} metadata")
+            pass
         
         return browser_id
     except Exception as e:
@@ -676,7 +688,8 @@ async def browser_stream_websocket(websocket: WebSocket, browser_id: str):
                     if message['type'] == 'message':
                         frame_count += 1
                         if frame_count <= 5 or frame_count % 100 == 0:
-                            logger.debug(f"📹 Relaying frame #{frame_count} to frontend for browser {browser_id}")
+                            # logger.debug(f"📹 Relaying frame #{frame_count} to frontend for browser {browser_id}")
+                            pass
                         await websocket.send_text(message['data'])
             except asyncio.CancelledError:
                 logger.debug(f"📹 Redis listener cancelled for browser {browser_id}")
@@ -699,12 +712,14 @@ async def browser_stream_websocket(websocket: WebSocket, browser_id: str):
                     await websocket.send_json({"type": "pong"})
                 elif msg_type == "interaction":
                     # Route interaction to the extension
-                    logger.debug(f"📹 Routing interaction to extension for browser {browser_id}")
-                    await send_browser_command(
-                        browser_id=browser_id,
-                        action="interaction",
-                        params=data.get("params", {})
-                    )
+                    # logger.debug(f"📹 Routing interaction to extension for browser {browser_id}")
+                    # DISABLE RELAY: Interactions from Kortix Computer are currently disabled to reduce log spam/issues
+                    pass 
+                    # await send_browser_command(
+                    #     browser_id=browser_id,
+                    #     action="interaction",
+                    #     params=data.get("params", {})
+                    # )
             except asyncio.TimeoutError:
                 # No message from frontend in 60s, send a ping to keep connection alive
                 try:
@@ -808,7 +823,7 @@ async def extension_websocket(websocket: WebSocket):
             elif msg_type == "stream_chunk":
                 # Real-time frame from extension - broadcast via Redis
                 browser_id = session.browser_id
-                logger.debug(f"📹 Received stream_chunk from extension for browser {browser_id}")
+                # logger.debug(f"📹 Received stream_chunk from extension for browser {browser_id}")
                 client = await redis_service.get_client()
                 await client.publish(f"browser:stream:{browser_id}", json.dumps(message))
             
@@ -818,6 +833,17 @@ async def extension_websocket(websocket: WebSocket):
                 # Note: keeping debug logs light for video frames as they are frequent
                 client = await redis_service.get_client()
                 await client.publish(f"browser:stream:{browser_id}", json.dumps(message))
+            
+            elif msg_type == "user_takeover":
+                # User has token over - stop any active runs for this browser
+                browser_id = session.browser_id
+                asyncio.create_task(handle_user_takeover(browser_id))
+            
+            elif msg_type == "user_resume":
+                # User wants to hand back control - resume agent with context
+                browser_id = session.browser_id
+                summary = message.get("summary", "")
+                asyncio.create_task(handle_user_resume(browser_id, summary))
             
             elif msg_type == "error":
                 logger.error(f"Extension error: {message.get('message')}")
@@ -1155,6 +1181,111 @@ async def get_thread_browser_endpoint(
     
     metadata = result.data.get("metadata") or {}
     return {"browser_id": metadata.get("browser_id")}
+
+
+# ========== User Takeover & Resume Handlers ==========
+
+async def handle_user_takeover(browser_id: str):
+    """Handle user taking over the browser - stop active agent runs."""
+    logger.info(f"🛑 [BROWSER_EXT] Handling user takeover for browser {browser_id}")
+    client = await _get_db_client()
+    
+    # 1. Find threads linked to this browser
+    # Note: Using .contains() for JSONB metadata search
+    threads = await client.table("threads").select("thread_id").contains("metadata", {"browser_id": browser_id}).execute()
+    if not (threads and threads.data):
+        # logger.debug(f"🔌 [BROWSER_EXT] No threads found for browser {browser_id}")
+        return
+    
+    thread_ids = [t["thread_id"] for t in threads.data]
+    
+    # 2. Find active runs for these threads
+    from core.utils.query_utils import batch_query_in
+    active_runs = await batch_query_in(
+        client=client,
+        table_name="agent_runs",
+        select_fields="id",
+        in_field="thread_id",
+        in_values=thread_ids,
+        additional_filters={"status": "running"}
+    )
+    
+    if not active_runs:
+        # logger.debug(f"🔌 [BROWSER_EXT] No active runs for browser {browser_id}")
+        return
+    
+    # 3. Stop them
+    from core.utils.run_management import stop_agent_run_with_helpers
+    for run in active_runs:
+        await stop_agent_run_with_helpers(run["id"], stop_source="user_takeover")
+    
+    # 4. Notify frontend via stream channel
+    client_redis = await redis_service.get_client()
+    await client_redis.publish(f"browser:stream:{browser_id}", json.dumps({
+        "type": "takeover",
+        "timestamp": int(time.time() * 1000)
+    }))
+
+
+async def handle_user_resume(browser_id: str, summary: str):
+    """Handle user handing back control - resume agent run with summary."""
+    logger.info(f"🚀 [BROWSER_EXT] Handling user resume for browser {browser_id}")
+    client = await _get_db_client()
+    
+    # 1. Find the most recent thread for this browser
+    threads = await client.table("threads")\
+        .select("thread_id, account_id, project_id")\
+        .contains("metadata", {"browser_id": browser_id})\
+        .order("updated_at", desc=True)\
+        .limit(1)\
+        .execute()
+        
+    if not (threads and threads.data):
+        logger.warning(f"🔌 [BROWSER_EXT] Cannot resume: No thread found for browser {browser_id}")
+        return
+    
+    thread_data = threads.data[0]
+    thread_id = thread_data["thread_id"]
+    account_id = thread_data["account_id"]
+    project_id = thread_data["project_id"]
+    
+    # 2. Add the summary as a message to the thread
+    resume_text = f"[Takeover Resume]\nUser has finished manual actions. Summary of changes:\n{summary}"
+    
+    message_payload = {
+        "role": "user",
+        "content": resume_text
+    }
+    
+    await client.table('messages').insert({
+        "message_id": str(uuid.uuid4()),
+        "thread_id": thread_id,
+        "type": "user",
+        "is_llm_message": True,
+        "content": message_payload,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }).execute()
+    
+    # 3. Trigger a new agent run
+    try:
+        from core.agent_runs import start_agent_run
+        await start_agent_run(
+            account_id=account_id,
+            prompt=resume_text,
+            thread_id=thread_id,
+            project_id=project_id,
+            skip_limits_check=True # Allow resume even if limits hit (short message)
+        )
+        logger.info(f"✅ [BROWSER_EXT] Agent run resumed for thread {thread_id}")
+        
+        # 4. Notify frontend via stream channel
+        client_redis = await redis_service.get_client()
+        await client_redis.publish(f"browser:stream:{browser_id}", json.dumps({
+            "type": "resume",
+            "timestamp": int(time.time() * 1000)
+        }))
+    except Exception as e:
+        logger.error(f"❌ [BROWSER_EXT] Failed to resume agent run: {e}")
 
 
 # ========== Exports ==========

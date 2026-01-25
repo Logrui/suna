@@ -405,7 +405,7 @@ export function ToolView({ toolCall, toolResult, ...props }: ToolViewProps) {
 
   // Wrap all tool views in a container with CSS containment to prevent overflow
   return (
-    <div className="h-full w-full max-h-full max-w-full overflow-auto min-w-0 min-h-0" style={{ contain: 'layout style' }}>
+    <div className="h-full w-full max-h-full max-w-full overflow-auto scrollbar-hide min-w-0 min-h-0" style={{ contain: 'layout style' }}>
       <ToolViewComponent toolCall={toolCall} toolResult={modifiedToolResult} {...props} />
     </div>
   );

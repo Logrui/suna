@@ -327,7 +327,7 @@ export function BrowserToolView({
   };
 
   return (
-    <Card className="gap-0 flex border-0 shadow-none p-0 py-0 rounded-none flex-col h-full overflow-scroll bg-card">
+    <Card className="gap-0 flex border-0 shadow-none p-0 py-0 rounded-none flex-col h-full overflow-scroll scrollbar-hide bg-card">
       <CardHeader className="h-14 bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b p-2 px-4 space-y-2">
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
@@ -378,9 +378,9 @@ export function BrowserToolView({
       </CardHeader>
 
       <CardContent className="p-0 flex-1 overflow-hidden relative" style={{ height: 'calc(100vh - 150px)' }}>
-        <div className="flex-1 flex h-full items-center overflow-scroll bg-white dark:bg-black">
+        <div className="flex-1 flex h-full items-center overflow-scroll scrollbar-hide bg-white dark:bg-black">
           {showContext && (result || parameters) ? (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-4">
               {parameters && <JsonViewer
                 data={parameters}
                 title="INPUT"

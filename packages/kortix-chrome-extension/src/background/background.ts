@@ -26,6 +26,7 @@ interface ExtensionState {
   extensionId: string | null;
   commandCount: number;
   lastError: string | null;
+  overlayState: "hidden" | "ongoing" | "takeover";
 }
 
 // ========== State ==========
@@ -36,6 +37,7 @@ let state: ExtensionState = {
   extensionId: null,
   commandCount: 0,
   lastError: null,
+  overlayState: "hidden",
 };
 
 // ========== Command Handlers ==========
@@ -59,7 +61,7 @@ async function handleBackendCommand(
     // Ensure streaming is active when commands are flowing
     if (!streamingManager.streaming) {
       await streamingManager.start();
-      setOverlayState(true);
+      await broadcastOverlayState("ongoing");
     }
 
     let data: Record<string, any> = {};
@@ -127,6 +129,21 @@ async function handleBackendCommand(
           timestamp: Date.now(),
         };
 
+      case "press_key":
+        await handlePressKey(command.params);
+        data = await getPageState();
+        break;
+
+      case "set_file_input_files":
+        await handleSetFileInputFiles(command.params);
+        data = await getPageState();
+        break;
+
+      case "hover":
+        await handleHover(command.params);
+        data = await getPageState();
+        break;
+
       default:
         throw new Error(`Unknown action: ${command.action}`);
     }
@@ -153,16 +170,70 @@ async function handleBackendCommand(
 }
 
 /**
+ * Helper: Wait for tab to reach 'complete' status with safety timeout
+ */
+function waitForTabLoad(tabId: number, timeoutMs: number = 15000): Promise<void> {
+  return new Promise((resolve) => {
+    let isResolved = false;
+    let timerId: any;
+
+    const cleanup = () => {
+      if (isResolved) return;
+      isResolved = true;
+      chrome.tabs.onUpdated.removeListener(listener);
+      clearTimeout(timerId);
+      resolve();
+    };
+
+    const listener = (tid: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+      if (tid === tabId && changeInfo.status === "complete") {
+        cleanup();
+      }
+    };
+
+    // 1. Setup listener first to ensure we don't miss event
+    chrome.tabs.onUpdated.addListener(listener);
+
+    // 2. Check current status
+    chrome.tabs.get(tabId, (tab) => {
+      // Handle case where tab closed or error
+      if (chrome.runtime.lastError || !tab) {
+        cleanup();
+        return;
+      }
+      if (tab.status === "complete") {
+        cleanup();
+      }
+    });
+
+    // 3. Safety timeout
+    timerId = setTimeout(() => {
+      if (!isResolved) {
+        console.warn(`[Kortix] Tab load wait timed out (${timeoutMs}ms)`);
+        cleanup();
+      }
+    }, timeoutMs);
+  });
+}
+
+/**
  * Navigate to a URL
  */
 async function handleNavigate(params: Record<string, any>): Promise<void> {
   const { url } = params;
   if (!url) throw new Error("Missing url parameter");
 
-  await tabGroupManager.navigate(url);
+  const tab = await tabGroupManager.navigate(url);
 
-  // Wait for page to load
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  if (tab && tab.id) {
+    // Wait for native load event (max 15s)
+    await waitForTabLoad(tab.id, 15000);
+    // Add hydration buffer for frameworks (React/Vue) to render
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  } else {
+    // Fallback if no tab ID (unlikely)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
 }
 
 /**
@@ -201,6 +272,56 @@ async function handleType(params: Record<string, any>): Promise<void> {
   await tabGroupManager.sendToActiveTab({
     type: "executeCommand",
     command: { action: "type", params: { selector, text, clear } },
+  });
+}
+
+/**
+ * Press a specific key (Enter, Tab, etc.)
+ */
+async function handlePressKey(params: Record<string, any>): Promise<void> {
+  const { key } = params;
+  if (!key) throw new Error("Missing key parameter");
+
+  const tab = await tabGroupManager.getActiveTab();
+  if (!tab || !tab.id) return;
+
+  await inputManager.dispatchKeyEvent(tab.id, {
+    type: "keyDown",
+    key: key,
+  });
+  await inputManager.dispatchKeyEvent(tab.id, {
+    type: "keyUp",
+    key: key,
+  });
+}
+
+/**
+ * Handle file upload by setting files on an input element
+ */
+async function handleSetFileInputFiles(params: Record<string, any>): Promise<void> {
+  const { files, selector, nodeId } = params;
+  if (!files || !Array.isArray(files)) throw new Error("Missing or invalid files array");
+
+  const tab = await tabGroupManager.getActiveTab();
+  if (!tab || !tab.id) return;
+
+  await inputManager.setFileInputFiles(tab.id, {
+    files,
+    selector,
+    nodeId
+  });
+}
+
+/**
+ * Hover over an element
+ */
+async function handleHover(params: Record<string, any>): Promise<void> {
+  const { selector } = params;
+  if (!selector) throw new Error("Missing selector parameter");
+
+  await tabGroupManager.sendToActiveTab({
+    type: "executeCommand",
+    command: { action: "hover", params: { selector } },
   });
 }
 
@@ -313,7 +434,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       extensionId: wsClient.currentExtensionId,
       commandCount: state.commandCount,
       tabGroup: tabGroupManager.state,
+      overlayState: state.overlayState,
     });
+    return true;
+  }
+
+  if (type === "GET_OVERLAY_STATE") {
+    // Restrict overlay state to tabs within the Kortix group
+    const isInGroup = sender.tab?.id && tabGroupManager.state.tabIds.includes(sender.tab.id);
+    sendResponse({ state: isInGroup ? state.overlayState : "hidden" });
     return true;
   }
 
@@ -396,20 +525,26 @@ async function handleLegacyCommand(
 // ========== UI Helpers ==========
 
 /**
- * Update the overlay state on all tabs in the Kortix window
+ * Broadcast the overlay state to all tabs in the Kortix window
+ * @param mode - The overlay state to apply
  */
-async function setOverlayState(visible: boolean): Promise<void> {
+async function broadcastOverlayState(
+  mode: "hidden" | "ongoing" | "takeover",
+): Promise<void> {
+  // Update state regardless of group existence so new tabs inherit it
+  state.overlayState = mode;
+
   const groupState = tabGroupManager.state;
-  if (!groupState.windowId) return;
+  if (!groupState.groupId) return;
 
   try {
-    const tabs = await chrome.tabs.query({ windowId: groupState.windowId });
+    const tabs = await tabGroupManager.getGroupTabs();
     const promises = tabs.map((tab) => {
       if (tab.id) {
         return chrome.tabs
           .sendMessage(tab.id, {
             type: "SET_OVERLAY_STATE",
-            visible,
+            state: mode,
           })
           .catch(() => {
             // Ignore errors for tabs that don't have the content script loaded yet
@@ -419,7 +554,7 @@ async function setOverlayState(visible: boolean): Promise<void> {
     await Promise.all(promises);
   } catch (e) {
     console.error(
-      "[Kortix Extension - Background] Failed to set overlay state:",
+      "[Kortix Extension - Background] Failed to broadcast overlay state:",
       e,
     );
   }
@@ -430,10 +565,10 @@ async function setOverlayState(visible: boolean): Promise<void> {
  */
 async function setStreamVisibility(visible: boolean): Promise<void> {
   const groupState = tabGroupManager.state;
-  if (!groupState.windowId) return;
+  if (!groupState.groupId) return;
 
   try {
-    const tabs = await chrome.tabs.query({ windowId: groupState.windowId });
+    const tabs = await tabGroupManager.getGroupTabs();
     const promises = tabs.map((tab) => {
       if (tab.id) {
         return chrome.tabs
@@ -441,7 +576,7 @@ async function setStreamVisibility(visible: boolean): Promise<void> {
             type: "SET_OVERLAY_VISIBILITY",
             visible,
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     });
     await Promise.all(promises);
@@ -467,9 +602,8 @@ async function initialize(): Promise<void> {
       console.log(
         "[Kortix Extension - Background] Takeover requested by user (Pausing stream)",
       );
-      // Pause streaming but keep window and tabs open
-      // User is now in control, overlay switches to takeover mode
-      streamingManager.stop();
+      // Update global state and broadcast to all tabs
+      broadcastOverlayState("takeover").catch(console.error);
 
       // Notify backend that user has taken over
       if (wsClient.isConnected) {
@@ -485,11 +619,14 @@ async function initialize(): Promise<void> {
       console.log("[Kortix Extension - Background] Resume requested by user");
       const { summary } = message;
 
+      // Update global overlay state
+      state.overlayState = "ongoing";
+
       // Restart streaming
       streamingManager
         .start()
         .then(() => {
-          setOverlayState(true);
+          broadcastOverlayState("ongoing").catch(console.error);
         })
         .catch(console.error);
 
@@ -534,7 +671,7 @@ async function initialize(): Promise<void> {
       // We only want to stream when the user/agent is actually performing browser actions
       if (!state.isConnected) {
         streamingManager.stop();
-        setOverlayState(false);
+        broadcastOverlayState("hidden").catch(console.error);
       }
     },
   });
@@ -555,8 +692,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   if (shouldOpen) {
     console.log(
       "[Kortix Extension - Background] Opening connect page (Reason: " +
-        details.reason +
-        ")",
+      details.reason +
+      ")",
     );
 
     // Open welcome/login page

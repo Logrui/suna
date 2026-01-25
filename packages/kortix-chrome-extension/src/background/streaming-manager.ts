@@ -250,8 +250,7 @@ export class StreamingManager {
             }
 
             // Perform direct capture without toggling overlay
-            // BACKGROUND stream shots include the overlay now (no flicker!)
-            // VIDEO stream (tabCapture) also includes the overlay.
+            // Live stream shots include the overlay (fixes the flicker!)
             const screenshotBase64 = await debuggerCapture.captureTab(this.targetTabId, 'png');
 
             if (!screenshotBase64) return;

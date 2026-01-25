@@ -99,14 +99,24 @@ class BrowserTool(SandboxToolsBase):
     
     async def _is_extension_available(self) -> bool:
         """Check if browser extension is configured and online."""
-        logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() called. self.browser_id={self.browser_id}")
+        # Check instance variable first
+        browser_id = self.browser_id
         
-        if not self.browser_id:
+        # Fallback to thread_manager if instance variable is missing
+        if not browser_id and hasattr(self, 'thread_manager') and self.thread_manager:
+            browser_id = getattr(self.thread_manager, 'browser_id', None)
+            if browser_id:
+                logger.info(f"🚨 [BROWSER_ROUTER] Found browser_id in thread_manager: {browser_id}")
+                self.browser_id = browser_id # Cache it for later
+        
+        logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() called. browser_id={browser_id}")
+        
+        if not browser_id:
             logger.warning(f"🚨 [BROWSER_ROUTER] No browser_id → will use SANDBOX")
             return False
         
-        is_online = await session_manager.is_browser_online(self.browser_id)
-        logger.info(f"🚨 [BROWSER_ROUTER] is_browser_online({self.browser_id}) returned: {is_online}")
+        is_online = await session_manager.is_browser_online(browser_id)
+        logger.info(f"🚨 [BROWSER_ROUTER] is_browser_online({browser_id}) returned: {is_online}")
         
         if is_online:
             logger.info(f"🌐 [BROWSER_TOOL] ✅ Extension is ONLINE → routing to EXTENSION")
@@ -159,11 +169,12 @@ class BrowserTool(SandboxToolsBase):
                 
                 # 2. Interpret command via Backend AI
                 instruction = params.get("action") if action == "act" else params.get("instruction")
+                file_path = params.get("filePath")
                 
                 if action == "act":
                     # For 'act', we might need a small loop, but for a single ToolResult 
                     # we will do one step and return the result.
-                    ai_result = await browser_interpreter.interpret_act(instruction, screenshot_base64, current_url)
+                    ai_result = await browser_interpreter.interpret_act(instruction, screenshot_base64, current_url, filePath=file_path)
                     logger.info(f"🌐 [BROWSER_TOOL] AI interpreted act: {ai_result.get('action')} - {ai_result.get('thought')}")
                     
                     if ai_result["action"] == "complete":
@@ -173,12 +184,21 @@ class BrowserTool(SandboxToolsBase):
                             "url": current_url,
                             "screenshot": screenshot_base64
                         }
-                    elif ai_result["action"] in ["click", "type", "navigate", "scroll_down", "scroll_up"]:
+                    elif ai_result["action"] in ["click", "type", "navigate", "scroll_down", "scroll_up", "set_file_input_files", "press_key", "hover"]:
                         # 3. Execute primitive action via extension
+                        exec_params = ai_result.get("params", {})
+                        
+                        # Handle file upload mapping
+                        if ai_result["action"] == "set_file_input_files":
+                            if file_path:
+                                exec_params["files"] = [file_path] if isinstance(file_path, str) else file_path
+                            else:
+                                return self.fail_response("AI requested file upload but no filePath was provided by the user.")
+
                         exec_res = await send_browser_command(
                             browser_id=self.browser_id,
                             action=ai_result["action"],
-                            params=ai_result.get("params", {}),
+                            params=exec_params,
                         )
                         if exec_res and exec_res.success:
                             # Extension returns current page state after action
@@ -244,7 +264,8 @@ class BrowserTool(SandboxToolsBase):
                     else:
                         response_data["image_validation_error"] = error_msg
                     # Remove raw base64 to avoid storing large data
-                    del response_data["screenshot"]
+                    response_data.pop("screenshot", None)
+                    response_data.pop("screenshot_base64", None)
                 
                 # Also handle if extension sends screenshot_url directly
                 if "screenshot_url" in response_data and "image_url" not in response_data:
@@ -254,12 +275,20 @@ class BrowserTool(SandboxToolsBase):
                 response_data["input"] = params
                 
                 # Save browser_state message to thread (exactly like sandbox)
-                added_message = await self.thread_manager.add_message(
-                    thread_id=self.thread_id,
-                    type="browser_state",
-                    content=response_data,
-                    is_llm_message=False
-                )
+                logger.debug(f"🌐 [BROWSER_TOOL] Saving browser state for thread {self.thread_id}...")
+                try:
+                    added_message = await self.thread_manager.add_message(
+                        thread_id=self.thread_id,
+                        type="browser_state",
+                        content=response_data,
+                        is_llm_message=False
+                    )
+                    logger.debug(f"🌐 [BROWSER_TOOL] Browser state saved: message_id={added_message.get('message_id')}")
+                except Exception as db_err:
+                    logger.error(f"🌐 [BROWSER_TOOL] Failed to save browser outcome to thread: {db_err}")
+                    # Don't fail the whole action just because persistence failed - try to return success anyway
+                    # but without message_id
+                    added_message = {}
                 
                 # Build clean_result matching sandbox format EXACTLY
                 clean_result = {
@@ -629,8 +658,8 @@ class BrowserTool(SandboxToolsBase):
     })
     async def browser_navigate_to(self, url: str) -> ToolResult:
         """Navigate to a URL using Stagehand or browser extension."""
-        logger.info(f"🚨 [BROWSER_ROUTER] browser_navigate_to() called with url={url}")
-        logger.info(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
+        logger.info(f"🚨 [BROWSER_ROUTER] EXECUTING TOOL: browser_navigate_to with url='{url}'")
+        logger.debug(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
         
         # Try extension first if available
         extension_available = await self._is_extension_available()
@@ -640,13 +669,13 @@ class BrowserTool(SandboxToolsBase):
             logger.info(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
             result = await self._execute_via_extension("navigate", {"url": url})
             if result is not None:
-                logger.info(f"🚨 [BROWSER_ROUTER] Extension returned result: {result}")
+                logger.info(f"🚨 [BROWSER_ROUTER] Extension returned valid result: success={result.success}")
                 return result
             # DEBUG: For now, FAIL instead of falling back to sandbox
             logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
             return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
         
-        logger.info(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
+        logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
         return await self._execute_stagehand_api("navigate", {"url": url})
     
     @openapi_schema({
@@ -682,17 +711,17 @@ class BrowserTool(SandboxToolsBase):
             }
         }
     })
-    async def browser_act(self, action: str, variables: dict = None, iframes: bool = False, filePath: dict = None) -> ToolResult:
+    async def browser_act(self, action: str, variables: dict = None, iframes: bool = False, filePath: str = None) -> ToolResult:
         """Perform any browser action using Stagehand or browser extension."""
-        logger.info(f"🚨 [BROWSER_ROUTER] browser_act() called with action={action}")
-        logger.info(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
+        logger.debug(f"🚨 [BROWSER_ROUTER] browser_act() called with action={action}")
+        logger.debug(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
         
         # Try extension first if available
         extension_available = await self._is_extension_available()
-        logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
+        logger.debug(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
         
         if extension_available:
-            logger.info(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
+            logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
             params = {
                 "action": action,
                 "variables": variables,
@@ -701,13 +730,13 @@ class BrowserTool(SandboxToolsBase):
             }
             result = await self._execute_via_extension("act", params)
             if result is not None:
-                logger.info(f"🚨 [BROWSER_ROUTER] Extension returned result")
+                logger.debug(f"🚨 [BROWSER_ROUTER] Extension returned result")
                 return result
             # DEBUG: For now, FAIL instead of falling back to sandbox
             logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
             return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
         
-        logger.info(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
+        logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
         params = {"action": action, "iframes": iframes, "variables": variables}
         if filePath:
             params["filePath"] = filePath
@@ -738,16 +767,25 @@ class BrowserTool(SandboxToolsBase):
     })
     async def browser_extract_content(self, instruction: str, iframes: bool = False) -> ToolResult:
         """Extract structured content from the current page using Stagehand or browser extension."""
-        logger.debug(f"Browser extracting: {instruction} (iframes={iframes})")
+        logger.debug(f"🚨 [BROWSER_ROUTER] browser_extract_content() called with instruction={instruction}")
+        logger.debug(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
         
         # Try extension first if available
-        if await self._is_extension_available():
+        extension_available = await self._is_extension_available()
+        logger.debug(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
+        
+        if extension_available:
+            logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
             params = {"instruction": instruction, "iframes": iframes}
             result = await self._execute_via_extension("extract", params)
             if result is not None:
+                logger.debug(f"🚨 [BROWSER_ROUTER] Extension returned result")
                 return result
-            # Fall through to sandbox if extension failed
+            # DEBUG: For now, FAIL instead of falling back to sandbox
+            logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
+            return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
         
+        logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
         params = {"instruction": instruction, "iframes": iframes}
         return await self._execute_stagehand_api("extract", params)
     
@@ -772,13 +810,22 @@ class BrowserTool(SandboxToolsBase):
     })
     async def browser_screenshot(self, name: str = "screenshot") -> ToolResult:
         """Take a screenshot using Stagehand or browser extension."""
-        logger.debug(f"Browser taking screenshot: {name}")
+        logger.info(f"🚨 [BROWSER_ROUTER] EXECUTING TOOL: browser_screenshot with name='{name}'")
+        logger.debug(f"🚨 [BROWSER_ROUTER] self.browser_id = {self.browser_id}")
         
         # Try extension first if available
-        if await self._is_extension_available():
+        extension_available = await self._is_extension_available()
+        logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
+        
+        if extension_available:
+            logger.info(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
             result = await self._execute_via_extension("screenshot", {"name": name})
             if result is not None:
+                logger.info(f"🚨 [BROWSER_ROUTER] Extension returned valid result: success={result.success}")
                 return result
-            # Fall through to sandbox if extension failed
+            # DEBUG: For now, FAIL instead of falling back to sandbox
+            logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
+            return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
         
+        logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
         return await self._execute_stagehand_api("screenshot", {"name": name})

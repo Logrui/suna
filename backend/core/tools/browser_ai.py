@@ -16,25 +16,31 @@ class BrowserAIInterpreter:
     def __init__(self, model_name: str = "gemini-2.5-flash"):
         self.model_name = model_name
 
-    async def interpret_act(self, instruction: str, screenshot_base64: str, url: str) -> Dict[str, Any]:
+    async def interpret_act(self, instruction: str, screenshot_base64: str, url: str, filePath: Optional[str] = None) -> Dict[str, Any]:
         """
         Interpret a natural language 'act' instruction based on a screenshot.
         Returns a primitive action for the extension to execute.
         """
+        upload_context = ""
+        if filePath:
+            upload_context = f"\nFILE UPLOAD CONTEXT: The user wants to upload a file: {filePath}. Your goal is to find the <input type='file'> element or the upload button/area. Preference: Return 'set_file_input_files' if you can identify the file input element."
+
         prompt = f"""
 You are a browser automation expert. Your task is to interpret a user's instruction and convert it into a SINGLE primitive browser action based on the provided screenshot of the current page.
 
+{upload_context}
 CURRENT URL: {url}
 USER INSTRUCTION: "{instruction}"
 
 RESPONSE FORMAT (JSON ONLY):
 {{
     "thought": "Briefly explain why you chose this action",
-    "action": "click" | "type" | "navigate" | "scroll_down" | "scroll_up",
+    "action": "click" | "type" | "navigate" | "scroll_down" | "scroll_up" | "set_file_input_files" | "press_key" | "hover",
     "params": {{
         "selector": "CSS selector or text to find element",
         "text": "text to type (only for type action)",
-        "url": "url to navigate to (only for navigate action)"
+        "url": "url to navigate to (only for navigate action)",
+        "key": "key to press (only for press_key action, e.g., 'Enter', 'Tab')"
     }}
 }}
 
@@ -43,6 +49,9 @@ PRIMITIVE ACTIONS:
 - type: Requires 'selector' and 'text'.
 - navigate: Requires 'url'.
 - scroll_down / scroll_up: No params needed.
+- set_file_input_files: Requires 'selector'. Use this when targeted for an <input type="file">.
+- press_key: Requires 'key'. Use for Enter, Tab, Escape etc.
+- hover: Requires 'selector'. Moves mouse to the element without clicking.
 
 If the instruction is already completed or impossible, return:
 {{

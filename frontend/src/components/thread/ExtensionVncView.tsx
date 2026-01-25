@@ -22,6 +22,7 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [fps, setFps] = useState(0);
+    const [isUserControlled, setIsUserControlled] = useState(false);
     const frameCountRef = useRef(0);
     const lastFpsUpdateRef = useRef(Date.now());
     const wsRef = useRef<WebSocket | null>(null);
@@ -171,6 +172,14 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
                         };
                         img.src = `data:image/webp;base64,${message.screenshot_base64}`;
                     }
+                }
+                else if (message.type === 'takeover') {
+                    console.log('[ExtensionVncView] User has taken control');
+                    setIsUserControlled(true);
+                }
+                else if (message.type === 'resume') {
+                    console.log('[ExtensionVncView] Control handed back to agent');
+                    setIsUserControlled(false);
                 }
             } catch (e) {
                 console.error('[ExtensionVncView] Failed to parse message', e);
@@ -340,9 +349,23 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
             </div>
 
             <div className="absolute top-4 right-4 z-20 pointer-events-none">
-                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-lg px-3 py-1.5 shadow-lg">
-                    <Monitor className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[11px] font-medium text-white/80">Kortix Operator</span>
+                <div className={cn(
+                    "flex items-center gap-2 backdrop-blur-md border rounded-lg px-3 py-1.5 shadow-lg transition-all duration-500",
+                    isUserControlled
+                        ? "bg-amber-500/20 border-amber-500/40 text-amber-200"
+                        : "bg-black/60 border-white/10 text-white/80"
+                )}>
+                    {isUserControlled ? (
+                        <>
+                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                            <span className="text-[11px] font-bold tracking-tight uppercase">Manual Control</span>
+                        </>
+                    ) : (
+                        <>
+                            <Monitor className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-[11px] font-medium">Kortix Operator</span>
+                        </>
+                    )}
                 </div>
             </div>
 

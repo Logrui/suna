@@ -29,13 +29,14 @@ ToolChoice = Literal["auto", "required", "none"]
 class ThreadManager:
     def __init__(self, trace: Optional[StatefulTraceClient] = None, agent_config: Optional[dict] = None, 
                  project_id: Optional[str] = None, thread_id: Optional[str] = None, account_id: Optional[str] = None,
-                 jit_config: Optional['JITConfig'] = None):
+                 browser_id: Optional[str] = None, jit_config: Optional['JITConfig'] = None):
         self.db = DBConnection()
         self.tool_registry = ToolRegistry()
         
         self.project_id = project_id
         self.thread_id = thread_id
         self.account_id = account_id
+        self.browser_id = browser_id
         
         self.trace = trace
         if not self.trace:

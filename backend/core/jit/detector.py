@@ -57,6 +57,9 @@ class ParameterDetector:
         elif param_name == 'account_id':
             return getattr(thread_manager, 'account_id', None)
         
+        elif param_name == 'browser_id':
+            return getattr(thread_manager, 'browser_id', None)
+        
         else:
             logger.debug(f"⚡ [JIT] Unknown parameter '{param_name}', skipping")
             return None

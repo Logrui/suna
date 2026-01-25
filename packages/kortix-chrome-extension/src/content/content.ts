@@ -24,10 +24,11 @@ interface CommandResponse {
 chrome.runtime.onMessage.addListener((request: any, _sender, sendResponse) => {
   // Handle Overlay State
   if (request.type === "SET_OVERLAY_STATE") {
-    if (request.visible) {
-      overlayManager.show();
-    } else {
+    const { state } = request;
+    if (state === "hidden") {
       overlayManager.hide();
+    } else {
+      overlayManager.show(state);
     }
     sendResponse({ success: true });
     return false;
@@ -74,6 +75,9 @@ async function executeCommand(command: any): Promise<any> {
 
     case "scroll":
       return handleScroll(params);
+
+    case "hover":
+      return handleHover(params);
 
     case "screenshot":
       return handleScreenshot(params);
@@ -160,6 +164,33 @@ async function handleClick(params: any): Promise<any> {
 }
 
 /**
+ * Hover over element
+ */
+async function handleHover(params: any): Promise<any> {
+  const { selector } = params;
+
+  if (!selector) {
+    throw new Error("Selector parameter required");
+  }
+
+  const element = document.querySelector(selector);
+
+  if (!element) {
+    throw new Error("Element not found");
+  }
+
+  // Trigger mouse over events
+  element.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+  element.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+  element.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+
+  return {
+    hovered: true,
+    element: element.tagName,
+  };
+}
+
+/**
  * Type text into element
  */
 async function handleType(params: any): Promise<any> {
@@ -191,7 +222,7 @@ async function handleType(params: any): Promise<any> {
   // Return the resulting value
   const resultValue =
     element instanceof HTMLInputElement ||
-    element instanceof HTMLTextAreaElement
+      element instanceof HTMLTextAreaElement
       ? element.value
       : (element as HTMLElement).textContent || "";
 
@@ -359,14 +390,20 @@ async function handleFillForm(params: any): Promise<any> {
       continue;
     }
 
-    const input = element as HTMLInputElement | HTMLTextAreaElement;
-    input.focus();
-    input.value = String(value);
+    if (element instanceof HTMLElement) {
+      // Use InputHelper for React-aware typing
+      InputHelper.type(element, String(value), true);
 
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+      const resultValue =
+        element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement
+          ? element.value
+          : element.textContent || "";
 
-    results[selector] = { success: true, value: input.value };
+      results[selector] = { success: true, value: resultValue };
+    } else {
+      results[selector] = { success: false, error: "Element is not an HTMLElement" };
+    }
   }
 
   return results;
@@ -463,5 +500,15 @@ async function html2canvas(_element: HTMLElement): Promise<HTMLCanvasElement> {
 
   return canvas;
 }
+
+/**
+ * Initialization: Query current overlay state from background
+ */
+chrome.runtime.sendMessage({ type: "GET_OVERLAY_STATE" }, (response) => {
+  if (response && response.state && response.state !== "hidden") {
+    console.log("[Kortix Extension - Content] Restoring overlay state:", response.state);
+    overlayManager.show(response.state);
+  }
+});
 
 console.log("[Kortix Extension - Content] Content script loaded");

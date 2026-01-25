@@ -295,6 +295,9 @@ class AgentRunner:
             self.browser_id = await get_thread_browser_id(self.config.thread_id)
             if self.browser_id:
                 logger.info(f"🌐 Browser extension configured for thread: {self.browser_id}")
+                # Update thread_manager for JIT activation support
+                if hasattr(self, 'thread_manager'):
+                    self.thread_manager.browser_id = self.browser_id
         except Exception as e:
             logger.debug(f"Could not fetch browser_id (non-fatal): {e}")
         
