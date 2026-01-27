@@ -82,17 +82,14 @@ docker compose up -d --build
 
 <div align="center">
 
-# Kortix – Open Source Platform to Build, Manage and Train AI Agents
-
-![Kortix Screenshot](frontend/public/banner.png)
+# Kortix
 
 **The complete platform for creating autonomous AI agents that work for you**
 
-Kortix is a comprehensive open source platform that empowers you to build, manage, and train sophisticated AI agents for any use case. Create powerful agents that act autonomously on your behalf, from general-purpose assistants to specialized automation tools.
+Build, manage, and train sophisticated AI agents for any use case. Create powerful agents that act autonomously on your behalf.
 
-[![License](https://img.shields.io/badge/License-Apache--2.0-blue)](./license)
-[![Discord Follow](https://dcbadge.limes.pink/api/server/Py6pCBUUPw?style=flat)](https://discord.gg/RvFhXUdZ9H)
-[![Twitter Follow](https://img.shields.io/twitter/follow/kortixai)](https://x.com/kortixai)
+[![Discord Follow](https://dcbadge.limes.pink/api/server/RvFhXUdZ9H?style=flat)](https://discord.com/invite/RvFhXUdZ9H)
+[![Twitter Follow](https://img.shields.io/twitter/follow/kortix)](https://x.com/kortix)
 [![GitHub Repo stars](https://img.shields.io/github/stars/kortix-ai/suna)](https://github.com/kortix-ai/suna)
 [![Issues](https://img.shields.io/github/issues/kortix-ai/suna)](https://github.com/kortix-ai/suna/labels/bug)
 
@@ -106,16 +103,18 @@ Kortix is a comprehensive open source platform that empowers you to build, manag
 [Русский](https://www.readme-i18n.com/kortix-ai/suna?lang=ru) | 
 [中文](https://www.readme-i18n.com/kortix-ai/suna?lang=zh)
 
+![Kortix Screenshot](apps/frontend/public/banner.png)
 </div>
 
-<div align="left">
+
+
 
 ## 🌟 What Makes Kortix Special
 
-### 🤖 Includes Suna – Flagship Generalist AI Worker
-Meet Suna, our showcase agent that demonstrates the full power of the Kortix platform. Through natural conversation, Suna handles research, data analysis, browser automation, file management, and complex workflows – showing you what's possible when you build with Kortix.
+### 🤖 Includes Kortix Super Worker – Flagship Generalist AI Worker
+Meet Kortix Super Worker, our showcase agent that demonstrates the full power of the Kortix platform. Through natural conversation, Kortix Super Worker handles research, data analysis, browser automation, file management, and complex workflows – showing you what's possible when you build with Kortix.
 
-### 🔧 Build Custom Suna-Type Agents
+### 🔧 Build Custom Kortix Super Worker-Type Agents
 Create your own specialized agents tailored to specific domains, workflows, or business needs. Whether you need agents for customer service, data processing, content creation, or industry-specific tasks, Kortix provides the infrastructure and tools to build, deploy, and scale them.
 
 ### 🚀 Complete Platform Capabilities
@@ -134,13 +133,13 @@ Create your own specialized agents tailored to specific domains, workflows, or b
 - [🚀 Quick Start](#-quick-start)
 - [🏠 Self-Hosting](#-self-hosting)
 - [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
+- [📄 License](LICENSE)
 
 ## 🎯 Agent Examples & Use Cases
 
-### Suna - Your Generalist AI Worker
+### Kortix Super Worker - Your Generalist AI Worker
 
-Suna demonstrates the full capabilities of the Kortix platform as a versatile AI worker that can:
+Kortix Super Worker demonstrates the full capabilities of the Kortix platform as a versatile AI worker that can:
 
 **🔍 Research & Analysis**
 - Conduct comprehensive web research across multiple sources
@@ -240,30 +239,56 @@ cd suna
 ```bash
 python setup.py
 ```
-The wizard will guide you through 14 steps with progress saving, so you can resume if interrupted.
+The wizard will guide you through configuring all required services with progress saving, so you can resume if interrupted.
 
-### 3️⃣ Start the Platform
+### 3️⃣ Manage the Platform
 ```bash
-python start.py
+python start.py          # Interactive start/stop
+python start.py start    # Start all services
+python start.py stop     # Stop all services
+python start.py status   # Show service status
+python start.py restart  # Restart all services
 ```
 
-That's it! Your Kortix platform will be running with Suna ready to assist you.
+The service manager automatically detects your setup method (Docker or Manual) and manages services accordingly.
 
-## 🏠 Self-Hosting
+### 📋 Viewing Realtime Logs
 
-Just use "setup.py". Ty mate.
+**Manual Setup (native processes):**
+```bash
+# View both backend and frontend logs
+tail -f backend.log frontend.log
 
-## 📄 License
+# View backend only
+tail -f backend.log
 
-Kortix is licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for the full license text.
+# View frontend only
+tail -f frontend.log
+```
 
+**Docker Setup:**
+```bash
+# View all service logs
+docker compose logs -f
+
+# View specific service
+docker compose logs -f backend
+docker compose logs -f frontend
+```
+
+### 4️⃣ Add More API Keys (Optional)
+After initial setup, you can run `python setup.py` again to:
+- **Add/Update API Keys** - Configure additional LLM providers (Anthropic, OpenAI, Groq, etc.), search APIs (Tavily, Firecrawl, etc.), and other integrations
+- **Clear setup and start fresh** - Remove all configuration and start over
+
+That's it! Your Kortix platform will be running with Kortix Super Worker ready to assist you. Ty mate
 ---
-</div>
 
 <div align="center">
 
 **Ready to build your first AI agent?** 
 
-[Get Started](./docs/SELF-HOSTING.md) • [Join Discord](https://discord.gg/RvFhXUdZ9H) • [Follow on Twitter](https://x.com/kortix)
+[Get Started](./docs/SELF-HOSTING.md) • [Join Discord](https://discord.com/invite/RvFhXUdZ9H) • [Follow on Twitter](https://x.com/kortix)
 
 </div>
+
