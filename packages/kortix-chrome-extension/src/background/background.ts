@@ -328,19 +328,38 @@ async function handleHover(params: Record<string, any>): Promise<void> {
 /**
  * Handle user interaction from the backend (Live Stream)
  */
+/**
+ * Helper to calculate CDP modifier bitmask
+ */
+function getModifiers(params: any): number {
+  let modifiers = 0;
+  if (params.alt) modifiers |= 1;
+  if (params.ctrl) modifiers |= 2;
+  if (params.meta) modifiers |= 4;
+  if (params.shift) modifiers |= 8;
+  return modifiers;
+}
+
+/**
+ * Handle user interaction from the backend (Live Stream)
+ */
 async function handleInteraction(command: InteractionCommand): Promise<void> {
-  const { action, params } = command;
+  const { params } = command;
   const tab = await tabGroupManager.getActiveTab();
   if (!tab || !tab.id) return;
 
+  const modifiers = getModifiers(params);
+
   switch (params.type) {
     case "click":
+      // Legacy support for 'click' type
       await inputManager.dispatchMouseEvent(tab.id, {
         type: "mousePressed",
         x: params.x,
         y: params.y,
         button: params.button || "left",
         clickCount: 1,
+        modifiers
       });
       await inputManager.dispatchMouseEvent(tab.id, {
         type: "mouseReleased",
@@ -348,6 +367,29 @@ async function handleInteraction(command: InteractionCommand): Promise<void> {
         y: params.y,
         button: params.button || "left",
         clickCount: 1,
+        modifiers
+      });
+      break;
+
+    case "mousedown":
+      await inputManager.dispatchMouseEvent(tab.id, {
+        type: "mousePressed",
+        x: params.x,
+        y: params.y,
+        button: params.button || "left",
+        clickCount: 1,
+        modifiers
+      });
+      break;
+
+    case "mouseup":
+      await inputManager.dispatchMouseEvent(tab.id, {
+        type: "mouseReleased",
+        x: params.x,
+        y: params.y,
+        button: params.button || "left",
+        clickCount: 1,
+        modifiers
       });
       break;
 
@@ -356,32 +398,40 @@ async function handleInteraction(command: InteractionCommand): Promise<void> {
         type: "mouseMoved",
         x: params.x,
         y: params.y,
+        modifiers
       });
       break;
 
     case "key_down":
+      if (!params.key) break;
       await inputManager.dispatchKeyEvent(tab.id, {
         type: "keyDown",
-        text: params.key,
-        unmodifiedText: params.key,
+        text: params.key.length === 1 ? params.key : undefined, // Only send text for single characters
+        unmodifiedText: params.key.length === 1 ? params.key : undefined,
         key: params.key,
+        code: params.code,
+        modifiers
       });
       break;
 
     case "key_up":
+      if (!params.key) break;
       await inputManager.dispatchKeyEvent(tab.id, {
         type: "keyUp",
         key: params.key,
+        code: params.code,
+        modifiers
       });
       break;
 
     case "scroll":
       await inputManager.dispatchMouseEvent(tab.id, {
         type: "mouseWheel",
-        x: 0,
-        y: 0,
+        x: params.x || 0,
+        y: params.y || 0,
         deltaX: params.deltaX || 0,
         deltaY: params.deltaY || 0,
+        modifiers
       });
       break;
   }

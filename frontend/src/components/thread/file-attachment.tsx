@@ -159,6 +159,20 @@ function getFileSize(filepath: string, type: FileType): string {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Helper function to check if error is due to deleted sandbox
+const isSandboxDeletedError = (error: unknown): boolean => {
+    if (!error) return false;
+    const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+        ? (error as { message: string }).message
+        : error.toString();
+    return (
+        errorMessage.includes('404') ||
+        errorMessage.includes('Sandbox not found') ||
+        errorMessage.includes('Failed to retrieve sandbox') ||
+        errorMessage.includes('no project owns this sandbox')
+    );
+};
+
 // Get the API URL for file content
 function getFileUrl(sandboxId: string | undefined, path: string): string {
     if (!sandboxId) return path;
@@ -224,7 +238,7 @@ export function FileAttachment({
     // Authentication 
     const { session } = useAuth();
     const { openPresentation } = usePresentationViewerStore();
-    
+
     // Download restriction for free tier users
     const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
         featureName: 'files',
@@ -257,12 +271,12 @@ export function FileAttachment({
     const isCsv = isCsvExtension(extension);
     const isXlsx = isSpreadsheetExtension(extension);
     const isPdf = isPdfExtension(extension);
-    
+
     // For HTML files, construct the proper preview URL using sandbox URL instead of API endpoint
     const htmlPreviewUrl = isHtml && project?.sandbox?.sandbox_url
         ? constructHtmlPreviewUrl(project.sandbox.sandbox_url, filepath)
         : undefined;
-    
+
     const isGridLayout = customStyle?.gridColumn === '1 / -1' || Boolean(customStyle && ('--attachment-height' in customStyle));
     const isInlineMode = !isGridLayout;
     const shouldShowPreview = isPreviewableExtension(extension) && showPreview && collapsed === false;
@@ -312,23 +326,12 @@ export function FileAttachment({
         isXlsx && shouldShowPreview ? filepath : undefined
     );
 
-    // Helper function to check if error is due to deleted sandbox
-    const isSandboxDeletedError = (error: any): boolean => {
-        if (!error) return false;
-        const errorMessage = error?.message || error?.toString() || '';
-        return (
-            errorMessage.includes('404') ||
-            errorMessage.includes('Sandbox not found') ||
-            errorMessage.includes('Failed to retrieve sandbox') ||
-            errorMessage.includes('no project owns this sandbox')
-        );
-    };
 
     // Set error state based on query errors - but only after retries exhausted
     React.useEffect(() => {
         const anyError = fileContentError || imageError || pdfError || xlsxError;
         const isStillRetrying = imageRetryAttempt < 15 || fileRetryAttempt < 15;
-        
+
         if (anyError && !isStillRetrying) {
             // Only show error after retries exhausted
             // Check if it's a sandbox deleted error
@@ -360,16 +363,16 @@ export function FileAttachment({
                     const response = await fetch(xlsxBlobUrl);
                     const arrayBuffer = await response.arrayBuffer();
                     const view = new Uint8Array(arrayBuffer);
-                    
+
                     // Detect format: XLSX starts with PK (0x50 0x4B), XLS starts with D0 CF 11 E0
                     const isXlsxFormat = view.length >= 4 && view[0] === 0x50 && view[1] === 0x4B;
                     const isXlsFormat = view.length >= 8 && view[0] === 0xD0 && view[1] === 0xCF;
-                    
+
                     if (isXlsxFormat) {
                         // Use read-excel-file for XLSX
                         const { readSheetNames } = await import('read-excel-file');
-                        const blob = new Blob([arrayBuffer], { 
-                            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+                        const blob = new Blob([arrayBuffer], {
+                            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                         });
                         const names = await readSheetNames(blob);
                         setXlsxSheetNames(names);
@@ -471,7 +474,7 @@ export function FileAttachment({
 
     if (isImage && showPreview) {
         const imageHeight = isGridLayout
-            ? (customStyle as any)['--attachment-height'] as string
+            ? (customStyle as React.CSSProperties & { [key: string]: string })['--attachment-height']
             : '54px';
 
         if (isSandboxDeleted) {
@@ -536,7 +539,7 @@ export function FileAttachment({
         // Check if we're waiting for sandboxId to load (race condition)
         const isSandboxFile = !filepath.startsWith('http://') && !filepath.startsWith('https://') && !localPreviewUrl;
         const waitingForSandboxId = isSandboxFile && !sandboxId;
-        
+
         if (waitingForSandboxId) {
             return (
                 <div
@@ -600,7 +603,7 @@ export function FileAttachment({
                         )}
                     </div>
                 )}
-                
+
                 <img
                     src={localPreviewUrl || (sandboxId && session?.access_token ? imageUrl : (fileUrl || ''))}
                     alt={filename}
@@ -672,7 +675,7 @@ export function FileAttachment({
     // Only show preview if we have actual content or it's loading
     const hasContent = fileContent || pdfBlobUrl || xlsxBlobUrl;
     const isLoadingContent = fileContentLoading || pdfLoading || xlsxLoading;
-    
+
     if (shouldShowPreview && isGridLayout && (hasContent || isLoadingContent || hasError || isSandboxDeleted)) {
 
         return (
@@ -718,7 +721,7 @@ export function FileAttachment({
                                     />
                                 ) : null;
                             })()}
-                            
+
                             {(isCsv || isXlsx) && (
                                 <SpreadsheetViewer
                                     filePath={filepath}
@@ -734,14 +737,14 @@ export function FileAttachment({
                             {(extension === 'md' || extension === 'markdown') && fileContent && (
                                 <div className="h-full w-full overflow-auto p-4">
                                     <UnifiedMarkdown content={fileContent} />
-                                    </div>
+                                </div>
                             )}
-                            
+
                             {/* JSON Preview */}
                             {isJson && fileContent && (
                                 <JsonRenderer content={fileContent} />
                             )}
-                            
+
                             {/* HTML Preview */}
                             {isHtml && fileContent && (() => {
                                 const rendererPreviewUrl = htmlPreviewUrl || fileUrl;
@@ -892,7 +895,7 @@ export function FileAttachment({
     const safeStyle = isGridLayout ? customStyle : { ...customStyle };
     if (!isGridLayout) {
         delete safeStyle.height;
-        delete (safeStyle as any)['--attachment-height'];
+        delete (safeStyle as React.CSSProperties & { [key: string]: any })['--attachment-height'];
     }
 
     const fileButton = isSandboxDeleted ? (
@@ -932,8 +935,8 @@ export function FileAttachment({
                 "group flex items-center rounded-xl transition-all duration-200 overflow-hidden",
                 uploadStatus === 'uploading' ? "cursor-default" : "cursor-pointer",
                 "border border-black/10 dark:border-white/10",
-                uploadStatus === 'error' 
-                    ? "bg-red-500/5 border-red-500/20" 
+                uploadStatus === 'error'
+                    ? "bg-red-500/5 border-red-500/20"
                     : "bg-sidebar hover:bg-accent/5",
                 "text-left",
                 "h-[54px] w-fit min-w-[200px] max-w-[300px]",
@@ -1039,7 +1042,7 @@ export function FileAttachmentGrid({
     // When there are multiple files, use smaller max heights to prevent taking up too much screen space
     const getGridImageHeight = () => {
         if (!standalone) return 200; // Default for non-standalone
-        
+
         const fileCount = filePaths.length;
         if (fileCount === 1) return 600; // Large for single file - preserves aspect ratio better
         if (fileCount === 2) return 400; // Medium for 2 files
@@ -1114,7 +1117,7 @@ export function FileAttachmentGrid({
                     })}
                 </div>
             )}
-            
+
             {/* Render file attachments */}
             {filePaths.length > 0 && (
                 <AttachmentGroup

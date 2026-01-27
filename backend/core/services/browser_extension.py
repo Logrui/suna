@@ -713,13 +713,11 @@ async def browser_stream_websocket(websocket: WebSocket, browser_id: str):
                 elif msg_type == "interaction":
                     # Route interaction to the extension
                     # logger.debug(f"📹 Routing interaction to extension for browser {browser_id}")
-                    # DISABLE RELAY: Interactions from Kortix Computer are currently disabled to reduce log spam/issues
-                    pass 
-                    # await send_browser_command(
-                    #     browser_id=browser_id,
-                    #     action="interaction",
-                    #     params=data.get("params", {})
-                    # )
+                    await send_browser_command(
+                        browser_id=browser_id,
+                        action="interaction",
+                        params=data.get("params", {})
+                    )
             except asyncio.TimeoutError:
                 # No message from frontend in 60s, send a ping to keep connection alive
                 try:

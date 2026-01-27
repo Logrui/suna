@@ -224,30 +224,96 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
         };
     };
 
+    // Throttled mouse move
+    const lastMouseMoveRef = useRef<number>(0);
     const handleMouseMove = (e: React.MouseEvent) => {
+        const now = Date.now();
+        if (now - lastMouseMoveRef.current < 16) return; // ~60fps
+        lastMouseMoveRef.current = now;
+
         const { x, y } = getCoordinates(e);
-        sendInteraction('mouse_move', { x, y });
+        sendInteraction('mouse_move', {
+            x, y,
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey,
+            alt: e.altKey,
+            meta: e.metaKey
+        });
+
+        // Prevent local browser features like selection
+        if (e.buttons > 0) e.preventDefault();
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
         const { x, y } = getCoordinates(e);
         const button = e.button === 0 ? 'left' : e.button === 2 ? 'right' : 'middle';
-        sendInteraction('click', { x, y, button });
+        sendInteraction('mousedown', {
+            x, y, button,
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey,
+            alt: e.altKey,
+            meta: e.metaKey
+        });
+
+        // Focus the canvas so keyboard events work
+        canvasRef.current?.focus();
+        e.preventDefault();
+    };
+
+    const handleMouseUp = (e: React.MouseEvent) => {
+        const { x, y } = getCoordinates(e);
+        const button = e.button === 0 ? 'left' : e.button === 2 ? 'right' : 'middle';
+        sendInteraction('mouseup', {
+            x, y, button,
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey,
+            alt: e.altKey,
+            meta: e.metaKey
+        });
+        e.preventDefault();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        sendInteraction('key_down', { key: e.key });
+        sendInteraction('key_down', {
+            key: e.key,
+            code: e.code,
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey,
+            alt: e.altKey,
+            meta: e.metaKey
+        });
+
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].includes(e.key)) {
             e.preventDefault();
         }
     };
 
     const handleKeyUp = (e: React.KeyboardEvent) => {
-        sendInteraction('key_up', { key: e.key });
+        sendInteraction('key_up', {
+            key: e.key,
+            code: e.code,
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey,
+            alt: e.altKey,
+            meta: e.metaKey
+        });
     };
 
     const handleWheel = (e: React.WheelEvent) => {
-        sendInteraction('scroll', { deltaX: e.deltaX * 2, deltaY: e.deltaY * 2 });
+        const { x, y } = getCoordinates(e);
+        sendInteraction('scroll', {
+            x, y,
+            deltaX: e.deltaX,
+            deltaY: e.deltaY,
+            shift: e.shiftKey,
+            ctrl: e.ctrlKey,
+            alt: e.altKey,
+            meta: e.metaKey
+        });
+    };
+
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
     };
 
     return (
@@ -317,11 +383,13 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
                             ref={canvasRef}
                             onMouseMove={handleMouseMove}
                             onMouseDown={handleMouseDown}
+                            onMouseUp={handleMouseUp}
                             onKeyDown={handleKeyDown}
                             onKeyUp={handleKeyUp}
                             onWheel={handleWheel}
+                            onContextMenu={handleContextMenu}
                             tabIndex={0}
-                            className="max-w-full max-h-full object-contain cursor-none focus:outline-none shadow-2xl border border-white/5 active:border-primary/30 transition-colors"
+                            className="max-w-full max-h-full object-contain focus:outline-none shadow-2xl border border-white/5 active:border-primary/30 transition-colors"
                         />
                         <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-lg overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />

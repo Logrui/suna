@@ -45,13 +45,18 @@ export interface InteractionCommand {
     session_id: string;
     action: 'interaction';
     params: {
-        type: 'click' | 'key_down' | 'key_up' | 'mouse_move' | 'scroll';
+        type: 'click' | 'mousedown' | 'mouseup' | 'key_down' | 'key_up' | 'mouse_move' | 'scroll';
         x?: number;
         y?: number;
         key?: string;
+        code?: string;
         deltaX?: number;
         deltaY?: number;
         button?: 'left' | 'right' | 'middle';
+        shift?: boolean;
+        ctrl?: boolean;
+        alt?: boolean;
+        meta?: boolean;
     };
     timestamp: number;
 }

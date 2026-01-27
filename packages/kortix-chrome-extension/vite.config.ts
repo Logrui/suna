@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => {
       modulePreload: false,
       rollupOptions: {
         input: {
-          popup: path.resolve(__dirname, 'src/popup/index.html'),
+          popup: path.resolve(__dirname, 'popup.html'),
           background: path.resolve(__dirname, 'src/background/background.ts'),
           content: path.resolve(__dirname, 'src/content/content.ts'),
           'connect-bridge': path.resolve(__dirname, 'src/content/connect-bridge.ts'),
