@@ -80,10 +80,6 @@ docker compose up -d --build
 ```
 **Note:** Ensure your domain and subdomains are covered by Cloudflare TLS Total otherwise you will get errors with realtime streaming/HTTPS
 
-```
-
-</div>
-
 <div align="center">
 
 # Kortix – Open Source Platform to Build, Manage and Train AI Agents
