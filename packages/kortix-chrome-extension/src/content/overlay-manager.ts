@@ -196,8 +196,14 @@ export class OverlayManager {
     switch (newState) {
       case "ongoing":
         // Agent is working - full blocking enabled
-        if (aura) aura.classList.remove("paused");
-        if (container) container.classList.remove("takeover-mode");
+        // HIDE VISUALS FOR STREAM CLARITY
+        if (aura) aura.style.display = "none";
+        if (container) container.style.display = "none";
+        if (this.shadowRoot) {
+          const techOverlays = this.shadowRoot.querySelector(".tech-overlays") as HTMLElement;
+          if (techOverlays) techOverlays.style.display = "none";
+        }
+
         if (statusText) statusText.textContent = "Kortix is browsing...";
         if (statusIndicator) {
           statusIndicator.style.background = "oklch(0.72 0.18 150)";

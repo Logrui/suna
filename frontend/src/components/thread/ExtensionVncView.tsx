@@ -253,7 +253,7 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
     return (
         <div
             className={cn(
-                "relative w-full h-full bg-slate-950 flex flex-col items-center justify-center overflow-hidden rounded-xl border border-white/5 shadow-2xl",
+                "relative w-full h-full bg-transparent flex flex-col items-center justify-center overflow-hidden rounded-xl border border-white/5 shadow-2xl",
                 className
             )}
             ref={containerRef}
@@ -330,7 +330,7 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
                 )}
             </AnimatePresence>
 
-            <div className="absolute top-4 left-4 flex items-center gap-3 z-20 pointer-events-none">
+            <div className="absolute top-4 right-4 flex items-center gap-3 z-20 pointer-events-none">
                 <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 rounded-full px-3 py-1.5 shadow-lg">
                     {isConnected ? (
                         <>
@@ -348,26 +348,7 @@ export function ExtensionVncView({ browserId, className, onMetadata, onConnectio
                 </div>
             </div>
 
-            <div className="absolute top-4 right-4 z-20 pointer-events-none">
-                <div className={cn(
-                    "flex items-center gap-2 backdrop-blur-md border rounded-lg px-3 py-1.5 shadow-lg transition-all duration-500",
-                    isUserControlled
-                        ? "bg-amber-500/20 border-amber-500/40 text-amber-200"
-                        : "bg-black/60 border-white/10 text-white/80"
-                )}>
-                    {isUserControlled ? (
-                        <>
-                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                            <span className="text-[11px] font-bold tracking-tight uppercase">Manual Control</span>
-                        </>
-                    ) : (
-                        <>
-                            <Monitor className="w-3.5 h-3.5 text-primary" />
-                            <span className="text-[11px] font-medium">Kortix Operator</span>
-                        </>
-                    )}
-                </div>
-            </div>
+
 
             {!isConnected && !isLoading && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-10 flex items-center justify-center pointer-events-none">

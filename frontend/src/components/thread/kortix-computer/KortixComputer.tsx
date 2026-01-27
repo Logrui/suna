@@ -597,7 +597,10 @@ export const KortixComputer = memo(function KortixComputer({
       <div className="h-full flex flex-col overflow-hidden">
         <BrowserHeader
           isConnected={isConnected}
-          onRefresh={onRefresh}
+          onRefresh={() => {
+            handleVncRefresh();
+            if (browserId) handleScreenshotRefresh();
+          }}
           url={browserId ? (streamMetadata.url || extensionScreenshot?.url) : undefined}
           title={browserId ? (streamMetadata.title || extensionScreenshot?.title) : undefined}
           browserName={browserName}
@@ -608,6 +611,7 @@ export const KortixComputer = memo(function KortixComputer({
         <div className="flex-1 overflow-hidden grid items-center bg-zinc-50 dark:bg-zinc-950/20 relative">
           {browserId ? (
             <ExtensionVncView
+              key={vncRefreshKey}
               browserId={browserId}
               className="w-full h-full"
               onMetadata={handleStreamMetadata}
