@@ -263,11 +263,10 @@ export default function RootLayout() {
         scheme: parsedUrl.scheme,
       });
 
-      // Check for universal links (https://kortix.com/share/xxx or https://staging.kortix.com/share/xxx)
+      // Check for universal links (https://kortix.railway.syhc.dev/share/xxx or https://suna.syhc.dev/share/xxx)
       const isUniversalLink = parsedUrl.scheme === 'https' &&
-        (parsedUrl.hostname === 'kortix.com' ||
-          parsedUrl.hostname === 'www.kortix.com' ||
-          parsedUrl.hostname === 'staging.kortix.com');
+        (parsedUrl.hostname === 'kortix.railway.syhc.dev' ||
+          parsedUrl.hostname === 'suna.syhc.dev');
 
       // Handle universal link share paths first
       if (isUniversalLink && parsedUrl.path?.startsWith('/share/')) {
@@ -452,7 +451,7 @@ export default function RootLayout() {
           router.replace('/auth');
         }
       } else if (parsedUrl.path?.startsWith('share/') || parsedUrl.hostname === 'share') {
-        // Handle share links: kortix://share/xxx or https://kortix.com/share/xxx
+        // Handle share links: kortix://share/xxx or https://suna.syhc.dev/share/xxx
         console.log('🔗 Share link detected');
 
         // Extract thread ID from path

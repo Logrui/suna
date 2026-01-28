@@ -162,6 +162,7 @@ jobs:
             echo "EXPO_PUBLIC_SUPABASE_URL=https://kong.kortix.railway.syhc.dev" >> $GITHUB_ENV
             echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWRlbW8iLCJpYXQiOjE2NDE3NjkyMDAsImV4cCI6MTc5OTUzNTYwMH0.3oxoyIq4gsDgKv97f3OU7EPTAOOyXaq_yqci_5kDjTY" >> $GITHUB_ENV
             echo "EXPO_PUBLIC_BACKEND_URL=https://api.kortix.railway.syhc.dev/v1" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_FRONTEND_URL=https://kortix.railway.syhc.dev" >> $GITHUB_ENV
             echo "environment=railway" >> $GITHUB_OUTPUT
           else
             # Local environment for stable branch
@@ -169,6 +170,7 @@ jobs:
             echo "EXPO_PUBLIC_SUPABASE_URL=https://kong.suna.syhc.dev" >> $GITHUB_ENV
             echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWRlbW8iLCJpYXQiOjE2NDE3NjkyMDAsImV4cCI6MTc5OTUzNTYwMH0.3oxoyIq4gsDgKv97f3OU7EPTAOOyXaq_yqci_5kDjTY" >> $GITHUB_ENV
             echo "EXPO_PUBLIC_BACKEND_URL=https://api.suna.syhc.dev/v1" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_FRONTEND_URL=https://suna.syhc.dev" >> $GITHUB_ENV
             echo "environment=local" >> $GITHUB_OUTPUT
           fi
 

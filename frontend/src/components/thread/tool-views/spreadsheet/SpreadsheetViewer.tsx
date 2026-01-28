@@ -25,7 +25,7 @@ import '../../../../../node_modules/@syncfusion/ej2-grids/styles/material.css';
 import '../../../../../node_modules/@syncfusion/ej2-react-spreadsheet/styles/material.css';
 
 
-const SYNCFUSION_LICENSE = "Ngo9BigBOggjHTQxAR8/V1JGaF5cXGpCf0x0QHxbf1x2ZFFMYFtbRHZPMyBoS35Rc0RhW3ledHRSRmVeVUx+VEFf";
+const SYNCFUSION_LICENSE = "Ngo9BigBOggjHTQxAR8/V1JGaF5cXGpCfEx0Qnxbf1x2ZFNMYlpbQXBPMyBoS35RcEViW3dednZdQ2hbUERyVEFf";
 const SYNCFUSION_BASE_URL = 'https://ej2services.syncfusion.com/production/web-services/api/spreadsheet';
 
 registerLicense(SYNCFUSION_LICENSE);
@@ -83,7 +83,7 @@ export function SpreadsheetViewer({
   const { isRestricted: isDownloadRestricted, openUpgradeModal } = useDownloadRestriction({
     featureName: 'files',
   });
-  
+
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -104,22 +104,22 @@ export function SpreadsheetViewer({
       document.head.removeChild(style);
     };
   }, []);
-  
+
   const resolvedSandboxId = sandboxId || project?.sandbox?.id;
-  
+
   const resolvedFilePath = (() => {
     if (!filePath) {
       console.warn('[SpreadsheetViewer] No filePath provided, only fileName:', fileName);
       return null;
     }
-    
+
     let path = filePath;
-    
+
     if (path.startsWith('blob:')) {
       console.log('[SpreadsheetViewer] Using blob URL:', path);
       return path;
     }
-    
+
     if (!path.startsWith('/')) {
       if (path.startsWith('workspace')) {
         path = '/' + path;
@@ -127,14 +127,14 @@ export function SpreadsheetViewer({
         path = `/workspace/${path}`;
       }
     }
-    
+
     console.log('[SpreadsheetViewer] Resolved path:', {
       original: filePath,
       resolved: path,
       fileName,
       sandboxId: resolvedSandboxId
     });
-    
+
     return path;
   })();
 
@@ -176,7 +176,7 @@ export function SpreadsheetViewer({
       openUpgradeModal();
       return;
     }
-    
+
     if (!resolvedSandboxId || !resolvedFilePath || !session?.access_token) {
       console.error('[SpreadsheetViewer] Download failed - missing:', {
         resolvedSandboxId,
@@ -214,7 +214,7 @@ export function SpreadsheetViewer({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success('File downloaded successfully');
     } catch (error) {
       console.error('[SpreadsheetViewer] Download error:', error);
@@ -248,7 +248,7 @@ export function SpreadsheetViewer({
       case 'conflict':
         return <AlertCircle className="w-3 h-3 text-red-500" />;
       default:
-        return syncState.pendingChanges 
+        return syncState.pendingChanges
           ? <Cloud className="w-3 h-3 text-zinc-400" />
           : <Cloud className="w-3 h-3 text-zinc-400" />;
     }
@@ -354,7 +354,7 @@ export function SpreadsheetViewer({
           </div>
         </div>
       )}
-      
+
       <div className="flex-1 relative">
         <SpreadsheetComponent
           ref={ssRef}
@@ -393,7 +393,7 @@ export function SpreadsheetViewer({
           openComplete={handlers.handleOpenComplete}
           openFailure={handlers.handleOpenFailure}
         />
-        
+
         {isLoading && (
           <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm">
             <SpreadsheetLoader mode="max" />

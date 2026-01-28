@@ -44,19 +44,19 @@ export function getFrontendUrl(): string {
   }
 
   // Infer from backend URL - if backend is production, frontend should be too
-  if (BACKEND_URL.includes('api.kortix.com') || BACKEND_URL.includes('api.suna.so')) {
-    return 'https://kortix.com';
+  if (BACKEND_URL.includes('api.kortix.railway.syhc.dev') || BACKEND_URL.includes('api.kortix.com') || BACKEND_URL.includes('api.suna.so')) {
+    return 'https://kortix.railway.syhc.dev';
   }
-  if (BACKEND_URL.includes('staging.api') || BACKEND_URL.includes('staging-api')) {
-    return 'https://staging.kortix.com';
+  if (BACKEND_URL.includes('api.suna.syhc.dev') || BACKEND_URL.includes('staging.api') || BACKEND_URL.includes('staging-api')) {
+    return 'https://suna.syhc.dev';
   }
 
   // Fall back to environment-based defaults
   switch (ENV_MODE) {
     case EnvMode.PRODUCTION:
-      return 'https://kortix.com';
+      return 'https://kortix.railway.syhc.dev';
     case EnvMode.STAGING:
-      return 'https://staging.kortix.com';
+      return 'https://suna.syhc.dev';
     case EnvMode.LOCAL:
     default:
       return 'http://localhost:3000';
@@ -73,7 +73,7 @@ export async function getAuthToken(): Promise<string | null> {
 
 export async function getAuthHeaders(): Promise<HeadersInit> {
   const token = await getAuthToken();
-  
+
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

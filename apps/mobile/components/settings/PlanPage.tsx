@@ -31,7 +31,8 @@ export function PlanPage({ visible = true, onClose }: PlanPageProps) {
 
   const handleOpenWeb = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Linking.openURL('https://www.kortix.com');
+    const baseUrl = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://kortix.railway.syhc.dev';
+    Linking.openURL(baseUrl);
   };
 
   if (!visible) return null;
@@ -58,22 +59,22 @@ export function PlanPage({ visible = true, onClose }: PlanPageProps) {
       </AnimatedView>
 
       {/* Content */}
-      <ScrollView 
-        className="flex-1" 
+      <ScrollView
+        className="flex-1"
         contentContainerClassName="flex-grow items-center justify-center px-8 py-8"
         showsVerticalScrollIndicator={false}>
         <AnimatedView entering={FadeIn.duration(600).delay(200)} className="items-center w-full max-w-md">
           {/* Alert Message */}
           {alertTitle && (
-            <AnimatedView 
+            <AnimatedView
               entering={FadeIn.duration(400).delay(100)}
               className="w-full mb-6 p-4 rounded-xl bg-warning/10 dark:bg-warning/20 border border-warning/30">
               <View className="flex-row items-start gap-3">
-                <Icon 
-                  as={AlertCircle} 
-                  size={20} 
-                  className="text-warning mt-0.5 flex-shrink-0" 
-                  strokeWidth={2} 
+                <Icon
+                  as={AlertCircle}
+                  size={20}
+                  className="text-warning mt-0.5 flex-shrink-0"
+                  strokeWidth={2}
                 />
                 <View className="flex-1 gap-1">
                   <Text className="font-roobert-semibold text-base text-foreground">
@@ -95,7 +96,7 @@ export function PlanPage({ visible = true, onClose }: PlanPageProps) {
           <Text className="mb-8 text-center text-base leading-relaxed text-muted-foreground">
             {t(
               'billing.checkoutUnavailableMessage',
-              'To subscribe to a plan, please visit kortix.com on the web.'
+              'To subscribe to a plan, please visit suna.syhc.dev on the web.'
             )}
           </Text>
 
@@ -103,7 +104,7 @@ export function PlanPage({ visible = true, onClose }: PlanPageProps) {
             onPress={handleOpenWeb}
             className="flex-row items-center gap-2 rounded-xl bg-primary px-6 py-3">
             <Text className="font-roobert-medium text-base text-primary-foreground">
-              {t('billing.goToWeb', 'Go to kortix.com')}
+              {t('billing.goToWeb', 'Go to suna.syhc.dev')}
             </Text>
             <Icon as={ExternalLink} size={18} className="text-primary-foreground" strokeWidth={2} />
           </Pressable>

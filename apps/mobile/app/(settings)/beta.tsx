@@ -25,7 +25,8 @@ export default function BetaScreen() {
 
   const handleVisitWeb = React.useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Linking.openURL('https://kortix.com');
+    const baseUrl = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://kortix.railway.syhc.dev';
+    Linking.openURL(baseUrl);
   }, []);
 
   return (
@@ -49,7 +50,7 @@ export default function BetaScreen() {
             <View className="flex-1">
               <View className="flex-row items-center gap-2">
                 <Text className="text-lg font-roobert-bold text-purple-900 dark:text-purple-100">
-                  OTA Update Test v2.0
+                  OTA Update Test v3.0
                 </Text>
                 <Icon
                   as={Sparkles}
@@ -61,7 +62,7 @@ export default function BetaScreen() {
             </View>
           </View>
           <Text className="text-sm font-roobert text-purple-800 dark:text-purple-200 leading-5">
-            If you see this banner with "v2.0", the Over-The-Air update system is working! 🎉
+            If you see this banner with "v3.0", the Over-The-Air update system is working! 🎉
           </Text>
           <View className="mt-3 pt-3 border-t border-purple-500/30">
             <Text className="text-xs font-roobert-medium text-purple-700 dark:text-purple-300">
@@ -97,16 +98,14 @@ export default function BetaScreen() {
         {/* Mobile Beta Toggle */}
         <View className="mb-5">
           <View
-            className={`bg-card border rounded-3xl p-5 ${
-              advancedFeaturesEnabled ? 'border-border/50' : 'border-border/30'
-            }`}
+            className={`bg-card border rounded-3xl p-5 ${advancedFeaturesEnabled ? 'border-border/50' : 'border-border/30'
+              }`}
           >
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center gap-4 flex-1">
                 <View
-                  className={`h-12 w-12 rounded-2xl items-center justify-center ${
-                    advancedFeaturesEnabled ? 'bg-primary' : 'bg-muted/50 border border-border/50'
-                  }`}
+                  className={`h-12 w-12 rounded-2xl items-center justify-center ${advancedFeaturesEnabled ? 'bg-primary' : 'bg-muted/50 border border-border/50'
+                    }`}
                 >
                   <Icon
                     as={Layers}
@@ -117,9 +116,8 @@ export default function BetaScreen() {
                 </View>
                 <View className="flex-1">
                   <Text
-                    className={`text-base font-roobert-semibold mb-1 ${
-                      advancedFeaturesEnabled ? 'text-foreground' : 'text-foreground/70'
-                    }`}
+                    className={`text-base font-roobert-semibold mb-1 ${advancedFeaturesEnabled ? 'text-foreground' : 'text-foreground/70'
+                      }`}
                   >
                     {t('beta.advancedFeatures')}
                   </Text>

@@ -4,10 +4,10 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpreadsheetComponent } from '@syncfusion/ej2-react-spreadsheet';
 import { registerLicense } from '@syncfusion/ej2-base';
-import { 
-  Table, 
-  Plus, 
-  Clock, 
+import {
+  Table,
+  Plus,
+  Clock,
   FileSpreadsheet,
   Search,
   Loader2,
@@ -41,7 +41,7 @@ import '../../../../../node_modules/@syncfusion/ej2-dropdowns/styles/material.cs
 import '../../../../../node_modules/@syncfusion/ej2-grids/styles/material.css';
 import '../../../../../node_modules/@syncfusion/ej2-react-spreadsheet/styles/material.css';
 
-const SYNCFUSION_LICENSE = "Ngo9BigBOggjHTQxAR8/V1JGaF5cXGpCf0x0QHxbf1x2ZFFMYFtbRHZPMyBoS35Rc0RhW3ledHRSRmVeVUx+VEFf";
+const SYNCFUSION_LICENSE = "Ngo9BigBOggjHTQxAR8/V1JGaF5cXGpCfEx0Qnxbf1x2ZFNMYlpbQXBPMyBoS35RcEViW3dednZdQ2hbUERyVEFf";
 const SYNCFUSION_BASE_URL = 'https://ej2services.syncfusion.com/production/web-services/api/spreadsheet';
 
 registerLicense(SYNCFUSION_LICENSE);
@@ -130,7 +130,7 @@ const SpreadsheetEditor = memo(function SpreadsheetEditor({
       openUpgradeModal();
       return;
     }
-    
+
     if (!sandboxId || !filePath || !session?.access_token) {
       toast.error('Unable to download file');
       return;
@@ -157,7 +157,7 @@ const SpreadsheetEditor = memo(function SpreadsheetEditor({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       toast.success('File downloaded successfully');
     } catch (error) {
       console.error('Download error:', error);
@@ -281,7 +281,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
     enabled: !!sandboxId,
   });
 
-  const spreadsheetFiles = workspaceFiles.filter(f => 
+  const spreadsheetFiles = workspaceFiles.filter(f =>
     !f.is_dir && (f.name.endsWith('.xlsx') || f.name.endsWith('.xls') || f.name.endsWith('.csv'))
   );
 
@@ -321,10 +321,10 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
 
   const closeTab = useCallback((tabId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    
+
     setTabs(prev => {
       const newTabs = prev.filter(t => t.id !== tabId);
-      
+
       if (activeTabId === tabId) {
         if (newTabs.length > 0) {
           const closedIndex = prev.findIndex(t => t.id === tabId);
@@ -335,7 +335,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
           setShowHome(true);
         }
       }
-      
+
       return newTabs;
     });
   }, [activeTabId]);
@@ -366,7 +366,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
 
   const createEmptyXlsx = useCallback(async (): Promise<Blob> => {
     const zip = new JSZip();
-    
+
     const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -413,34 +413,34 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
     zip.file('xl/worksheets/sheet1.xml', sheet1);
     zip.file('xl/styles.xml', styles);
 
-    return await zip.generateAsync({ 
-      type: 'blob', 
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    return await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
   }, []);
 
   const createNewSpreadsheet = useCallback(async () => {
     if (!sandboxId) return;
-    
+
     setIsCreating(true);
-    
+
     try {
       const newFileName = generateUniqueFileName();
       const newFilePath = `/workspace/spreadsheets/${newFileName}`;
-      
+
       const blob = await createEmptyXlsx();
-      
+
       const uploadFormData = new FormData();
       uploadFormData.append('path', newFilePath);
       uploadFormData.append('file', blob, newFileName);
-      
+
       await backendApi.uploadPut(`/sandboxes/${sandboxId}/files/binary`, uploadFormData, {
         showErrors: true,
       });
-      
+
       invalidateDirectory();
       openFileInTab(newFilePath);
-      
+
     } catch (error) {
       console.error('Failed to create spreadsheet:', error);
     } finally {
@@ -449,7 +449,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
   }, [sandboxId, generateUniqueFileName, invalidateDirectory, createEmptyXlsx, openFileInTab]);
 
   const handleTabUnsavedChange = useCallback((tabId: string, hasChanges: boolean) => {
-    setTabs(prev => prev.map(t => 
+    setTabs(prev => prev.map(t =>
       t.id === tabId ? { ...t, hasUnsavedChanges: hasChanges } : t
     ));
   }, []);
@@ -462,8 +462,8 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
           onClick={goToHome}
           className={cn(
             "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-r border-zinc-200 dark:border-zinc-800 transition-colors shrink-0",
-            showHome 
-              ? "bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400" 
+            showHome
+              ? "bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400"
               : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
           )}
         >
@@ -478,7 +478,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
             className={cn(
               "group flex items-center gap-2 px-3 py-2.5 text-sm font-medium border-r border-zinc-200 dark:border-zinc-800 transition-colors shrink-0 max-w-[200px]",
               activeTabId === tab.id && !showHome
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white" 
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                 : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
             )}
           >
@@ -563,7 +563,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
               <span className="flex-1">Name</span>
               <span className="w-32">Location</span>
             </div>
-            
+
             {(searchQuery ? filteredFiles : spreadsheetFiles).length > 0 ? (
               (searchQuery ? filteredFiles : spreadsheetFiles).map((file, index) => (
                 <motion.button
@@ -586,7 +586,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
                     </div>
                   </div>
                   <div className="w-32 text-xs text-zinc-400 truncate">
-                     /workspace/spreadsheets
+                    /workspace/spreadsheets
                   </div>
                 </motion.button>
               ))
@@ -629,7 +629,7 @@ export const SpreadsheetApp = memo(function SpreadsheetApp({
       `}</style>
       <div className="h-full w-full overflow-hidden flex flex-col">
         {renderTabBar()}
-        
+
         <div className="flex-1 overflow-hidden relative">
           <AnimatePresence mode="wait">
             {showHome && renderHome()}

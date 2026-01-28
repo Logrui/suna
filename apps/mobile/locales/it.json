@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "cancel": "Annulla",
     "save": "Salva",
@@ -7,14 +7,14 @@
     "done": "Fatto",
     "close": "Chiudi",
     "ok": "OK",
-    "yes": "Sì",
+    "yes": "SÃ¬",
     "no": "No",
     "delete": "Elimina",
     "edit": "Modifica",
     "search": "Cerca",
     "loading": "Caricamento...",
     "error": "Errore",
-    "errorOccurred": "Si è verificato un errore. Per favore riprova.",
+    "errorOccurred": "Si Ã¨ verificato un errore. Per favore riprova.",
     "retry": "Riprova",
     "send": "Invia",
     "back": "Indietro",
@@ -59,7 +59,7 @@
     "signInWithGoogle": "Accedi con Google",
     "orEmail": "o email",
     "orContinueWith": "Oppure continua con",
-    "alreadyHaveAccount": "Hai già un account?",
+    "alreadyHaveAccount": "Hai giÃ  un account?",
     "dontHaveAccount": "Non hai un account?",
     "tapToContinue": "Tocca per continuare",
     "drawer": {
@@ -117,7 +117,7 @@
     }
   },
   "onboarding": {
-    "welcome": "Scopri cosa può fare Kortix",
+    "welcome": "Scopri cosa puÃ² fare Kortix",
     "welcomeSubtitle": "Il tuo assistente IA che agisce",
     "skip": "Salta",
     "next": "Avanti",
@@ -129,7 +129,7 @@
         "title": "Presentazioni",
         "description": "Guarda come crea presentazioni straordinarie",
         "userMessage": "Ricerca e crea una presentazione sulle reti neurali",
-        "aiMessage": "Ricercherò le reti neurali e creerò una presentazione per te...",
+        "aiMessage": "RicercherÃ² le reti neurali e creerÃ² una presentazione per te...",
         "researching": "Ricerca in corso",
         "creatingFile": "Creazione file",
         "creatingSlides": "Creazione diapositive"
@@ -138,7 +138,7 @@
         "title": "Analisi dati",
         "description": "Guardalo analizzare i dati e creare report visivi",
         "userMessage": "Analizza le prestazioni di vendita Q4 da Google Drive",
-        "aiMessage": "Caricherò i tuoi dati di vendita e creerò un'analisi completa...",
+        "aiMessage": "CaricherÃ² i tuoi dati di vendita e creerÃ² un'analisi completa...",
         "loadingFromDrive": "Caricamento da Google Drive",
         "creatingVisualization": "Creazione visualizzazione",
         "researchingMarket": "Ricerca mercato",
@@ -148,7 +148,7 @@
         "title": "Immagine",
         "description": "Sperimenta la progettazione di loghi e brand con IA",
         "userMessage": "Crea un logo per la nostra azienda",
-        "aiMessage": "Vedo che hai menzionato LUXY. Creerò un logo professionale per il tuo brand...",
+        "aiMessage": "Vedo che hai menzionato LUXY. CreerÃ² un logo professionale per il tuo brand...",
         "researchingBrand": "Ricerca brand",
         "creatingLogo": "Creazione logo",
         "creatingBrandBoard": "Creazione board brand"
@@ -157,7 +157,7 @@
         "title": "Immagine",
         "description": "Trasforma le tue foto con stili IA",
         "userMessage": "Converti la mia immagine in stile pixel art blocky",
-        "aiMessage": "Certo! Trasformerò la tua immagine in un look stilizzato blocky...",
+        "aiMessage": "Certo! TrasformerÃ² la tua immagine in un look stilizzato blocky...",
         "creatingImage": "Creazione immagine stilizzata"
       }
     },
@@ -167,15 +167,15 @@
     },
     "slide2": {
       "title": "Veloce come un Fulmine",
-      "description": "Ottieni risposte istantanee con i modelli IA più recenti. Il tuo assistente è sempre pronto ad aiutare"
+      "description": "Ottieni risposte istantanee con i modelli IA piÃ¹ recenti. Il tuo assistente Ã¨ sempre pronto ad aiutare"
     },
     "slide3": {
       "title": "Sicuro e Privato",
       "description": "Le tue conversazioni sono crittografate e sicure. Rispettiamo la tua privacy e non condividiamo mai i tuoi dati"
     },
     "slide4": {
-      "title": "Automatizza le Attività",
-      "description": "Imposta trigger e worker per automatizzare i tuoi flussi di lavoro e aumentare la produttività"
+      "title": "Automatizza le AttivitÃ ",
+      "description": "Imposta trigger e worker per automatizzare i tuoi flussi di lavoro e aumentare la produttivitÃ "
     },
     "slides": {
       "title": "Genera Presentazioni",
@@ -185,7 +185,7 @@
     "research": {
       "title": "Deep Research",
       "description": "Ricerca web completa con insights istantanei, riassunti e analisi.",
-      "example": "Ricerca le tendenze IA nella sanità"
+      "example": "Ricerca le tendenze IA nella sanitÃ "
     },
     "data": {
       "title": "Analisi Dati",
@@ -199,7 +199,7 @@
     },
     "automation": {
       "title": "Automazione Intelligente",
-      "description": "Imposta trigger per automatizzare i flussi di lavoro. Programma attività e monitora eventi.",
+      "description": "Imposta trigger per automatizzare i flussi di lavoro. Programma attivitÃ  e monitora eventi.",
       "example": "Invia report giornalieri alle 9:00"
     },
     "final": {
@@ -209,7 +209,7 @@
     },
     "superworker": {
       "title": "Il Tuo Super Worker IA",
-      "description": "Combina tutte le funzionalità per costruire worker IA personalizzati per qualsiasi attività di cui hai bisogno.",
+      "description": "Combina tutte le funzionalitÃ  per costruire worker IA personalizzati per qualsiasi attivitÃ  di cui hai bisogno.",
       "example": "Crea un worker di supporto clienti"
     }
   },
@@ -222,12 +222,12 @@
     "integrations": "Integrazioni",
     "theme": "Tema & Icona",
     "language": "Lingua",
-    "advancedFeatures": "Funzionalità avanzate",
+    "advancedFeatures": "FunzionalitÃ  avanzate",
     "signOut": "Esci",
     "upgrade": "Passa a Pro",
-    "beta": "Funzionalità Beta",
+    "beta": "FunzionalitÃ  Beta",
     "deleteAccount": "Elimina Account",
-    "unlockFeatures": "Sblocca tutte le funzionalità"
+    "unlockFeatures": "Sblocca tutte le funzionalitÃ "
   },
   "chat": {
     "newChat": "Nuova Chat",
@@ -240,8 +240,8 @@
     "editTitle": "Modifica titolo",
     "noMessages": "Ancora nessun messaggio",
     "startConversation": "Inizia una conversazione",
-    "taskCompleted": "Attività completata",
-    "howWasThisResult": "Com'è stato questo risultato?",
+    "taskCompleted": "AttivitÃ  completata",
+    "howWasThisResult": "Com'Ã¨ stato questo risultato?",
     "rateThisResult": "Valuta questo risultato",
     "feedbackHelpsImprove": "Il tuo feedback ci aiuta a migliorare",
     "additionalFeedbackOptional": "Feedback aggiuntivo (opzionale)",
@@ -365,7 +365,7 @@
         "Fotografia di prodotto elegante di una bottiglia di profumo di lusso su superficie di marmo",
         "Isole galleggianti capricciose collegate da ponti di corda in un cielo pastello",
         "Primo piano macro di gocce di rugiada mattutina su petali di fiori vibranti",
-        "Setup moderno di scrivania con laptop, caffè e piante grasse dall'alto"
+        "Setup moderno di scrivania con laptop, caffÃ¨ e piante grasse dall'alto"
       ],
       "slides": [
         "Crea un pitch deck Serie A con dimensione del mercato, trazione e proiezioni finanziarie",
@@ -397,11 +397,11 @@
         "Ricerca Ingegneri Blockchain Senior con esperienza Solidity",
         "Genera una lista prospect di fondatori tecnici presso startup Seed-Serie A in Enterprise IA",
         "Identifica Product Manager Senior presso aziende fintech con esperienza FAANG",
-        "Trova CIO presso aziende IT sanità mid-market che pianificano migrazione cloud"
+        "Trova CIO presso aziende IT sanitÃ  mid-market che pianificano migrazione cloud"
       ],
       "research": [
         "Analizza tendenze emergenti nel calcolo quantistico e applicazioni commerciali potenziali",
-        "Ricerca i top 10 concorrenti nello spazio CRM alimentato da IA con confronto funzionalità",
+        "Ricerca i top 10 concorrenti nello spazio CRM alimentato da IA con confronto funzionalitÃ ",
         "Investiga requisiti normativi per lanciare un'app fintech nell'UE",
         "Compila un'analisi di mercato sui tassi di adozione veicoli elettrici nei mercati principali",
         "Studia l'impatto del lavoro remoto sulla domanda di immobili commerciali",
@@ -427,17 +427,17 @@
   "languages": {
     "title": "Seleziona Lingua",
     "en": "English",
-    "es": "Español",
-    "fr": "Français",
+    "es": "EspaÃ±ol",
+    "fr": "FranÃ§ais",
     "de": "Deutsch",
-    "zh": "中文",
-    "ja": "日本語",
-    "pt": "Português",
+    "zh": "ä¸­æ–‡",
+    "ja": "æ—¥æœ¬èªž",
+    "pt": "PortuguÃªs",
     "it": "Italiano",
-    "ru": "Русский",
-    "ko": "한국어",
-    "ar": "العربية",
-    "hi": "हिन्दी"
+    "ru": "Ð ÑƒÑÑÐºÐ¸Ð¹",
+    "ko": "í•œêµ­ì–´",
+    "ar": "Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©",
+    "hi": "à¤¹à¤¿à¤¨à¥à¤¦à¥€"
   },
   "attachments": {
     "title": "Allegati",
@@ -464,8 +464,8 @@
   "billing": {
     "loadingPaywall": "Caricamento piani...",
     "checkoutUnavailable": "Checkout mobile non disponibile",
-    "checkoutUnavailableMessage": "Per abbonarti a un piano, visita kortix.com sul web.",
-    "goToWeb": "Vai su kortix.com",
+    "checkoutUnavailableMessage": "Per abbonarti a un piano, visita suna.syhc.dev sul web.",
+    "goToWeb": "Vai su suna.syhc.dev",
     "billingStatus": "Stato Fatturazione",
     "loading": "Caricamento informazioni di fatturazione...",
     "error": "Errore nel caricamento delle informazioni di fatturazione",
@@ -483,7 +483,7 @@
     "annualCommitment": "Impegno Annuale",
     "activeUntil": "Attivo fino al {{date}}",
     "subscriptionCancelled": "Abbonamento Cancellato",
-    "subscriptionCancelledOn": "Il tuo abbonamento sarà cancellato il {{date}}",
+    "subscriptionCancelledOn": "Il tuo abbonamento sarÃ  cancellato il {{date}}",
     "changePlan": "Cambia Piano",
     "getAdditionalCredits": "Ottieni Crediti Aggiuntivi",
     "customerInfo": "Informazioni Cliente",
@@ -504,48 +504,48 @@
     "lightDescription": "Usa sempre tema chiaro",
     "darkDescription": "Usa sempre tema scuro",
     "systemDescription": "Segui impostazioni dispositivo",
-    "lightMode": "Modalità Chiara",
-    "darkMode": "Modalità Scura"
+    "lightMode": "ModalitÃ  Chiara",
+    "darkMode": "ModalitÃ  Scura"
   },
   "language": {
     "title": "Lingua",
     "selectLanguage": "Seleziona Lingua"
   },
   "beta": {
-    "title": "Funzionalità Beta",
+    "title": "FunzionalitÃ  Beta",
     "webSupportTitle": "Completamente Supportato sul Web",
-    "webSupportDescription": "Disponibile su Kortix.com. In arrivo su mobile presto—ancora in sviluppo qui.",
-    "visitKortix": "Visita Kortix.com",
-    "advancedFeatures": "Funzionalità Avanzate",
+    "webSupportDescription": "Disponibile su suna.syhc.dev. In arrivo su mobile prestoâ€”ancora in sviluppo qui.",
+    "visitKortix": "Visita suna.syhc.dev",
+    "advancedFeatures": "FunzionalitÃ  Avanzate",
     "mobileBeta": "Beta Mobile",
     "pleaseNote": "Nota Bene",
-    "mobileWarning": "In sviluppo su mobile e potrebbe avere problemi. Per la migliore esperienza, usa Kortix.com."
+    "mobileWarning": "In sviluppo su mobile e potrebbe avere problemi. Per la migliore esperienza, usa suna.syhc.dev."
   },
   "accountDeletion": {
     "title": "Elimina Account",
     "deletionScheduled": "Eliminazione Programmata",
     "scheduledFor": "Programmata Per",
     "deleteYourAccount": "Elimina il tuo Account",
-    "actionCannotBeUndone": "Questa azione non può essere annullata",
-    "accountWillBeDeleted": "Il tuo account sarà eliminato permanentemente",
-    "whatWillBeDeleted": "Cosa Sarà Eliminato",
+    "actionCannotBeUndone": "Questa azione non puÃ² essere annullata",
+    "accountWillBeDeleted": "Il tuo account sarÃ  eliminato permanentemente",
+    "whatWillBeDeleted": "Cosa SarÃ  Eliminato",
     "allAgents": "Tutti i tuoi worker e versioni dei worker",
     "allThreads": "Tutti i tuoi thread e conversazioni",
     "allCredentials": "Tutte le tue credenziali e integrazioni",
     "subscriptionData": "I tuoi dati di abbonamento e fatturazione",
     "gracePeriod": "Periodo di Grazia di 30 Giorni",
-    "gracePeriodDescription": "Il tuo account sarà programmato per l'eliminazione tra 30 giorni. Puoi annullare questa richiesta in qualsiasi momento durante il periodo di grazia.",
+    "gracePeriodDescription": "Il tuo account sarÃ  programmato per l'eliminazione tra 30 giorni. Puoi annullare questa richiesta in qualsiasi momento durante il periodo di grazia.",
     "typeDeleteToConfirm": "Digita {{text}} per confermare",
     "deletePlaceholder": "ELIMINA",
     "deleteAccount": "Elimina Account",
     "cancelDeletion": "Annulla Eliminazione",
     "processing": "Elaborazione...",
-    "deletionScheduledSuccess": "Il tuo account sarà eliminato tra 30 giorni. Puoi annullare questa richiesta in qualsiasi momento.",
+    "deletionScheduledSuccess": "Il tuo account sarÃ  eliminato tra 30 giorni. Puoi annullare questa richiesta in qualsiasi momento.",
     "cancelDeletionTitle": "Annulla Eliminazione Account",
     "cancelDeletionDescription": "Vuoi annullare l'eliminazione del tuo account? Il tuo account e tutti i dati saranno preservati.",
     "back": "Indietro",
     "deletionCancelled": "Eliminazione Annullata",
-    "deletionCancelledSuccess": "Il tuo account è al sicuro. L'eliminazione è stata annullata.",
+    "deletionCancelledSuccess": "Il tuo account Ã¨ al sicuro. L'eliminazione Ã¨ stata annullata.",
     "failedToRequest": "Impossibile richiedere l'eliminazione dell'account",
     "failedToCancel": "Impossibile annullare l'eliminazione dell'account",
     "cancelRequestDescription": "Puoi annullare questa richiesta in qualsiasi momento prima della data di eliminazione. Tutti i tuoi dati saranno preservati se annulli."
@@ -598,16 +598,16 @@
     "lastConversations": "Ultime {{count}} conversazioni",
     "conversationBreakdown": "Dettaglio Conversazioni",
     "noConversationsYet": "Ancora nessuna conversazione",
-    "conversationHistoryAppearHere": "La tua cronologia apparirà qui",
+    "conversationHistoryAppearHere": "La tua cronologia apparirÃ  qui",
     "showingTopOf": "Mostrando {{shown}} di {{total}} conversazioni",
     "credits": "crediti",
     "upgradeYourPlan": "Migliora il tuo Piano",
-    "upgradeDescription": "Ottieni più crediti e sblocca funzionalità premium",
+    "upgradeDescription": "Ottieni piÃ¹ crediti e sblocca funzionalitÃ  premium",
     "topUp": "Ricarica",
     "topUpDescription": "Ricarica il tuo account con crediti aggiuntivi",
     "upgrade": "Migliora",
     "upgradeToUltra": "Passa a Ultra",
-    "upgradeToUltraDescription": "Ottieni il livello più alto per crediti massimi"
+    "upgradeToUltraDescription": "Ottieni il livello piÃ¹ alto per crediti massimi"
   },
   "nameEdit": {
     "title": "Modifica Profilo",
@@ -615,16 +615,16 @@
     "yourNamePlaceholder": "Il tuo nome",
     "emailAddress": "Indirizzo Email",
     "notAvailable": "Non disponibile",
-    "nameRequired": "Il nome è obbligatorio",
-    "nameTooLong": "Il nome è troppo lungo (max 100 caratteri)",
+    "nameRequired": "Il nome Ã¨ obbligatorio",
+    "nameTooLong": "Il nome Ã¨ troppo lungo (max 100 caratteri)",
     "saving": "Salvataggio...",
     "saveChanges": "Salva Modifiche",
-    "nameUpdated": "Il tuo nome è stato aggiornato con successo",
+    "nameUpdated": "Il tuo nome Ã¨ stato aggiornato con successo",
     "failedToUpdate": "Errore nell'aggiornare il nome. Riprova."
   },
   "integrations": {
     "title": "Integrazioni",
-    "description": "Connetti le tue app e servizi preferiti per automatizzare i flussi di lavoro ed estendere le capacità del tuo worker.",
+    "description": "Connetti le tue app e servizi preferiti per automatizzare i flussi di lavoro ed estendere le capacitÃ  del tuo worker.",
     "connectApps": "Connetti le tue App",
     "externalApps": "App Esterne",
     "externalAppsDescription": "Connetti app e servizi popolari",
@@ -666,7 +666,7 @@
       "selectConnection": "Seleziona una connessione o creane una nuova",
       "createFirstConnection": "Crea la tua prima connessione",
       "useExistingConnection": "Usa Connessione Esistente",
-      "profilesConnected": "{{count}} profilo{{plural}} già connesso{{plural}}",
+      "profilesConnected": "{{count}} profilo{{plural}} giÃ  connesso{{plural}}",
       "createNewConnection": "Crea Nuova Connessione",
       "connectNewAccount": "Connetti nuovo account {{app}}",
       "cancel": "Annulla",
@@ -677,7 +677,7 @@
       "profileName": "Nome Profilo",
       "profileNamePlaceholder": "Account {{app}}",
       "nameAvailable": "Nome disponibile",
-      "nameAlreadyTaken": "Questo nome è già in uso",
+      "nameAlreadyTaken": "Questo nome Ã¨ giÃ  in uso",
       "creating": "Creazione...",
       "completeInBrowser": "Completa nel Browser",
       "authenticateInstructions": "Autenticati nella finestra del browser, poi torna qui quando hai finito",
@@ -685,7 +685,7 @@
       "completedAuthentication": "Ho Completato l'Autenticazione",
       "goBack": "Indietro",
       "allSet": "Tutto Pronto",
-      "connectionReady": "La tua connessione con {{app}} è pronta",
+      "connectionReady": "La tua connessione con {{app}} Ã¨ pronta",
       "createdOn": "Creato il {{date}}"
     },
     "toolsSelector": {
@@ -735,7 +735,7 @@
   "threadActions": {
     "title": "Azioni Thread",
     "upgradeRequired": "Upgrade Richiesto",
-    "upgradeRequiredMessage": "La condivisione dei thread è disponibile nei piani a pagamento. Aggiorna per sbloccare questa funzione.",
+    "upgradeRequiredMessage": "La condivisione dei thread Ã¨ disponibile nei piani a pagamento. Aggiorna per sbloccare questa funzione.",
     "upgrade": "Aggiorna",
     "share": "Condividi",
     "files": "File",
@@ -747,7 +747,7 @@
     "manageFiles": "Gestisci File",
     "viewManageAttachments": "Visualizza e gestisci allegati",
     "deleteThread": "Elimina Thread",
-    "deleteConfirm": "Sei sicuro di voler eliminare questo thread? Questa azione non può essere annullata.",
+    "deleteConfirm": "Sei sicuro di voler eliminare questo thread? Questa azione non puÃ² essere annullata.",
     "permanentlyDelete": "Elimina definitivamente questa conversazione"
   },
   "triggers": {
@@ -786,7 +786,7 @@
     "loadingFiles": "Caricamento file...",
     "failedToLoad": "Caricamento fallito",
     "retry": "Riprova",
-    "folderEmpty": "Questa cartella è vuota",
+    "folderEmpty": "Questa cartella Ã¨ vuota",
     "uploadOrCreate": "Carica file o crea cartelle",
     "createFolder": "Crea Cartella",
     "folderName": "Nome cartella",
@@ -804,9 +804,9 @@
     },
     "loadingWorker": "Caricamento worker...",
     "core": "Principale",
-    "capabilitiesEnabled": "{{enabled}} / {{total}} capacità abilitate",
+    "capabilitiesEnabled": "{{enabled}} / {{total}} capacitÃ  abilitate",
     "toolConfiguration": "Configurazione strumenti",
-    "configureToolsDescription": "Configura gli strumenti e le loro capacità individuali per il tuo worker",
+    "configureToolsDescription": "Configura gli strumenti e le loro capacitÃ  individuali per il tuo worker",
     "toolsEnabled": "{{enabled}} / {{total}} abilitati",
     "loadingTools": "Caricamento strumenti...",
     "noToolsAvailable": "Nessuno strumento disponibile",

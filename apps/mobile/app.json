@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Kortix",
-    "slug": "kortix",
+    "slug": "logrui",
     "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/images/AppIcon-Light.png",
@@ -21,9 +21,8 @@
       "bundleIdentifier": "com.kortix.app",
       "usesAppleSignIn": true,
       "associatedDomains": [
-        "applinks:kortix.com",
-        "applinks:www.kortix.com",
-        "applinks:staging.kortix.com"
+        "applinks:kortix.railway.syhc.dev",
+        "applinks:suna.syhc.dev"
       ],
       "infoPlist": {
         "NSCameraUsageDescription": "Kortix needs camera access to let you capture photos and attach them to your saved conversations with the AI Worker. For example, you can photograph a document, whiteboard, or product for analysis and receive insights that are stored in your conversation history.",
@@ -47,17 +46,12 @@
           "data": [
             {
               "scheme": "https",
-              "host": "kortix.com",
+              "host": "kortix.railway.syhc.dev",
               "pathPrefix": "/auth/callback"
             },
             {
               "scheme": "https",
-              "host": "www.kortix.com",
-              "pathPrefix": "/auth/callback"
-            },
-            {
-              "scheme": "https",
-              "host": "staging.kortix.com",
+              "host": "suna.syhc.dev",
               "pathPrefix": "/auth/callback"
             }
           ],
@@ -72,17 +66,12 @@
           "data": [
             {
               "scheme": "https",
-              "host": "kortix.com",
+              "host": "kortix.railway.syhc.dev",
               "pathPrefix": "/share"
             },
             {
               "scheme": "https",
-              "host": "www.kortix.com",
-              "pathPrefix": "/share"
-            },
-            {
-              "scheme": "https",
-              "host": "staging.kortix.com",
+              "host": "suna.syhc.dev",
               "pathPrefix": "/share"
             }
           ],
@@ -150,13 +139,13 @@
     },
     "extra": {
       "eas": {
-        "projectId": "9fca3cff-a291-41c9-88b9-feb8053b990f"
+        "projectId": "0059bc8e-a1dd-45d9-9b41-f6e8352f255a"
       }
     },
-    "owner": "kortix",
+    "owner": "yhcsanction",
     "runtimeVersion": "1.1.2",
     "updates": {
-      "url": "https://u.expo.dev/9fca3cff-a291-41c9-88b9-feb8053b990f",
+      "url": "https://u.expo.dev/0059bc8e-a1dd-45d9-9b41-f6e8352f255a",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
     }

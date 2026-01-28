@@ -4,7 +4,7 @@
  * Handles opening checkout URLs (provided by our backend) in an in-app browser.
  * Our backend handles the actual Stripe integration and returns masked/proxied URLs.
  * 
- * Note: The backend should return kortix.com URLs that wrap/proxy Stripe,
+ * Note: The backend should return kortix.railway.syhc.dev URLs that wrap/proxy Stripe,
  * not direct stripe.com URLs for compliance.
  */
 
@@ -29,7 +29,7 @@ async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const headers = await getAuthHeaders();
-  
+
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -72,7 +72,7 @@ const checkoutApi = {
     });
     return response;
   },
-  
+
   async purchaseCredits(request: PurchaseCreditsRequest): Promise<{ checkout_url: string }> {
     log.log('🔄 Creating credit purchase via backend...');
     const response = await fetchApi<{ checkout_url: string }>('/billing/purchase-credits', {
@@ -112,7 +112,7 @@ function buildCancelUrl(): string {
  * Open checkout URL in in-app browser
  * 
  * The checkout URL is provided by our backend, which should return
- * a kortix.com masked URL (not direct stripe.com for compliance)
+ * a kortix.railway.syhc.dev masked URL (not direct stripe.com for compliance)
  */
 async function openCheckoutInBrowser(
   checkoutUrl: string,
@@ -155,7 +155,7 @@ export async function openExternalUrl(url: string): Promise<void> {
   log.log('🌐 Opening external URL:', url);
 
   const supported = await Linking.canOpenURL(url);
-  
+
   if (supported) {
     await Linking.openURL(url);
   } else {
@@ -190,8 +190,8 @@ export async function startPlanCheckout(
   try {
     // For Stripe web checkout, map 'yearly_commitment' to 'yearly'
     // The backend expects 'yearly' for Stripe products, not 'yearly_commitment'
-    const stripeCommitmentType = commitmentType === 'yearly_commitment' 
-      ? 'yearly' 
+    const stripeCommitmentType = commitmentType === 'yearly_commitment'
+      ? 'yearly'
       : commitmentType;
 
     const request: CreateCheckoutSessionRequest = {
@@ -200,18 +200,18 @@ export async function startPlanCheckout(
       cancel_url: buildCancelUrl(),
       commitment_type: stripeCommitmentType,
     };
-    
-    log.log('📤 Sending checkout request:', { 
-      tier_key: tierKey, 
+
+    log.log('📤 Sending checkout request:', {
+      tier_key: tierKey,
       commitment_type: stripeCommitmentType,
-      original_commitment_type: commitmentType 
+      original_commitment_type: commitmentType
     });
 
     const response = await checkoutApi.createCheckoutSession(request);
 
     // Check if we have a checkout URL to open
     const checkoutUrl = response.fe_checkout_url || response.checkout_url || response.url;
-    
+
     if (checkoutUrl) {
       // Backend returned checkout URL - open it in browser
       log.log('🌐 Opening checkout URL:', checkoutUrl);
@@ -281,9 +281,9 @@ export async function openBillingPortal(returnUrl?: string): Promise<void> {
 
   try {
     // Direct users to the web app's billing management page
-    const webBillingUrl = process.env.EXPO_PUBLIC_WEB_APP_URL 
+    const webBillingUrl = process.env.EXPO_PUBLIC_WEB_APP_URL
       ? `${process.env.EXPO_PUBLIC_WEB_APP_URL}/subscription`
-      : 'https://www.kortix.com/subscription';
+      : 'https://kortix.railway.syhc.dev/subscription';
 
     await openExternalUrl(webBillingUrl);
   } catch (error) {

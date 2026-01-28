@@ -38,7 +38,7 @@ export default function SplashScreen() {
   const { hasCompletedOnboarding, isLoading: onboardingLoading } = useOnboarding();
   const { hasActiveSubscription, isLoading: billingLoading, subscriptionData } = useBillingContext();
   const { expoPushToken } = usePushNotifications();
-  
+
   // Log token status when it changes
   React.useEffect(() => {
     if (expoPushToken) {
@@ -47,10 +47,10 @@ export default function SplashScreen() {
       log.log('[SPLASH] ⚠️ expoPushToken is undefined (check [PUSH] logs for details)');
     }
   }, [expoPushToken]);
-  
+
   // Track navigation to prevent double navigation
   const [hasNavigated, setHasNavigated] = React.useState(false);
-  
+
   // Reset navigation flag when component mounts (fresh visit to splash)
   React.useEffect(() => {
     setHasNavigated(false);
@@ -72,7 +72,7 @@ export default function SplashScreen() {
     if (billingLoading) return 'Loading account...';
     if (!subscriptionData) return 'Fetching subscription...';
     if (onboardingLoading) return 'Checking setup...';
-    return 'Almost there...';
+    return 'Almost there! (OTA Test)';
   };
 
   // Debug logging
@@ -93,7 +93,7 @@ export default function SplashScreen() {
   React.useEffect(() => {
     // Don't navigate twice
     if (hasNavigated) return;
-    
+
     // Wait until all data is ready
     if (!allDataReady) return;
 

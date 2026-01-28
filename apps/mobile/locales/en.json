@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "cancel": "Cancel",
     "save": "Save",
@@ -57,7 +57,7 @@
     "continueWith": "Continue with",
     "continueWithApple": "Continue with Apple",
     "continueWithGoogle": "Continue with Google",
-    "continueWithEmail": "Continue with Email",
+    "continueWithEmail": "Continue with Password",
     "signInWithEmail": "Sign in with email",
     "signUpWithEmail": "Sign up with email",
     "signInWithApple": "Sign in with Apple",
@@ -465,17 +465,17 @@
   "languages": {
     "title": "Select Language",
     "en": "English",
-    "es": "Español",
-    "fr": "Français",
+    "es": "EspaÃ±ol",
+    "fr": "FranÃ§ais",
     "de": "Deutsch",
-    "zh": "中文",
-    "ja": "日本語",
-    "pt": "Português",
+    "zh": "ä¸­æ–‡",
+    "ja": "æ—¥æœ¬èªž",
+    "pt": "PortuguÃªs",
     "it": "Italiano",
-    "ru": "Русский",
-    "ko": "한국어",
-    "ar": "العربية",
-    "hi": "हिन्दी"
+    "ru": "Ð ÑƒÑÑÐºÐ¸Ð¹",
+    "ko": "í•œêµ­ì–´",
+    "ar": "Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©",
+    "hi": "à¤¹à¤¿à¤¨à¥à¤¦à¥€"
   },
   "attachments": {
     "title": "Attachments",
@@ -550,8 +550,8 @@
   "billing": {
     "loadingPaywall": "Loading plans...",
     "checkoutUnavailable": "Mobile checkout not available",
-    "checkoutUnavailableMessage": "To subscribe to a plan, please visit kortix.com on the web.",
-    "goToWeb": "Go to kortix.com",
+    "checkoutUnavailableMessage": "To subscribe to a plan, please visit suna.syhc.dev on the web.",
+    "goToWeb": "Go to suna.syhc.dev",
     "billingStatus": "Billing Status",
     "loading": "Loading billing information...",
     "error": "Failed to load billing information",
@@ -600,12 +600,12 @@
   "beta": {
     "title": "Beta Features",
     "webSupportTitle": "Fully Supported on Web",
-    "webSupportDescription": "Available on Kortix.com. Coming to mobile soon—still work-in-progress here.",
-    "visitKortix": "Visit Kortix.com",
+    "webSupportDescription": "Available on suna.syhc.dev. Coming to mobile soonâ€”still work-in-progress here.",
+    "visitKortix": "Visit suna.syhc.dev",
     "advancedFeatures": "Advanced Features",
     "mobileBeta": "Mobile Beta",
     "pleaseNote": "Please Note",
-    "mobileWarning": "Work-in-progress on mobile and may have issues. For the best experience, use Kortix.com."
+    "mobileWarning": "Work-in-progress on mobile and may have issues. For the best experience, use suna.syhc.dev."
   },
   "accountDeletion": {
     "title": "Delete Account",

@@ -8,14 +8,14 @@ import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mail, ArrowRight, X, Check } from 'lucide-react-native';
+import { ArrowRight, X, Check } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { openInbox } from 'react-native-email-link';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts';
+import { cn } from '@/lib/utils';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { useToast } from '@/components/ui/toast-provider';
-import { log } from '@/lib/logger';
 
 export interface EmailAuthDrawerRef {
   open: () => void;
@@ -34,14 +34,16 @@ export const EmailAuthDrawer = React.forwardRef<EmailAuthDrawerRef, {
   const bottomSheetRef = React.useRef<BottomSheetModal>(null);
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
-  const { signInWithMagicLink, isLoading } = useAuth();
+  const { signIn, signUp, resetPassword, isLoading } = useAuth();
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  
-  const [emailSent, setEmailSent] = React.useState(false);
+
+  const [mode, setMode] = React.useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [acceptedTerms, setAcceptedTerms] = React.useState(false);
-  const [isInputFocused, setIsInputFocused] = React.useState(false);
   const emailInputRef = React.useRef<TextInput | null>(null);
 
   const isDark = colorScheme === 'dark';
@@ -50,7 +52,6 @@ export const EmailAuthDrawer = React.forwardRef<EmailAuthDrawerRef, {
   React.useImperativeHandle(ref, () => ({
     open: () => {
       bottomSheetRef.current?.present();
-      setIsInputFocused(true);
       setTimeout(() => {
         emailInputRef.current?.focus();
       }, 400);
@@ -60,7 +61,7 @@ export const EmailAuthDrawer = React.forwardRef<EmailAuthDrawerRef, {
     },
   }));
 
-  // Dynamic snap point based on state - always 85% height
+  // Dynamic snap point based on state - always 90% height
   const snapPoints = React.useMemo(() => {
     return ['90%'];
   }, []);
@@ -79,38 +80,77 @@ export const EmailAuthDrawer = React.forwardRef<EmailAuthDrawerRef, {
     []
   );
 
-  const handleSendMagicLink = async () => {
+  const handleAuth = async () => {
     if (!email || !email.includes('@')) {
       toast.error(t('auth.validationErrors.emailRequired'));
       return;
     }
 
-    if (!acceptedTerms) {
-      toast.error(t('auth.termsRequired'));
+    if (!password || password.length < 6) {
+      toast.error(t('auth.passwordTooShort') || 'Password must be at least 6 characters');
       return;
     }
 
+    if (mode === 'signup') {
+      if (password !== confirmPassword) {
+        toast.error(t('auth.passwordsDontMatch') || 'Passwords do not match');
+        return;
+      }
+
+      if (!acceptedTerms) {
+        toast.error(t('auth.termsRequired'));
+        return;
+      }
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    const result = await signInWithMagicLink({ email, acceptedTerms });
-    
-    if (result.success) {
-      setEmailSent(true);
-      setIsInputFocused(false);
-      Keyboard.dismiss();
-      emailInputRef.current?.blur();
+
+    let result;
+    if (mode === 'signin') {
+      result = await signIn({ email, password });
     } else {
-      toast.error(result.error?.message || t('auth.magicLinkFailed'));
+      result = await signUp({ email, password });
+    }
+
+    if (result.success) {
+      if (mode === 'signup' && !result.data?.session) {
+        // Verification email might be required
+        toast.success(t('auth.verificationEmailSent') + ' ' + email);
+        bottomSheetRef.current?.dismiss();
+      } else {
+        // Logged in!
+        bottomSheetRef.current?.dismiss();
+        onSuccess?.();
+      }
+    } else {
+      toast.error(result.error?.message || (mode === 'signin' ? t('auth.signInFailed') : t('auth.signUpFailed')));
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email || !email.includes('@')) {
+      toast.error(t('auth.validationErrors.emailRequired'));
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await resetPassword({ email });
+
+    if (result.success) {
+      toast.success(t('auth.resetLinkSent') + ' ' + email);
+    } else {
+      toast.error(result.error?.message || t('auth.resetFailed'));
     }
   };
 
   const handleDismiss = () => {
     Keyboard.dismiss();
     // Reset state for next open
-    setEmailSent(false);
+    setMode('signin');
     setEmail('');
+    setPassword('');
+    setConfirmPassword('');
     setAcceptedTerms(false);
-    setIsInputFocused(false);
   };
 
   const handleSheetChange = React.useCallback((index: number) => {
@@ -145,7 +185,7 @@ export const EmailAuthDrawer = React.forwardRef<EmailAuthDrawerRef, {
       <BottomSheetScrollView
         contentContainerStyle={{
           paddingHorizontal: 24,
-          paddingTop: 24,
+          paddingTop: 8,
           paddingBottom: Math.max(insets.bottom, 20) + 16,
         }}
         showsVerticalScrollIndicator={false}
@@ -153,207 +193,198 @@ export const EmailAuthDrawer = React.forwardRef<EmailAuthDrawerRef, {
         keyboardDismissMode="on-drag"
       >
         <View className="flex-1">
-            {emailSent ? (
-              // Success State
-              <View className="gap-6">
-                <View className="flex-row items-center justify-end">
-                  <BottomSheetTouchable
-                    onPress={() => bottomSheetRef.current?.dismiss()}
-                  >
-                    <Icon as={X} size={24} className="text-muted-foreground" />
-                  </BottomSheetTouchable>
-                </View>
+          <View className="flex-row items-center justify-between mb-6">
+            <View className="flex-row bg-muted/20 dark:bg-muted/10 rounded-full p-1">
+              <BottomSheetTouchable
+                onPress={() => {
+                  setMode('signin');
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                className={cn(
+                  "px-6 py-2 rounded-full",
+                  mode === 'signin' ? "bg-background shadow-sm" : ""
+                )}
+              >
+                <Text className={cn(
+                  "text-sm font-roobert-medium",
+                  mode === 'signin' ? "text-foreground" : "text-muted-foreground"
+                )}>
+                  {t('auth.signIn')}
+                </Text>
+              </BottomSheetTouchable>
+              <BottomSheetTouchable
+                onPress={() => {
+                  setMode('signup');
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                className={cn(
+                  "px-6 py-2 rounded-full",
+                  mode === 'signup' ? "bg-background shadow-sm" : ""
+                )}
+              >
+                <Text className={cn(
+                  "text-sm font-roobert-medium",
+                  mode === 'signup' ? "text-foreground" : "text-muted-foreground"
+                )}>
+                  {t('auth.signUp')}
+                </Text>
+              </BottomSheetTouchable>
+            </View>
 
-                <View className="items-center gap-5">
-                  <View className="size-16 rounded-full bg-primary/10 items-center justify-center">
-                    <Icon as={Mail} size={32} className="text-primary" />
-                  </View>
-                  
-                  <View className="gap-3">
-                    <Text className="text-2xl font-roobert-semibold text-foreground text-center">
-                      {t('auth.checkYourEmail')}
-                    </Text>
-                    
-                    <Text className="text-[15px] font-roobert text-muted-foreground text-center px-4">
-                      {t('auth.magicLinkSent')}{'\n\n'}
-                      <Text className="font-roobert-medium text-foreground">{email}</Text>
-                    </Text>
-                  </View>
-                </View>
+            <BottomSheetTouchable
+              onPress={() => bottomSheetRef.current?.dismiss()}
+            >
+              <Icon as={X} size={24} className="text-muted-foreground" />
+            </BottomSheetTouchable>
+          </View>
 
-                <View className="w-full gap-3">
-                  {Platform.OS === 'ios' && (
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onPress={async () => {
-                        try {
-                          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          await openInbox({});
-                        } catch (error) {
-                          log.error('Failed to open email app:', error);
-                        }
-                      }}
-                      className="flex-row items-center justify-center gap-2"
-                    >
-                      <Icon as={Mail} size={20} className="text-foreground" strokeWidth={2.5} />
-                      <Text className="text-foreground text-[16px] font-roobert-medium">
-                        {t('auth.openEmailAppBtn')}
-                      </Text>
-                    </Button>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onPress={async () => {
-                      try {
-                        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        await openInbox({ app: 'gmail' });
-                      } catch (error) {
-                        log.error('Failed to open Gmail:', error);
-                      }
-                    }}
-                    className="flex-row items-center justify-center gap-2"
-                  >
-                    <MaterialCommunityIcons 
-                      name="gmail" 
-                      size={22} 
-                      color={isDark ? '#FFFFFF' : '#000000'} 
-                    />
-                    <Text className="text-foreground text-[16px] font-roobert-medium">
-                      {t('auth.openGmailBtn')}
-                    </Text>
-                  </Button>
+          <View className="gap-6">
+            <View className="gap-2">
+              <Text className="text-[28px] font-roobert-semibold text-foreground leading-tight">
+                {mode === 'signin' ? t('auth.signIn') : t('auth.createAccount')}
+              </Text>
+              <Text className="text-[15px] font-roobert text-muted-foreground">
+                {mode === 'signin'
+                  ? t('auth.enterEmailPassword')
+                  : t('auth.enterEmailAddress')}
+              </Text>
+            </View>
 
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    onPress={handleSendMagicLink}
-                    disabled={isLoading}
-                    className="flex-row items-center justify-center gap-2"
-                  >
-                    <Text className="text-muted-foreground text-[16px] font-roobert">
-                      {isLoading ? t('auth.sending') : t('auth.resendLink')}
-                    </Text>
-                  </Button>
-                </View>
-              </View>
-            ) : (
-              // Email Form
-              <View className="gap-6">
-                <View className="flex-row items-center justify-end">
-                  <BottomSheetTouchable
-                    onPress={() => bottomSheetRef.current?.dismiss()}
-                  >
-                    <Icon as={X} size={24} className="text-muted-foreground" />
-                  </BottomSheetTouchable>
-                </View>
+            <View className="gap-4">
+              <Input
+                ref={emailInputRef}
+                value={email}
+                onChangeText={(text) => setEmail(text.trim().toLowerCase())}
+                placeholder={t('auth.emailPlaceholder')}
+                keyboardType="email-address"
+                returnKeyType="next"
+                size="lg"
+                wrapperClassName="bg-muted/10 dark:bg-muted/30"
+              />
 
-                <View className="gap-4">
-                  <Text className="text-[28px] font-roobert-semibold text-foreground leading-tight">
-                    {t('auth.continueWithEmail')}
-                  </Text>
-                  <Text className="text-[15px] font-roobert text-muted-foreground">
-                    {t('auth.magicLinkDescription')}
-                  </Text>
-                </View>
-
+              <View className="w-full">
                 <Input
-                  ref={emailInputRef}
-                  value={email}
-                  onChangeText={(text) => setEmail(text.trim().toLowerCase())}
-                  onFocus={() => setIsInputFocused(true)}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      if (!TextInput.State.currentlyFocusedInput()) {
-                        setIsInputFocused(false);
-                      }
-                    }, 100);
-                  }}
-                  placeholder={t('auth.emailPlaceholder')}
-                  keyboardType="email-address"
-                  returnKeyType="go"
-                  onSubmitEditing={handleSendMagicLink}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder={t('auth.passwordPlaceholder')}
+                  secureTextEntry={!showPassword}
+                  returnKeyType={mode === 'signup' ? 'next' : 'go'}
+                  onSubmitEditing={mode === 'signin' ? handleAuth : undefined}
                   size="lg"
                   wrapperClassName="bg-muted/10 dark:bg-muted/30"
                 />
-
-                <View className="flex-row items-start">
-                  <BottomSheetTouchable
-                    onPress={() => {
-                      setAcceptedTerms(!acceptedTerms);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    style={{ marginRight: 12, marginTop: 2 }}
-                  >
-                    <View
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 6,
-                        borderWidth: 1,
-                        borderColor: acceptedTerms ? (isDark ? '#FFFFFF' : '#000000') : isDark ? '#454444' : '#c2c2c2',
-                        backgroundColor: acceptedTerms ? (isDark ? '#FFFFFF' : '#000000') : 'transparent',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      {acceptedTerms && (
-                        <Icon as={Check} size={16} color={isDark ? '#000000' : '#FFFFFF'} />
-                      )}
-                    </View>
-                  </BottomSheetTouchable>
-
-                  <View className="flex-1 flex-row flex-wrap">
-                    <Text className="text-[14px] font-roobert text-muted-foreground leading-5">
-                      {t('auth.agreeTerms')}{' '}
-                    </Text>
-                    <BottomSheetTouchable onPress={async () => {
-                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      const WebBrowser = await import('expo-web-browser');
-                      await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=terms', {
-                        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-                        controlsColor: isDark ? '#FFFFFF' : '#000000',
-                      });
-                    }}>
-                      <Text className="text-[14px] font-roobert text-foreground leading-5 underline">
-                        {t('auth.userTerms')}
-                      </Text>
-                    </BottomSheetTouchable>
-                    <Text className="text-[14px] font-roobert text-muted-foreground leading-5">
-                      {' '}{t('auth.and')}{' '}
-                    </Text>
-                    <BottomSheetTouchable onPress={async () => {
-                      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      const WebBrowser = await import('expo-web-browser');
-                      await WebBrowser.openBrowserAsync('https://www.kortix.com/legal?tab=privacy', {
-                        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-                        controlsColor: isDark ? '#FFFFFF' : '#000000',
-                      });
-                    }}>
-                      <Text className="text-[14px] font-roobert text-foreground leading-5 underline">
-                        {t('auth.privacyNotice')}
-                      </Text>
-                    </BottomSheetTouchable>
-                  </View>
-                </View>
-
-                <Button
-                  variant="default"
-                  size="lg"
-                  onPress={handleSendMagicLink}
-                  disabled={isLoading || !isValidEmail || !acceptedTerms}
+                <BottomSheetTouchable
+                  onPress={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-[18px]"
                 >
-                  <Text className="text-[16px] font-roobert-medium text-primary-foreground">
-                    {isLoading ? t('auth.sending') : t('auth.sendMagicLink')}
+                  <MaterialCommunityIcons
+                    name={showPassword ? "eye-off" : "eye"}
+                    size={20}
+                    color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                  />
+                </BottomSheetTouchable>
+              </View>
+
+              {mode === 'signup' && (
+                <Input
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder={t('auth.confirmPasswordPlaceholder')}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="go"
+                  onSubmitEditing={handleAuth}
+                  size="lg"
+                  wrapperClassName="bg-muted/10 dark:bg-muted/30"
+                />
+              )}
+            </View>
+
+            {mode === 'signin' && (
+              <BottomSheetTouchable onPress={handleForgotPassword}>
+                <Text className="text-sm font-roobert-medium text-primary text-right">
+                  {t('auth.forgotPassword')}
+                </Text>
+              </BottomSheetTouchable>
+            )}
+
+            {mode === 'signup' && (
+              <View className="flex-row items-start">
+                <BottomSheetTouchable
+                  onPress={() => {
+                    setAcceptedTerms(!acceptedTerms);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={{ marginRight: 12, marginTop: 2 }}
+                >
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: acceptedTerms ? (isDark ? '#FFFFFF' : '#000000') : isDark ? '#454444' : '#c2c2c2',
+                      backgroundColor: acceptedTerms ? (isDark ? '#FFFFFF' : '#000000') : 'transparent',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    {acceptedTerms && (
+                      <Icon as={Check} size={16} color={isDark ? '#000000' : '#FFFFFF'} />
+                    )}
+                  </View>
+                </BottomSheetTouchable>
+
+                <View className="flex-1 flex-row flex-wrap">
+                  <Text className="text-[14px] font-roobert text-muted-foreground leading-5">
+                    {t('auth.agreeTerms')}{' '}
                   </Text>
-                  {!isLoading && (
-                    <Icon as={ArrowRight} size={16} className="text-primary-foreground" />
-                  )}
-                </Button>
+                  <BottomSheetTouchable onPress={async () => {
+                    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const baseUrl = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://kortix.railway.syhc.dev';
+                    await WebBrowser.openBrowserAsync(`${baseUrl}/legal?tab=terms`, {
+                      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+                      controlsColor: isDark ? '#FFFFFF' : '#000000',
+                    });
+                  }}>
+                    <Text className="text-[14px] font-roobert text-foreground leading-5 underline">
+                      {t('auth.userTerms')}
+                    </Text>
+                  </BottomSheetTouchable>
+                  <Text className="text-[14px] font-roobert text-muted-foreground leading-5">
+                    {' '}{t('auth.and')}{' '}
+                  </Text>
+                  <BottomSheetTouchable onPress={async () => {
+                    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const baseUrl = process.env.EXPO_PUBLIC_FRONTEND_URL || 'https://kortix.railway.syhc.dev';
+                    await WebBrowser.openBrowserAsync(`${baseUrl}/legal?tab=privacy`, {
+                      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+                      controlsColor: isDark ? '#FFFFFF' : '#000000',
+                    });
+                  }}>
+                    <Text className="text-[14px] font-roobert text-foreground leading-5 underline">
+                      {t('auth.privacyNotice')}
+                    </Text>
+                  </BottomSheetTouchable>
+                </View>
               </View>
             )}
+
+            <Button
+              variant="default"
+              size="lg"
+              onPress={handleAuth}
+              disabled={isLoading || !isValidEmail || (mode === 'signup' && !acceptedTerms)}
+            >
+              <Text className="text-[16px] font-roobert-medium text-primary-foreground">
+                {isLoading
+                  ? (mode === 'signin' ? t('auth.signingIn') : t('auth.creatingAccount'))
+                  : (mode === 'signin' ? t('auth.signIn') : t('auth.createAccount'))}
+              </Text>
+              {!isLoading && (
+                <Icon as={ArrowRight} size={16} className="text-primary-foreground" />
+              )}
+            </Button>
+          </View>
         </View>
       </BottomSheetScrollView>
     </BottomSheetModal>

@@ -110,10 +110,10 @@ export function BillingPage({ visible, onClose, onChangePlan }: BillingPageProps
   const handleCreditsExplained = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      // Use kortix.com for production, staging.kortix.com for staging
-      const baseUrl = process.env.EXPO_PUBLIC_ENV === 'staging'
-        ? 'https://staging.kortix.com'
-        : 'https://www.kortix.com';
+      // Use kortix.railway.syhc.dev for production, suna.syhc.dev for staging
+      const baseUrl = process.env.EXPO_PUBLIC_ENV_MODE === 'staging'
+        ? 'https://suna.syhc.dev'
+        : 'https://kortix.railway.syhc.dev';
       await WebBrowser.openBrowserAsync(`${baseUrl}/credits-explained`, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
       });
@@ -321,10 +321,10 @@ export function BillingPage({ visible, onClose, onChangePlan }: BillingPageProps
   const hasCommitment = commitmentData?.has_commitment;
   const commitmentEndDate = commitmentData?.commitment_end_date
     ? new Date(commitmentData.commitment_end_date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
     : null;
 
   const scheduledChange = scheduledChangesData?.scheduled_change || accountState?.subscription?.scheduled_change;
@@ -344,10 +344,10 @@ export function BillingPage({ visible, onClose, onChangePlan }: BillingPageProps
             paddingBottom: insets.bottom + 24,
           }}
         >
-        <SettingsHeader
+          <SettingsHeader
             title={t('billing.billingStatus', 'Billing Status')}
-          onClose={handleClose}
-        />
+            onClose={handleClose}
+          />
 
           {/* Subtitle */}
           <AnimatedView
@@ -650,7 +650,7 @@ export function BillingPage({ visible, onClose, onChangePlan }: BillingPageProps
               }}
               onPressOut={() => {
                 creditsLinkScale.value = withSpring(1, { damping: 15, stiffness: 400 });
-          }}
+              }}
               style={creditsLinkStyle}
               className="flex-row items-center justify-center gap-2 py-2"
             >
