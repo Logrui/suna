@@ -266,7 +266,6 @@ apps/mobile/app-example
 infra/
 
 .credentials/
-.github/
 .vscode/
 .windsurf/
 

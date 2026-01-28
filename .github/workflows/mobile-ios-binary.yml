@@ -1,0 +1,103 @@
+name: Mobile iOS Binary Build
+
+on:
+  push:
+    branches:
+      - dev # Temporary: Force GitHub to register this manual workflow in the sidebar
+    paths:
+      - '.github/workflows/mobile-ios-binary.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to build for (local/railway)'
+        required: true
+        default: 'railway'
+        type: choice
+        options:
+          - local
+          - railway
+
+jobs:
+  build-ios:
+    name: Build iOS Binary (Unsigned)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Set Environment Variables
+        run: |
+          if [ "${{ github.event.inputs.environment }}" == "railway" ]; then
+            echo "EXPO_PUBLIC_ENV_MODE=production" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_SUPABASE_URL=https://kong.kortix.railway.syhc.dev" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWRlbW8iLCJpYXQiOjE2NDE3NjkyMDAsImV4cCI6MTc5OTUzNTYwMH0.3oxoyIq4gsDgKv97f3OU7EPTAOOyXaq_yqci_5kDjTY" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_BACKEND_URL=https://api.kortix.railway.syhc.dev/v1" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_FRONTEND_URL=https://kortix.railway.syhc.dev" >> $GITHUB_ENV
+          else
+            echo "EXPO_PUBLIC_ENV_MODE=local" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_SUPABASE_URL=https://kong.suna.syhc.dev" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWRlbW8iLCJpYXQiOjE2NDE3NjkyMDAsImV4cCI6MTc5OTUzNTYwMH0.3oxoyIq4gsDgKv97f3OU7EPTAOOyXaq_yqci_5kDjTY" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_BACKEND_URL=https://api.suna.syhc.dev/v1" >> $GITHUB_ENV
+            echo "EXPO_PUBLIC_FRONTEND_URL=https://suna.syhc.dev" >> $GITHUB_ENV
+          fi
+          echo "EXPO_PUBLIC_USE_REVENUECAT=true" >> $GITHUB_ENV
+          echo "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=appl_UpcFYduOZYUgSqKPNvtzgXkPCeh" >> $GITHUB_ENV
+
+      - name: Prebuild iOS
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios --no-install
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install Pods
+        working-directory: apps/mobile/ios
+        run: pod install
+
+      - name: Build Unsigned Archive
+        working-directory: apps/mobile
+        run: |
+          mkdir -p build
+          xcodebuild -workspace ios/Kortix.xcworkspace \
+                     -scheme Kortix \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -archivePath build/Kortix.xcarchive \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_ENTITLEMENTS="" \
+                     CODE_SIGNING_ING=NO \
+                     AD_HOC_CODE_SIGNING_ALLOWED=YES \
+                     archive
+
+      - name: Package IPA
+        working-directory: apps/mobile
+        run: |
+          mkdir -p Payload
+          cp -r build/Kortix.xcarchive/Products/Applications/Kortix.app Payload/
+          zip -vr Kortix.ipa Payload/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kortix-ios-unsigned-${{ github.event.inputs.environment }}
+          path: apps/mobile/Kortix.ipa
+          retention-days: 7
