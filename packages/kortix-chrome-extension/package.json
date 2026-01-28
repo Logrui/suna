@@ -1,0 +1,33 @@
+{
+  "name": "@kortix/chrome-extension",
+  "version": "1.0.0",
+  "description": "Kortix AI Browser Operator - Enable agents to control your browser",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "pack": "npm run build && web-ext build --source-dir dist --artifacts-dir ."
+  },
+  "dependencies": {
+    "@agentpress/shared": "workspace:*",
+    "chart.js": "^4.4.1",
+    "react": "^19.0.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.9"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "web-ext": "^7.9.0"
+  }
+}
