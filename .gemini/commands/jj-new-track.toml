@@ -1,0 +1,38 @@
+description = "Initialize a new Jujutsu (jj) commit to track a new piece of work with a descriptive temporary message."
+prompt = '''
+//turbo-all
+
+## User Input
+
+```text
+{{args}}
+```
+
+## Goal
+
+Create a new clean `jj` revision to track upcoming work, ensuring the commit message is set immediately.
+
+## Execution Steps
+
+### 1. Determine Description
+
+If `{{args}}` is provided, use it. Otherwise, prompt the user.
+
+### 2. Create the New Revision
+
+```powershell
+jj new
+```
+
+### 3. Initialize the Commit Message
+
+Set a "Work In Progress" message.
+
+```powershell
+jj describe -m "task: [WIP] {{args}}"
+```
+
+### 4. Report Success
+
+Provide the new commit ID and a reminder to add files.
+'''

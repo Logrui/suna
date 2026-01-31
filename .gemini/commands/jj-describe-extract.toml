@@ -1,0 +1,63 @@
+description = "Extract and separate mixed edits into isolated Jujutsu (jj) commits with detailed messages."
+prompt = '''
+//turbo-all
+
+## User Input
+
+```text
+{{args}}
+```
+
+## Goal
+
+Provide a structured SOP for separating a "mangled" or multi-feature `jj` commit (where `jj new` was forgotten) into clean, independent, and well-described commits.
+
+## Execution Steps
+
+### 1. Identify the "Mangled" Commit
+
+Find the commit ID (usually `@`).
+
+```powershell
+jj log -n 5 --color=never
+```
+
+### 2. Create the First Isolated Commit
+
+Create a new empty commit on the **parent** of the mixed commit.
+
+```powershell
+jj new "@-" -m "feat(scope): temporary message"
+```
+
+### 3. Extract Specific Changes
+
+Move relevant files/changes from the mangled commit.
+
+```powershell
+# Replace MANGLED_ID with the ID from step 1
+jj restore --from MANGLED_ID path/to/file1
+```
+
+### 4. Apply a Detailed Commit Message
+
+```powershell
+jj describe -m "type(scope): summary of changes
+
+- Detailed points
+- Rationale/Context"
+```
+
+### 5. Cleanup
+
+Once all changes are extracted, abandon the original mixed commit.
+
+```powershell
+jj abandon MANGLED_ID
+```
+
+## Tips for PowerShell
+
+- Always wrap revisions in quotes: `"@-"`, `"@^"`.
+- Use `jj squash -i --from MANGLED_ID` for interactive line picking.
+'''

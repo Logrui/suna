@@ -1,0 +1,62 @@
+description = "Review recent edits, finalize commit messages, and optionally trigger commit extraction for clean jj history."
+prompt = '''
+//turbo-all
+
+## User Input
+
+```text
+{{args}}
+```
+
+## Goal
+
+Ensure the current `jj` revision has a high-quality, descriptive commit message that reflects all recent changes. If the changes are found to be multi-purpose or "mangled", facilitate the transition to extraction.
+
+## Prerequisites
+
+- **Jujutsu (jj)**: The version control system
+
+To verify:
+```powershell
+jj version
+```
+
+## Execution Steps
+
+### 1. Review Recent Edits
+
+Analyze the difference between the working copy and its parent.
+
+```powershell
+jj diff --color=never
+```
+
+### 2. Inspect Current Message
+
+Check the existing commit message for the working copy.
+
+```powershell
+jj log -n 1 --color=never
+```
+
+### 3. Determine Quality & Cohesion
+
+Evaluate:
+- **Cohesion**: Do all changes relate to a single feature or fix?
+- **Sufficiency**: Does the current message (if any) accurately describe the *intent* and *impact* of the changes?
+
+### 4. Apply Improvements
+
+**A. If cohesive but poor message:**
+Run `jj describe -m` with a comprehensive message (e.g., `feat(scope): summary`).
+
+**B. If changes are mixed (mangled):**
+Inform the user that the edits should be separated. **STOP** and suggest triggering the `/jj-describe-extract` command.
+
+### 5. Finalize
+
+If choosing to finalize:
+```powershell
+jj describe -m "task: [Final] {{args}}"
+```
+'''
