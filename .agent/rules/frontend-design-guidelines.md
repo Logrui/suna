@@ -18,7 +18,7 @@ globs: *.ts, *tsx, *.js
 - **Framework**: Next.js 15 (App Router).
 - **Language**: TypeScript (Strict Mode).
 - **Styling**:
-  - **Tailwind CSS v4** (using `@theme inline` and CSS variables).
+  - **Tailwind CSS v4** (using \@theme inline and CSS variables).
   - **Modules**: Avoid CSS Modules; prefer Tailwind utility classes.
   - **Global Styles**: Defined in `globals.css`.
 - **UI Library**: ShadCN UI (Radix Primitives + Tailwind).
@@ -40,7 +40,7 @@ globs: *.ts, *tsx, *.js
 
 - **Format**: MUST USE **OKLCH** for all color definitions.
 - **Variables**: Use CSS variables defined in `.root` and `.dark` blocks in `globals.css` (e.g., `--primary`, `--sidebar-bg`).
-- **Tailwind v4**: Use the new `@theme inline` syntax in CSS or standard utility classes.
+- **Tailwind v4**: Use the new \@theme inline syntax in CSS or standard utility classes.
 
 ### Typography
 

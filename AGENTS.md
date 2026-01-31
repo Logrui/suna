@@ -137,13 +137,13 @@ For full comparison, see [Git Command Comparison Table](https://docs.jj-vcs.dev/
 
 | Task | Git Equivalent | Jujutsu Command | Notes |
 | :--- | :--- | :--- | :--- |
-| **Status/Log** | `git status`, `git log` | `jj st`, `jj log` | `"@"` is your working copy |
+| **Status/Log** | `git status`, `git log` | `jj st`, `jj log` | `"\@"` is your working copy |
 | **Fetch** | `git fetch` | `jj git fetch` |  |
 | **Commit** | `git commit -m "msg"` | `jj describe -m "msg"` | Describes current change |
 | **Push** | `git push origin feature` | `jj git push --bookmark feature` | Pushes bookmark to origin |
 | **New Change** | `git commit` | `jj new` | Starts a fresh change on top of current |
-| **Update Parent**| `git commit --amend` | `jj describe -m "msg"` | Updates descriptive info of `@` |
-| **New Branch** | `git checkout -b feature` | `jj bookmark create feature -r @` | Creates bookmark on current commit |
+| **Update Parent**| `git commit --amend` | `jj describe -m "msg"` | Updates descriptive info of `\@` |
+| **New Branch** | `git checkout -b feature` | `jj bookmark create feature -r \@` | Creates bookmark on current commit |
 | **Switch Branch** | `git switch feature` | `jj edit feature` | Updates working copy to bookmark |
 | **Amend** | `git commit --amend` | `jj squash` | Folds working copy changes into parent |
 | **Undo** | *10 hours of reflog magic* | `jj undo` | Reverts last operation safely |
@@ -151,14 +151,14 @@ For full comparison, see [Git Command Comparison Table](https://docs.jj-vcs.dev/
 
 #### Jujutsu Semantic Rules & Workflow (Critical)
 
-1.  **Always Quote the At-Sign**: In PowerShell and Windows environments, the `@` character has special meaning. You MUST encapsulate it in double quotes: **`"@"`**.
-    *   ❌ `jj bookmark set dev -r @` (May fail or behave unexpectedly)
-    *   ✅ `jj bookmark set dev -r "@"`
+1.  **Always Quote the At-Sign**: In PowerShell and Windows environments, the `\@` character has special meaning. You MUST encapsulate it in double quotes: **`"\@"`**.
+    *   âŒ `jj bookmark set dev -r \@` (May fail or behave unexpectedly)
+    *   âœ… `jj bookmark set dev -r "\@"`
 2.  **State Isolation (jj new)**: Never run destructive operations (like `restore` or `sync`) directly on a commit with existing work if you want to keep them separate.
-    *   **Anti-Pattern**: Editing a file, then running `jj restore --from main` on the same `@`. (This merges the "restore" into your previous edits).
-    *   **Pro-Pattern**: Run `jj new` FIRST to "save" your current work in the parent, then perform the next action (like `restore`) in the new `@`.
+    *   **Anti-Pattern**: Editing a file, then running `jj restore --from main` on the same `\@`. (This merges the "restore" into your previous edits).
+    *   **Pro-Pattern**: Run `jj new` FIRST to "save" your current work in the parent, then perform the next action (like `restore`) in the new `\@`.
 3.  **Clean Descriptions**: Use `jj describe -m "message"` to set the commit message.
-4.  **Bookmark Advancement**: Use `jj bookmark move dev --to "@"` to advance your bookmark to the current working copy.
+4.  **Bookmark Advancement**: Use `jj bookmark move dev --to "\@"` to advance your bookmark to the current working copy.
 5.  **Git Pushing**: Use `jj git push --bookmark dev` to sync with origin.
 
 **Scenario: You modified `FileA` and `FileB`, but only want to commit `FileA`.**
@@ -212,13 +212,13 @@ This downloads `upstream/main` without modifying your working copy.
 jj log --limit 10
 ```
 
-Note the commit IDs for your local work (`@`) and where `main` currently points.
+Note the commit IDs for your local work (`\@`) and where `main` currently points.
 
 **Step 3: Update Your Main Bookmark**
 
 ```powershell
 # Point local 'main' bookmark to the latest upstream/main
-jj bookmark set main -r "main@upstream"
+jj bookmark set main -r "main\@upstream"
 ```
 
 **Step 4: Rebase Your Work**
@@ -397,7 +397,7 @@ cd ..
 
 If you have many intermediate commits from conflict resolution, you may want to squash them. **However, be aware of a critical pitfall:**
 
-> ⚠️ **CRITICAL WARNING: The Squashing Pitfall**
+> âš ï¸ **CRITICAL WARNING: The Squashing Pitfall**
 >
 > When you do `jj new main` then `jj restore --from <your-commit>`, you ONLY get files
 > that exist in YOUR commit. Any NEW files added by upstream will be MISSING!
@@ -415,11 +415,11 @@ If you have many intermediate commits from conflict resolution, you may want to 
 jj new main -m "feat: sync with upstream (squashed)"
 jj restore --from <your-resolved-commit-id>
 
-# ⚠️ CRITICAL: Restore files added by upstream that you don't have
+# âš ï¸ CRITICAL: Restore files added by upstream that you don't have
 git diff --diff-filter=D --name-only main | ForEach-Object { git checkout main -- $_ 2>$null }
 
 # Option 2: Move bookmark to skip conflicted ancestors
-jj bookmark set dev -r '@' --allow-backwards
+jj bookmark set dev -r '\@' --allow-backwards
 
 # Push (may need force if history changed)
 jj git push --bookmark dev
@@ -494,7 +494,7 @@ The tool system uses **auto-discovery** - tools are automatically registered by 
 ```python
 from core.agentpress.tool import Tool, tool_metadata, method_metadata, openapi_schema
 
-@tool_metadata(
+\@tool_metadata(
     display_name="My Tool",
     description="Tool description",
     icon="IconName",
@@ -502,11 +502,11 @@ from core.agentpress.tool import Tool, tool_metadata, method_metadata, openapi_s
 )
 class MyTool(Tool):
 
-    @method_metadata(
+    \@method_metadata(
         display_name="Do Something",
         description="Method description"
     )
-    @openapi_schema({
+    \@openapi_schema({
         "type": "function",
         "function": {
             "name": "do_something",
@@ -538,7 +538,7 @@ The backend uses Supabase (PostgreSQL) with these key tables:
 - `triggers` - Scheduled/webhook triggers
 - `credentials` - Encrypted credentials for tools
 
-**Important**: When setting up Supabase, expose the `basejump` schema: Project Settings → API → Add `basejump` to Exposed Schemas.
+**Important**: When setting up Supabase, expose the `basejump` schema: Project Settings â†’ API â†’ Add `basejump` to Exposed Schemas.
 
 ### Environment Variables
 
@@ -609,9 +609,9 @@ This fork includes significant customizations for self-hosted deployments. Compr
 
 1. **Location**: `suna-supabase/docker/` (separate directory)
 2. **Port Mappings**:
-   - Kong (API Gateway): `8002` → Internal `8000`
-   - Auth Service: `8100` → Internal `9999`
-   - Studio (Dashboard): `6005` → Internal `3000`
+   - Kong (API Gateway): `8002` â†’ Internal `8000`
+   - Auth Service: `8100` â†’ Internal `9999`
+   - Studio (Dashboard): `6005` â†’ Internal `3000`
    - PostgreSQL: `5432` (direct access)
 
 3. **Required Configuration** (`suna-supabase/docker/.env`):
@@ -691,9 +691,9 @@ See `.docs/initialsetup/6. middleware migrations/` for complete documentation.
 - **Embeddings**: kb-fusion uses OpenAI `text-embedding-3-small` (hardcoded, no alternatives)
 - **LLM Models**: LiteLLM supports 7+ providers (OpenAI, Anthropic, Google, etc.)
 - **Without OPENAI_API_KEY**:
-  - ✅ Documents upload and store
-  - ✅ LLM summarization works (uses fallback providers)
-  - ❌ KB semantic search fails (no embeddings)
+  - âœ… Documents upload and store
+  - âœ… LLM summarization works (uses fallback providers)
+  - âŒ KB semantic search fails (no embeddings)
 
 **kb-fusion Architecture:**
 
@@ -804,7 +804,7 @@ For detailed deployment guides, see `.docs/railway-deployments/` and `RAILWAY_DE
 
 | Action | Command |
 | :--- | :--- |
-| **Install/Login** | `npm i -g @railway/cli && railway login` |
+| **Install/Login** | `npm i -g \@railway/cli && railway login` |
 | **Link Project** | `railway link -p <id>` |
 | **Get Variables** | `railway variables -e <env> -s "Service Name"` |
 | **Run Local** | `railway run python api.py` |
@@ -841,11 +841,11 @@ This repository uses **Portkit** for syncing upstream features to this soft-fork
 - **Tools**: `.portkit/scripts/` (Use `uv run scripts/python/script.py` or `npx tsx scripts/typescript/script.ts`).
 - **Workflow**: Specify -> Research -> Plan -> Tasks -> Implement -> Verify.
 
-## 🔧 Patch System (Helps with Upstream Sync)
+## ðŸ”§ Patch System (Helps with Upstream Sync)
 
 This repository uses a Portkit a **universal patch system** for tracking customizations to sync with upstream. See `patches/AGENT_RULES.md` for complete documentation.
 
-### 🚨 CRITICAL: Never Manually Create .patch Files
+### ðŸš¨ CRITICAL: Never Manually Create .patch Files
 
 **ALWAYS use `git diff` with `--relative` to generate patch files:**
 
@@ -889,9 +889,9 @@ Examples:
 
 The patch system automatically detects already-applied patches using `git apply --check --reverse`:
 
-- **Not applied** → Apply it
-- **Already applied** → Skip gracefully (shows "⏭️ Already applied, skipping")
-- **Conflicts** → Fail with error
+- **Not applied** â†’ Apply it
+- **Already applied** â†’ Skip gracefully (shows "â­ï¸ Already applied, skipping")
+- **Conflicts** â†’ Fail with error
 
 ### Key Files
 

@@ -25,7 +25,7 @@ from core.agentpress.tool import Tool  # For non-sandbox tools
 from core.utils.config import config
 from core.agentpress.thread_manager import ThreadManager
 
-@tool_metadata(
+\@tool_metadata(
     display_name="Tool Display Name",
     description="Tool description",
     icon="IconName",  # Lucide icon name
@@ -41,7 +41,7 @@ class YourTool(SandboxToolsBase):  # or Tool
         super().__init__(project_id, thread_manager)
         # Initialize any config/API keys from config
     
-    @openapi_schema({
+    \@openapi_schema({
         "type": "function",
         "function": {
             "name": "function_name",
@@ -68,8 +68,8 @@ class YourTool(SandboxToolsBase):  # or Tool
 
 **Key Points:**
 
-- Use `@tool_metadata` decorator for tool metadata
-- Use `@openapi_schema` decorator for each function
+- Use \@tool_metadata decorator for tool metadata
+- Use \@openapi_schema decorator for each function
 - Return `ToolResult` using `self.success_response()` or `self.fail_response()`
 - Inherit from `SandboxToolsBase` if tool needs sandbox access, otherwise `Tool`
 
