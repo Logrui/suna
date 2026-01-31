@@ -1,0 +1,49 @@
+# Normalize line endings for all text files
+* text=auto
+
+# Force LF line endings for specific file types (critical for Gemini CLI compatibility)
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+
+# Shell scripts should always be LF
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Python files
+*.py text eol=lf
+
+# TypeScript/JavaScript
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+
+# CSS
+*.css text eol=lf
+*.scss text eol=lf
+
+# HTML
+*.html text eol=lf
+
+# Configuration files
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.editorconfig text eol=lf
+Dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+
+# Binary files (don't touch these)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
