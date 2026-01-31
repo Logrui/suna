@@ -7,21 +7,6 @@
  * - Threads/Chats
  * - Triggers
  * - Any selectable entity
- *
- * Features:
- * - Consistent selection states across all lists
- * - Checkmark for selected items
- * - Chevron for navigation items
- * - Avatar integration (no wrapping)
- * - Haptic feedback
- * - Spring animations
- * - Dark/Light mode support
- *
- * Design Specifications (from Figma):
- * - Height: Auto (min 48px with avatar)
- * - Gap between avatar and text: 8px (gap-2)
- * - Selection indicator: 20px circle with check (dark) or chevron (navigation)
- * - Press animation: Scale to 0.98
  */
 
 import React, { ReactNode } from 'react';
@@ -30,8 +15,6 @@ import { useColorScheme } from 'nativewind';
 import { Text } from '@/components/ui/text';
 import { Check, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { cn } from '@/lib';
-// Use @gorhom/bottom-sheet touchable for proper Android gesture handling inside bottom sheets
 import { TouchableOpacity as BottomSheetTouchable } from '@gorhom/bottom-sheet';
 
 export interface SelectableListItemProps {
@@ -86,6 +69,10 @@ export function SelectableListItem({
   rightIcon,
 }: SelectableListItemProps) {
   const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  const textColor = isDark ? '#F8F8F8' : '#121215';
+  const mutedColor = isDark ? 'rgba(248, 248, 248, 0.5)' : 'rgba(18, 18, 21, 0.5)';
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -95,22 +82,39 @@ export function SelectableListItem({
   return (
     <BottomSheetTouchable
       onPress={handlePress}
-      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+      }}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel || `Select ${title}`}>
+      accessibilityLabel={accessibilityLabel || `Select ${title}`}
+    >
       {/* Left: Avatar + Text */}
-      <View className="flex-1 flex-row items-center gap-2">
-        {/* Avatar (no wrapping - passed directly) */}
-        <View className={cn(isActive ? 'opacity-100' : 'opacity-30')}>{avatar}</View>
+      <View
+        style={{
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        {/* Avatar */}
+        <View style={{ opacity: isActive ? 1 : 0.3, marginRight: 10 }}>{avatar}</View>
 
         {/* Text Content */}
-        <View className="flex-1">
-          <View className="flex-row items-center gap-2">
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {typeof title === 'string' ? (
               <Text
-                style={{ color: colorScheme === 'dark' ? '#f8f8f8' : '#121215' }}
-                className="font-roobert-medium text-base"
-                numberOfLines={1}>
+                style={{
+                  color: textColor,
+                  fontSize: 15,
+                  fontFamily: 'Roobert-Medium',
+                }}
+                numberOfLines={1}
+              >
                 {title}
               </Text>
             ) : (
@@ -121,10 +125,12 @@ export function SelectableListItem({
             {!isActive && (
               <Text
                 style={{
-                  color:
-                    colorScheme === 'dark' ? 'rgba(248, 248, 248, 0.5)' : 'rgba(18, 18, 21, 0.5)',
+                  color: mutedColor,
+                  fontSize: 12,
+                  fontFamily: 'Roobert',
+                  marginLeft: 8,
                 }}
-                className="mt-0.5 font-roobert text-xs">
+              >
                 Inactive
               </Text>
             )}
@@ -132,46 +138,51 @@ export function SelectableListItem({
           {subtitle && (
             <Text
               style={{
-                color:
-                  colorScheme === 'dark' ? 'rgba(248, 248, 248, 0.5)' : 'rgba(18, 18, 21, 0.5)',
+                color: mutedColor,
+                fontSize: 12,
+                fontFamily: 'Roobert',
+                marginTop: 2,
               }}
-              className="mt-0.5 font-roobert text-xs"
-              numberOfLines={1}>
+              numberOfLines={1}
+            >
               {subtitle}
             </Text>
           )}
         </View>
 
-        {/* Optional Meta (right side of text) */}
+        {/* Optional Meta */}
         {meta && (
           <Text
             style={{
-              color: colorScheme === 'dark' ? 'rgba(248, 248, 248, 0.5)' : 'rgba(18, 18, 21, 0.5)',
+              color: mutedColor,
+              fontSize: 12,
+              fontFamily: 'Roobert-Medium',
+              marginLeft: 8,
             }}
-            className="ml-2 font-roobert-medium text-xs">
+          >
             {meta}
           </Text>
         )}
       </View>
 
       {/* Right: Selection Indicator or Right Icon */}
-      {rightIcon && <View className="mr-2">{rightIcon}</View>}
+      {rightIcon && <View style={{ marginRight: 8 }}>{rightIcon}</View>}
       {!hideIndicator && (
-        <View className="w-6 items-center justify-center">
+        <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
           {showChevron ? (
-            <ChevronRight
-              size={18}
-              color={colorScheme === 'dark' ? 'rgba(248, 248, 248, 0.5)' : 'rgba(18, 18, 21, 0.5)'}
-            />
+            <ChevronRight size={18} color={mutedColor} />
           ) : isSelected ? (
             <View
-              style={{ backgroundColor: colorScheme === 'dark' ? '#f8f8f8' : '#121215' }}
-              className="h-5 w-5 items-center justify-center rounded-full">
-              <Check
-                size={12}
-                color={colorScheme === 'dark' ? '#121215' : '#f8f8f8'}
-                strokeWidth={3}
-              />
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: textColor,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Check size={12} color={isDark ? '#121215' : '#F8F8F8'} strokeWidth={3} />
             </View>
           ) : null}
         </View>

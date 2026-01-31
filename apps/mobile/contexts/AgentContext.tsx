@@ -1,17 +1,21 @@
 import * as React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAgents } from '@/lib/agents';
+import { useAvailableModels } from '@/lib/models';
 import { useAuthContext } from './AuthContext';
-import type { Agent } from '@/api/types';
+import type { Agent, Model } from '@/api/types';
 import { log } from '@/lib/logger';
 
 interface AgentContextType {
   selectedAgentId: string | undefined;
   selectedModelId: string | undefined;
+  selectedModelLabel: string;
   agents: Agent[];
+  availableModels: Model[];
   isLoading: boolean;
   error: Error | null;
   hasInitialized: boolean;
+  isAdmin: boolean;
 
   selectAgent: (agentId: string) => Promise<void>;
   selectModel: (modelId: string) => Promise<void>;
@@ -40,16 +44,30 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
       sort_order: 'asc'
     },
     {
-      // Only fetch if user is authenticated
       enabled: !!session,
-      // Don't refetch on window focus - avoid unnecessary requests
       refetchOnWindowFocus: false,
-      // Don't refetch on reconnect - we'll handle this manually
       refetchOnReconnect: false,
     }
   );
 
   const agents = React.useMemo(() => agentsResponse?.agents || [], [agentsResponse?.agents]);
+
+  // Fetch available models
+  const { data: modelsResponse, isLoading: modelsLoading } = useAvailableModels({ enabled: !!session });
+  const availableModels = React.useMemo(() => modelsResponse?.models || [], [modelsResponse]);
+
+  // Admin check (basic implementation)
+  const isAdmin = React.useMemo(() => {
+    const email = session?.user?.email?.toLowerCase();
+    return email === 'admin@kortix.ai' || email?.endsWith('@kortix.dev') || false;
+  }, [session?.user?.email]);
+
+  // Get selected model label
+  const selectedModelLabel = React.useMemo(() => {
+    if (!selectedModelId) return 'Kortix Basic';
+    const model = availableModels.find(m => m.id === selectedModelId);
+    return model?.display_name || selectedModelId;
+  }, [selectedModelId, availableModels]);
 
   // Handle error state - if agents fail to load, still mark as initialized
   React.useEffect(() => {
@@ -195,10 +213,13 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const value: AgentContextType = React.useMemo(() => ({
     selectedAgentId,
     selectedModelId,
+    selectedModelLabel,
     agents,
-    isLoading,
+    availableModels,
+    isLoading: isLoading || modelsLoading,
     error,
     hasInitialized,
+    isAdmin,
     selectAgent,
     selectModel,
     loadAgents,
@@ -209,10 +230,14 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   }), [
     selectedAgentId,
     selectedModelId,
+    selectedModelLabel,
     agents,
+    availableModels,
     isLoading,
+    modelsLoading,
     error,
     hasInitialized,
+    isAdmin,
     selectAgent,
     selectModel,
     loadAgents,
@@ -238,7 +263,3 @@ export function useAgent() {
 
   return context;
 }
-
-
-
-

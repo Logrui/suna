@@ -15,8 +15,6 @@ import BottomSheet, {
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import {
-  Plus,
-  Zap,
   ArrowLeft,
   Brain,
   Wrench,
@@ -25,6 +23,10 @@ import {
   Lock,
   ChevronRight,
   Plug,
+  User,
+  Search as SearchIcon,
+  Plus,
+  Zap,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
@@ -38,11 +40,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { AgentAvatar } from './AgentAvatar';
-import { ModelToggle } from '@/components/models/ModelToggle';
+import { SectionCard } from '@/components/shared/SectionCard';
+import { ModelProviderIcon } from '@/components/models/ModelProviderIcon';
 import { SelectableListItem } from '@/components/shared/SelectableListItem';
 import { EntityList } from '@/components/shared/EntityList';
 import { useSearch } from '@/lib/utils/search';
-import { useAvailableModels } from '@/lib/models';
 import type { Agent, Model } from '@/api/types';
 import {
   AppBubble,
@@ -69,7 +71,8 @@ interface AgentDrawerProps {
 
 type ViewState =
   | 'main'
-  | 'agents'
+  | 'workers'
+  | 'models'
   | 'integrations'
   | 'composio'
   | 'composio-detail'
@@ -113,8 +116,11 @@ export function AgentDrawer({
 
   const {
     agents,
+    availableModels: models,
     selectedAgentId,
     selectedModelId,
+    selectedModelLabel,
+    isAdmin,
     selectAgent,
     selectModel,
     isLoading,
@@ -122,10 +128,8 @@ export function AgentDrawer({
     loadAgents,
   } = useAgent();
 
-  const { data: modelsData, isLoading: modelsLoading } = useAvailableModels();
   const { hasActiveSubscription, hasFreeTier } = useBillingContext();
 
-  const models = modelsData?.models || [];
   const selectedAgent = agents.find((a) => a.agent_id === selectedAgentId);
 
   const isOpeningRef = React.useRef(false);
@@ -155,6 +159,49 @@ export function AgentDrawer({
     () => agentResults.map((result) => ({ ...result, agent_id: result.id })),
     [agentResults]
   );
+
+  // Search for models
+  const searchableModels = React.useMemo(
+    () => models.map((model) => ({ ...model, name: model.display_name })),
+    [models]
+  );
+  const {
+    query: modelQuery,
+    results: modelResults,
+    clearSearch: clearModelSearch,
+    updateQuery: updateModelQuery,
+  } = useSearch(searchableModels, ['display_name', 'id']);
+
+  const modelGroups = React.useMemo(() => {
+    const groups: Record<string, Model[]> = {};
+    const results = modelQuery ? modelResults : models;
+
+    results.forEach((model) => {
+      const id = model.id.toLowerCase();
+      let provider = 'Other';
+      if (id.includes('gpt') || id.includes('oai') || id.includes('openai')) provider = 'OpenAI';
+      else if (id.includes('claude') || id.includes('anthropic')) provider = 'Anthropic';
+      else if (id.includes('gemini') || id.includes('google')) provider = 'Google';
+      else if (id.includes('grok')) provider = 'X.AI';
+      else if (id.includes('moonshot')) provider = 'Moonshot';
+      else if (id.includes('kortix')) provider = 'Kortix';
+      else if (id.includes('ollama') || id.includes('local') || id.includes('lmstudio')) provider = 'Local';
+
+      // Skip local models for non-admins
+      if (provider === 'Local' && !isAdmin) return;
+
+      if (!groups[provider]) groups[provider] = [];
+      groups[provider].push(model);
+    });
+
+    const order = ['Kortix', 'OpenAI', 'Anthropic', 'Google', 'X.AI', 'Moonshot', 'Local', 'Other'];
+    return order
+      .filter((p) => groups[p] && groups[p].length > 0)
+      .map((provider) => ({
+        provider,
+        models: groups[provider].sort((a, b) => (b.priority || 0) - (a.priority || 0)),
+      }));
+  }, [models, modelResults, modelQuery]);
 
   // Check if user can access a model
   const canAccessModel = React.useCallback(
@@ -234,6 +281,14 @@ export function AgentDrawer({
     [selectAgent, navigateToView]
   );
 
+  const handleModelPress = React.useCallback(
+    async (model: Model) => {
+      await selectModel(model.id);
+      navigateToView('main');
+    },
+    [selectModel, navigateToView]
+  );
+
   const handleIntegrationsPress = React.useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (hasFreeTier) {
@@ -265,195 +320,161 @@ export function AgentDrawer({
   // ============================================================================
   const renderMainView = () => (
     <View style={styles.mainContainer}>
-      {/* Mode Section - Primary & prominent */}
+      {/* Configuration Sections */}
       <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: colors.muted }]}>
-          {t('models.mode', 'Mode')}
-        </Text>
-        {modelsLoading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: colors.muted }]}>Loading...</Text>
-          </View>
-        ) : (
-          <ModelToggle
-            models={models}
-            selectedModelId={selectedModelId}
-            onModelChange={handleModelChange}
-            canAccessModel={canAccessModel}
-            onUpgradeRequired={handleUpgradeRequired}
-          />
-        )}
+        <SectionCard
+          icon={
+            selectedAgent ? (
+              <AgentAvatar
+                agent={selectedAgent}
+                size={42}
+              />
+            ) : (
+              <User size={28} color={isDark ? '#F8F8F8' : '#121215'} />
+            )
+          }
+          label={t('agents.worker', 'Worker')}
+          value={selectedAgent?.name || t('agents.defaultWorker', 'Suna (Default)')}
+          onPress={() => navigateToView('workers')}
+        />
+
+        <SectionCard
+          icon={
+            selectedModelId ? (
+              <ModelProviderIcon modelId={selectedModelId} size={32} />
+            ) : (
+              <Brain size={28} color={isDark ? '#F8F8F8' : '#121215'} />
+            )
+          }
+          label={t('models.model', 'Model')}
+          value={selectedModelLabel}
+          onPress={() => navigateToView('models')}
+        />
+
+        <SectionCard
+          icon={
+            hasFreeTier ? (
+              <Lock size={26} color={colors.muted} />
+            ) : (
+              <Plug size={26} color={isDark ? '#F8F8F8' : '#121215'} />
+            )
+          }
+          label={t('integrations.title', 'Integrations')}
+          value={hasFreeTier ? 'Upgrade to unlock' : 'Connect your Apps'}
+          locked={hasFreeTier}
+          onPress={handleIntegrationsPress}
+        />
       </View>
 
-      {/* Integrations */}
-      <Pressable
-        onPress={handleIntegrationsPress}
-        style={({ pressed }) => [
-          styles.integrationsContainer,
-          {
-            backgroundColor: pressed 
-              ? isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
-              : isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <View style={styles.integrationsRow}>
-          <View style={[styles.integrationsIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
-            {hasFreeTier ? (
-              <Lock size={18} color={colors.muted} strokeWidth={2} />
-            ) : (
-              <Plug size={18} color={colors.text} strokeWidth={2} />
-            )}
-          </View>
-          <View style={styles.integrationsTextContainer}>
-            <Text style={[styles.integrationsTitle, { color: colors.text }]}>
-              Connect your Apps
-            </Text>
-            <Text style={[styles.integrationsSubtitle, { color: colors.muted }]}>
-              {hasFreeTier ? 'Upgrade to unlock' : 'Google, Slack, GitHub & more'}
-            </Text>
-          </View>
-          <ChevronRight size={18} color={colors.muted} />
+      {/* Worker Quick Actions - Contextual secondary actions */}
+      {selectedAgent && (
+        <View style={styles.quickActionsContainer}>
+          <BottomSheetTouchable
+            style={[styles.quickAction, { borderColor: colors.border }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (selectedAgentId && onOpenWorkerConfig) {
+                onOpenWorkerConfig(selectedAgentId, 'instructions');
+                onClose?.();
+              }
+            }}
+          >
+            <Brain size={18} color={colors.text} />
+          </BottomSheetTouchable>
+          <BottomSheetTouchable
+            style={[styles.quickAction, { borderColor: colors.border }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (selectedAgentId && onOpenWorkerConfig) {
+                onOpenWorkerConfig(selectedAgentId, 'tools');
+                onClose?.();
+              }
+            }}
+          >
+            <Wrench size={18} color={colors.text} />
+          </BottomSheetTouchable>
+          <BottomSheetTouchable
+            style={[styles.quickAction, { borderColor: colors.border }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (selectedAgentId && onOpenWorkerConfig) {
+                onOpenWorkerConfig(selectedAgentId, 'integrations');
+                onClose?.();
+              }
+            }}
+          >
+            <Server size={18} color={colors.text} />
+          </BottomSheetTouchable>
+          <BottomSheetTouchable
+            style={[styles.quickAction, { borderColor: colors.border }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (selectedAgentId && onOpenWorkerConfig) {
+                onOpenWorkerConfig(selectedAgentId, 'triggers');
+                onClose?.();
+              }
+            }}
+          >
+            <Zap size={18} color={colors.text} />
+          </BottomSheetTouchable>
         </View>
-      </Pressable>
-
-      {/* Worker Section - ONLY visible in beta mode */}
-      {advancedFeaturesEnabled && (
-        <>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionLabel, { color: colors.muted }]}>
-                {t('agents.myWorkers', 'Workers')}
-              </Text>
-              {onCreateAgent && (
-                <BottomSheetTouchable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    hasFreeTier ? handleUpgradeRequired() : onCreateAgent();
-                  }}
-                >
-                  {hasFreeTier ? (
-                    <Sparkles size={16} color={colors.accent} />
-                  ) : (
-                    <Plus size={16} color={colors.muted} />
-                  )}
-                </BottomSheetTouchable>
-              )}
-            </View>
-
-            {/* Selected Worker */}
-            {selectedAgent ? (
-              <Pressable
-                onPress={() => navigateToView('agents')}
-                style={({ pressed }) => [
-                  styles.workerCard,
-                  {
-                    backgroundColor: pressed ? colors.card : 'transparent',
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <AgentAvatar agent={selectedAgent} size={40} />
-                <View style={styles.workerInfo}>
-                  <Text style={[styles.workerName, { color: colors.text }]} numberOfLines={1}>
-                    {selectedAgent.name}
-                  </Text>
-                  {selectedAgent.description && (
-                    <Text style={[styles.workerDesc, { color: colors.muted }]} numberOfLines={1}>
-                      {selectedAgent.description}
-                    </Text>
-                  )}
-                </View>
-                <ChevronRight size={18} color={colors.muted} />
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => navigateToView('agents')}
-                style={({ pressed }) => [
-                  styles.workerCard,
-                  {
-                    backgroundColor: pressed ? colors.card : 'transparent',
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <View style={[styles.workerPlaceholder, { backgroundColor: colors.card }]}>
-                  <Sparkles size={18} color={colors.muted} />
-                </View>
-                <Text style={[styles.workerPlaceholderText, { color: colors.muted }]}>
-                  Select a worker
-                </Text>
-                <ChevronRight size={18} color={colors.muted} />
-              </Pressable>
-            )}
-          </View>
-
-          {/* Worker Quick Actions */}
-          {selectedAgent && (
-            <View style={styles.quickActionsContainer}>
-              <BottomSheetTouchable
-                style={[styles.quickAction, { borderColor: colors.border }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  if (selectedAgentId && onOpenWorkerConfig) {
-                    onOpenWorkerConfig(selectedAgentId, 'instructions');
-                    onClose?.();
-                  }
-                }}
-              >
-                <Brain size={18} color={colors.text} />
-              </BottomSheetTouchable>
-              <BottomSheetTouchable
-                style={[styles.quickAction, { borderColor: colors.border }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  if (selectedAgentId && onOpenWorkerConfig) {
-                    onOpenWorkerConfig(selectedAgentId, 'tools');
-                    onClose?.();
-                  }
-                }}
-              >
-                <Wrench size={18} color={colors.text} />
-              </BottomSheetTouchable>
-              <BottomSheetTouchable
-                style={[styles.quickAction, { borderColor: colors.border }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  if (selectedAgentId && onOpenWorkerConfig) {
-                    onOpenWorkerConfig(selectedAgentId, 'integrations');
-                    onClose?.();
-                  }
-                }}
-              >
-                <Server size={18} color={colors.text} />
-              </BottomSheetTouchable>
-              <BottomSheetTouchable
-                style={[styles.quickAction, { borderColor: colors.border }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  if (selectedAgentId && onOpenWorkerConfig) {
-                    onOpenWorkerConfig(selectedAgentId, 'triggers');
-                    onClose?.();
-                  }
-                }}
-              >
-                <Zap size={18} color={colors.text} />
-              </BottomSheetTouchable>
-            </View>
-          )}
-        </>
       )}
     </View>
   );
 
   // ============================================================================
-  // AGENTS VIEW - Worker selection (beta only)
+  // MODELS VIEW - Full model selection
   // ============================================================================
-  const renderAgentsView = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
+  const renderModelsView = () => (
+    <View>
+      <View style={styles.viewHeader}>
+        <BackButton onPress={() => navigateToView('main')} />
+        <View style={styles.viewHeaderText}>
+          <Text style={[styles.viewTitle, { color: colors.text }]}>
+            {t('models.selectModel', 'Select Model')}
+          </Text>
+          <Text style={[styles.viewSubtitle, { color: colors.muted }]}>
+            {t('models.chooseModel', 'Choose an AI model for your worker')}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={modelQuery}
+          onChangeText={updateModelQuery}
+          placeholder={t('models.searchModels', 'Search models...')}
+          onClear={clearModelSearch}
+        />
+      </View>
+
+      {modelGroups.map((group) => (
+        <View key={group.provider} style={styles.modelGroup}>
+          <Text style={[styles.groupLabel, { color: colors.muted }]}>
+            {group.provider}
+          </Text>
+          <View style={styles.modelList}>
+            {group.models.map((model) => (
+              <SelectableListItem
+                key={model.id}
+                avatar={<ModelProviderIcon modelId={model.id} size={28} />}
+                title={model.display_name}
+                subtitle={model.requires_subscription && !hasActiveSubscription ? 'Pro access required' : undefined}
+                isSelected={model.id === selectedModelId}
+                onPress={() => handleModelPress(model)}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  // ============================================================================
+  // WORKERS VIEW - Worker selection
+  // ============================================================================
+  const renderWorkersView = () => (
+    <View>
       <View style={styles.viewHeader}>
         <BackButton onPress={() => navigateToView('main')} />
         <View style={styles.viewHeaderText}>
@@ -513,13 +534,13 @@ export function AgentDrawer({
           />
         )}
       />
-    </ScrollView>
+    </View>
   );
 
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={advancedFeaturesEnabled ? ['70%'] : ['50%']}
+      snapPoints={['75%']}
       enablePanDownToClose
       onDismiss={handleDismiss}
       onChange={handleSheetChange}
@@ -627,16 +648,9 @@ export function AgentDrawer({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {currentView === 'main' && (
-            <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(150)}>
-              {renderMainView()}
-            </Animated.View>
-          )}
-          {currentView === 'agents' && (
-            <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(150)}>
-              {renderAgentsView()}
-            </Animated.View>
-          )}
+          {currentView === 'main' && renderMainView()}
+          {currentView === 'workers' && renderWorkersView()}
+          {currentView === 'models' && renderModelsView()}
           {currentView === 'integrations' && (
             <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(150)}>
               <IntegrationsPageContent
@@ -798,6 +812,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Roobert',
     marginTop: 2,
+  },
+  modelGroup: {
+    marginBottom: 20,
+  },
+  groupLabel: {
+    fontSize: 12,
+    fontFamily: 'Roobert-Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  modelList: {
+    gap: 8,
   },
   searchContainer: {
     marginBottom: 16,
