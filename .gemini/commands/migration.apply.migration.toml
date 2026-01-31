@@ -1,5 +1,5 @@
 description = "apply a migration to the relevant Supabase container"
-prompt = """ 
+prompt = ''' 
 //turbo-all
 
 ## User Input
@@ -29,4 +29,4 @@ Execute the `docker-apply-migration.ps1` script to apply a SQL migration.
 ```powershell
 .\.scripts\core\docker-apply-migration.ps1 $ARGUMENTS
 ```
-""" 
+''' 

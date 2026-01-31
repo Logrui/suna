@@ -1,5 +1,5 @@
 description = "Perform a docker compose build verification and continue in fix loop until quality and issues with docker compose build are resolved for the most recent task and/or changes"
-prompt = """ 
+prompt = ''' 
 //turbo-all
 
 ---
@@ -25,4 +25,4 @@ You **MUST** consider the user input before proceeding (if not empty).
 4. Review logs and then if there are issues review the code files
 
 5. If there is a substantial code change that is required or a refactor that needs to occur to resolve build issues - inform the user
-""" 
+''' 

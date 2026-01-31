@@ -1,5 +1,5 @@
 description = "Document a bug fix by creating a standardized report in `.docs/bugfixes`. This ensures we have a history of issues, root causes, and resolutions."
-prompt = """ 
+prompt = ''' 
 ## User Input
 
 ```text
@@ -78,4 +78,4 @@ Use the following structure for `BUG_REPORT_RESOLUTION.md`:
 ### 4. Commit (Optional)
 
 If the user approves, you can commit the documentation along with the code changes.
-""" 
+''' 

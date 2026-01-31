@@ -1,5 +1,5 @@
 description = "List recently edited documentation files (.md)."
-prompt = """ 
+prompt = ''' 
 ## User Input
 
 ```text
@@ -26,4 +26,4 @@ Execute the `list-recent-docs.ps1` script to see recently modified documentation
 ```powershell
 .\.scripts\core\list-recent-docs.ps1 $ARGUMENTS
 ```
-""" 
+''' 

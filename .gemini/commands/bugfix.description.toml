@@ -1,5 +1,5 @@
 description = "Initialize a bug investigation by creating description.md and research.md in a new or existing bugfix folder."
-prompt = """ 
+prompt = ''' 
 ## User Input
 
 ```text
@@ -40,4 +40,4 @@ Create `research.md` to serve as a living document for the investigation. It **M
 After creating the files, prompt the user with options to:
 1.  Begin investigating the issue immediately (which will update `research.md`).
 2.  Add more context to the description.
-""" 
+''' 

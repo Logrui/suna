@@ -1,5 +1,5 @@
 description = "Perform a hard restart (down then up) of Docker services."
-prompt = """ 
+prompt = ''' 
 ## User Input
 
 ```text
@@ -30,4 +30,4 @@ Execute the `docker-compose-hard-restart.ps1` script to hard restart services.
 ```powershell
 .\.scripts\core\docker-compose-hard-restart.ps1 $ARGUMENTS
 ```
-""" 
+''' 

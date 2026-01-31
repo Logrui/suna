@@ -1,5 +1,5 @@
 description = "List Suna Docker containers."
-prompt = """ 
+prompt = ''' 
 ## User Input
 
 ```text
@@ -26,4 +26,4 @@ Execute the `docker-list-containers.ps1` script to list containers.
 ```powershell
 .\.scripts\core\docker-list-containers.ps1 $ARGUMENTS
 ```
-""" 
+''' 

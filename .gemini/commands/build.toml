@@ -1,5 +1,5 @@
 description = "Build and restart Docker Compose services."
-prompt = """ 
+prompt = ''' 
 //turbo-all
 
 ## User Input
@@ -32,4 +32,4 @@ Execute the `docker-compose-build.ps1` script to build and restart services.
 ```
 
 ### 2. Review the docker compose build progression periodically and report back to the user with actionable next steps if the build fails. If the build succeeds offer a brief congradulations and celebratory message
-""" 
+''' 

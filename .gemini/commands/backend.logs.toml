@@ -1,5 +1,5 @@
 description = "Tail most recent backend logs from the Suna Docker container."
-prompt = """ 
+prompt = ''' 
 //turbo-all
 
 
@@ -20,4 +20,4 @@ Execute the `docker-backend-tail-logs.ps1` script to view backend logs.
 ```powershell
 .\.scripts\core\docker-backend-tail-logs.ps1 $ARGUMENTS
 ```
-""" 
+''' 

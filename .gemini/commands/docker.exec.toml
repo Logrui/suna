@@ -1,5 +1,5 @@
 description = "Execute relevant commands inside Docker containers."
-prompt = """ 
+prompt = ''' 
 ## User Input
 
 ```text
@@ -30,4 +30,4 @@ Execute the `docker-exec.ps1` script to run commands in containers based on rece
 ```powershell
 .\.scripts\core\docker-exec.ps1 $ARGUMENTS
 ```
-""" 
+''' 

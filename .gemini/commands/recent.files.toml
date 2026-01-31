@@ -1,5 +1,5 @@
 description = "List recently edited files in the repository."
-prompt = """ 
+prompt = ''' 
 ## User Input
 
 ```text
@@ -26,4 +26,4 @@ Execute the `list-recent-edits.ps1` script to see recently modified files.
 ```powershell
 .\.scripts\core\list-recent-edits.ps1 $ARGUMENTS
 ```
-""" 
+''' 
