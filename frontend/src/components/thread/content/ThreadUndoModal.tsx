@@ -9,14 +9,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Loader2 } from 'lucide-react';
 
 interface ThreadUndoModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => void;
+    loading?: boolean;
 }
 
-export function ThreadUndoModal({ open, onOpenChange, onConfirm }: ThreadUndoModalProps) {
+export function ThreadUndoModal({ open, onOpenChange, onConfirm, loading = false }: ThreadUndoModalProps) {
     return (
         <AlertDialog open={open} onOpenChange={onOpenChange}>
             <AlertDialogContent>
@@ -27,11 +29,15 @@ export function ThreadUndoModal({ open, onOpenChange, onConfirm }: ThreadUndoMod
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={(e) => {
-                        e.preventDefault();
-                        onConfirm();
-                    }}>
+                    <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onConfirm();
+                        }}
+                        disabled={loading}
+                    >
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Confirm
                     </AlertDialogAction>
                 </AlertDialogFooter>

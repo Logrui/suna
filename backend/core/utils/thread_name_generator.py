@@ -26,19 +26,21 @@ async def generate_and_update_thread_name(thread_id: str, prompt: str):
         db_conn = DBConnection()
         client = await db_conn.client
 
+        logger.debug(f"Naming task for thread {thread_id} initiated with prompt: '{prompt[:50]}...'")
+
         # Use same model and approach as project name generation
         model_name = "openrouter/openai/gpt-5-nano"
         
         system_prompt = """You are a helpful assistant that generates extremely concise titles (2-4 words maximum) for chat threads based on the user's message.
 
 Respond with a JSON object containing:
-- "title": A concise 2-4 word title for the thread
+- \"title\": A concise 2-4 word title for the thread
 
 Example responses:
-{"title": "Code Review Help"}
-{"title": "Build Todo App"}
-{"title": "Research Paper"}
-{"title": "Fix Bug"}
+{\"title\": \"Code Review Help\"}
+{\"title\": \"Build Todo App\"}
+{\"title\": \"Research Paper\"}
+{\"title\": \"Fix Bug\"}
 
 Keep titles short, descriptive, and action-oriented when appropriate."""
 
@@ -54,11 +56,14 @@ Keep titles short, descriptive, and action-oriented when appropriate."""
             response_format={"type": "json_object"},
             stream=False
         )
+        
+        logger.debug(f"LLM response for thread {thread_id}: {response}")
 
         generated_name = None
         
         if response and response.get('choices') and response['choices'][0].get('message'):
             raw_content = response['choices'][0]['message'].get('content', '').strip()
+            logger.debug(f"Raw LLM content for thread {thread_id}: {raw_content}")
             try:
                 parsed_response = json.loads(raw_content)
                 
@@ -119,6 +124,7 @@ async def generate_thread_branch_title(thread_id: str):
         
         # Fetch up to 25 recent messages for context
         try:
+            logger.debug(f"Fetching history for branched thread {thread_id}")
             messages_result = await client.table('messages')\
                 .select('type,content,message_id,tool_calls,tool_call_id,role')\
                 .eq('thread_id', thread_id)\
@@ -128,6 +134,7 @@ async def generate_thread_branch_title(thread_id: str):
                 
             history_messages = []
             if messages_result.data:
+                logger.debug(f"Found {len(messages_result.data)} raw messages for context")
                 # Reverse to get chronological order (oldest -> newest)
                 raw_messages = list(reversed(messages_result.data))
                 
@@ -158,6 +165,7 @@ async def generate_thread_branch_title(thread_id: str):
                         # For naming, we focus on text content mainly.
                         history_messages.append({"role": role, "content": str(content)})
                         
+            logger.debug(f"Compiled {len(history_messages)} history messages for prompt context")
         except Exception as e:
             logger.warning(f"Failed to fetch/compress message history for branched thread {thread_id}: {e}")
             history_messages = []
@@ -166,12 +174,12 @@ async def generate_thread_branch_title(thread_id: str):
 Review the conversation history provided and generate a title that best summarizes the active topic of this branched conversation.
 
 Respond with a JSON object containing:
-- "title": A concise 2-4 word title for the thread
+- \"title\": A concise 2-4 word title for the thread
 
 Example responses:
-{"title": "Refactor API Logic"}
-{"title": "Debug Auth Issue"}
-{"title": "Plan New Feature"}
+{\"title\": \"Refactor API Logic\"}
+{\"title\": \"Debug Auth Issue\"}
+{\"title\": \"Plan New Feature\"}
 
 Keep titles short, descriptive, and action-oriented."""
         
@@ -188,17 +196,21 @@ Keep titles short, descriptive, and action-oriented."""
             response_format={"type": "json_object"},
             stream=False
         )
+        
+        logger.debug(f"LLM response for branched thread {thread_id}: {response}")
 
         generated_name = None
         
         if response and response.get('choices') and response['choices'][0].get('message'):
             raw_content = response['choices'][0]['message'].get('content', '').strip()
+            logger.debug(f"Raw LLM content for branched thread {thread_id}: {raw_content}")
             try:
                 parsed_response = json.loads(raw_content)
                 if isinstance(parsed_response, dict):
                     title = parsed_response.get('title', '').strip()
                     if title:
                         generated_name = title.strip('\'" \n\t')
+                        logger.debug(f"Generated branched name: {generated_name}")
             except json.JSONDecodeError:
                 pass
         
@@ -209,5 +221,4 @@ Keep titles short, descriptive, and action-oriented."""
             logger.warning(f"No generated name for branched thread {thread_id}")
 
     except Exception as e:
-        logger.error(f"Error in branch naming task for {thread_id}: {str(e)}")
-
+        logger.error(f"Error in branch naming task for {thread_id}: {str(e)}\n{traceback.format_exc()}")

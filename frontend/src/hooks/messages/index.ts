@@ -1,7 +1,7 @@
 // Message and streaming related hooks
 export { useAgentStream, type UseAgentStreamResult, type AgentStreamCallbacks } from './useAgentStream';
 export { useThreadToolCalls } from './useThreadToolCalls';
-export { useMessagesQuery, useAddUserMessageMutation, useEditMessageMutation } from './useMessages';
+export { useMessagesQuery, useAddUserMessageMutation, useEditMessageMutation, useBranchThreadMutation } from './useMessages';
 export { usePlaybackController, type PlaybackState } from './usePlaybackController';
 
 // Mutation hooks re-exported from threads for convenience

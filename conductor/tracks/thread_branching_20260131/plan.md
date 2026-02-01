@@ -49,3 +49,15 @@
     - [x] Verify the entire flow from editing a message to branching a thread.
     - [x] Ensure auto-naming works during the branching process.
 - [x] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
+
+## Retrospective and Final Polish
+- [x] **Issue:** `22P02` Invalid UUID error when editing messages immediately after sending.
+    - **Cause:** The frontend was attempting to edit a message using its temporary optimistic ID (`temp-...`) instead of the real UUID assigned by the backend.
+    - **Solution:** Updated `addUserMessage` and `useAddUserMessageMutation` to return the full `Message` object from the backend. Modified `handleSubmitMessage` to immediately update the local message state with the real UUID upon successful creation.
+- [x] **Issue:** UI not refreshing after message edit (lingering truncated messages).
+    - **Cause:** The `useThreadData` hook had an optimization check (`messagesQuery.data.length > messages.length + 50`) that prevented updates when the message list shrank (which happens during truncation/rewind). Additionally, the `localExtras` logic was re-adding truncated messages because they were no longer in the server response.
+    - **Solution:** Removed the restrictive length check in `useThreadData`. Updated `localExtras` filtering to only preserve explicit temporary messages (starting with `temp-`), ensuring that messages removed on the server are correctly removed from the local state.
+- [x] **Feature:** Branch Naming.
+    - **Enhancement:** Added an optional `name` field to the `branchThread` API and mutation. Updated the `ThreadBranchModal` to allow users to preview and edit the suggested thread name before branching.
+- [x] **Polish:** UI Styling.
+    - **Enhancement:** Cleaned up the "Edit Message" text area styling to remove unnecessary borders and backgrounds, matching the cleaner project design guidelines. Added loading states to both Undo and Branch modals for better user feedback.

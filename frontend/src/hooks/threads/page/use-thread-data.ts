@@ -245,10 +245,12 @@ export function useThreadData(
     messages
   ]);
 
-  // Force message reload when new data arrives (but not via polling)
+  // Force message reload when new data arrives
   useEffect(() => {
     if (messagesQuery.data && messagesQuery.status === 'success' && !isLoading) {
-      const shouldReload = messages.length === 0 || messagesQuery.data.length > messages.length + 50;
+      // Always sync if the counts differ, or if we have new server data
+      // This ensures truncated messages (edit/undo) are removed from UI
+      const shouldReload = messages.length !== messagesQuery.data.length || messagesQuery.data.some((m, i) => m.message_id !== messages[i]?.message_id);
 
       if (shouldReload) {
         const unifiedMessages = (messagesQuery.data || [])
@@ -269,13 +271,21 @@ export function useThreadData(
           const serverIds = new Set(
             unifiedMessages.map((m) => m.message_id).filter(Boolean) as string[],
           );
+          
+          // Only keep truly local/temporary messages
+          // Messages that were on the server (valid UUID) but are now missing (truncated) should NOT be kept
           const localExtras = (prev || []).filter(
             (m) =>
-              !m.message_id ||
-              (typeof m.message_id === 'string' && m.message_id.startsWith('temp-')) ||
-              !serverIds.has(m.message_id as string),
+              !m.message_id || 
+              (typeof m.message_id === 'string' && m.message_id.startsWith('temp-'))
           );
-          const merged = [...unifiedMessages, ...localExtras].sort((a, b) => {
+          
+          // Filter out local extras that might have collided or been superseded (though unlikely with temp- IDs)
+          const filteredLocalExtras = localExtras.filter(m => 
+             !m.message_id || !serverIds.has(m.message_id)
+          );
+
+          const merged = [...unifiedMessages, ...filteredLocalExtras].sort((a, b) => {
             const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
             const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
             return aTime - bTime;

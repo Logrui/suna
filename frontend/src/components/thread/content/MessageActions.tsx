@@ -25,6 +25,8 @@ export function MessageActions({
     onBranch,
     className
 }: MessageActionsProps) {
+    const isTemp = messageId.startsWith('temp-');
+
     return (
         <div className={cn(
             "flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
@@ -32,11 +34,11 @@ export function MessageActions({
         )}>
             <CopyButton text={content} />
 
-            {showEdit && onEdit && (
+            {showEdit && onEdit && !isTemp && (
                 <EditButton onClick={onEdit} />
             )}
 
-            {showBranch && onBranch && (
+            {showBranch && onBranch && !isTemp && (
                 <BranchButton onClick={onBranch} />
             )}
         </div>

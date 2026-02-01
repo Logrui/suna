@@ -27,6 +27,7 @@ from .threads import (
     CreateThreadResponse,
     MessageCreateRequest,
     ThreadBranchRequest,
+    MessageUpdateRequest,
 )
 
 from .imports import (
@@ -56,6 +57,7 @@ __all__ = [
     "CreateThreadResponse",
     "MessageCreateRequest",
     "ThreadBranchRequest",
+    "MessageUpdateRequest",
     
     # Import models
     "JsonAnalysisRequest",

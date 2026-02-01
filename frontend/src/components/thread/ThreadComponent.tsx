@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { AgentRunLimitError } from '@/lib/api/errors';
 import { toast } from 'sonner';
 import { ChatInput, ChatInputHandles } from '@/components/thread/chat-input/chat-input';
@@ -19,7 +19,7 @@ import { isLocalMode } from '@/lib/config';
 import { ThreadContent } from '@/components/thread/content/ThreadContent';
 import { ThreadSkeleton } from '@/components/thread/content/ThreadSkeleton';
 import { PlaybackFloatingControls } from '@/components/thread/content/PlaybackFloatingControls';
-import { usePlaybackController, useAddUserMessageMutation } from '@/hooks/messages';
+import { usePlaybackController, useAddUserMessageMutation, useEditMessageMutation, useBranchThreadMutation } from '@/hooks/messages';
 import { useMessageQueueStore } from '@/stores/message-queue-store';
 import {
   useStartAgentMutation,
@@ -76,6 +76,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   const t = useTranslations('dashboard');
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const { user } = useAuth();
@@ -272,6 +273,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   });
 
   const addUserMessageMutation = useAddUserMessageMutation();
+  const editMessageMutation = useEditMessageMutation();
+  const branchThreadMutation = useBranchThreadMutation();
   const startAgentMutation = useStartAgentMutation();
   const stopAgentMutation = useStopAgentMutation();
   const threadAgentQuery = useThreadAgent(threadId, { enabled: isAuthenticated && !isShared });
@@ -700,17 +703,43 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           agentPromise,
         ]);
 
-        if (results[0].status === 'rejected') {
-          const reason = results[0].reason;
+        const messageResult = results[0];
+        const agentRunResult = results[1];
+
+        if (messageResult.status === 'rejected') {
+          const reason = messageResult.reason;
           console.error('Failed to send message:', reason);
           pendingMessageRef.current = null;
           throw new Error(
             `Failed to send message: ${reason?.message || reason}`,
           );
+        } else {
+          // Update the optimistic message with the real one from the server
+          const realMessage = messageResult.value;
+          if (realMessage) {
+            setMessages((prev) => {
+              const optimisticIndex = prev.findIndex(
+                (m) =>
+                  m.type === 'user' &&
+                  m.message_id?.startsWith('temp-') &&
+                  m.content === message,
+              );
+              if (optimisticIndex !== -1) {
+                return prev.map((m, index) =>
+                  index === optimisticIndex ? {
+                    ...(realMessage as any),
+                    // Ensure we keep any client-side properties if needed, but realMessage is the source of truth for ID
+                    message_id: (realMessage as any).message_id || m.message_id
+                  } as UnifiedMessage : m,
+                );
+              }
+              return prev;
+            });
+          }
         }
 
-        if (results[1].status === 'rejected') {
-          const error = results[1].reason;
+        if (agentRunResult.status === 'rejected') {
+          const error = agentRunResult.reason;
           console.error('Failed to start agent:', error);
           pendingMessageRef.current = null;
 
@@ -731,7 +760,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
         chatInputRef.current?.setValue('');
 
-        const agentResult = results[1].value;
+        const agentResult = agentRunResult.value;
         setUserInitiatedRun(true);
         setAgentRunId(agentResult.agent_run_id);
       } catch (err) {
@@ -759,6 +788,126 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       queuedMessages,
     ],
   );
+
+  const handleEditMessage = useCallback(async (messageId: string, content: string) => {
+
+    console.log('[ThreadComponent] handleEditMessage initiated', { messageId, content });
+
+    if (!content.trim() || !editMessageMutation) return;
+
+
+
+    try {
+
+      // 1. Edit the message (backend handles truncation)
+
+      await editMessageMutation.mutateAsync({
+
+        threadId,
+
+        messageId,
+
+        content
+
+      });
+
+      console.log('[ThreadComponent] editMessageMutation success');
+
+
+
+      // 2. Invalidate messages to refresh UI (and show truncated state)
+
+
+
+      await queryClient.invalidateQueries({ queryKey: threadKeys.messages(threadId) });
+
+
+
+      await queryClient.refetchQueries({ queryKey: threadKeys.messages(threadId), type: 'active' });
+
+
+
+      console.log('[ThreadComponent] messages query invalidated and refetched');
+
+
+
+      // 3. Start the agent again to continue from this point
+
+      const agentResult = await startAgentMutation.mutateAsync({
+
+        threadId,
+
+        options: {
+
+          agent_id: selectedAgentId
+
+        }
+
+      });
+
+      console.log('[ThreadComponent] Agent restarted', agentResult);
+
+
+
+      setUserInitiatedRun(true);
+
+      setAgentRunId(agentResult.agent_run_id);
+
+      toast.success("Message updated and conversation restarted");
+
+
+
+    } catch (error) {
+
+      console.error("Failed to edit message:", error);
+
+      toast.error("Failed to edit message");
+
+    }
+
+  }, [threadId, editMessageMutation, startAgentMutation, queryClient, selectedAgentId, setAgentRunId]);
+
+
+
+  const handleBranchThread = useCallback(async (messageId: string, name?: string) => {
+
+    console.log('[ThreadComponent] handleBranchThread initiated', { messageId, name });
+
+    if (!branchThreadMutation) return;
+
+
+
+    try {
+
+      const result = await branchThreadMutation.mutateAsync({
+
+        threadId,
+
+        messageId,
+
+        name
+
+      });
+
+      console.log('[ThreadComponent] Branch thread success', result);
+
+
+
+      toast.success("Thread branched successfully");
+
+      router.push(`/project/${result.project_id}/thread/${result.thread_id}`);
+
+
+
+    } catch (error) {
+
+      console.error("Failed to branch thread:", error);
+
+      toast.error("Failed to branch thread");
+
+    }
+
+  }, [threadId, branchThreadMutation, router]);
 
   const handleStopAgent = useCallback(async () => {
     if (isShared) return;
@@ -1219,6 +1368,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
                 isPreviewMode={true}
                 onPromptFill={!isShared ? handlePromptFill : undefined}
                 threadId={threadId}
+                onEdit={handleEditMessage}
+                onBranch={handleBranchThread}
               />
             </div>
           </div>
@@ -1384,6 +1535,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           scrollContainerRef={scrollContainerRef}
           threadId={threadId}
           onPromptFill={!isShared ? handlePromptFill : undefined}
+          onEdit={!isShared ? handleEditMessage : undefined}
+          onBranch={!isShared ? handleBranchThread : undefined}
         />
 
         {isShared && (

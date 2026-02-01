@@ -939,7 +939,7 @@ async def edit_message(
     Edit a message and truncate all subsequent messages in the thread.
     This effectively "rewinds" the conversation to this point with new content.
     """
-    logger.info(f"Editing message {message_id} in thread {thread_id}")
+    logger.debug(f"Editing message {message_id} in thread {thread_id} with content length: {len(request.content)}")
     client = await utils.db.client
     
     try:
@@ -1025,10 +1025,16 @@ async def branch_thread(
         # 5. Create new thread
         new_thread_id = str(uuid.uuid4())
         
-        # Determine the name - if it's "New Chat", keep it so naming triggers normally
-        # Otherwise use "Branch of [Source Name]"
-        source_name = source_thread.get('name', 'New Chat')
-        new_name = source_name if source_name == 'New Chat' else f"Branch of {source_name}"
+        # Determine the name - use provided name if available, otherwise fall back to logic
+        if request.name:
+            new_name = request.name
+        else:
+            # Determine the name - if it's "New Chat", keep it so naming triggers normally
+            # Otherwise use "Branch of [Source Name]"
+            source_name = source_thread.get('name', 'New Chat')
+            new_name = source_name if source_name == 'New Chat' else f"Branch of {source_name}"
+        
+        logger.debug(f"Source thread context - Project: {source_thread.get('project_id')}, Account: {source_thread.get('account_id')}")
         
         new_thread_data = {
             "thread_id": new_thread_id,
@@ -1040,6 +1046,7 @@ async def branch_thread(
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
+        logger.debug(f"New thread data payload: {new_thread_data}")
         
         await client.table('threads').insert(new_thread_data).execute()
         

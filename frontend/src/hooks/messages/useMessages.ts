@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { threadKeys } from "../threads/keys";
-import { addUserMessage, getMessages, editMessage, type Message } from "@/lib/api/threads";
+import { addUserMessage, getMessages, editMessage, branchThread, type Message } from "@/lib/api/threads";
 
 export const useMessagesQuery = (threadId: string, options?) => {
   return useQuery<Message[]>({
@@ -31,7 +31,7 @@ export const useMessagesQuery = (threadId: string, options?) => {
 };
 
 export const useAddUserMessageMutation = () => {
-  return useMutation<void, Error, { threadId: string; message: string }>({
+  return useMutation<Message, Error, { threadId: string; message: string }>({
     mutationFn: ({
       threadId,
       message,
@@ -49,6 +49,16 @@ export const useEditMessageMutation = () => {
       messageId,
       content,
     }) => editMessage(threadId, messageId, content)
+  });
+};
+
+export const useBranchThreadMutation = () => {
+  return useMutation<{ thread_id: string; project_id: string }, Error, { threadId: string; messageId: string; name?: string }>({
+    mutationFn: ({
+      threadId,
+      messageId,
+      name,
+    }) => branchThread(threadId, messageId, name)
   });
 };
 

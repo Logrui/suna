@@ -47,6 +47,7 @@ class MessageFeedbackResponse(BaseModel):
 class ThreadBranchRequest(BaseModel):
     """Request model for branching a thread."""
     message_id: str
+    name: Optional[str] = None
 
 
 class MessageUpdateRequest(BaseModel):

@@ -9,6 +9,7 @@ import { Project } from '@/lib/api/threads';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ThreadUndoModal } from './ThreadUndoModal';
+import { ThreadBranchModal } from './ThreadBranchModal';
 import {
     extractPrimaryParam,
     getToolIcon,
@@ -131,8 +132,16 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [editContent, setEditContent] = useState("");
     const [showUndoModal, setShowUndoModal] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    // Branching State
+    const [branchingMessageId, setBranchingMessageId] = useState<string | null>(null);
+    const [branchingDefaultName, setBranchingDefaultName] = useState("");
+    const [showBranchModal, setShowBranchModal] = useState(false);
+    const [isBranching, setIsBranching] = useState(false);
 
     const handleInitiateEdit = useCallback((messageId: string, content: string) => {
+        if (messageId.startsWith('temp-')) return;
         setEditingMessageId(messageId);
         setEditContent(content);
     }, []);
@@ -141,18 +150,53 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
         setEditingMessageId(null);
         setEditContent("");
         setShowUndoModal(false);
+        setIsUpdating(false);
     }, []);
 
     const handleUpdateClick = useCallback(() => {
         setShowUndoModal(true);
     }, []);
 
-    const handleConfirmEdit = useCallback(() => {
+    const handleConfirmEdit = useCallback(async () => {
         if (editingMessageId && onEdit) {
-            onEdit(editingMessageId, editContent);
-            handleCancelEdit();
+            setIsUpdating(true);
+            try {
+                await onEdit(editingMessageId, editContent);
+                handleCancelEdit();
+            } catch (error) {
+                console.error("Edit failed:", error);
+            } finally {
+                setIsUpdating(false);
+            }
         }
     }, [editingMessageId, editContent, onEdit, handleCancelEdit]);
+
+    const handleInitiateBranch = useCallback((messageId: string, content: string) => {
+        setBranchingMessageId(messageId);
+        
+        // Suggest a name based on message content
+        const suggestedName = content.length > 30 
+            ? `${content.substring(0, 30)}...` 
+            : content;
+        setBranchingDefaultName(`Branch: ${suggestedName}`);
+        
+        setShowBranchModal(true);
+    }, []);
+
+    const handleConfirmBranch = useCallback(async (name: string) => {
+        if (branchingMessageId && onBranch) {
+            setIsBranching(true);
+            try {
+                await onBranch(branchingMessageId, name);
+                setShowBranchModal(false);
+                setBranchingMessageId(null);
+            } catch (error) {
+                console.error("Branching failed:", error);
+            } finally {
+                setIsBranching(false);
+            }
+        }
+    }, [branchingMessageId, onBranch]);
 
     const containerClassName = isPreviewMode
         ? "flex-1 overflow-y-auto scrollbar-hide px-4 py-4 pb-0"
@@ -279,6 +323,14 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                 open={showUndoModal}
                 onOpenChange={setShowUndoModal}
                 onConfirm={handleConfirmEdit}
+                loading={isUpdating}
+            />
+            <ThreadBranchModal
+                open={showBranchModal}
+                onOpenChange={setShowBranchModal}
+                onConfirm={handleConfirmBranch}
+                loading={isBranching}
+                initialName={branchingDefaultName}
             />
             {displayMessages.length === 0 && !streamingTextContent && !streamingToolCall &&
                 !streamingText && !currentToolCall && agentStatus === 'idle' ? (
@@ -508,11 +560,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                         if (editingMessageId === message.message_id) {
                                             return (
                                                 <div key={group.key} className="flex flex-col items-end group w-full mb-4">
-                                                    <div className="w-full max-w-[90%] bg-card border rounded-xl p-4 shadow-sm">
+                                                    <div className="w-full max-w-[90%]">
                                                         <Textarea
                                                             value={editContent}
                                                             onChange={(e) => setEditContent(e.target.value)}
-                                                            className="min-h-[100px] mb-3 resize-y font-mono text-sm"
+                                                            className="min-h-[100px] mb-3 resize-y text-sm bg-background"
                                                             autoFocus
                                                         />
                                                         <div className="flex justify-end gap-2">
@@ -543,7 +595,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                         showEdit={true}
                                                         onEdit={() => handleInitiateEdit(message.message_id, cleanContent)}
                                                         showBranch={true}
-                                                        onBranch={() => onBranch?.(message.message_id)}
+                                                        onBranch={() => handleInitiateBranch(message.message_id, cleanContent)}
                                                         className="mr-2"
                                                     />
                                                 )}
@@ -627,7 +679,7 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                                         messageId={message.message_id}
                                                                                         content={message.content}
                                                                                         showBranch={true}
-                                                                                        onBranch={() => onBranch?.(message.message_id)}
+                                                                                        onBranch={() => handleInitiateBranch(message.message_id, message.content)}
                                                                                         className="ml-0"
                                                                                     />
                                                                                 )}

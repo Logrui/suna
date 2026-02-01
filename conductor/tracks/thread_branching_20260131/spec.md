@@ -33,11 +33,11 @@ Implement frontend and backend support for conversation branching, in-place mess
 - **State Management:** Utilize Zustand/TanStack Query for thread state updates.
 
 ## Acceptance Criteria
-- [ ] Users can edit a message and the thread correctly truncates and resubmits.
-- [ ] "Confirm Undo" modal appears with correct warning text.
-- [ ] Users can branch a thread, and the new thread contains the correct historical context.
-- [ ] Auto-naming and icons work correctly for newly branched/created threads.
-- [ ] Submenu buttons appear on hover and match the project UI theme.
+- [x] Users can edit a message and the thread correctly truncates and resubmits.
+- [x] "Confirm Undo" modal appears with correct warning text.
+- [x] Users can branch a thread, and the new thread contains the correct historical context.
+- [x] Auto-naming and icons work correctly for newly branched/created threads.
+- [x] Submenu buttons appear on hover and match the project UI theme.
 
 ## Out of Scope
 - Visual "Branch Tree" or Project Manager divergence view (Future Goal).

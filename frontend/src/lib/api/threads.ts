@@ -473,7 +473,7 @@ export class NoAccessTokenAvailableError extends Error {
 export const addUserMessage = async (
   threadId: string,
   content: string,
-): Promise<void> => {
+): Promise<Message> => {
   try {
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -500,6 +500,8 @@ export const addUserMessage = async (
       handleApiError(new Error(errorText), { operation: 'add message', resource: 'message' });
       throw new Error(`Error adding message: ${errorText}`);
     }
+
+    return await response.json();
   } catch (error) {
     if (error instanceof NoAccessTokenAvailableError) {
       throw error;
@@ -564,11 +566,12 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
 
 export const branchThread = async (
   threadId: string,
-  messageId: string
+  messageId: string,
+  name?: string
 ): Promise<{ thread_id: string; project_id: string }> => {
   const response = await backendApi.post<{ thread_id: string; project_id: string }>(
     `/threads/${threadId}/branch`,
-    { message_id: messageId },
+    { message_id: messageId, name },
     { showErrors: true }
   );
 
