@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Plus, MoreHorizontal, Trash2, ExternalLink, Search, Frown, ChevronRight, Settings, Wrench, MessageCircle, Shield, GlobeLock, Download, Pencil } from 'lucide-react';
+import { Plus, MoreHorizontal, Trash2, ExternalLink, Search, Frown, ChevronRight, Settings, Wrench, MessageCircle, Shield, GlobeLock, Download, Pencil, Star, PinOff, Pin } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAgents, useDeleteAgent, useUpdateAgent } from '@/hooks/agents/use-agents';
 import { useUnpublishTemplate } from '@/hooks/secure-mcp/use-secure-mcp';
+import { useAuth } from '@/components/AuthProvider';
 import { cn } from '@/lib/utils';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { Button } from '@/components/ui/button';
@@ -35,11 +36,13 @@ const AgentItem: React.FC<{
     agent: Agent;
     isActive: boolean;
     isSunaDefault?: boolean;
+    isPinned?: boolean;
     onAgentClick: (agent: Agent) => void;
     onCustomize: (agentId: string) => void;
     onRename: (agentId: string, newName: string) => Promise<void>;
+    onTogglePin: (agentId: string) => void;
     handleDeleteAgent: (agentId: string, agentName: string) => void;
-}> = ({ agent, isActive, isSunaDefault, onAgentClick, onCustomize, onRename, handleDeleteAgent }) => {
+}> = ({ agent, isActive, isSunaDefault, isPinned, onAgentClick, onCustomize, onRename, onTogglePin, handleDeleteAgent }) => {
     const [isHoveringCard, setIsHoveringCard] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [newName, setNewName] = useState(agent.name);
@@ -162,6 +165,25 @@ const AgentItem: React.FC<{
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
+                                            onTogglePin(agent.agent_id);
+                                        }}
+                                    >
+                                        {isPinned ? (
+                                            <>
+                                                <PinOff className="mr-2 h-4 w-4" />
+                                                Unpin
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Star className="mr-2 h-4 w-4" />
+                                                Star
+                                            </>
+                                        )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
                                             setIsEditing(true);
                                         }}
                                     >
@@ -191,6 +213,7 @@ const AgentItem: React.FC<{
 
 export function NavAgentsView() {
     const { isMobile, state, setOpenMobile } = useSidebar();
+    const { user, supabase } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const queryClient = useQueryClient();
@@ -203,6 +226,34 @@ export function NavAgentsView() {
     const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
     const [showConfigDialog, setShowConfigDialog] = useState(false);
     const [configAgentId, setConfigAgentId] = useState<string | null>(null);
+
+    const pinnedAgentIds = useMemo(() => {
+        return (user?.user_metadata?.pinned_agent_ids as string[]) || [];
+    }, [user?.user_metadata?.pinned_agent_ids]);
+
+    const handleTogglePin = async (agentId: string) => {
+        if (!user) {
+            toast.error('You must be logged in to pin workers');
+            return;
+        }
+
+        const isCurrentlyPinned = pinnedAgentIds.includes(agentId);
+        const newPinnedIds = isCurrentlyPinned
+            ? pinnedAgentIds.filter(id => id !== agentId)
+            : [...pinnedAgentIds, agentId];
+
+        try {
+            const { error } = await supabase.auth.updateUser({
+                data: { pinned_agent_ids: newPinnedIds }
+            });
+
+            if (error) throw error;
+            toast.success(isCurrentlyPinned ? 'Worker unpinned' : 'Worker starred');
+        } catch (error) {
+            console.error('Error updating pinned workers:', error);
+            toast.error('Failed to update pinned workers');
+        }
+    };
 
     const {
         data: agentsResponse,
@@ -247,9 +298,17 @@ export function NavAgentsView() {
         return agents.find((a: Agent) => a.metadata?.is_suna_default === true);
     }, [agents]);
 
+    const pinnedAgents = useMemo(() => {
+        return filteredAgents.filter((a: Agent) =>
+            pinnedAgentIds.includes(a.agent_id) && a.metadata?.is_suna_default !== true
+        );
+    }, [filteredAgents, pinnedAgentIds]);
+
     const customAgents = useMemo(() => {
-        return filteredAgents.filter((a: Agent) => a.metadata?.is_suna_default !== true);
-    }, [filteredAgents]);
+        return filteredAgents.filter((a: Agent) =>
+            !pinnedAgentIds.includes(a.agent_id) && a.metadata?.is_suna_default !== true
+        );
+    }, [filteredAgents, pinnedAgentIds]);
 
     const handleAgentClick = (agent: Agent) => {
         router.push(`/dashboard?agent_id=${agent.agent_id}`);
@@ -367,8 +426,31 @@ export function NavAgentsView() {
                                         onAgentClick={handleAgentClick}
                                         onCustomize={handleCustomize}
                                         onRename={handleRename}
+                                        onTogglePin={handleTogglePin}
                                         handleDeleteAgent={handleDeleteAgent}
                                     />
+                                )}
+
+                                {/* Pinned Workers (Starred) */}
+                                {pinnedAgents.length > 0 && (
+                                    <div className="space-y-1.5 pt-0.5">
+                                        {pinnedAgents.map((agent: Agent) => {
+                                            const isActive = pathname?.includes(agent.agent_id) || false;
+                                            return (
+                                                <AgentItem
+                                                    key={agent.agent_id}
+                                                    agent={agent}
+                                                    isActive={isActive}
+                                                    isPinned={true}
+                                                    onAgentClick={handleAgentClick}
+                                                    onCustomize={handleCustomize}
+                                                    onRename={handleRename}
+                                                    onTogglePin={handleTogglePin}
+                                                    handleDeleteAgent={handleDeleteAgent}
+                                                />
+                                            );
+                                        })}
+                                    </div>
                                 )}
 
                                 {/* My Workers */}
@@ -389,6 +471,7 @@ export function NavAgentsView() {
                                                     onAgentClick={handleAgentClick}
                                                     onCustomize={handleCustomize}
                                                     onRename={handleRename}
+                                                    onTogglePin={handleTogglePin}
                                                     handleDeleteAgent={handleDeleteAgent}
                                                 />
                                             );

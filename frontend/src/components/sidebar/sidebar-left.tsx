@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Bot, Menu, Plus, Zap, MessageCircle, PanelLeftOpen, PanelLeftClose, Search, Bell, Folder, Database, Workflow, ChevronRight, BookOpen, Code, Star, Package, Sparkle, Sparkles, X, Settings, LogOut, User, CreditCard, Key, Plug, Shield, DollarSign, KeyRound, Sun, Moon, Book } from 'lucide-react';
+import { Users, Menu, Plus, Zap, MessageCircle, PanelLeftOpen, PanelLeftClose, Search, Bell, Folder, Database, Workflow, ChevronRight, BookOpen, Code, Star, Package, Sparkle, Sparkles, X, Settings, LogOut, User, CreditCard, Key, Plug, Shield, DollarSign, KeyRound, Sun, Moon, Book } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -357,7 +357,7 @@ export function SidebarLeft({
               <div className="w-full flex flex-col items-center space-y-3">
                 {[
                   { view: 'chats' as const, icon: MessageCircle, label: 'Chats' },
-                  { view: 'agents' as const, icon: Bot, label: 'Workers' },
+                  { view: 'agents' as const, icon: Users, label: 'Workers' },
                   { view: 'triggers' as const, icon: Zap, label: 'Triggers' },
                   { view: 'workflows' as const, icon: Workflow, label: 'Workflows' },
                   { view: 'knowledge' as const, icon: Database, label: 'Knowledge' },
@@ -444,7 +444,7 @@ export function SidebarLeft({
                 <div className="flex justify-between items-center gap-2">
                   {[
                     { view: 'chats' as const, icon: MessageCircle, label: 'Chats' },
-                    { view: 'agents' as const, icon: Bot, label: 'Workers' },
+                    { view: 'agents' as const, icon: Users, label: 'Workers' },
                     { view: 'triggers' as const, icon: Zap, label: 'Triggers' }
                   ].map(({ view, icon: Icon, label }) => (
                     <Link
