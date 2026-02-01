@@ -26,6 +26,7 @@ from .threads import (
     UnifiedAgentStartResponse,
     CreateThreadResponse,
     MessageCreateRequest,
+    ThreadBranchRequest,
 )
 
 from .imports import (
@@ -54,6 +55,7 @@ __all__ = [
     "UnifiedAgentStartResponse",
     "CreateThreadResponse",
     "MessageCreateRequest",
+    "ThreadBranchRequest",
     
     # Import models
     "JsonAnalysisRequest",

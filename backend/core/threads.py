@@ -1,5 +1,4 @@
 import asyncio
-import json
 import traceback
 import uuid
 from datetime import datetime, timezone
@@ -10,7 +9,7 @@ from core.utils.logger import logger
 from core.sandbox.sandbox import create_sandbox, delete_sandbox
 from core.utils.config import config, EnvMode
 
-from .api_models import CreateThreadResponse, MessageCreateRequest
+from .api_models import CreateThreadResponse, MessageCreateRequest, ThreadBranchRequest, MessageUpdateRequest
 from . import core_utils as utils
 
 router = APIRouter(tags=["threads"])
@@ -265,7 +264,6 @@ async def get_project_threads(
         threads = threads_result.data or []
         
         # Get message counts for each thread
-        thread_ids = [t['thread_id'] for t in threads]
         mapped_threads = []
         
         for thread in threads:
@@ -930,6 +928,160 @@ async def delete_message(
         logger.error(f"Error deleting message {message_id} from thread {thread_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete message: {str(e)}")
 
+@router.patch("/threads/{thread_id}/messages/{message_id}", summary="Edit Message", operation_id="edit_message")
+async def edit_message(
+    thread_id: str,
+    message_id: str,
+    request: MessageUpdateRequest,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """
+    Edit a message and truncate all subsequent messages in the thread.
+    This effectively "rewinds" the conversation to this point with new content.
+    """
+    logger.info(f"Editing message {message_id} in thread {thread_id}")
+    client = await utils.db.client
+    
+    try:
+        await verify_and_authorize_thread_access(client, thread_id, user_id)
+        
+        # 1. Verify existence and get created_at
+        msg_result = await client.table('messages').select('created_at').eq('message_id', message_id).eq('thread_id', thread_id).execute()
+        if not msg_result.data:
+            raise HTTPException(status_code=404, detail="Message not found")
+        
+        created_at = msg_result.data[0]['created_at']
+        
+        # 2. Delete all messages created AFTER this message in this thread
+        # Using gt (greater than) created_at
+        logger.debug(f"Truncating thread {thread_id} after {created_at}")
+        await client.table('messages').delete().eq('thread_id', thread_id).gt('created_at', created_at).execute()
+        
+        # 3. Update the message content
+        # Check type to preserve structure
+        type_result = await client.table('messages').select('type').eq('message_id', message_id).execute()
+        msg_type = type_result.data[0]['type']
+        
+        new_content_structure = request.content
+        if msg_type == 'user':
+             new_content_structure = {
+                 "role": "user",
+                 "content": request.content
+             }
+        elif msg_type == 'assistant':
+             new_content_structure = {
+                 "role": "assistant",
+                 "content": request.content
+             }
+
+        update_result = await client.table('messages').update({
+            'content': new_content_structure,
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }).eq('message_id', message_id).execute()
+        
+        return update_result.data[0]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error editing message {message_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to edit message: {str(e)}")
+    
+@router.post("/threads/{thread_id}/branch", summary="Branch Thread", operation_id="branch_thread")
+async def branch_thread(
+    thread_id: str,
+    request: ThreadBranchRequest,
+    user_id: str = Depends(verify_and_get_user_id_from_jwt)
+):
+    """Branch a thread from a specific message."""
+    logger.info(f"Branching thread {thread_id} from message {request.message_id}")
+    client = await utils.db.client
+    
+    try:
+        # 1. Verify access to source thread
+        await verify_and_authorize_thread_access(client, thread_id, user_id)
+        
+        # 2. Fetch source thread data
+        thread_result = await client.table('threads').select('*').eq('thread_id', thread_id).execute()
+        if not thread_result.data:
+            raise HTTPException(status_code=404, detail="Source thread not found")
+        
+        source_thread = thread_result.data[0]
+        
+        # 3. Fetch all messages for source thread, ordered by created_at
+        messages_result = await client.table('messages').select('*').eq('thread_id', thread_id).order('created_at').execute()
+        source_messages = messages_result.data or []
+        
+        # 4. Find target message index
+        target_index = -1
+        for i, msg in enumerate(source_messages):
+            if msg['message_id'] == request.message_id:
+                target_index = i
+                break
+        
+        if target_index == -1:
+            raise HTTPException(status_code=404, detail="Target message not found in source thread")
+        
+        # 5. Create new thread
+        new_thread_id = str(uuid.uuid4())
+        
+        # Determine the name - if it's "New Chat", keep it so naming triggers normally
+        # Otherwise use "Branch of [Source Name]"
+        source_name = source_thread.get('name', 'New Chat')
+        new_name = source_name if source_name == 'New Chat' else f"Branch of {source_name}"
+        
+        new_thread_data = {
+            "thread_id": new_thread_id,
+            "project_id": source_thread.get('project_id'),
+            "account_id": source_thread.get('account_id'),
+            "name": new_name,
+            "metadata": source_thread.get('metadata', {}),
+            "is_public": source_thread.get('is_public', False),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await client.table('threads').insert(new_thread_data).execute()
+        
+        # 6. Clone messages up to target_index
+        messages_to_clone = source_messages[:target_index+1]
+        cloned_messages = []
+        for msg in messages_to_clone:
+            cloned_msg = {
+                "message_id": str(uuid.uuid4()),
+                "thread_id": new_thread_id,
+                "type": msg['type'],
+                "is_llm_message": msg['is_llm_message'],
+                "content": msg['content'],
+                "metadata": msg['metadata'],
+                "created_at": msg['created_at'],
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            cloned_messages.append(cloned_msg)
+        
+        if cloned_messages:
+            # Batch insert cloned messages
+            await client.table('messages').insert(cloned_messages).execute()
+            
+            # 7. Trigger background naming generation for the new thread
+            from core.utils.thread_name_generator import generate_thread_branch_title
+            
+            logger.debug(f"Triggering naming for new branched thread {new_thread_id}...")
+            asyncio.create_task(generate_thread_branch_title(new_thread_id))
+
+        return {
+            "thread_id": new_thread_id, 
+            "project_id": source_thread.get('project_id'),
+            "name": new_name
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error branching thread {thread_id}: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to branch thread: {str(e)}")
+
+
 @router.patch("/threads/{thread_id}", summary="Update Thread", operation_id="update_thread")
 async def update_thread(
     thread_id: str,
@@ -1025,6 +1177,8 @@ async def update_thread(
         return {
             "thread_id": thread_data['thread_id'],
             "project_id": thread_data.get('project_id'),
+            "name": thread_data.get('name'),
+            "icon_name": thread_data.get('icon_name'),
             "metadata": thread_data.get('metadata', {}),
             "is_public": thread_data.get('is_public', False),
             "created_at": thread_data['created_at'],

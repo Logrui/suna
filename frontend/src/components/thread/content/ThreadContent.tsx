@@ -6,6 +6,9 @@ import { FileAttachmentGrid } from '@/components/thread/file-attachment';
 import { useFilePreloader } from '@/hooks/files';
 import { useAuth } from '@/components/AuthProvider';
 import { Project } from '@/lib/api/threads';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { ThreadUndoModal } from './ThreadUndoModal';
 import {
     extractPrimaryParam,
     getToolIcon,
@@ -14,9 +17,11 @@ import {
     HIDE_STREAMING_XML_TAGS,
 } from '@/components/thread/utils';
 import { KortixLogo } from '@/components/sidebar/kortix-logo';
+import { cn } from '@/lib/utils';
 import { AgentLoader } from './loader';
 import { ShowToolStream } from './ShowToolStream';
 import { ComposioUrlDetector } from './composio-url-detector';
+import { MessageActions } from './MessageActions';
 import { TaskCompletedFeedback } from '@/components/thread/tool-views/shared/TaskCompletedFeedback';
 import { PromptExamples } from '@/components/shared/prompt-examples';
 import {
@@ -81,6 +86,8 @@ export interface ThreadContentProps {
     scrollContainerRef?: React.RefObject<HTMLDivElement>; // Add scroll container ref prop
     threadId?: string; // Add threadId prop
     onPromptFill?: (message: string) => void; // Handler for filling ChatInput with prompt text from samples
+    onEdit?: (messageId: string, content: string) => void;
+    onBranch?: (messageId: string) => void;
 }
 
 export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadContent({
@@ -106,6 +113,8 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
     scrollContainerRef,
     threadId,
     onPromptFill,
+    onEdit,
+    onBranch,
 }) {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const latestMessageRef = useRef<HTMLDivElement>(null);
@@ -115,7 +124,35 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
     const t = useTranslations();
 
     // React Query file preloader
+    // React Query file preloader
     const { preloadFiles } = useFilePreloader();
+
+    // Editing State
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editContent, setEditContent] = useState("");
+    const [showUndoModal, setShowUndoModal] = useState(false);
+
+    const handleInitiateEdit = useCallback((messageId: string, content: string) => {
+        setEditingMessageId(messageId);
+        setEditContent(content);
+    }, []);
+
+    const handleCancelEdit = useCallback(() => {
+        setEditingMessageId(null);
+        setEditContent("");
+        setShowUndoModal(false);
+    }, []);
+
+    const handleUpdateClick = useCallback(() => {
+        setShowUndoModal(true);
+    }, []);
+
+    const handleConfirmEdit = useCallback(() => {
+        if (editingMessageId && onEdit) {
+            onEdit(editingMessageId, editContent);
+            handleCancelEdit();
+        }
+    }, [editingMessageId, editContent, onEdit, handleCancelEdit]);
 
     const containerClassName = isPreviewMode
         ? "flex-1 overflow-y-auto scrollbar-hide px-4 py-4 pb-0"
@@ -238,6 +275,11 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
 
     return (
         <>
+            <ThreadUndoModal
+                open={showUndoModal}
+                onOpenChange={setShowUndoModal}
+                onConfirm={handleConfirmEdit}
+            />
             {displayMessages.length === 0 && !streamingTextContent && !streamingToolCall &&
                 !streamingText && !currentToolCall && agentStatus === 'idle' ? (
                 // Render empty state outside scrollable container
@@ -462,8 +504,28 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                         // Remove attachment info from the message content
                                         const cleanContent = messageContent.replace(/\[Uploaded File: .*?\]/g, '').trim();
 
+                                        // Check if we are editing this message
+                                        if (editingMessageId === message.message_id) {
+                                            return (
+                                                <div key={group.key} className="flex flex-col items-end group w-full mb-4">
+                                                    <div className="w-full max-w-[90%] bg-card border rounded-xl p-4 shadow-sm">
+                                                        <Textarea
+                                                            value={editContent}
+                                                            onChange={(e) => setEditContent(e.target.value)}
+                                                            className="min-h-[100px] mb-3 resize-y font-mono text-sm"
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button variant="ghost" size="sm" onClick={handleCancelEdit}>Cancel</Button>
+                                                            <Button size="sm" onClick={handleUpdateClick}>Update</Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
                                         return (
-                                            <div key={group.key} className="flex justify-end">
+                                            <div key={group.key} className="flex flex-col items-end group">
                                                 <div className="flex max-w-[90%] rounded-3xl rounded-br-lg bg-card border px-4 py-3 break-words overflow-hidden">
                                                     <div className="space-y-2 min-w-0 flex-1">
                                                         {cleanContent && (
@@ -474,6 +536,17 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                         {renderAttachments(attachments as string[], handleOpenFileViewer, sandboxId, project)}
                                                     </div>
                                                 </div>
+                                                {!readOnly && (
+                                                    <MessageActions
+                                                        messageId={message.message_id}
+                                                        content={cleanContent}
+                                                        showEdit={true}
+                                                        onEdit={() => handleInitiateEdit(message.message_id, cleanContent)}
+                                                        showBranch={true}
+                                                        onBranch={() => onBranch?.(message.message_id)}
+                                                        className="mr-2"
+                                                    />
+                                                )}
                                             </div>
                                         );
                                     } else if (group.type === 'assistant_group') {
@@ -545,10 +618,19 @@ export const ThreadContent: React.FC<ThreadContentProps> = memo(function ThreadC
                                                                         if (!renderedContent) return;
 
                                                                         elements.push(
-                                                                            <div key={msgKey} className={assistantMessageCount > 0 ? "mt-3" : ""}>
+                                                                            <div key={msgKey} className={cn("group flex flex-col", assistantMessageCount > 0 ? "mt-3" : "")}>
                                                                                 <div className="break-words overflow-hidden">
                                                                                     {renderedContent}
                                                                                 </div>
+                                                                                {!readOnly && message.message_id !== 'streamingTextContent' && message.content && (
+                                                                                    <MessageActions
+                                                                                        messageId={message.message_id}
+                                                                                        content={message.content}
+                                                                                        showBranch={true}
+                                                                                        onBranch={() => onBranch?.(message.message_id)}
+                                                                                        className="ml-0"
+                                                                                    />
+                                                                                )}
                                                                             </div>
                                                                         );
 

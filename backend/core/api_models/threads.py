@@ -42,3 +42,13 @@ class MessageFeedbackResponse(BaseModel):
     help_improve: bool
     created_at: str
     updated_at: str
+
+
+class ThreadBranchRequest(BaseModel):
+    """Request model for branching a thread."""
+    message_id: str
+
+
+class MessageUpdateRequest(BaseModel):
+    """Request model for updating a message."""
+    content: str

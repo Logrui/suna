@@ -1,0 +1,8 @@
+{
+    "description":  "Frontend support for conversation branching, editing, and resending messages in threads, including fixing the auto-naming pipeline.",
+    "track_id":  "thread_branching_20260131",
+    "type":  "feature",
+    "created_at":  "2026-01-31T12:00:00Z",
+    "status":  "new",
+    "updated_at":  "2026-01-31T12:00:00Z"
+}

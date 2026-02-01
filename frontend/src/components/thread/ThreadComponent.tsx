@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AgentRunLimitError, ProjectLimitError, BillingError } from '@/lib/api/errors';
+import { AgentRunLimitError } from '@/lib/api/errors';
 import { toast } from 'sonner';
 import { ChatInput, ChatInputHandles } from '@/components/thread/chat-input/chat-input';
 import { useSidebar, SidebarContext } from '@/components/ui/sidebar';
@@ -25,9 +25,7 @@ import {
   useStartAgentMutation,
   useStopAgentMutation,
 } from '@/hooks/threads/use-agent-run';
-import { useSharedSubscription } from '@/stores/subscription-store';
 import { useAuth } from '@/components/AuthProvider';
-export type SubscriptionStatus = 'no_subscription' | 'active';
 
 import {
   UnifiedMessage,
@@ -35,13 +33,10 @@ import {
 } from '@/components/thread/types';
 import {
   useThreadData,
-  useThreadBilling,
   useThreadKeyboardShortcuts,
 } from '@/hooks/threads/page';
 import { useThreadToolCalls } from '@/hooks/messages';
 import { ThreadError, ThreadLayout } from '@/components/thread/layout';
-import { PlanSelectionModal } from '@/components/billing/pricing';
-import { useBillingModal } from '@/hooks/billing/use-billing-modal';
 
 import {
   useThreadAgent,
@@ -267,35 +262,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
   const { openFileInComputer, openFileBrowser, reset: resetKortixComputerStore } = useKortixComputerStore();
 
-  const billingModal = useBillingModal();
-  const threadBilling = useThreadBilling(
-    null,
-    agentStatus,
-    initialLoadCompleted,
-    () => {
-      billingModal.openModal();
-    },
-    isAuthenticated && !isShared
-  );
-
-  const {
-    showModal: showBillingModal,
-    creditsExhausted,
-    openModal: openBillingModal,
-    closeModal: closeBillingModal,
-  } = isShared ? {
-    showModal: false,
-    creditsExhausted: false,
-    openModal: () => { },
-    closeModal: () => { },
-  } : billingModal;
-
-  const {
-    checkBillingLimits,
-  } = isShared ? {
-    checkBillingLimits: async () => false,
-  } : threadBilling;
-
   useProjectRealtime(projectId);
   useThreadKeyboardShortcuts({
     isSidePanelOpen,
@@ -471,14 +437,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     }
   }, [threadAgentData, agents, initializeFromAgents, configuredAgentId, selectedAgentId, setSelectedAgent]);
 
-  const sharedSubscription = useSharedSubscription();
-  const { data: subscriptionData } = isShared ? { data: undefined } : sharedSubscription;
-  const subscriptionStatus: SubscriptionStatus =
-    subscriptionData?.status === 'active' ||
-      subscriptionData?.status === 'trialing'
-      ? 'active'
-      : 'no_subscription';
-
   const handleProjectRenamed = useCallback((newName: string) => { }, []);
 
   const handleAgentSelect = useCallback((agentId: string | undefined) => {
@@ -626,23 +584,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     const isExpected =
       lower.includes('not found') || lower.includes('agent run is not running');
 
-    const isBillingError =
-      lower.includes('insufficient credits') ||
-      lower.includes('credit') ||
-      lower.includes('balance') ||
-      lower.includes('out of credits') ||
-      lower.includes('no credits');
-
-    if (isBillingError) {
-      console.error(`[PAGE] Agent stopped due to billing error: ${errorMessage}`);
-      const billingError = new BillingError(402, {
-        message: errorMessage,
-      });
-      openBillingModal(billingError);
-      pendingMessageRef.current = null;
-      return;
-    }
-
     if (isExpected) {
       return;
     }
@@ -651,7 +592,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     toast.error(`Stream Error: ${errorMessage}`);
 
     pendingMessageRef.current = null;
-  }, [openBillingModal]);
+  }, []);
 
   const handleStreamClose = useCallback(() => { }, []);
 
@@ -773,11 +714,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           console.error('Failed to start agent:', error);
           pendingMessageRef.current = null;
 
-          if (error instanceof BillingError) {
-            openBillingModal(error);
-            return;
-          }
-
           if (error instanceof AgentRunLimitError) {
             const { running_thread_ids, running_count } = error.detail;
 
@@ -787,11 +723,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
             });
             // Show inline banner for better UX context
             setShowAgentLimitBanner(true);
-            return;
-          }
-
-          if (error instanceof ProjectLimitError) {
-            openBillingModal(error);
             return;
           }
 
@@ -806,7 +737,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       } catch (err) {
         console.error('Error sending message or starting agent:', err);
         if (
-          !(err instanceof BillingError) &&
           !(err instanceof AgentRunLimitError)
         ) {
           toast.error(err instanceof Error ? err.message : 'Operation failed');
@@ -821,7 +751,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
       addUserMessageMutation,
       startAgentMutation,
       setMessages,
-      openBillingModal,
       setAgentRunId,
       isShared,
       selectedAgentId,
@@ -1054,24 +983,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
   }, [projectName]);
 
   const hasCheckedUpgradeDialog = useRef(false);
-
-  useEffect(() => {
-    if (
-      initialLoadCompleted &&
-      subscriptionData &&
-      !hasCheckedUpgradeDialog.current
-    ) {
-      hasCheckedUpgradeDialog.current = true;
-      const hasSeenUpgradeDialog = localStorage.getItem(
-        'suna_upgrade_dialog_displayed',
-      );
-      const isFreeTier = subscriptionStatus === 'no_subscription';
-      if (!hasSeenUpgradeDialog && isFreeTier && !isLocalMode()) {
-        openBillingModal();
-      }
-    }
-  }, [subscriptionData, subscriptionStatus, initialLoadCompleted, openBillingModal]);
-
 
   // Note: handleStreamingToolCall is called via the onToolCallChunk callback in useAgentStream
   // No need for a separate useEffect here - it would cause duplicate processing
@@ -1360,12 +1271,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           )}
         </ThreadLayout>
 
-        <PlanSelectionModal
-          open={showBillingModal}
-          onOpenChange={closeBillingModal}
-          creditsExhausted={creditsExhausted}
-        />
-
         {agentLimitData && (
           <AgentRunLimitBanner
             open={showAgentLimitBanner}
@@ -1495,12 +1400,6 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
           />
         )}
       </ThreadLayout>
-
-      <PlanSelectionModal
-        open={showBillingModal}
-        onOpenChange={closeBillingModal}
-        creditsExhausted={creditsExhausted}
-      />
 
       {agentLimitData && (
         <AgentRunLimitBanner

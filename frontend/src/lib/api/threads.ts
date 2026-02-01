@@ -107,16 +107,16 @@ export const getProjectThreads = async (projectId: string, page: number = 1, lim
       page: page.toString(),
       limit: limit.toString(),
     });
-    
+
     const response = await backendApi.get<{ threads: any[]; pagination: any }>(`/projects/${projectId}/threads?${params.toString()}`, {
       showErrors: false,
     });
 
     if (response.error) {
       console.error('Error getting project threads:', response.error);
-      handleApiError(response.error, { 
-        operation: 'load project threads', 
-        resource: `threads for project ${projectId}` 
+      handleApiError(response.error, {
+        operation: 'load project threads',
+        resource: `threads for project ${projectId}`
       });
       return {
         threads: [],
@@ -160,9 +160,9 @@ export const getProjectThreads = async (projectId: string, page: number = 1, lim
     };
   } catch (err) {
     console.error('Error fetching project threads:', err);
-    handleApiError(err, { 
-      operation: 'load project threads', 
-      resource: `threads for project ${projectId}` 
+    handleApiError(err, {
+      operation: 'load project threads',
+      resource: `threads for project ${projectId}`
     });
     return {
       threads: [],
@@ -282,9 +282,9 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
 
     if (response.error) {
       console.error('Error getting threads:', response.error);
-      handleApiError(response.error, { 
-        operation: 'load threads', 
-        resource: projectId ? `threads for project ${projectId}` : 'threads' 
+      handleApiError(response.error, {
+        operation: 'load threads',
+        resource: projectId ? `threads for project ${projectId}` : 'threads'
       });
       return [];
     }
@@ -308,9 +308,9 @@ export const getThreads = async (projectId?: string): Promise<Thread[]> => {
     return threads;
   } catch (err) {
     console.error('Error fetching threads:', err);
-    handleApiError(err, { 
-      operation: 'load threads', 
-      resource: projectId ? `threads for project ${projectId}` : 'threads' 
+    handleApiError(err, {
+      operation: 'load threads',
+      resource: projectId ? `threads for project ${projectId}` : 'threads'
     });
     return [];
   }
@@ -322,16 +322,16 @@ export const getThreadsPaginated = async (projectId?: string, page: number = 1, 
       page: page.toString(),
       limit: limit.toString(),
     });
-    
+
     const response = await backendApi.get<{ threads: any[]; pagination: any }>(`/threads?${params.toString()}`, {
       showErrors: false,
     });
 
     if (response.error) {
       console.error('Error getting paginated threads:', response.error);
-      handleApiError(response.error, { 
-        operation: 'load threads', 
-        resource: projectId ? `threads for project ${projectId}` : 'threads' 
+      handleApiError(response.error, {
+        operation: 'load threads',
+        resource: projectId ? `threads for project ${projectId}` : 'threads'
       });
       return {
         threads: [],
@@ -380,9 +380,9 @@ export const getThreadsPaginated = async (projectId?: string, page: number = 1, 
     };
   } catch (err) {
     console.error('Error fetching paginated threads:', err);
-    handleApiError(err, { 
-      operation: 'load threads', 
-      resource: projectId ? `threads for project ${projectId}` : 'threads' 
+    handleApiError(err, {
+      operation: 'load threads',
+      resource: projectId ? `threads for project ${projectId}` : 'threads'
     });
     return {
       threads: [],
@@ -542,8 +542,8 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
     const response = await fetch(
       `${API_URL}/threads/${threadId}/messages?order=asc&optimized=${useOptimized}`,
       {
-      headers,
-      cache: 'no-store',
+        headers,
+        cache: 'no-store',
       }
     );
 
@@ -561,3 +561,54 @@ export const getMessages = async (threadId: string): Promise<Message[]> => {
   }
 };
 
+
+export const branchThread = async (
+  threadId: string,
+  messageId: string
+): Promise<{ thread_id: string; project_id: string }> => {
+  const response = await backendApi.post<{ thread_id: string; project_id: string }>(
+    `/threads/${threadId}/branch`,
+    { message_id: messageId },
+    { showErrors: true }
+  );
+
+  if (response.error) {
+    handleApiError(response.error, {
+      operation: 'branch thread',
+      resource: `thread ${threadId} at message ${messageId}`
+    });
+    throw new Error(response.error.message || 'Failed to branch thread');
+  }
+
+  if (!response.data) {
+    throw new Error('Failed to branch thread: No data returned');
+  }
+
+  return response.data;
+};
+
+export const editMessage = async (
+  threadId: string,
+  messageId: string,
+  content: string
+): Promise<Message> => {
+  const response = await backendApi.patch<Message>(
+    `/threads/${threadId}/messages/${messageId}`,
+    { content },
+    { showErrors: true }
+  );
+
+  if (response.error) {
+    handleApiError(response.error, {
+      operation: 'edit message',
+      resource: `thread ${threadId} message ${messageId}`
+    });
+    throw new Error(response.error.message || 'Failed to edit message');
+  }
+
+  if (!response.data) {
+    throw new Error('Failed to edit message: No data returned');
+  }
+
+  return response.data;
+};

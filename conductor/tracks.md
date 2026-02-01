@@ -30,3 +30,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## [x] Track: Update ollama and lm studio models to properly display ollama.svg and lmstudio.svg on the frontend.
 *Link: [./conductor/tracks/local_model_icons_20251231/](./conductor/tracks/local_model_icons_20251231/)*
+
+---
+
+- [x] **Track: Frontend support for conversation branch and editing and resending messages in threads**
+*Link: [./tracks/thread_branching_20260131/](./tracks/thread_branching_20260131/)*
