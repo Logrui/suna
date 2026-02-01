@@ -895,7 +895,7 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
 
       toast.success("Thread branched successfully");
 
-      router.push(`/project/${result.project_id}/thread/${result.thread_id}`);
+      router.push(`/projects/${result.project_id}/thread/${result.thread_id}`);
 
 
 

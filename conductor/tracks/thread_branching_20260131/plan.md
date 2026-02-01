@@ -61,3 +61,12 @@
     - **Enhancement:** Added an optional `name` field to the `branchThread` API and mutation. Updated the `ThreadBranchModal` to allow users to preview and edit the suggested thread name before branching.
 - [x] **Polish:** UI Styling.
     - **Enhancement:** Cleaned up the "Edit Message" text area styling to remove unnecessary borders and backgrounds, matching the cleaner project design guidelines. Added loading states to both Undo and Branch modals for better user feedback.
+- [x] **Bug Fix:** Branch Redirect 404.
+    - **Issue:** Branching a thread redirected to `/project/...` instead of `/projects/...`, causing a 404 error.
+    - **Solution:** Corrected the URL path in `ThreadComponent.tsx` to redirect to the correct pluralized route.
+
+## Phase 5: UI Polish & Refinements
+- [x] Task: Review and refine message action buttons styling (hover states, positioning).
+- [x] Task: Ensure consistent loading states across all new modals.
+- [x] Task: Final walkthrough of the branching and editing flows to catch any edge case UI glitches.
+- [ ] Task: Conductor - Final Track Review
