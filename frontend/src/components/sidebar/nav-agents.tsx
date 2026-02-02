@@ -11,7 +11,8 @@ import {
   Frown,
   Plus,
   ChevronDown,
-  Check
+  Check,
+  Pencil
 } from "lucide-react"
 import { ThreadIcon } from "./thread-icon"
 import { toast } from "sonner"
@@ -41,13 +42,14 @@ import Link from "next/link"
 import { DeleteConfirmationDialog } from "@/components/thread/DeleteConfirmationDialog"
 import { useDeleteOperation } from '@/stores/delete-operation-store'
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { ThreadWithProject, GroupedByProject, ProjectGroup, GroupedByDateThenProject } from '@/hooks/sidebar/use-sidebar';
 import { useDeleteMultipleThreads, useDeleteThread, useProjects, groupThreadsByDateThenProject } from '@/hooks/sidebar/use-sidebar';
 import { projectKeys, threadKeys } from '@/hooks/threads/keys';
 import { useThreadAgentStatuses } from '@/hooks/threads';
 import { formatDateForList } from '@/lib/utils/date-formatting';
 import { createThreadInProject } from '@/lib/api/threads';
-import { useThreads } from '@/hooks/threads/use-threads';
+import { useThreads, useUpdateThreadMutation } from '@/hooks/threads/use-threads';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
@@ -75,6 +77,13 @@ const SingleChatCard: React.FC<{
   handleDeleteThread: (threadId: string, threadName: string) => void;
   handleCreateNewChat: (projectId: string) => Promise<void>;
   isCreatingChat: boolean;
+  onRename: (threadId: string, currentName: string) => void;
+  renamingId: string | null;
+  renamingValue: string;
+  onRenamingValueChange: (val: string) => void;
+  onConfirmRename: () => void;
+  onCancelRename: () => void;
+  isUpdating: boolean;
 }> = ({
   thread,
   projectGroup,
@@ -87,8 +96,16 @@ const SingleChatCard: React.FC<{
   handleDeleteThread,
   handleCreateNewChat,
   isCreatingChat,
+  onRename,
+  renamingId,
+  renamingValue,
+  onRenamingValueChange,
+  onConfirmRename,
+  onCancelRename,
+  isUpdating
 }) => {
     const [isHoveringCard, setIsHoveringCard] = useState(false);
+    const isRenaming = renamingId === thread.threadId;
 
     return (
       <SpotlightCard
@@ -99,7 +116,13 @@ const SingleChatCard: React.FC<{
       >
         <Link
           href={thread.url}
-          onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
+          onClick={(e) => {
+            if (isRenaming) {
+              e.preventDefault();
+              return;
+            }
+            handleThreadClick(e, thread.threadId, thread.url);
+          }}
           prefetch={false}
           className="block"
         >
@@ -139,8 +162,39 @@ const SingleChatCard: React.FC<{
               )}
             </button>
 
-            {/* Name */}
-            <span className="flex-1 truncate">{projectGroup.projectName}</span>
+            {/* Name & Rename Input */}
+            <div className="flex-1 min-w-0">
+              {isRenaming ? (
+                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                  <Input
+                    value={renamingValue}
+                    onChange={e => onRenamingValueChange(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') onConfirmRename();
+                      if (e.key === 'Escape') onCancelRename();
+                    }}
+                    autoFocus
+                    className="h-7 text-xs py-0 px-2"
+                    disabled={isUpdating}
+                  />
+                  {isUpdating ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Check 
+                      className="h-3.5 w-3.5 text-primary cursor-pointer hover:scale-110 transition-transform" 
+                      onClick={onConfirmRename}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col min-w-0">
+                  <span className="truncate font-medium text-foreground/90">{projectGroup.projectName}</span>
+                  {thread.threadName && thread.threadName !== 'New Chat' && (
+                    <span className="truncate text-[11px] text-muted-foreground">{thread.threadName}</span>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Date & Menu */}
             <div className="flex-shrink-0 relative">
@@ -152,49 +206,63 @@ const SingleChatCard: React.FC<{
               >
                 {formatDateForList(thread.updatedAt)}
               </span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={cn(
-                      "absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-2xl hover:bg-accent transition-all text-muted-foreground",
-                      isHoveringCard ? "opacity-100" : "opacity-0 pointer-events-none"
-                    )}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <MoreHorizontal className="h-4 w-4 rotate-90" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleCreateNewChat(projectGroup.projectId);
-                    }}
-                    disabled={isCreatingChat}
-                  >
-                    {isCreatingChat ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="mr-2 h-4 w-4" />
-                    )}
-                    New chat
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleDeleteThread(thread.threadId, thread.projectName);
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {!isRenaming && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={cn(
+                        "absolute top-1/2 right-0 -translate-y-1/2 p-1 rounded-2xl hover:bg-accent transition-all text-muted-foreground",
+                        isHoveringCard ? "opacity-100" : "opacity-0 pointer-events-none"
+                      )}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <MoreHorizontal className="h-4 w-4 rotate-90" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCreateNewChat(projectGroup.projectId);
+                      }}
+                      disabled={isCreatingChat}
+                    >
+                      {isCreatingChat ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="mr-2 h-4 w-4" />
+                      )}
+                      New chat
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onRename(thread.threadId, thread.threadName);
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeleteThread(thread.threadId, thread.projectName);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
         </Link>
@@ -221,6 +289,10 @@ export function NavAgents() {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+
+  // Rename state
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renamingValue, setRenamingValue] = useState("");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -249,6 +321,8 @@ export function NavAgents() {
     mutate: deleteMultipleThreadsMutation,
     isPending: isDeletingMultiple
   } = useDeleteMultipleThreads();
+
+  const updateThreadMutation = useUpdateThreadMutation();
 
   // Use threads directly from response
   const currentThreads = threadsResponse?.threads || [];
@@ -295,13 +369,15 @@ export function NavAgents() {
       const displayName = project?.name || 'Unnamed Project';
       const iconName = project?.icon_name;
       const updatedAt = thread.updated_at || project?.updated_at || new Date().toISOString();
-      const formattedDate = formatDateForList(updatedAt);
+      
+      // Prioritize explicit name column, then metadata title, then fallback to "New Chat"
+      const rawThreadName = thread.name?.trim() || thread.metadata?.title?.trim() || 'New Chat';
 
       processed.push({
         threadId: thread.thread_id,
         projectId: projectId,
         projectName: displayName,
-        threadName: thread.name && thread.name.trim() ? thread.name : formattedDate,
+        threadName: rawThreadName,
         url: `/projects/${projectId}/thread/${thread.thread_id}`,
         updatedAt: updatedAt,
         iconName: iconName,
@@ -405,9 +481,7 @@ export function NavAgents() {
 
     window.addEventListener('project-updated', handleProjectUpdate as EventListener);
     return () => {
-      window.removeEventListener(
-        'project-updated',
-        handleProjectUpdate as EventListener,
+      window.removeEventListener('project-updated', handleProjectUpdate as EventListener,
       );
     };
   }, [queryClient]);
@@ -500,6 +574,36 @@ export function NavAgents() {
   const exitMultiSelectMode = () => {
     setSelectedThreads(new Set());
     setIsMultiSelectMode(false);
+  };
+
+  // Rename handlers
+  const handleRenameThread = (threadId: string, currentName: string) => {
+    setRenamingId(threadId);
+    setRenamingValue(currentName);
+  };
+
+  const confirmRename = async () => {
+    if (!renamingId || !renamingValue.trim()) return;
+
+    try {
+      await updateThreadMutation.mutateAsync({
+        threadId: renamingId,
+        data: { title: renamingValue.trim() }
+      });
+      
+      queryClient.invalidateQueries({ queryKey: threadKeys.all });
+      toast.success('Thread renamed');
+      setRenamingId(null);
+      setRenamingValue("");
+    } catch (error) {
+      console.error('Rename failed:', error);
+      toast.error('Failed to rename thread');
+    }
+  };
+
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenamingValue("");
   };
 
   // Function to handle thread deletion
@@ -759,6 +863,13 @@ export function NavAgents() {
                               handleDeleteThread={handleDeleteThread}
                               handleCreateNewChat={handleCreateNewChat}
                               isCreatingChat={isCreatingChat}
+                              onRename={handleRenameThread}
+                              renamingId={renamingId}
+                              renamingValue={renamingValue}
+                              onRenamingValueChange={setRenamingValue}
+                              onConfirmRename={confirmRename}
+                              onCancelRename={cancelRename}
+                              isUpdating={updateThreadMutation.isPending}
                             />
                           );
                         }
@@ -836,15 +947,13 @@ export function NavAgents() {
                                   {projectThreads.map((thread) => {
                                     const isThreadActive = pathname?.includes(thread.threadId) || false;
                                     const isRunning = agentStatusMap.get(thread.threadId) || false;
+                                    const isRenaming = renamingId === thread.threadId;
 
                                     return (
-                                      <Link
+                                      <div
                                         key={`thread-${thread.threadId}`}
-                                        href={thread.url}
-                                        onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
-                                        prefetch={false}
                                         className={cn(
-                                          "flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors group/chat",
+                                          "flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors group/chat relative",
                                           isThreadActive
                                             ? "bg-muted text-foreground font-medium"
                                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -874,41 +983,89 @@ export function NavAgents() {
                                           )}
                                         </button>
 
-                                        {/* Chat name */}
-                                        <span className={cn(
-                                          "flex-1 truncate",
-                                          isThreadActive && "font-medium"
-                                        )}>
-                                          {thread.threadName}
-                                        </span>
+                                        {/* Chat name & Rename UI */}
+                                        {isRenaming ? (
+                                          <div className="flex-1 flex items-center gap-1 min-w-0">
+                                            <Input
+                                              value={renamingValue}
+                                              onChange={e => setRenamingValue(e.target.value)}
+                                              onKeyDown={e => {
+                                                if (e.key === 'Enter') confirmRename();
+                                                if (e.key === 'Escape') cancelRename();
+                                              }}
+                                              autoFocus
+                                              className="h-6 text-xs py-0 px-1.5"
+                                              disabled={updateThreadMutation.isPending}
+                                            />
+                                            {updateThreadMutation.isPending ? (
+                                              <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                              <Check 
+                                                className="h-3 w-3 text-primary cursor-pointer" 
+                                                onClick={confirmRename}
+                                              />
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <Link
+                                            href={thread.url}
+                                            onClick={(e) => handleThreadClick(e, thread.threadId, thread.url)}
+                                            prefetch={false}
+                                            className="flex-1 min-w-0 flex items-center gap-2"
+                                          >
+                                            <span className={cn(
+                                              "truncate",
+                                              isThreadActive && "font-medium"
+                                            )}>
+                                              {thread.threadName}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                                              {formatDateForList(thread.updatedAt)}
+                                            </span>
+                                          </Link>
+                                        )}
 
                                         {/* Menu */}
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                            <button
-                                              className="p-1 rounded-md hover:bg-accent transition-colors opacity-0 group-hover/chat:opacity-100"
-                                              onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                              }}
-                                            >
-                                              <MoreHorizontal className="h-3.5 w-3.5" />
-                                            </button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="w-40">
-                                            <DropdownMenuItem
-                                              onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleDeleteThread(thread.threadId, thread.projectName);
-                                              }}
-                                            >
-                                              <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                              Delete
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </Link>
+                                        {!isRenaming && (
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <button
+                                                className="p-1 rounded-md hover:bg-accent transition-colors opacity-0 group-hover/chat:opacity-100"
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                }}
+                                              >
+                                                <MoreHorizontal className="h-3.5 w-3.5" />
+                                              </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-40">
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  handleRenameThread(thread.threadId, thread.threadName);
+                                                }}
+                                              >
+                                                <Pencil className="mr-2 h-3.5 w-3.5" />
+                                                Rename
+                                              </DropdownMenuItem>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem
+                                                className="text-destructive focus:text-destructive"
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  handleDeleteThread(thread.threadId, thread.projectName);
+                                                }}
+                                              >
+                                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                Delete
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        )}
+                                      </div>
                                     );
                                   })}
                                 </div>

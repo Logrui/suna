@@ -128,7 +128,7 @@ class BrowserTool(SandboxToolsBase):
         """
         Execute a browser action via the connected extension.
         
-        This method mirrors _execute_stagehand_api behavior exactly:
+        This method mirrors _execute_stagehand_api behavior:
         - Saves browser_state message to thread
         - Returns clean_result with message_id
         - Uses consistent key names (image_url, not screenshot_url)
@@ -145,6 +145,8 @@ class BrowserTool(SandboxToolsBase):
         
         try:
             import time
+            final_response_data = {}
+            
             if action in ["act", "extract"]:
                 # Extension doesn't have AI capabilities locally, use Backend AI Interpreter
                 logger.info(f"🌐 [BROWSER_TOOL] Extension: AI-powered {action} requested. Fetching current page state...")
@@ -156,190 +158,225 @@ class BrowserTool(SandboxToolsBase):
                     params={},
                 )
                 
-                if state_res is None or not state_res.success:
-                    logger.warning(f"🌐 [BROWSER_TOOL] Failed to get state for AI {action}, falling back to sandbox")
-                    return None
+                if state_res is None:
+                    logger.warning(f"🌐 [BROWSER_TOOL] Extension offline while getting state for AI {action}")
+                    return None # Fallback to sandbox
+                
+                if not state_res.success:
+                    return self.fail_response(f"Failed to get browser state for AI {action}: {state_res.error}")
                 
                 screenshot_base64 = state_res.data.get("screenshot_base64")
                 current_url = state_res.data.get("url", "")
+                current_title = state_res.data.get("title", "")
                 
                 if not screenshot_base64:
-                    logger.warning(f"🌐 [BROWSER_TOOL] No screenshot received for AI {action}, falling back to sandbox")
-                    return None
+                    return self.fail_response(f"No screenshot received from extension for AI {action}")
                 
                 # 2. Interpret command via Backend AI
                 instruction = params.get("action") if action == "act" else params.get("instruction")
                 file_path = params.get("filePath")
+                variables = params.get("variables")
                 
                 if action == "act":
-                    # For 'act', we might need a small loop, but for a single ToolResult 
-                    # we will do one step and return the result.
-                    ai_result = await browser_interpreter.interpret_act(instruction, screenshot_base64, current_url, filePath=file_path)
-                    logger.info(f"🌐 [BROWSER_TOOL] AI interpreted act: {ai_result.get('action')} - {ai_result.get('thought')}")
+                    # Multi-step action loop
+                    max_steps = 10
+                    steps = 0
+                    previous_actions = []
+                    last_thought = ""
                     
-                    if ai_result["action"] == "complete":
-                        result_data = {
-                            "success": True,
-                            "message": f"Instruction completed: {ai_result.get('thought')}",
-                            "url": current_url,
-                            "screenshot": screenshot_base64
-                        }
-                    elif ai_result["action"] in ["click", "type", "navigate", "scroll_down", "scroll_up", "set_file_input_files", "press_key", "hover"]:
-                        # 3. Execute primitive action via extension
-                        exec_params = ai_result.get("params", {})
-                        
-                        # Handle file upload mapping
-                        if ai_result["action"] == "set_file_input_files":
-                            if file_path:
-                                exec_params["files"] = [file_path] if isinstance(file_path, str) else file_path
-                            else:
-                                return self.fail_response("AI requested file upload but no filePath was provided by the user.")
-
-                        exec_res = await send_browser_command(
-                            browser_id=self.browser_id,
-                            action=ai_result["action"],
-                            params=exec_params,
+                    while steps < max_steps:
+                        # 2. Interpret step via Backend AI
+                        ai_result = await browser_interpreter.interpret_act(
+                            instruction, 
+                            screenshot_base64, 
+                            current_url, 
+                            filePath=file_path,
+                            variables=variables,
+                            previous_actions=previous_actions
                         )
-                        if exec_res and exec_res.success:
-                            # Extension returns current page state after action
-                            result_data = exec_res.data or {}
-                            result_data["success"] = True
-                            result_data["action_taken"] = f"{ai_result['action']} ({ai_result.get('thought')})"
+                        
+                        last_thought = ai_result.get("thought", "")
+                        logger.info(f"🌐 [BROWSER_TOOL] AI interpreted act step {steps+1}: {ai_result.get('action')} - {last_thought}")
+                        
+                        if ai_result["action"] == "complete":
+                            final_response_data = {
+                                "success": True,
+                                "message": f"Completed: {last_thought}",
+                                "url": current_url,
+                                "title": current_title,
+                                "screenshot_base64": screenshot_base64
+                            }
+                            break
+                        
+                        elif ai_result["action"] == "error":
+                            return self.fail_response(f"AI failed to interpret action: {ai_result.get('error') or ai_result.get('thought')}")
+                            
+                        elif ai_result["action"] in ["click", "type", "navigate", "scroll_down", "scroll_up", "set_file_input_files", "press_key", "hover"]:
+                            # 3. Execute primitive action via extension
+                            exec_params = ai_result.get("params", {})
+                            
+                            # Handle file upload mapping
+                            if ai_result["action"] == "set_file_input_files":
+                                if file_path:
+                                    exec_params["files"] = [file_path] if isinstance(file_path, str) else file_path
+                                else:
+                                    return self.fail_response("AI requested file upload but no filePath was provided.")
+    
+                            # Execute command
+                            exec_res = await send_browser_command(
+                                browser_id=self.browser_id,
+                                action=ai_result["action"],
+                                params=exec_params,
+                            )
+                            
+                            if exec_res is None:
+                                logger.warning("🌐 [BROWSER_TOOL] Extension went offline during multi-step action")
+                                return None # Fallback
+                                
+                            if not exec_res.success:
+                                return self.fail_response(f"Step {steps+1} failed ({ai_result['action']}): {exec_res.error}")
+                                
+                            # Action successful, record it
+                            previous_actions.append(ai_result)
+                            steps += 1
+                            
+                            # Update state for next iteration
+                            if exec_res.data and "screenshot_base64" in exec_res.data:
+                                screenshot_base64 = exec_res.data.get("screenshot_base64")
+                                current_url = exec_res.data.get("url", current_url)
+                                current_title = exec_res.data.get("title", current_title)
+                            else:
+                                # Refresh state explicitly
+                                refresh_res = await send_browser_command(
+                                    browser_id=self.browser_id,
+                                    action="screenshot",
+                                    params={},
+                                )
+                                if refresh_res and refresh_res.success:
+                                    screenshot_base64 = refresh_res.data.get("screenshot_base64")
+                                    current_url = refresh_res.data.get("url", current_url)
+                                    current_title = refresh_res.data.get("title", current_title)
+                                else:
+                                    logger.warning("🌐 [BROWSER_TOOL] Failed to refresh state after action step")
                         else:
-                            error_msg = exec_res.error if exec_res else "Command failed"
-                            return self.fail_response(f"Extension primitive action failed: {error_msg}")
-                    else:
-                        return self.fail_response(f"AI could not resolve action: {ai_result.get('error', 'unknown error')}")
+                            return self.fail_response(f"AI returned unknown action: {ai_result.get('action')}")
+                    
+                    if steps >= max_steps:
+                        return self.fail_response(f"Action timed out after {max_steps} steps. Last state: {last_thought}")
                 
                 else:  # extract
-                    extract_data = await browser_interpreter.interpret_extract(instruction, screenshot_base64, current_url)
-                    result_data = {
+                    # Fetch DOM content for better context
+                    dom_res = await send_browser_command(
+                        browser_id=self.browser_id,
+                        action="extractContent",
+                        params={}
+                    )
+                    
+                    if dom_res is None:
+                        logger.warning("🌐 [BROWSER_TOOL] Extension offline during extraction")
+                        return None
+                        
+                    dom_text = dom_res.data.get("content", "") if dom_res.success and dom_res.data else ""
+                    
+                    extract_data = await browser_interpreter.interpret_extract(
+                        instruction, 
+                        screenshot_base64, 
+                        current_url,
+                        dom_text=dom_text
+                    )
+                    
+                    final_response_data = {
                         "success": True,
                         "data": extract_data,
                         "url": current_url,
-                        "screenshot": screenshot_base64
+                        "title": current_title,
+                        "screenshot_base64": screenshot_base64,
+                        "message": f"Extracted content for: {instruction}"
                     }
                 
-                # Now we have result_data, proceed to processing like regular extension results
-                result = CommandResult(
-                    type="result",
-                    id="ai_internal",
-                    session_id="ai_internal",
-                    success=True,
-                    data=result_data,
-                    timestamp=int(time.time() * 1000)
-                )
 
             else:
-                # Regular command execution (navigate, screenshot)
+                # Regular command execution (navigate, screenshot, etc.)
                 result = await send_browser_command(
                     browser_id=self.browser_id,
                     action=action,
                     params=params or {},
                 )
+                
+                if result is None:
+                    logger.warning(f"🌐 [BROWSER_TOOL] Extension offline for command {action}")
+                    return None
+                
+                if not result.success:
+                    return self.fail_response(f"Extension command {action} failed: {result.error}")
+                
+                final_response_data = result.data or {}
+                final_response_data["success"] = True
             
-            if result is None:
-                # Extension went offline, fall back to sandbox
-                logger.warning(f"🌐 [BROWSER_TOOL] send_browser_command returned None → extension offline, falling back to sandbox")
-                return None  # Signal to caller to use sandbox fallback
+            # --- POST-PROCESSING (Consistent for all extension paths) ---
             
-            logger.info(f"🌐 [BROWSER_TOOL] Extension result received: success={result.success}, has_data={result.data is not None}")
+            # 1. Handle Screenshot Mapping
+            image_url = None
+            screenshot_base64 = final_response_data.get("screenshot_base64") or final_response_data.get("screenshot")
             
-            if result.success:
-                # Build response data matching sandbox format
-                response_data = result.data or {}
-                
-                # Process screenshot if present (extension sends base64)
-                screenshot_base64 = response_data.get("screenshot") or response_data.get("screenshot_base64")
-                if screenshot_base64:
-                    is_valid, error_msg = self._validate_base64_image(screenshot_base64)
-                    if is_valid:
-                        # Use consistent bucket name 
-                        image_url = await upload_base64_image(
-                            base64_data=screenshot_base64,
-                            bucket_name="browser-screenshots"
-                        )
-                        response_data["image_url"] = image_url  # Use same key as sandbox
-                        logger.debug(f"Extension screenshot uploaded: {image_url}")
-                    else:
-                        response_data["image_validation_error"] = error_msg
-                    # Remove raw base64 to avoid storing large data
-                    response_data.pop("screenshot", None)
-                    response_data.pop("screenshot_base64", None)
-                
-                # Also handle if extension sends screenshot_url directly
-                if "screenshot_url" in response_data and "image_url" not in response_data:
-                    response_data["image_url"] = response_data.pop("screenshot_url")
-                
-                # Add input params for browser_state record (like sandbox)
-                response_data["input"] = params
-                
-                # Save browser_state message to thread (exactly like sandbox)
-                logger.debug(f"🌐 [BROWSER_TOOL] Saving browser state for thread {self.thread_id}...")
-                try:
-                    added_message = await self.thread_manager.add_message(
-                        thread_id=self.thread_id,
-                        type="browser_state",
-                        content=response_data,
-                        is_llm_message=False
+            if screenshot_base64:
+                is_valid, error_msg = self._validate_base64_image(screenshot_base64)
+                if is_valid:
+                    image_url = await upload_base64_image(
+                        base64_data=screenshot_base64,
+                        bucket_name="browser-screenshots"
                     )
-                    logger.debug(f"🌐 [BROWSER_TOOL] Browser state saved: message_id={added_message.get('message_id')}")
-                except Exception as db_err:
-                    logger.error(f"🌐 [BROWSER_TOOL] Failed to save browser outcome to thread: {db_err}")
-                    # Don't fail the whole action just because persistence failed - try to return success anyway
-                    # but without message_id
-                    added_message = {}
+                    logger.debug(f"🌐 [BROWSER_TOOL] Screenshot uploaded: {image_url}")
+                else:
+                    logger.warning(f"🌐 [BROWSER_TOOL] Screenshot validation failed: {error_msg}")
                 
-                # Build clean_result matching sandbox format EXACTLY
-                clean_result = {
-                    "success": response_data.get("success", True),
-                    "message": response_data.get("message", f"Browser {action} completed successfully")
-                }
-                
-                # Include standard fields (like sandbox)
-                if response_data.get("url"):
-                    clean_result["url"] = response_data["url"]
-                if response_data.get("title"):
-                    clean_result["title"] = response_data["title"]
-                if response_data.get("action"):
-                    clean_result["action"] = response_data["action"]
-                if response_data.get("image_url"):
-                    clean_result["image_url"] = response_data["image_url"]
-                
-                # Include screenshot error context (like sandbox)
-                if response_data.get("image_validation_error"):
-                    clean_result["screenshot_issue"] = f"Screenshot processing issue: {response_data['image_validation_error']}"
-                if response_data.get("image_upload_error"):
-                    clean_result["screenshot_issue"] = f"Screenshot upload issue: {response_data['image_upload_error']}"
-                
-                # Include message_id for agent reference (critical for parity)
-                clean_result["message_id"] = added_message.get("message_id")
-                
-                return self.success_response(clean_result)
-            else:
-                # Extension returned failure - still save to thread for debugging
-                error_data = {
-                    "success": False,
-                    "error": result.error,
-                    "input": params,
-                }
-                await self.thread_manager.add_message(
+                # Clean up large base64 data
+                final_response_data.pop("screenshot_base64", None)
+                final_response_data.pop("screenshot", None)
+
+            # 2. Build Thread State Record (Matches Sandbox)
+            thread_payload = {
+                **final_response_data,
+                "input": params,
+                "image_url": image_url
+            }
+            
+            # Save to database
+            try:
+                added_message = await self.thread_manager.add_message(
                     thread_id=self.thread_id,
                     type="browser_state",
-                    content=error_data,
+                    content=thread_payload,
                     is_llm_message=False
                 )
-                return self.fail_response(f"Browser action failed: {result.error}")
+                message_id = added_message.get("message_id")
+            except Exception as e:
+                logger.error(f"🌐 [BROWSER_TOOL] Database error saving browser state: {e}")
+                message_id = None
+
+            # 3. Build Final Tool Result
+            clean_result = {
+                "success": True,
+                "message": final_response_data.get("message", f"Browser {action} completed"),
+                "url": final_response_data.get("url"),
+                "title": final_response_data.get("title"),
+                "image_url": image_url,
+                "message_id": message_id
+            }
+            
+            # Include extraction data if present
+            if "data" in final_response_data:
+                clean_result["data"] = final_response_data["data"]
+
+            return self.success_response(clean_result)
                 
         except TimeoutError as e:
-            # Timeout should trigger fallback to sandbox for resilience
-            logger.warning(f"Extension command timed out for browser {self.browser_id}, falling back to sandbox")
-            return None  # Signal fallback instead of failing
+            logger.warning(f"🌐 [BROWSER_TOOL] Extension timeout: {e}")
+            return None  # Fallback
         except Exception as e:
-            # Log error but allow fallback to sandbox for resilience
-            logger.warning(f"Extension command error for browser {self.browser_id}: {e}, falling back to sandbox")
+            logger.error(f"🌐 [BROWSER_TOOL] Unexpected error in extension path: {e}")
             logger.debug(traceback.format_exc())
-            return None  # Signal fallback instead of failing
+            return self.fail_response(f"Error executing via extension: {str(e)}")
     
     def _validate_base64_image(self, base64_string: str, max_size_mb: int = 10) -> tuple[bool, str]:
         """
@@ -721,7 +758,6 @@ class BrowserTool(SandboxToolsBase):
         logger.debug(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
         
         if extension_available:
-            logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
             params = {
                 "action": action,
                 "variables": variables,
@@ -730,13 +766,11 @@ class BrowserTool(SandboxToolsBase):
             }
             result = await self._execute_via_extension("act", params)
             if result is not None:
-                logger.debug(f"🚨 [BROWSER_ROUTER] Extension returned result")
                 return result
-            # DEBUG: For now, FAIL instead of falling back to sandbox
-            logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
-            return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
+            
+            logger.warning(f"🌐 [BROWSER_ROUTER] Extension failed (returned None) → falling back to sandbox")
         
-        logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
+        # Fallback to Sandbox
         params = {"action": action, "iframes": iframes, "variables": variables}
         if filePath:
             params["filePath"] = filePath
@@ -775,17 +809,14 @@ class BrowserTool(SandboxToolsBase):
         logger.debug(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
         
         if extension_available:
-            logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
             params = {"instruction": instruction, "iframes": iframes}
             result = await self._execute_via_extension("extract", params)
             if result is not None:
-                logger.debug(f"🚨 [BROWSER_ROUTER] Extension returned result")
                 return result
-            # DEBUG: For now, FAIL instead of falling back to sandbox
-            logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
-            return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
+            
+            logger.warning(f"🌐 [BROWSER_ROUTER] Extension failed (returned None) → falling back to sandbox")
         
-        logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
+        # Fallback to Sandbox
         params = {"instruction": instruction, "iframes": iframes}
         return await self._execute_stagehand_api("extract", params)
     
@@ -818,14 +849,11 @@ class BrowserTool(SandboxToolsBase):
         logger.info(f"🚨 [BROWSER_ROUTER] _is_extension_available() returned: {extension_available}")
         
         if extension_available:
-            logger.info(f"🚨 [BROWSER_ROUTER] → Routing to EXTENSION")
             result = await self._execute_via_extension("screenshot", {"name": name})
             if result is not None:
-                logger.info(f"🚨 [BROWSER_ROUTER] Extension returned valid result: success={result.success}")
                 return result
-            # DEBUG: For now, FAIL instead of falling back to sandbox
-            logger.error(f"🚨 [BROWSER_ROUTER] Extension returned None! Would normally fallback to sandbox.")
-            return self.fail_response("Extension failed and sandbox fallback is disabled for debugging")
-        
-        logger.debug(f"🚨 [BROWSER_ROUTER] → Routing to SANDBOX (extension not available)")
+            
+            logger.warning(f"🌐 [BROWSER_ROUTER] Extension failed (returned None) → falling back to sandbox")
+            
+        # Fallback to Sandbox
         return await self._execute_stagehand_api("screenshot", {"name": name})

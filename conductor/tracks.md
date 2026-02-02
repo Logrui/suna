@@ -35,3 +35,21 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Frontend support for conversation branch and editing and resending messages in threads**
 *Link: [./tracks/thread_branching_20260131/](./tracks/thread_branching_20260131/)*
+
+---
+
+## [~] Track: Kortix Browser Operator Chrome Extension (~50% Complete)
+*Allows AI agents to control the user's local Chrome browser via WebSocket extension.*
+*Link: [./conductor/tracks/kortix_browser_extension_20260204/](./conductor/tracks/kortix_browser_extension_20260204/)*
+
+**Status**: Core infrastructure complete, but **2 of 4 browser tools NOT FUNCTIONAL**:
+- ✅ `navigate`, `screenshot`: Full parity with sandbox
+- 🔴 `act`, `extract`: **NOT FUNCTIONAL** - Primary focus for Phase 6
+- Remaining: fix act/extract, popup polish, E2E testing, deployment prep
+
+
+- [ ] **Track: Project-Based Memories**
+*Allows manual knowledge management and project-specific context injection.*
+*Link: [./conductor/tracks/project_memories_20260210/](./conductor/tracks/project_memories_20260210/)*
+
+---

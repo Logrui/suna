@@ -58,6 +58,7 @@ import { useProjectRealtime } from '@/hooks/threads';
 import { handleGoogleSlidesUpload } from './tool-views/utils/presentation-utils';
 import { useTranslations } from 'next-intl';
 import { backendApi } from '@/lib/api-client';
+import { useThreadMemorySettings, useUpdateThreadMemorySettings } from '@/hooks/memory/use-memory';
 import { useKortixComputerStore, useSetIsSidePanelOpen } from '@/stores/kortix-computer-store';
 import { useToolStreamStore } from '@/stores/tool-stream-store';
 import { useOptimisticFilesStore } from '@/stores/optimistic-files-store';
@@ -330,6 +331,17 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
     window.addEventListener('sandbox-active', handleSandboxActive);
     return () => window.removeEventListener('sandbox-active', handleSandboxActive);
   }, [projectId, queryClient]);
+
+  const { data: threadMemorySettings } = useThreadMemorySettings(threadId);
+  const updateThreadMemorySettings = useUpdateThreadMemorySettings();
+
+  const handleMemoryToggle = useCallback((enabled: boolean) => {
+    if (threadId) {
+      updateThreadMemorySettings.mutate({ threadId, enabled });
+    }
+  }, [threadId, updateThreadMemorySettings]);
+
+  const memoryEnabled = threadMemorySettings?.memory_enabled ?? true;
 
   useEffect(() => {
     if (
@@ -1404,6 +1416,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
                 showScrollToBottomIndicator={showScrollToBottom}
                 onScrollToBottom={scrollToBottom}
                 threadId={threadId}
+                memoryEnabled={memoryEnabled}
+                onMemoryToggle={handleMemoryToggle}
               />
             </div>
           )}
@@ -1470,6 +1484,8 @@ export function ThreadComponent({ projectId, threadId, compact = false, configur
         showScrollToBottomIndicator={showScrollToBottom}
         onScrollToBottom={scrollToBottom}
         bgColor="bg-card"
+        memoryEnabled={memoryEnabled}
+        onMemoryToggle={handleMemoryToggle}
       />
     </div>
   ) : undefined;

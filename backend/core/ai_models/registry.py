@@ -65,17 +65,20 @@ class ModelRegistry:
         # Register Haiku Bedrock ARN pricing for fallback billing resolution
         self._litellm_id_to_pricing[HAIKU_BEDROCK_ARN] = HAIKU_PRICING
         
-        # Kortix Basic - using MiniMax M2.1
+        # Kortix Basic
         # basic_litellm_id = build_bedrock_profile_arn(HAIKU_4_5_PROFILE_ID) if SHOULD_USE_BEDROCK else "anthropic/claude-haiku-4-5-20251001"
-        basic_litellm_id = "openrouter/minimax/minimax-m2.1"  # 204,800 context $0.30/M input tokens $1.20/M output tokens
+        # basic_litellm_id = "openrouter/minimax/minimax-m2.1"  # 204,800 context $0.30/M input tokens $1.20/M output tokens
         
+        basic_litellm_id = "openrouter/google/gemini-3-flash-preview"  # 1.05M context $0.50/M input tokens $3/M output tokens $1/M audio tokens
+
+
         self.register(Model(
             id="kortix/basic",
             name="Kortix Basic",
             litellm_model_id=basic_litellm_id,
             provider=ModelProvider.OPENROUTER,
             aliases=["kortix-basic", "Kortix Basic"],
-            context_window=200_000,
+            context_window=1_050_000,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
@@ -83,8 +86,8 @@ class ModelRegistry:
                 ModelCapability.PROMPT_CACHING,
             ],
             pricing=ModelPricing(
-                input_cost_per_million_tokens=0.30,
-                output_cost_per_million_tokens=1.20,
+                input_cost_per_million_tokens=0.50,
+                output_cost_per_million_tokens=3.00,
                 cached_read_cost_per_million_tokens=0.03,
                 cache_write_5m_cost_per_million_tokens=0.375,
                 # OLD Haiku 4.5 pricing:
@@ -98,7 +101,7 @@ class ModelRegistry:
             priority=200,
             recommended=True,
             enabled=True,
-            fallback_model_id=HAIKU_BEDROCK_ARN,  # Fallback for vision/image input
+            fallback_model_id="openrouter/google/gemini-3-flash-preview",  # Fallback for vision/image input
             config=ModelConfig(
                 # OLD Anthropic config:
                 # extra_headers={
@@ -109,15 +112,16 @@ class ModelRegistry:
         
         # Kortix Power - using MiniMax M2.1
         # power_litellm_id = build_bedrock_profile_arn(HAIKU_4_5_PROFILE_ID) if SHOULD_USE_BEDROCK else "anthropic/claude-haiku-4-5-20251001"
-        power_litellm_id = "openrouter/minimax/minimax-m2.1"  # 204,800 context $0.30/M input tokens $1.20/M output tokens
-        
+        # power_litellm_id = "openrouter/minimax/minimax-m2.1"  # 204,800 context $0.30/M input tokens $1.20/M output tokens
+        power_litellm_id = "openrouter/moonshotai/kimi-k2.5"  # 262K context $0.30/M input tokens $1.50/M output tokens
+
         self.register(Model(
             id="kortix/power",
-            name="Kortix Advanced Mode",
+            name="Kortix Power",
             litellm_model_id=power_litellm_id,
             provider=ModelProvider.OPENROUTER,
             aliases=["kortix-power", "Kortix POWER Mode", "Kortix Power", "Kortix Advanced Mode"],
-            context_window=200_000,
+            context_window=262_000,
             capabilities=[
                 ModelCapability.CHAT,
                 ModelCapability.FUNCTION_CALLING,
@@ -127,7 +131,7 @@ class ModelRegistry:
             ],
             pricing=ModelPricing(
                 input_cost_per_million_tokens=0.30,
-                output_cost_per_million_tokens=1.20,
+                output_cost_per_million_tokens=1.50,
                 cached_read_cost_per_million_tokens=0.03,
                 cache_write_5m_cost_per_million_tokens=0.375,
                 # OLD Haiku 4.5 pricing:
@@ -141,7 +145,7 @@ class ModelRegistry:
             priority=199,
             recommended=True,
             enabled=True,
-            fallback_model_id=HAIKU_BEDROCK_ARN,  # Fallback for vision/image input
+            fallback_model_id="openrouter/google/gemini-3-flash-preview",  # Fallback for vision/image input
             config=ModelConfig(
                 # OLD Anthropic config:
                 # extra_headers={
@@ -154,7 +158,7 @@ class ModelRegistry:
         if config.ENV_MODE != EnvMode.PRODUCTION:
             # test_litellm_id = build_bedrock_profile_arn(MINIMAX_M2_PROFILE_ID)
             # test_litellm_id ="openrouter/minimax/minimax-m2" #  205K context $0.255/M input tokens $1.02/M output tokens
-            test_litellm_id ="openrouter/minimax/minimax-m2.1" #  204,800 context $0.30/M input tokens $1.20/M output tokens 
+
             # test_litellm_id = "openrouter/z-ai/glm-4.7" # 203K context $0.44/M input tokens $1.74/M output tokens
             # test_litellm_id = "openrouter/z-ai/glm-4.6v" # 131K context $0.30/M input tokens $0.90/M output tokens 
             # test_litellm_id = "openrouter/google/gemini-3-flash-preview" #  1.05M context $0.50/M input tokens $3/M output tokens $1/M audio tokens
@@ -164,9 +168,11 @@ class ModelRegistry:
 
             # test_litellm_id ="groq/moonshotai/kimi-k2-instruct" 
 
+            test_litellm_id ="openrouter/minimax/minimax-m2.1" #  204,800 context $0.30/M input tokens $1.20/M output tokens 
+
             self.register(Model(
                 id="kortix/test",
-                name="Kortix Test",
+                name="Kortix Stable",
                 litellm_model_id=test_litellm_id,
                 provider=ModelProvider.OPENROUTER,
                 aliases=["kortix-test", "Kortix Test"],
@@ -187,6 +193,7 @@ class ModelRegistry:
                 priority=198,
                 recommended=False,
                 enabled=True,
+                fallback_model_id="openrouter/google/gemini-3-flash-preview",  # Fallback for vision/image input
                 config=ModelConfig()
             ))
 

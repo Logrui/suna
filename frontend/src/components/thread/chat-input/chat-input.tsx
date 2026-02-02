@@ -1400,13 +1400,13 @@ export const ChatInput = memo(forwardRef<ChatInputHandles, ChatInputProps>(
           onOpenPlanModal={handleOpenPlanModal}
         />
 
-        {/* {isLoggedIn && !threadId && (
+        {isLoggedIn && (
           <MemoryToggle
             disabled={loading || (disabled && !isAgentRunning)}
             memoryEnabled={memoryEnabled}
             onMemoryToggle={onMemoryToggle}
           />
-        )} */}
+        )}
 
         <SunaAgentModeSwitcher
           enabled={ENABLE_SUNA_AGENT_MODES}

@@ -114,17 +114,19 @@ class MemoryExtractionService:
                 reason = result.get('reason', '')
                 
                 if not worth_extracting:
-                    logger.info(f"LLM decided not to extract memories from thread {thread_id}: {reason}")
+                    logger.info(f"🧠 [MEMORY_EXTRACTION] LLM decided not to extract memories from thread {thread_id}. Reason: {reason}")
                     return []
                 
                 memories_data = result.get('memories', [])
                 
                 if not memories_data:
-                    logger.info(f"No memories to extract from thread {thread_id}: {reason}")
+                    logger.info(f"🧠 [MEMORY_EXTRACTION] LLM found no memories worth extracting from thread {thread_id}. Reason: {reason}")
                     return []
                 
+                logger.debug(f"🧠 [MEMORY_EXTRACTION] LLM reason for extraction: {reason}")
+                
                 extracted_memories = []
-                for mem in memories_data:
+                for idx, mem in enumerate(memories_data):
                     try:
                         memory = ExtractedMemory(
                             content=mem['content'],
@@ -133,11 +135,12 @@ class MemoryExtractionService:
                             metadata=mem.get('metadata', {})
                         )
                         extracted_memories.append(memory)
+                        logger.debug(f"🧠 [MEMORY_EXTRACTION] Extracted memory #{idx+1}: [{memory.memory_type.value}] {memory.content[:100]}...")
                     except Exception as e:
-                        logger.warning(f"Failed to parse memory: {e}")
+                        logger.warning(f"⚠️ [MEMORY_EXTRACTION] Failed to parse memory #{idx+1}: {e}")
                         continue
                 
-                logger.info(f"Extracted {len(extracted_memories)} memories from thread {thread_id}")
+                logger.info(f"✅ [MEMORY_EXTRACTION] Successfully distilled {len(extracted_memories)} memories from thread {thread_id}")
                 return extracted_memories
             
             except json.JSONDecodeError as e:

@@ -282,3 +282,4 @@ packages/kortix-chrome-extension/dist.crx
 packages/kortix-chrome-extension/dist.pem
 # iOS Build Artifacts
 ios-build/
+~/.gemini/

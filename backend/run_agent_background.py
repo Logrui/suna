@@ -750,19 +750,23 @@ async def run_agent_background(
         await cleanup_redis_keys_for_agent_run(agent_run_id, instance_id)
 
         if final_status == "completed" and account_id:
+            logger.info(f"🧠 [MEMORY_TRIGGER] Agent run {agent_run_id} completed. Checking for memory extraction...")
             try:
                 from core.memory.background_jobs import extract_memories_from_conversation
                 messages_result = await client.table('messages').select('message_id').eq('thread_id', thread_id).order('created_at', desc=False).execute()
                 if messages_result.data:
                     message_ids = [m['message_id'] for m in messages_result.data]
+                    logger.debug(f"🧠 [MEMORY_TRIGGER] Found {len(message_ids)} messages for thread {thread_id}. Queuing extraction...")
                     extract_memories_from_conversation.send(
                         thread_id=thread_id,
                         account_id=account_id,
                         message_ids=message_ids
                     )
-                    logger.debug(f"Queued memory extraction for thread {thread_id}")
+                    logger.info(f"✅ [MEMORY_TRIGGER] Queued memory extraction for thread {thread_id} (Job sent to Dramatiq)")
+                else:
+                    logger.debug(f"🧠 [MEMORY_TRIGGER] No messages found for thread {thread_id}, skipping extraction.")
             except Exception as mem_error:
-                logger.warning(f"Failed to queue memory extraction: {mem_error}")
+                logger.warning(f"❌ [MEMORY_TRIGGER] Failed to queue memory extraction: {mem_error}")
 
         # All stream writes are synchronous now, no pending operations to await
 

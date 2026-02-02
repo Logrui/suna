@@ -396,6 +396,29 @@ class KortixTabGroupManager {
     }
 
     /**
+     * Execute a function in ALL frames of the active tab
+     * Returns results from all frames
+     */
+    async executeInAllFrames<T>(
+        func: () => T | Promise<T>
+    ): Promise<{ frameId: number; result: T }[]> {
+        const tab = await this.getActiveTab();
+        if (!tab || !tab.id) {
+            throw new Error('No active tab');
+        }
+
+        const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id, allFrames: true },
+            func,
+        });
+
+        return results.map(r => ({
+            frameId: r.frameId,
+            result: r.result as T
+        }));
+    }
+
+    /**
      * Send a message to the content script in the active tab
      */
     async sendToActiveTab(message: any): Promise<any> {

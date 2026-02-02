@@ -53,13 +53,13 @@ async def extract_memories_from_conversation(
         tier_name = tier_info['name']
         
         if not is_memory_enabled(tier_name):
-            logger.debug(f"Memory disabled for tier {tier_name}, skipping extraction")
+            logger.debug(f"🧠 [MEMORY_JOB] Memory disabled for tier {tier_name}, skipping extraction for {account_id}")
             return
         
         user_memory_result = await client.rpc('get_user_memory_enabled', {'p_account_id': account_id}).execute()
         user_memory_enabled = user_memory_result.data if user_memory_result.data is not None else True
         if not user_memory_enabled:
-            logger.debug(f"Memory disabled by user {account_id}, skipping extraction")
+            logger.debug(f"🧠 [MEMORY_JOB] Memory explicitly disabled by user {account_id}, skipping extraction")
             return
         
         recent_extraction = await client.table('memory_extraction_queue').select('created_at').eq('thread_id', thread_id).eq('status', 'completed').order('created_at', desc=True).limit(1).execute()
@@ -113,6 +113,7 @@ async def extract_memories_from_conversation(
                 for mem in extracted_memories
             ]
         )
+        logger.debug(f"🧠 [MEMORY_JOB] Forwarded {len(extracted_memories)} memories to embedding job for account {account_id}")
         
         await client.table('memory_extraction_queue').update({
             'status': ExtractionQueueStatus.COMPLETED.value,
@@ -187,7 +188,7 @@ async def embed_and_store_memories(
         
         result = await client.table('user_memories').insert(memories_to_insert).execute()
         
-        logger.info(f"Successfully stored {len(result.data)} memories for account {account_id}")
+        logger.info(f"✅ [MEMORY_STORAGE] Successfully stored {len(result.data)} memories for account {account_id} in thread {thread_id}")
     
     except Exception as e:
         logger.error(f"Memory embedding and storage failed: {str(e)}")

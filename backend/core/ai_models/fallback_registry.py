@@ -87,7 +87,7 @@ class FallbackModelRegistry:
             tier_availability=["paid"],
             priority=109,
             enabled=config.GEMINI_API_KEY is not None,
-            fallback_models=["google/gemini-2.5-flash"]
+            fallback_models=["openrouter/google/gemini-2.5-flash"]
         ))
 
         # Gemini 2.5 Flash

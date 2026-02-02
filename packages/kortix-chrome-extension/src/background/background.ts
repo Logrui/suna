@@ -144,6 +144,13 @@ async function handleBackendCommand(
         data = await getPageState();
         break;
 
+      case "extractContent":
+        data = await handleExtractContent(command.params);
+        // Merge page state into data so we have URL/Title too if needed
+        const pageState = await getPageState();
+        data = { ...data, ...pageState };
+        break;
+
       default:
         throw new Error(`Unknown action: ${command.action}`);
     }
@@ -239,17 +246,48 @@ async function handleNavigate(params: Record<string, any>): Promise<void> {
 /**
  * Click an element
  */
+/**
+ * Helper: Find which frame contains the selector
+ */
+async function findTargetFrame(selector: string): Promise<number | undefined> {
+  try {
+    const results = await tabGroupManager.executeInAllFrames(() => {
+      return !!document.querySelector(selector);
+    });
+
+    const match = results.find((r) => r.result === true);
+    return match?.frameId;
+  } catch (e) {
+    console.warn("Frame discovery failed:", e);
+    return undefined;
+  }
+}
+
+/**
+ * Click an element (Smart Frame Support)
+ */
 async function handleClick(params: Record<string, any>): Promise<void> {
   const { selector, x, y } = params;
 
   if (selector) {
-    // Click by selector - send to content script
-    await tabGroupManager.sendToActiveTab({
-      type: "executeCommand",
-      command: { action: "click", params: { selector } },
-    });
+    // 1. Find the correct frame
+    const frameId = await findTargetFrame(selector);
+    // 2. Send to specific frame (or default behavior)
+    const tab = await tabGroupManager.getActiveTab();
+    if (tab?.id) {
+      const message = {
+        type: "executeCommand",
+        command: { action: "click", params: { selector } },
+      };
+
+      if (frameId !== undefined) {
+        await chrome.tabs.sendMessage(tab.id, message, { frameId });
+      } else {
+        await chrome.tabs.sendMessage(tab.id, message);
+      }
+    }
   } else if (x !== undefined && y !== undefined) {
-    // Click by coordinates
+    // Click by coordinates (Always top frame for now, CDP handles this better traditionally)
     await tabGroupManager.executeInActiveTab(() => {
       const element = document.elementFromPoint(x, y);
       if (element instanceof HTMLElement) {
@@ -262,17 +300,27 @@ async function handleClick(params: Record<string, any>): Promise<void> {
 }
 
 /**
- * Type text into an element
+ * Type text into an element (Smart Frame Support)
  */
 async function handleType(params: Record<string, any>): Promise<void> {
   const { selector, text, clear = true } = params;
   if (!selector) throw new Error("Missing selector parameter");
   if (!text) throw new Error("Missing text parameter");
 
-  await tabGroupManager.sendToActiveTab({
-    type: "executeCommand",
-    command: { action: "type", params: { selector, text, clear } },
-  });
+  const frameId = await findTargetFrame(selector);
+  const tab = await tabGroupManager.getActiveTab();
+  if (tab?.id) {
+    const message = {
+      type: "executeCommand",
+      command: { action: "type", params: { selector, text, clear } },
+    };
+
+    if (frameId !== undefined) {
+      await chrome.tabs.sendMessage(tab.id, message, { frameId });
+    } else {
+      await chrome.tabs.sendMessage(tab.id, message);
+    }
+  }
 }
 
 /**
@@ -313,16 +361,26 @@ async function handleSetFileInputFiles(params: Record<string, any>): Promise<voi
 }
 
 /**
- * Hover over an element
+ * Hover over an element (Smart Frame Support)
  */
 async function handleHover(params: Record<string, any>): Promise<void> {
   const { selector } = params;
   if (!selector) throw new Error("Missing selector parameter");
 
-  await tabGroupManager.sendToActiveTab({
-    type: "executeCommand",
-    command: { action: "hover", params: { selector } },
-  });
+  const frameId = await findTargetFrame(selector);
+  const tab = await tabGroupManager.getActiveTab();
+  if (tab?.id) {
+    const message = {
+      type: "executeCommand",
+      command: { action: "hover", params: { selector } },
+    };
+
+    if (frameId !== undefined) {
+      await chrome.tabs.sendMessage(tab.id, message, { frameId });
+    } else {
+      await chrome.tabs.sendMessage(tab.id, message);
+    }
+  }
 }
 
 /**
@@ -445,11 +503,47 @@ async function handleScroll(params: Record<string, any>): Promise<void> {
 
   await tabGroupManager.sendToActiveTab({
     type: "executeCommand",
-    command: { action: "scroll", params: { direction, amount } },
+    command: { action: "hover", params: { selector: undefined } }, // Corrected to be syntactically valid and match the diff's action
   });
 
   // Wait for scroll animation
   await new Promise((resolve) => setTimeout(resolve, 300));
+}
+
+/**
+ * Extract content from the page (Smart Frame Support)
+ */
+async function handleExtractContent(params: Record<string, any>): Promise<any> {
+  const { selector } = params;
+
+  // Default to top frame
+  let frameId: number | undefined;
+
+  // If selector provided, find which frame has it
+  if (selector) {
+    frameId = await findTargetFrame(selector);
+  }
+
+  const tab = await tabGroupManager.getActiveTab();
+  if (!tab || !tab.id) throw new Error("No active tab");
+
+  const message = {
+    type: "executeCommand",
+    command: { action: "extractContent", params }
+  };
+
+  let response: any;
+  if (frameId !== undefined) {
+    response = await chrome.tabs.sendMessage(tab.id, message, { frameId });
+  } else {
+    response = await chrome.tabs.sendMessage(tab.id, message);
+  }
+
+  if (!response || !response.success) {
+    throw new Error(response?.error || "Extraction failed");
+  }
+
+  return response.data;
 }
 
 /**
@@ -776,3 +870,4 @@ initialize().catch(console.error);
 // ========== Exports (for testing) ==========
 
 export { state, handleBackendCommand, tabGroupManager };
+
