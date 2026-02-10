@@ -48,7 +48,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 - Remaining: fix act/extract, popup polish, E2E testing, deployment prep
 
 
-- [ ] **Track: Project-Based Memories**
+- [~] **Track: Project-Based Memories**
 *Allows manual knowledge management and project-specific context injection.*
 *Link: [./conductor/tracks/project_memories_20260210/](./conductor/tracks/project_memories_20260210/)*
 

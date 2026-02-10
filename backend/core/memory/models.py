@@ -50,3 +50,28 @@ class ExtractedMemory:
             self.metadata = {}
         if isinstance(self.memory_type, str):
             self.memory_type = MemoryType(self.memory_type)
+
+@dataclass
+class ProjectMemoryItem:
+    """A memory scoped to a specific project, for per-project AI context."""
+    memory_id: str
+    account_id: str
+    project_id: str
+    content: str
+    memory_type: MemoryType
+    embedding: Optional[List[float]] = None
+    source_thread_id: Optional[str] = None
+    confidence_score: float = 1.0
+    metadata: Dict[str, Any] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    def __post_init__(self):
+        if self.metadata is None:
+            self.metadata = {}
+        if isinstance(self.memory_type, str):
+            self.memory_type = MemoryType(self.memory_type)
+        if isinstance(self.created_at, str):
+            self.created_at = datetime.fromisoformat(self.created_at.replace('Z', '+00:00'))
+        if isinstance(self.updated_at, str):
+            self.updated_at = datetime.fromisoformat(self.updated_at.replace('Z', '+00:00'))

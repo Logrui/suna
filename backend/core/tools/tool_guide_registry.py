@@ -98,6 +98,7 @@ class ToolGuideRegistry:
             'expand_msg_tool': 'core',
             'message_tool': 'core',
             'task_list_tool': 'core',
+            'project_memory_tool': 'core',
             'sb_shell_tool': 'files',
             'sb_files_tool': 'files',
             'sb_file_reader_tool': 'files',

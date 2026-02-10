@@ -493,7 +493,8 @@ class AgentRunner:
                     tool_registry=self.thread_manager.tool_registry,
                     xml_tool_calling=config.AGENT_XML_TOOL_CALLING,
                     user_id=self.account_id,
-                    mcp_loader=getattr(self.thread_manager, 'mcp_loader', None)
+                    mcp_loader=getattr(self.thread_manager, 'mcp_loader', None),
+                    project_id=self.config.project_id
                 )
                 logger.info(f"⏱️ [TIMING] build_system_prompt() in {(time.time() - prompt_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars)")
             
@@ -525,7 +526,8 @@ class AgentRunner:
                         tool_registry=self.thread_manager.tool_registry,
                         xml_tool_calling=config.AGENT_XML_TOOL_CALLING,
                         user_id=self.account_id,
-                        mcp_loader=getattr(self.thread_manager, 'mcp_loader', None)
+                        mcp_loader=getattr(self.thread_manager, 'mcp_loader', None),
+                        project_id=self.config.project_id
                     )
                     logger.info(f"⏱️ [TIMING] Upgraded to full prompt in {(time.time() - prompt_upgrade_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars)")
                     self.thread_manager._system_prompt = system_message

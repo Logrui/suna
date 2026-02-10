@@ -87,7 +87,8 @@ If relevant context seems missing, ask a clarifying question.
                                   xml_tool_calling: bool = False,
                                   user_id: Optional[str] = None,
                                   use_dynamic_tools: bool = True,
-                                  mcp_loader=None) -> Tuple[dict, Optional[dict]]:
+                                  mcp_loader=None,
+                                  project_id: Optional[str] = None) -> Tuple[dict, Optional[dict]]:
         
         if agent_config and agent_config.get('system_prompt'):
             system_content = agent_config['system_prompt'].strip()
@@ -101,6 +102,7 @@ If relevant context seems missing, ask a clarifying question.
         kb_task = PromptManager._fetch_knowledge_base(agent_config, client)
         user_context_task = PromptManager._fetch_user_context_data(user_id, client)
         memory_task = PromptManager._fetch_user_memories(user_id, thread_id, client)
+        project_memory_task = PromptManager._fetch_project_memories(project_id, user_id, thread_id, client)
         file_task = PromptManager._fetch_file_context(thread_id)
         
         # Get agent_id for fresh config loading
@@ -111,7 +113,7 @@ If relevant context seems missing, ask a clarifying question.
         system_content = PromptManager._append_xml_tool_calling_instructions(system_content, xml_tool_calling, tool_registry)
         system_content = PromptManager._append_datetime_info(system_content)
         
-        kb_data, user_context_data, memory_data, file_data = await asyncio.gather(kb_task, user_context_task, memory_task, file_task)
+        kb_data, user_context_data, memory_data, project_memory_data, file_data = await asyncio.gather(kb_task, user_context_task, memory_task, project_memory_task, file_task)
         
         if kb_data:
             system_content += kb_data
@@ -124,6 +126,9 @@ If relevant context seems missing, ask a clarifying question.
         system_message = {"role": "system", "content": system_content}
         
         context_parts = []
+        # Project memories get priority placement (injected first)
+        if project_memory_data:
+            context_parts.append(f"[CONTEXT - Project Memory]\n{project_memory_data}\n[END CONTEXT]")
         if memory_data:
             context_parts.append(f"[CONTEXT - User Memory]\n{memory_data}\n[END CONTEXT]")
         if file_data:
@@ -640,6 +645,86 @@ Example of correct tool call format (multiple invokes in one block):
         
         except Exception as e:
             logger.warning(f"Failed to fetch user memories for {user_id}: {e}")
+            return None
+    
+    @staticmethod
+    async def _fetch_project_memories(project_id: Optional[str], user_id: Optional[str], thread_id: str, client) -> Optional[str]:
+        """Fetch project-scoped memories for prompt injection."""
+        if not (project_id and user_id and client):
+            logger.debug(f"Project memory fetch skipped: project_id={project_id}, user_id={user_id}")
+            return None
+        
+        if not thread_id:
+            logger.debug("Project memory fetch skipped: no thread_id")
+            return None
+        
+        try:
+            from core.memory.project_memory_service import project_memory_service
+            
+            # Get the account_id from the project
+            project_result = await client.table('projects').select('account_id').eq('project_id', project_id).execute()
+            if not project_result.data:
+                logger.debug(f"Project memory fetch: project {project_id} not found")
+                return None
+            
+            account_id = project_result.data[0]['account_id']
+            
+            # Use the first user message as the semantic search query (same as user memories)
+            messages_result = await client.table('messages').select('content').eq('thread_id', thread_id).eq('type', 'user').order('created_at', desc=False).limit(1).execute()
+            
+            if not messages_result.data:
+                # If no messages yet, fetch all project memories (no semantic filtering)
+                memories, _ = await project_memory_service.list_memories(
+                    account_id=account_id,
+                    project_id=project_id,
+                    limit=10,
+                )
+                if not memories:
+                    return None
+                formatted = project_memory_service.format_memories_for_prompt(memories)
+                logger.info(f"Retrieved {len(memories)} project memories (all) for project {project_id}")
+                return formatted
+            
+            first_message_content = messages_result.data[0].get('content', {})
+            if isinstance(first_message_content, str):
+                import json as j
+                try:
+                    first_message_content = j.loads(first_message_content)
+                except:
+                    pass
+            
+            query_text = ''
+            if isinstance(first_message_content, dict):
+                query_text = first_message_content.get('content', str(first_message_content))
+            else:
+                query_text = str(first_message_content)
+            
+            if not query_text or len(query_text.strip()) < 10:
+                # Query too short for semantic search — fetch all memories
+                memories, _ = await project_memory_service.list_memories(
+                    account_id=account_id,
+                    project_id=project_id,
+                    limit=10,
+                )
+            else:
+                memories = await project_memory_service.search_memories(
+                    account_id=account_id,
+                    project_id=project_id,
+                    query_text=query_text,
+                    limit=10,
+                    similarity_threshold=0.1,
+                )
+            
+            if not memories:
+                logger.debug(f"Project memory fetch: no memories found for project {project_id}")
+                return None
+            
+            formatted = project_memory_service.format_memories_for_prompt(memories)
+            logger.info(f"Retrieved {len(memories)} project memories for project {project_id}")
+            return formatted
+        
+        except Exception as e:
+            logger.warning(f"Failed to fetch project memories for {project_id}: {e}")
             return None
     
     @staticmethod

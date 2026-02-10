@@ -424,8 +424,10 @@ api_router.include_router(google_docs_router)
 
 from core.referrals import router as referrals_router
 from core.memory.api import router as memory_router
+from core.memory.project_memory_api import router as project_memory_router
 api_router.include_router(referrals_router)
 api_router.include_router(memory_router)
+api_router.include_router(project_memory_router)
 
 from core.test_harness.api import router as test_harness_router
 api_router.include_router(test_harness_router)
