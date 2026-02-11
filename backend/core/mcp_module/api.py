@@ -29,8 +29,6 @@ class CustomMCPConnectionResponse(BaseModel):
     config: Dict[str, Any]
     url: str
     message: str
-    auth_required: bool = False
-    auth_url: Optional[str] = None
 
 
 class CustomMCPDiscoverRequest(BaseModel):
@@ -59,29 +57,6 @@ async def discover_custom_mcp_tools(request: CustomMCPDiscoverRequest):
         )
         
     except MCPException as e:
-        # Check if this failure might be solvable by OAuth
-        url = request.config.get("url")
-        if url:
-            try:
-                # Quick check if OAuth metadata exists
-                # We do this here to hint the frontend
-                await mcp_auth_service.discover_oauth_metadata(url)
-                
-                # If we get here, OAuth is supported
-                return CustomMCPConnectionResponse(
-                    success=False,
-                    qualified_name="",
-                    display_name="",
-                    tools=[],
-                    config=request.config,
-                    url=url,
-                    message="Authentication Required",
-                    auth_required=True
-                )
-            except Exception:
-                # OAuth not supported or failed to discover, ignore specific auth error and raise original
-                pass
-
         logger.error(f"Error discovering custom MCP tools: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 

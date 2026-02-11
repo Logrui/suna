@@ -542,7 +542,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1 min-w-0 pr-4">
                 <h2 className="text-xl font-semibold">
-                  {mode === 'profile-only' ? 'Connect New App' : 'Connectors'}
+                  {mode === 'profile-only' ? 'Connect New App' : 'App Integrations'}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {mode === 'profile-only'
@@ -613,7 +613,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                     <CollapsibleTrigger asChild>
                       <div className="w-full hover:underline flex items-center justify-between p-0 h-auto">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-medium">Connected Apps</h3>
+                          <h3 className="text-lg font-medium">Connected to this Worker</h3>
                           {isLoadingConnectedApps ? (
                             <Skeleton className="w-6 h-5 rounded ml-2" />
                           ) : connectedApps.length > 0 && (
@@ -629,7 +629,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                         )}
                       </div>
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-4 mb-8">
+                    <CollapsibleContent className="mt-4">
                       {isLoadingConnectedApps ? (
                         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                           {Array.from({ length: 3 }).map((_, i) => (
@@ -637,12 +637,12 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                           ))}
                         </div>
                       ) : connectedApps.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-                          <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-3 mx-auto">
-                            <Zap className="h-6 w-6 text-muted-foreground" />
+                        <div className="text-center py-8 text-muted-foreground">
+                          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4 mx-auto">
+                            <Zap className="h-8 w-8 text-muted-foreground" />
                           </div>
-                          <h4 className="text-sm font-medium mb-1">No connected apps</h4>
-                          <p className="text-xs">Connect apps below to manage tools.</p>
+                          <h4 className="text-sm font-medium mb-2">No connected apps</h4>
+                          <p className="text-xs">Connect apps below to manage tools for this Worker.</p>
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
@@ -660,37 +660,6 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                       )}
                     </CollapsibleContent>
                   </Collapsible>
-                )}
-
-                {/* Custom MCP Servers Section */}
-                {currentAgentId && agent?.custom_mcps?.some((m: any) => !m.config?.profile_id) && (
-                  <div className="mb-8">
-                    <h3 className="text-lg font-medium mb-4">Custom Servers</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {agent.custom_mcps
-                        .filter((m: any) => !m.config?.profile_id)
-                        .map((mcp: any, idx: number) => (
-                          <div key={idx} className="group border bg-card rounded-2xl p-4 transition-all duration-200">
-                            <div className="flex items-start gap-3 mb-3">
-                              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                <Server className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-medium text-sm leading-tight truncate mb-1">{mcp.name}</h3>
-                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                  {mcp.type.toUpperCase()} • {mcp.config?.url}
-                                </p>
-                              </div>
-                              {/* TODO: Edit/Delete Actions for Custom MCPs */}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                              {mcp.enabledTools?.length || 0} tools enabled
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
                 )}
                 <div>
                   <h3 className="text-lg font-medium mb-4">

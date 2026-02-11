@@ -3,12 +3,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, CheckCircle2, Zap, ChevronRight, Sparkles, Server } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Zap, ChevronRight, Sparkles, Server, Plus, Trash2, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -24,12 +25,21 @@ interface CustomMCPConfiguration {
   config: any;
   enabledTools: string[];
   selectedProfileId?: string;
+  oauth_client_id?: string;
+  oauth_client_secret?: string;
+  custom_headers?: Record<string, string>;
 }
 
 interface MCPTool {
   name: string;
   description: string;
   inputSchema?: any;
+}
+
+interface CustomHeader {
+  id: string;
+  key: string;
+  value: string;
 }
 
 export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
@@ -49,14 +59,35 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
   const [processedConfig, setProcessedConfig] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Advanced Settings State
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [oauthClientId, setOauthClientId] = useState('');
+  const [oauthClientSecret, setOauthClientSecret] = useState('');
+  const [customHeaders, setCustomHeaders] = useState<CustomHeader[]>([]);
+
+  const addCustomHeader = () => {
+    setCustomHeaders([...customHeaders, { id: crypto.randomUUID(), key: '', value: '' }]);
+  };
+
+  const removeCustomHeader = (id: string) => {
+    setCustomHeaders(customHeaders.filter(h => h.id !== id));
+  };
+
+  const updateCustomHeader = (id: string, field: 'key' | 'value', newValue: string) => {
+    setCustomHeaders(customHeaders.map(h =>
+      h.id === id ? { ...h, [field]: newValue } : h
+    ));
+  };
+
   const validateAndDiscoverTools = async () => {
     setIsValidating(true);
     setValidationError(null);
     setDiscoveredTools([]);
-    
+
     try {
       let parsedConfig: any;
-      
+      let headersDict: Record<string, string> = {};
+
       if (serverType === 'http') {
         const url = configText.trim();
         if (!url) {
@@ -65,8 +96,20 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         if (!manualServerName.trim()) {
           throw new Error('Please enter a name for this MCP server.');
         }
-        
-        parsedConfig = { url };
+
+        // Validate headers
+        customHeaders.forEach(h => {
+          if (h.key.trim() && h.value.trim()) {
+            headersDict[h.key.trim()] = h.value.trim();
+          }
+        });
+
+        parsedConfig = {
+          url,
+          // We pass these here so the backend discovery can blindly use them if needed for probing
+          custom_headers: Object.keys(headersDict).length > 0 ? headersDict : undefined
+        };
+
         setServerName(manualServerName.trim());
       }
 
@@ -77,25 +120,64 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         throw new Error('You must be logged in to discover tools');
       }
 
+      // Check if this looks like an OAuth flow might be needed (or if we explicitly want to try auth first)
+      // For now, we hit discovery. If discovery fails with 401 or returns a special "auth_required" payload (future), we handle it.
+      // But we also support the user explicitly clicking "Connect" which in the new design might be triggered if discovery fails?
+      // Actually, per the plan, we might want to initiate auth *during* discovery?
+      // Let's stick to the current flow: Try discover. 
+
+      const payload: any = {
+        type: serverType,
+        config: parsedConfig
+      };
+
+      // Add Optional OAuth fields to the payload for discovery context (if backend needs them to probe DCR)
+      if (oauthClientId.trim()) payload.oauth_client_id = oauthClientId.trim();
+      if (oauthClientSecret.trim()) payload.oauth_client_secret = oauthClientSecret.trim();
+      if (headersDict && Object.keys(headersDict).length > 0) payload.custom_headers = headersDict;
+
       const response = await fetch(`${API_URL}/mcp/discover-custom-tools`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          type: serverType,
-          config: parsedConfig
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
         const error = await response.json();
+        // Check for specific OAuth requirement signal or just general error
+        // If the user *wants* to do OAuth, they might have configured it.
+        // If discovery failed, let's see if it's an auth issue?
+
+        // *Self-Correction*: The requirements say "Start the new oauth flow as soon as we click 'Connect to MCP Server'". 
+        // This suggests we might want to *always* check for OAuth metadata if it fails?
+        // Or we catch the specific case where we need to auth.
+        // For now, let's treat any failure as a potential need to Auth IF we have a way to detect it.
+        // BUT, if the user explicitly provided OAuth Client ID/Secret, maybe we should have started with Auth?
+        // Let's stick to: "If discovery returns a redirect_url (it won't standardly), or if we need to manually trigger."
+
+        // Wait, the backend logic for `discover-custom-tools` doesn't return a redirect_url currently. 
+        // It tries to list tools.
+        // If we want to support OAuth, we might need a separate trigger mechanism OR we catch the error 
+        // and ask the user "This server might require authentication. [Connect with OAuth]"?
+
+        // However, the prompt says "update existing Connect... to be able to handle probing... and start new oauth flow".
+        // Let's check if we should try to discover metadata first via a HEAD request or similar in frontend? No, CORS.
+
+        // Proposal: If discovery fails, but we have a valid URL, prompt the user to try generic OAuth? 
+        // OR better: Just add a "Connect with OAuth" button?
+
+        // Let's assume for this step, if we get a specific error, we show the error.
         throw new Error(error.message || 'Failed to connect to the MCP server. Please check your configuration.');
       }
 
       const data = await response.json();
-      
+
+      // Check for redirect indication in response (if we updated backend to support hybrid)
+      // Currently backend `discover` returns tools.
+
       if (!data.tools || data.tools.length === 0) {
         throw new Error('No tools found. Please check your configuration.');
       }
@@ -111,13 +193,59 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       setDiscoveredTools(data.tools);
       setSelectedTools(new Set(data.tools.map((tool: MCPTool) => tool.name)));
       setStep('tools');
-      
+
     } catch (error: any) {
+      // If basic discovery failed, maybe check if we should try OAuth?
+      // For now just show error.
       setValidationError(error.message);
     } finally {
       setIsValidating(false);
     }
   };
+
+  const handleInitiateOAuth = async () => {
+    // This is the new "Connect" flow for OAuth servers
+    setIsValidating(true);
+    setValidationError(null);
+
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) throw new Error('You must be logged in.');
+
+      const url = configText.trim();
+      if (!url) throw new Error('URL required');
+
+      const returnUrl = window.location.href;
+      const encodedReturn = encodeURIComponent(returnUrl);
+      const encodedUrl = encodeURIComponent(url);
+
+      // Call start endpoint
+      const response = await fetch(`${API_URL}/mcp/auth/start?url=${encodedUrl}&return_url=${encodedReturn}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || 'Failed to initiate OAuth');
+      }
+
+      const data = await response.json();
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else {
+        throw new Error('No redirect URL returned');
+      }
+
+    } catch (e: any) {
+      setValidationError(e.message);
+      setIsValidating(false);
+    }
+  }
 
   const handleToolsNext = async () => {
     if (selectedTools.size === 0) {
@@ -143,24 +271,33 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
     setValidationError(null);
 
     try {
-      const configToSave: any = { url: configText.trim() };
-      
+      const headersDict: Record<string, string> = {};
+      customHeaders.forEach(h => {
+        if (h.key.trim() && h.value.trim()) {
+          headersDict[h.key.trim()] = h.value.trim();
+        }
+      });
+
+      const configToSave: any = {
+        url: configText.trim(),
+        custom_headers: Object.keys(headersDict).length > 0 ? headersDict : undefined,
+        oauth_client_id: oauthClientId.trim() || undefined,
+        oauth_client_secret: oauthClientSecret.trim() || undefined
+      };
+
       onSave({
         name: serverName,
         type: serverType,
         config: configToSave,
         enabledTools: Array.from(selectedTools),
-        selectedProfileId: undefined
+        selectedProfileId: undefined,
+        // Pass these up so main handler can store them safely if needed, though usually they go in config/credentials
+        oauth_client_id: oauthClientId.trim() || undefined,
+        oauth_client_secret: oauthClientSecret.trim() || undefined,
+        custom_headers: Object.keys(headersDict).length > 0 ? headersDict : undefined
       });
-      
-      setConfigText('');
-      setManualServerName('');
-      setDiscoveredTools([]);
-      setSelectedTools(new Set());
-      setServerName('');
-      setProcessedConfig(null);
-      setValidationError(null);
-      setStep('setup');
+
+      handleReset();
       onOpenChange(false);
     } catch (error: any) {
       setValidationError(error.message || 'Failed to save MCP configuration. Please try again.');
@@ -193,10 +330,15 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
     setSelectedTools(new Set());
     setServerName('');
     setProcessedConfig(null);
-    
+
     setValidationError(null);
     setStep('setup');
     setIsSaving(false);
+
+    setOauthClientId('');
+    setOauthClientSecret('');
+    setCustomHeaders([]);
+    setIsAdvancedOpen(false);
   };
 
   const exampleConfigs = {
@@ -217,7 +359,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
             <DialogTitle>Add MCP Server</DialogTitle>
           </div>
           <DialogDescription>
-            {step === 'setup' 
+            {step === 'setup'
               ? 'Connect to a Model Context Protocol (MCP) server to expand your agent\'s capabilities with new tools and integrations.'
               : 'Choose which tools you\'d like to enable from this MCP server.'
             }
@@ -297,17 +439,105 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                     MCP Server URL
                   </Label>
                   <Input
-                      id="config"
-                      type="url"
-                      placeholder={exampleConfigs.http}
-                      value={configText}
-                      onChange={(e) => setConfigText(e.target.value)}
-                      className="w-full px-4 py-3 border border-input bg-muted rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
-                    />
+                    id="config"
+                    type="url"
+                    placeholder={exampleConfigs.http}
+                    value={configText}
+                    onChange={(e) => setConfigText(e.target.value)}
+                    className="w-full px-4 py-3 border border-input bg-muted rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono"
+                  />
                   <p className="text-sm text-muted-foreground">
                     Enter the complete URL to your MCP server endpoint
                   </p>
                 </div>
+
+                {/* Advanced Settings */}
+                <Collapsible
+                  open={isAdvancedOpen}
+                  onOpenChange={setIsAdvancedOpen}
+                  className="border rounded-lg bg-card"
+                >
+                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 font-medium hover:bg-muted/50 transition-colors rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                      <span>Advanced Settings</span>
+                    </div>
+                    {isAdvancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="p-4 pt-0 space-y-6 animate-accordion-down">
+                    <div className="pt-2"></div>
+
+                    {/* OAuth Config */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold tracking-tight">OAuth Configuration (Optional)</h4>
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="clientId">Client ID</Label>
+                          <Input
+                            id="clientId"
+                            placeholder="Optional Client ID for manual configuration"
+                            value={oauthClientId}
+                            onChange={e => setOauthClientId(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="clientSecret">Client Secret</Label>
+                          <Input
+                            id="clientSecret"
+                            type="password"
+                            placeholder="Optional Client Secret"
+                            value={oauthClientSecret}
+                            onChange={e => setOauthClientSecret(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Custom Headers */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold tracking-tight">Custom Headers</h4>
+                        <Button variant="outline" size="sm" onClick={addCustomHeader} type="button">
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Header
+                        </Button>
+                      </div>
+
+                      {customHeaders.length === 0 ? (
+                        <div className="text-sm text-muted-foreground italic text-center py-2 border border-dashed rounded-md">
+                          No custom headers added
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {customHeaders.map(header => (
+                            <div key={header.id} className="flex gap-2 items-center">
+                              <Input
+                                placeholder="Key (e.g. X-Api-Token)"
+                                value={header.key}
+                                onChange={e => updateCustomHeader(header.id, 'key', e.target.value)}
+                                className="flex-1 font-mono text-sm"
+                              />
+                              <Input
+                                placeholder="Value"
+                                value={header.value}
+                                onChange={e => updateCustomHeader(header.id, 'value', e.target.value)}
+                                className="flex-1 font-mono text-sm"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeCustomHeader(header.id)}
+                                className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
 
               {validationError && (
@@ -358,12 +588,12 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                   <ScrollArea className="h-[400px] border border-border rounded-lg">
                     <div className="space-y-3 p-4">
                       {discoveredTools.map((tool) => (
-                        <div 
-                          key={tool.name} 
+                        <div
+                          key={tool.name}
                           className={cn(
                             "flex items-start space-x-3 p-4 rounded-lg border transition-all cursor-pointer hover:bg-muted/50",
-                            selectedTools.has(tool.name) 
-                              ? "border-primary bg-primary/5" 
+                            selectedTools.has(tool.name)
+                              ? "border-primary bg-primary/5"
                               : "border-border"
                           )}
                           onClick={() => handleToolToggle(tool.name)}
@@ -413,7 +643,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} type="button">
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleToolsNext}
                 disabled={selectedTools.size === 0 || isSaving}
                 type="button"
@@ -430,6 +660,14 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
             </>
           ) : (
             <>
+              {/* New OAuth Connect Button */}
+              {configText && (configText.includes('oauth') || isAdvancedOpen) && (
+                <Button variant="secondary" onClick={handleInitiateOAuth} disabled={!configText.trim() || isValidating} type="button" className="mr-auto hidden">
+                  <Lock className="h-3 w-3 mr-2" />
+                  Connect with OAuth (Legacy)
+                </Button>
+              )}
+
               <Button variant="outline" onClick={() => onOpenChange(false)} type="button">
                 Cancel
               </Button>
@@ -441,7 +679,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                 {isValidating ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Connecting to MCP server...
+                    Connecting...
                   </>
                 ) : (
                   <>
