@@ -361,12 +361,17 @@ class MCPService:
                     message=f"Private/local MCP servers are not allowed in production: {error_msg}"
                 )
         
+        # Build headers from config
+        headers = {"Content-Type": "application/json"}
+        if "headers" in config:
+            headers.update(config["headers"])
+
         try:
-            async with streamablehttp_client(url) as (read_stream, write_stream, _):
+            async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tool_result = await session.list_tools()
-                    
+
                     tools_info = []
                     for tool in tool_result.tools:
                         tools_info.append({
@@ -374,7 +379,7 @@ class MCPService:
                             "description": tool.description,
                             "inputSchema": tool.inputSchema
                         })
-                    
+
                     return CustomMCPConnectionResult(
                         success=True,
                         qualified_name=f"custom_http_{url.split('/')[-1]}",
@@ -384,7 +389,7 @@ class MCPService:
                         url=url,
                         message=f"Connected via HTTP ({len(tools_info)} tools)"
                     )
-        
+
         except Exception as e:
             self._logger.error(f"Error connecting to HTTP MCP server: {str(e)}")
             return CustomMCPConnectionResult(
@@ -416,12 +421,17 @@ class MCPService:
                     message=f"Private/local MCP servers are not allowed in production: {error_msg}"
                 )
         
+        # Build headers from config
+        headers = {}
+        if "headers" in config:
+            headers.update(config["headers"])
+
         try:
-            async with sse_client(url) as (read_stream, write_stream):
+            async with sse_client(url, headers=headers) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tool_result = await session.list_tools()
-                    
+
                     tools_info = []
                     for tool in tool_result.tools:
                         tools_info.append({
@@ -429,7 +439,7 @@ class MCPService:
                             "description": tool.description,
                             "inputSchema": tool.inputSchema
                         })
-                    
+
                     return CustomMCPConnectionResult(
                         success=True,
                         qualified_name=f"custom_sse_{url.split('/')[-1]}",
@@ -439,7 +449,7 @@ class MCPService:
                         url=url,
                         message=f"Connected via SSE ({len(tools_info)} tools)"
                     )
-        
+
         except Exception as e:
             self._logger.error(f"Error connecting to SSE MCP server: {str(e)}")
             return CustomMCPConnectionResult(
@@ -476,13 +486,17 @@ class MCPService:
     
     def _get_custom_headers(self, qualified_name: str, config: Dict[str, Any], external_user_id: Optional[str] = None) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
-        
+
         if "headers" in config:
             headers.update(config["headers"])
-        
+
+        # Inject OAuth Bearer token if present in config
+        if "oauth_access_token" in config and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {config['oauth_access_token']}"
+
         if external_user_id:
             headers["X-External-User-Id"] = external_user_id
-        
+
         return headers
     
     async def _get_composio_server_url(self, qualified_name: str, config: Dict[str, Any]) -> str:

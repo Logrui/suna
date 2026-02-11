@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { Settings, X, Sparkles, Key, AlertTriangle, Trash2 } from 'lucide-react';
+import { Settings, X, Sparkles, Key, AlertTriangle, Trash2, Link } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +24,7 @@ interface ConfiguredMcpListProps {
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
   onConfigureTools?: (index: number) => void;
+  onConnect?: (mcp: MCPConfiguration) => void;
 }
 
 const extractAppSlug = (mcp: MCPConfiguration): { type: 'composio', slug: string } | null => {
@@ -87,7 +88,8 @@ const MCPConfigurationItem: React.FC<{
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
   onConfigureTools?: (index: number) => void;
-}> = ({ mcp, index, onEdit, onRemove, onConfigureTools }) => {
+  onConnect?: (mcp: MCPConfiguration) => void;
+}> = ({ mcp, index, onEdit, onRemove, onConfigureTools, onConnect }) => {
   const qualifiedNameForLookup = (mcp.customType === 'composio' || mcp.isComposio)
     ? mcp.mcp_qualified_name || mcp.config?.mcp_qualified_name || mcp.qualifiedName
     : mcp.qualifiedName;
@@ -96,6 +98,9 @@ const MCPConfigurationItem: React.FC<{
   const selectedProfile = profiles.find(p => p.profile_id === profileId);
 
   const hasCredentialProfile = !!profileId && !!selectedProfile;
+
+  // Check if this custom MCP requires OAuth and isn't connected yet
+  const requiresOAuth = mcp.config?.requires_auth === true && !mcp.config?.oauth_connected;
 
   return (
     <SpotlightCard className="bg-card border border-border">
@@ -107,6 +112,11 @@ const MCPConfigurationItem: React.FC<{
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="text-sm font-medium text-foreground truncate">{mcp.name}</h4>
+              {requiresOAuth && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 text-xs">
+                  Auth Required
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>{mcp.enabledTools?.length || 0} tools enabled</span>
@@ -118,10 +128,28 @@ const MCPConfigurationItem: React.FC<{
                   </span>
                 </div>
               )}
+              {mcp.config?.oauth_connected && (
+                <div className="flex items-center gap-1">
+                  <Link className="h-3 w-3 text-green-600" />
+                  <span className="text-green-600 font-medium">OAuth Connected</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 ml-4">
+          {requiresOAuth && onConnect && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+              onClick={() => onConnect(mcp)}
+              type="button"
+            >
+              <Link className="h-4 w-4 mr-1" />
+              Connect
+            </Button>
+          )}
           {onConfigureTools && (
             <Button
               variant="outline"
@@ -139,7 +167,7 @@ const MCPConfigurationItem: React.FC<{
             size="icon"
             className="h-12 w-12 bg-card border border-border hover:bg-muted text-muted-foreground hover:text-destructive"
             onClick={() => onRemove(index)}
-            title="Remove integration"
+            title="Remove connector"
             type="button"
           >
             <Trash2 className="h-5 w-5" />
@@ -155,6 +183,7 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
   onEdit,
   onRemove,
   onConfigureTools,
+  onConnect,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [mcpToDelete, setMcpToDelete] = React.useState<{ mcp: MCPConfiguration; index: number } | null>(null);
@@ -185,6 +214,7 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
             onEdit={onEdit}
             onRemove={(idx) => handleDeleteClick(mcp, idx)}
             onConfigureTools={onConfigureTools}
+            onConnect={onConnect}
           />
         ))}
       </div>
@@ -192,9 +222,9 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Integration</AlertDialogTitle>
+            <AlertDialogTitle>Remove Connector</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove the "{mcpToDelete?.mcp.name}" integration? This will disconnect all associated tools and cannot be undone.
+              Are you sure you want to remove the &quot;{mcpToDelete?.mcp.name}&quot; connector? This will disconnect all associated tools and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -203,7 +233,7 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
               onClick={confirmDelete}
               className="bg-destructive hover:bg-destructive/90 text-white"
             >
-              Remove Integration
+              Remove Connector
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

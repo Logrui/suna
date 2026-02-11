@@ -312,6 +312,9 @@ class Configuration:
     
     # Frontend URL configuration
     FRONTEND_URL_ENV: Optional[str] = None
+
+    # Backend URL configuration (for OAuth callbacks)
+    BACKEND_URL_ENV: Optional[str] = None
     
     # AWS Bedrock configuration
     # Option 1 (Most Common): Standard AWS credentials
@@ -553,6 +556,26 @@ class Configuration:
         else:
             return 'http://localhost:3000'
     
+    @property
+    def BACKEND_URL(self) -> str:
+        """
+        Get the backend URL based on environment (used for OAuth callback URLs).
+
+        Returns:
+        - BACKEND_URL_ENV if set
+        - Production: 'https://api.kortix.com'
+        - Local: 'http://localhost:8000'
+        """
+        if self.BACKEND_URL_ENV:
+            return self.BACKEND_URL_ENV
+
+        if self.ENV_MODE == EnvMode.PRODUCTION:
+            return 'https://api.kortix.com'
+        elif self.ENV_MODE == EnvMode.STAGING:
+            return 'http://localhost:8000'
+        else:
+            return 'http://localhost:8000'
+
     def _generate_admin_api_key(self) -> str:
         """Generate a secure admin API key for Kortix administrative functions."""
         # Generate 32 random bytes and encode as hex for a readable API key
@@ -631,6 +654,14 @@ class Configuration:
             logger.info(f"Loaded FRONTEND_URL from environment: {frontend_url_env}")
         else:
             logger.debug("FRONTEND_URL not set in environment, using defaults")
+
+        # Custom handling for backend URL (used for OAuth callbacks)
+        backend_url_env = os.getenv("BACKEND_URL")
+        if backend_url_env is not None:
+            self.BACKEND_URL_ENV = backend_url_env
+            logger.info(f"Loaded BACKEND_URL from environment: {backend_url_env}")
+        else:
+            logger.debug("BACKEND_URL not set in environment, using defaults")
         
         # Custom handling for DEBUG_SAVE_LLM_IO (always False in production)
         debug_save_llm_io_env = os.getenv("DEBUG_SAVE_LLM_IO")

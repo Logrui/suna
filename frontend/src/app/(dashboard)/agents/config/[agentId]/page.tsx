@@ -121,7 +121,7 @@ export default function AgentConfigPage() {
   const menuItems = [
     { id: 'instructions' as const, label: 'Instructions', icon: Brain },
     { id: 'tools' as const, label: 'Tools', icon: Wrench },
-    { id: 'integrations' as const, label: 'Integrations', icon: Server },
+    { id: 'integrations' as const, label: 'Connectors', icon: Server },
     { id: 'knowledge' as const, label: 'Knowledge', icon: BookOpen },
     { id: 'triggers' as const, label: 'Triggers', icon: Zap },
     { id: 'workflows' as const, label: 'Workflows', icon: Workflow },

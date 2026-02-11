@@ -113,6 +113,7 @@ async def lifespan(app: FastAPI):
         credentials_api.initialize(db)
         template_api.initialize(db)
         composio_api.initialize(db)
+        mcp_api.initialize(db)
         
         # Start CloudWatch queue metrics publisher (production only)
         if config.ENV_MODE == EnvMode.PRODUCTION:

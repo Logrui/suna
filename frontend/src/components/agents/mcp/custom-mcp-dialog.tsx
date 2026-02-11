@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, CheckCircle2, Zap, ChevronRight, Sparkles, Server } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Zap, ChevronRight, ChevronDown, Sparkles, Server, Settings, Plus, Trash2, Key, Link } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ interface CustomMCPDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (config: CustomMCPConfiguration) => void;
+  agentId?: string;
 }
 
 interface CustomMCPConfiguration {
@@ -32,12 +34,18 @@ interface MCPTool {
   inputSchema?: any;
 }
 
+interface CustomHeader {
+  key: string;
+  value: string;
+}
+
 export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
   open,
   onOpenChange,
-  onSave
+  onSave,
+  agentId,
 }) => {
-  const [step, setStep] = useState<'setup' | 'tools'>('setup');
+  const [step, setStep] = useState<'setup' | 'tools' | 'oauth'>('setup');
   const [serverType, setServerType] = useState<'http'>('http');
   const [configText, setConfigText] = useState('');
   const [serverName, setServerName] = useState('');
@@ -49,14 +57,47 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
   const [processedConfig, setProcessedConfig] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Advanced settings
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [customHeaders, setCustomHeaders] = useState<CustomHeader[]>([]);
+  const [oauthClientId, setOauthClientId] = useState('');
+  const [oauthClientSecret, setOauthClientSecret] = useState('');
+
+  // OAuth state
+  const [requiresAuth, setRequiresAuth] = useState(false);
+  const [oauthMetadata, setOauthMetadata] = useState<any>(null);
+  const [oauthConnecting, setOauthConnecting] = useState(false);
+  const oauthPollRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (oauthPollRef.current) {
+        clearInterval(oauthPollRef.current);
+      }
+    };
+  }, []);
+
+  const getCustomHeadersObject = useCallback((): Record<string, string> => {
+    const headers: Record<string, string> = {};
+    customHeaders.forEach(h => {
+      if (h.key.trim()) {
+        headers[h.key.trim()] = h.value;
+      }
+    });
+    return headers;
+  }, [customHeaders]);
+
   const validateAndDiscoverTools = async () => {
     setIsValidating(true);
     setValidationError(null);
     setDiscoveredTools([]);
-    
+    setRequiresAuth(false);
+    setOauthMetadata(null);
+
     try {
       let parsedConfig: any;
-      
+
       if (serverType === 'http') {
         const url = configText.trim();
         if (!url) {
@@ -65,7 +106,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         if (!manualServerName.trim()) {
           throw new Error('Please enter a name for this MCP server.');
         }
-        
+
         parsedConfig = { url };
         setServerName(manualServerName.trim());
       }
@@ -77,16 +118,29 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         throw new Error('You must be logged in to discover tools');
       }
 
+      // Build request with custom headers and OAuth config
+      const headersObj = getCustomHeadersObject();
+      const requestBody: any = {
+        type: serverType,
+        config: parsedConfig,
+      };
+      if (Object.keys(headersObj).length > 0) {
+        requestBody.custom_headers = headersObj;
+      }
+      if (oauthClientId.trim()) {
+        requestBody.oauth_client_id = oauthClientId.trim();
+      }
+      if (oauthClientSecret.trim()) {
+        requestBody.oauth_client_secret = oauthClientSecret.trim();
+      }
+
       const response = await fetch(`${API_URL}/mcp/discover-custom-tools`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          type: serverType,
-          config: parsedConfig
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -95,7 +149,15 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       }
 
       const data = await response.json();
-      
+
+      // Check if OAuth is required
+      if (data.requires_auth && (!data.tools || data.tools.length === 0)) {
+        setRequiresAuth(true);
+        setOauthMetadata(data.oauth_metadata);
+        setStep('oauth');
+        return;
+      }
+
       if (!data.tools || data.tools.length === 0) {
         throw new Error('No tools found. Please check your configuration.');
       }
@@ -111,11 +173,115 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       setDiscoveredTools(data.tools);
       setSelectedTools(new Set(data.tools.map((tool: MCPTool) => tool.name)));
       setStep('tools');
-      
+
     } catch (error: any) {
       setValidationError(error.message);
     } finally {
       setIsValidating(false);
+    }
+  };
+
+  const startOAuthFlow = async () => {
+    setOauthConnecting(true);
+    setValidationError(null);
+
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('You must be logged in');
+      }
+
+      const url = configText.trim();
+      const params = new URLSearchParams({
+        mcp_url: url,
+        user_id: session.user.id,
+        agent_id: agentId || '',
+      });
+      if (oauthClientId.trim()) {
+        params.set('oauth_client_id', oauthClientId.trim());
+      }
+      if (oauthClientSecret.trim()) {
+        params.set('oauth_client_secret', oauthClientSecret.trim());
+      }
+
+      const authUrl = `${API_URL}/mcp/auth/start?${params.toString()}`;
+
+      // Open popup
+      const popup = window.open(authUrl, 'mcp_oauth', 'width=800,height=600,scrollbars=yes');
+
+      // Poll for completion
+      oauthPollRef.current = setInterval(async () => {
+        // Check if popup was closed
+        if (popup && popup.closed) {
+          if (oauthPollRef.current) {
+            clearInterval(oauthPollRef.current);
+            oauthPollRef.current = null;
+          }
+
+          // Check if OAuth completed
+          try {
+            const statusResp = await fetch(
+              `${API_URL}/mcp/auth/status?mcp_url=${encodeURIComponent(url)}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+              }
+            );
+            const statusData = await statusResp.json();
+
+            if (statusData.status === 'completed') {
+              setOauthConnecting(false);
+              setRequiresAuth(false);
+              // Re-run discovery with stored token
+              setStep('setup');
+              await validateAndDiscoverTools();
+            } else {
+              setOauthConnecting(false);
+              setValidationError('OAuth flow was not completed. Please try again.');
+            }
+          } catch {
+            setOauthConnecting(false);
+            setValidationError('Failed to verify OAuth status.');
+          }
+          return;
+        }
+
+        // Poll status while popup is open
+        try {
+          const statusResp = await fetch(
+            `${API_URL}/mcp/auth/status?mcp_url=${encodeURIComponent(url)}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+            }
+          );
+          const statusData = await statusResp.json();
+
+          if (statusData.status === 'completed') {
+            if (oauthPollRef.current) {
+              clearInterval(oauthPollRef.current);
+              oauthPollRef.current = null;
+            }
+            if (popup && !popup.closed) {
+              popup.close();
+            }
+            setOauthConnecting(false);
+            setRequiresAuth(false);
+            // Re-run discovery with stored token
+            setStep('setup');
+            await validateAndDiscoverTools();
+          }
+        } catch {
+          // Ignore polling errors
+        }
+      }, 2000);
+
+    } catch (error: any) {
+      setOauthConnecting(false);
+      setValidationError(error.message);
     }
   };
 
@@ -143,8 +309,25 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
     setValidationError(null);
 
     try {
-      const configToSave: any = { url: configText.trim() };
-      
+      const headersObj = getCustomHeadersObject();
+      const configToSave: any = {
+        url: configText.trim(),
+      };
+
+      if (Object.keys(headersObj).length > 0) {
+        configToSave.headers = headersObj;
+      }
+      if (oauthClientId.trim()) {
+        configToSave.oauth_client_id = oauthClientId.trim();
+      }
+      if (oauthClientSecret.trim()) {
+        configToSave.oauth_client_secret = oauthClientSecret.trim();
+      }
+      if (requiresAuth) {
+        configToSave.requires_auth = true;
+        configToSave.oauth_connected = true;
+      }
+
       onSave({
         name: serverName,
         type: serverType,
@@ -152,15 +335,8 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         enabledTools: Array.from(selectedTools),
         selectedProfileId: undefined
       });
-      
-      setConfigText('');
-      setManualServerName('');
-      setDiscoveredTools([]);
-      setSelectedTools(new Set());
-      setServerName('');
-      setProcessedConfig(null);
-      setValidationError(null);
-      setStep('setup');
+
+      handleReset();
       onOpenChange(false);
     } catch (error: any) {
       setValidationError(error.message || 'Failed to save MCP configuration. Please try again.');
@@ -180,8 +356,14 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
   };
 
   const handleBack = () => {
-    if (step === 'tools') {
+    if (step === 'tools' || step === 'oauth') {
       setStep('setup');
+      setRequiresAuth(false);
+      setOauthConnecting(false);
+      if (oauthPollRef.current) {
+        clearInterval(oauthPollRef.current);
+        oauthPollRef.current = null;
+      }
     }
     setValidationError(null);
   };
@@ -193,10 +375,34 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
     setSelectedTools(new Set());
     setServerName('');
     setProcessedConfig(null);
-    
     setValidationError(null);
     setStep('setup');
     setIsSaving(false);
+    setShowAdvanced(false);
+    setCustomHeaders([]);
+    setOauthClientId('');
+    setOauthClientSecret('');
+    setRequiresAuth(false);
+    setOauthMetadata(null);
+    setOauthConnecting(false);
+    if (oauthPollRef.current) {
+      clearInterval(oauthPollRef.current);
+      oauthPollRef.current = null;
+    }
+  };
+
+  const addCustomHeader = () => {
+    setCustomHeaders([...customHeaders, { key: '', value: '' }]);
+  };
+
+  const updateCustomHeader = (index: number, field: 'key' | 'value', val: string) => {
+    const updated = [...customHeaders];
+    updated[index] = { ...updated[index], [field]: val };
+    setCustomHeaders(updated);
+  };
+
+  const removeCustomHeader = (index: number) => {
+    setCustomHeaders(customHeaders.filter((_, i) => i !== index));
   };
 
   const exampleConfigs = {
@@ -217,8 +423,10 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
             <DialogTitle>Add MCP Server</DialogTitle>
           </div>
           <DialogDescription>
-            {step === 'setup' 
+            {step === 'setup'
               ? 'Connect to a Model Context Protocol (MCP) server to expand your agent\'s capabilities with new tools and integrations.'
+              : step === 'oauth'
+              ? 'This server requires OAuth authentication. Authorize access to continue.'
               : 'Choose which tools you\'d like to enable from this MCP server.'
             }
           </DialogDescription>
@@ -234,6 +442,19 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                 1
               </div>
               Setup MCP Server
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <div className={cn(
+              "flex items-center gap-2 text-sm font-medium",
+              step === 'oauth' ? "text-primary" : "text-muted-foreground"
+            )}>
+              <div className={cn(
+                "w-6 h-6 rounded-full flex items-center justify-center text-xs",
+                step === 'oauth' ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
+              )}>
+                <Key className="h-3 w-3" />
+              </div>
+              Authorize
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <div className={cn(
@@ -310,6 +531,148 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                 </div>
               </div>
 
+              {/* Advanced Settings */}
+              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between px-4 py-3 h-auto text-sm font-medium text-muted-foreground hover:text-foreground" type="button">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Advanced Settings
+                    </div>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", showAdvanced && "rotate-180")} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="space-y-5 pt-2 pl-1 pr-1 pb-1">
+                    {/* Custom Headers */}
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Custom Headers</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Add custom HTTP headers sent with every request to this MCP server.
+                      </p>
+                      {customHeaders.map((header, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            placeholder="Header Name (e.g. X-Api-Key)"
+                            value={header.key}
+                            onChange={(e) => updateCustomHeader(index, 'key', e.target.value)}
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Input
+                            placeholder="Header Value"
+                            value={header.value}
+                            onChange={(e) => updateCustomHeader(index, 'value', e.target.value)}
+                            className="flex-1 font-mono text-sm"
+                            type="password"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground hover:text-destructive flex-shrink-0"
+                            onClick={() => removeCustomHeader(index)}
+                            type="button"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={addCustomHeader}
+                        type="button"
+                        className="text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Custom Header
+                      </Button>
+                    </div>
+
+                    {/* OAuth Configuration */}
+                    <div className="space-y-3 border-t pt-4">
+                      <Label className="text-sm font-medium">OAuth Configuration (Optional)</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Only needed if the server requires OAuth and you have pre-registered client credentials. Leave empty for servers that support Dynamic Client Registration.
+                      </p>
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="OAuth Client ID"
+                          value={oauthClientId}
+                          onChange={(e) => setOauthClientId(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                        <Input
+                          placeholder="OAuth Client Secret"
+                          value={oauthClientSecret}
+                          onChange={(e) => setOauthClientSecret(e.target.value)}
+                          className="font-mono text-sm"
+                          type="password"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+
+              {validationError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{validationError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          ) : step === 'oauth' ? (
+            <div className="space-y-6 p-1 flex-1">
+              <Alert className="border-amber-200 bg-amber-50 text-amber-800">
+                <Key className="h-5 w-5 text-amber-600" />
+                <div className="ml-2">
+                  <h3 className="font-medium text-amber-900 mb-1">
+                    OAuth Authentication Required
+                  </h3>
+                  <p className="text-sm text-amber-700">
+                    The server at <strong>{configText.trim()}</strong> requires OAuth authentication. Click the button below to authorize Kortix to access this server on your behalf.
+                  </p>
+                </div>
+              </Alert>
+
+              {oauthMetadata && (
+                <div className="text-xs text-muted-foreground space-y-1 bg-muted p-3 rounded-lg">
+                  <p><strong>Authorization Endpoint:</strong> {oauthMetadata.authorization_endpoint}</p>
+                  <p><strong>Token Endpoint:</strong> {oauthMetadata.token_endpoint}</p>
+                  {oauthMetadata.registration_endpoint && (
+                    <p><strong>Registration:</strong> Dynamic Client Registration supported</p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={startOAuthFlow}
+                  disabled={oauthConnecting}
+                  size="lg"
+                  className="gap-2"
+                  type="button"
+                >
+                  {oauthConnecting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Waiting for authorization...
+                    </>
+                  ) : (
+                    <>
+                      <Link className="h-5 w-5" />
+                      Authorize with OAuth
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {oauthConnecting && (
+                <p className="text-xs text-center text-muted-foreground">
+                  A popup window has opened. Complete the authorization there, then return here.
+                </p>
+              )}
+
               {validationError && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -358,12 +721,12 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                   <ScrollArea className="h-[400px] border border-border rounded-lg">
                     <div className="space-y-3 p-4">
                       {discoveredTools.map((tool) => (
-                        <div 
-                          key={tool.name} 
+                        <div
+                          key={tool.name}
                           className={cn(
                             "flex items-start space-x-3 p-4 rounded-lg border transition-all cursor-pointer hover:bg-muted/50",
-                            selectedTools.has(tool.name) 
-                              ? "border-primary bg-primary/5" 
+                            selectedTools.has(tool.name)
+                              ? "border-primary bg-primary/5"
                               : "border-border"
                           )}
                           onClick={() => handleToolToggle(tool.name)}
@@ -413,7 +776,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} type="button">
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleToolsNext}
                 disabled={selectedTools.size === 0 || isSaving}
                 type="button"
@@ -426,6 +789,15 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                 ) : (
                   `Add MCP Server (${selectedTools.size} tools)`
                 )}
+              </Button>
+            </>
+          ) : step === 'oauth' ? (
+            <>
+              <Button variant="outline" onClick={handleBack} disabled={oauthConnecting} type="button">
+                Back
+              </Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={oauthConnecting} type="button">
+                Cancel
               </Button>
             </>
           ) : (

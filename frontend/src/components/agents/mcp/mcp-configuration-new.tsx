@@ -94,7 +94,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
       queryClient.invalidateQueries({ queryKey: ['agents', 'detail', selectedAgentId] });
     }
     queryClient.invalidateQueries({ queryKey: ['composio', 'profiles'] });
-    toast.success(`Connected ${appName} integration!`);
+    toast.success(`Connected ${appName} connector!`);
   };
 
   const handleCustomToolsUpdate = (enabledTools: string[]) => {
@@ -137,7 +137,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
             <Server className="h-6 w-6 text-muted-foreground" />
           </div>
           <h4 className="text-sm font-semibold text-foreground mb-2">
-            No integrations configured
+            No connectors configured
           </h4>
           <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
             Browse the app registry to connect your apps or add custom MCP servers
@@ -152,6 +152,29 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
             onEdit={handleEditMCP}
             onRemove={handleRemoveMCP}
             onConfigureTools={handleConfigureTools}
+            onConnect={(mcp) => {
+              // Open the OAuth flow for this MCP in a popup
+              const url = mcp.config?.url;
+              if (url) {
+                const params = new URLSearchParams({
+                  mcp_url: url,
+                  user_id: '', // Will be filled by the popup via session
+                  agent_id: selectedAgentId || '',
+                });
+                if (mcp.config?.oauth_client_id) {
+                  params.set('oauth_client_id', mcp.config.oauth_client_id);
+                }
+                if (mcp.config?.oauth_client_secret) {
+                  params.set('oauth_client_secret', mcp.config.oauth_client_secret);
+                }
+                const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+                window.open(
+                  `${API_URL}/mcp/auth/start?${params.toString()}`,
+                  'mcp_oauth',
+                  'width=800,height=600,scrollbars=yes'
+                );
+              }
+            }}
           />
         </div>
       )}
@@ -159,7 +182,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
       <Dialog open={showRegistryDialog} onOpenChange={setShowRegistryDialog}>
         <DialogContent className="p-0 max-w-6xl h-[90vh] overflow-hidden">
           <DialogHeader className="sr-only">
-            <DialogTitle>Select Integration</DialogTitle>
+            <DialogTitle>Select Connector</DialogTitle>
           </DialogHeader>
           <ComposioRegistry
             showAgentSelector={false}
@@ -181,6 +204,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
         open={showCustomDialog}
         onOpenChange={setShowCustomDialog}
         onSave={handleSaveCustomMCP}
+        agentId={selectedAgentId}
       />
       {selectedMCPForTools && selectedMCPForTools.customType === 'composio' && (selectedMCPForTools.selectedProfileId || selectedMCPForTools.config?.profile_id) && (
         <ComposioToolsManager

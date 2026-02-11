@@ -2,7 +2,7 @@ from .mcp_service import (
     MCPService,
     mcp_service,
 
-    MCPConnection, 
+    MCPConnection,
     ToolExecutionResult,
     CustomMCPConnectionResult,
 
@@ -15,6 +15,8 @@ from .mcp_service import (
     MCPAuthenticationError,
     CustomMCPError,
 )
+
+from .oauth_service import MCPOAuthService, mcp_oauth_service
 
 __all__ = [
     "MCPService",
@@ -29,5 +31,7 @@ __all__ = [
     "MCPProviderError",
     "MCPConfigurationError",
     "MCPAuthenticationError",
-    "CustomMCPError"
+    "CustomMCPError",
+    "MCPOAuthService",
+    "mcp_oauth_service",
 ] 
