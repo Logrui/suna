@@ -147,29 +147,16 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
 
       if (!response.ok) {
         const error = await response.json();
-        // Check for specific OAuth requirement signal or just general error
-        // If the user *wants* to do OAuth, they might have configured it.
-        // If discovery failed, let's see if it's an auth issue?
 
-        // *Self-Correction*: The requirements say "Start the new oauth flow as soon as we click 'Connect to MCP Server'". 
-        // This suggests we might want to *always* check for OAuth metadata if it fails?
-        // Or we catch the specific case where we need to auth.
-        // For now, let's treat any failure as a potential need to Auth IF we have a way to detect it.
-        // BUT, if the user explicitly provided OAuth Client ID/Secret, maybe we should have started with Auth?
-        // Let's stick to: "If discovery returns a redirect_url (it won't standardly), or if we need to manually trigger."
+        // Smart Auth Detection:
+        // If the server returns 401, or explicitly mentions "authentication required", 
+        // we automatically try to initiate the OAuth flow.
+        if (response.status === 401 || (error.message && error.message.toLowerCase().includes('authentication required'))) {
+          console.log("Discovery failed with Auth error, attempting OAuth flow...");
+          await handleInitiateOAuth();
+          return;
+        }
 
-        // Wait, the backend logic for `discover-custom-tools` doesn't return a redirect_url currently. 
-        // It tries to list tools.
-        // If we want to support OAuth, we might need a separate trigger mechanism OR we catch the error 
-        // and ask the user "This server might require authentication. [Connect with OAuth]"?
-
-        // However, the prompt says "update existing Connect... to be able to handle probing... and start new oauth flow".
-        // Let's check if we should try to discover metadata first via a HEAD request or similar in frontend? No, CORS.
-
-        // Proposal: If discovery fails, but we have a valid URL, prompt the user to try generic OAuth? 
-        // OR better: Just add a "Connect with OAuth" button?
-
-        // Let's assume for this step, if we get a specific error, we show the error.
         throw new Error(error.message || 'Failed to connect to the MCP server. Please check your configuration.');
       }
 
@@ -195,8 +182,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       setStep('tools');
 
     } catch (error: any) {
-      // If basic discovery failed, maybe check if we should try OAuth?
-      // For now just show error.
+      // If the error was not handled by auto-auth above, show it
       setValidationError(error.message);
     } finally {
       setIsValidating(false);
@@ -217,7 +203,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       const url = configText.trim();
       if (!url) throw new Error('URL required');
 
-      const returnUrl = window.location.href;
+      const returnUrl = window.location.href; // Using current page as return URL
       const encodedReturn = encodeURIComponent(returnUrl);
       const encodedUrl = encodeURIComponent(url);
 
@@ -231,14 +217,19 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.detail || 'Failed to initiate OAuth');
+        // If even the OAuth start fails, we must show the error
+        throw new Error(err.detail || 'Failed to initiate OAuth flow. The server might not support it.');
       }
 
       const data = await response.json();
       if (data.redirect_url) {
+        // Redirect the user to the OAuth provider
         window.location.href = data.redirect_url;
+        // We return here to prevent setting isValidating=false too early, 
+        // although the page will navigate away shortly.
+        return;
       } else {
-        throw new Error('No redirect URL returned');
+        throw new Error('No redirect URL returned by the backend.');
       }
 
     } catch (e: any) {
