@@ -191,103 +191,45 @@ const ConnectedAppCard = ({
   );
 };
 
-const AppCard = ({ app, profiles, onConnect, onConfigure, isConnectedToAgent, currentAgentId, mode, isBlocked, onBlockedClick }: {
-  app: ComposioToolkit;
-  profiles: ComposioProfile[];
-  onConnect: () => void;
-  onConfigure: (profile: ComposioProfile) => void;
-  isConnectedToAgent: boolean;
-  currentAgentId?: string;
-  mode?: 'full' | 'profile-only';
-  isBlocked?: boolean;
-  onBlockedClick?: () => void;
+const CustomMCPCard = ({
+  mcpConfig,
+  onRemove
+}: {
+  mcpConfig: any;
+  onRemove: (mcpName: string) => void;
 }) => {
-  const connectedProfiles = profiles.filter(p => p.is_connected);
-  const canConnect = mode === 'profile-only' ? true : (!isConnectedToAgent && currentAgentId);
-
-  const getStatusInfo = () => {
-    if (isBlocked) {
-      return { text: 'Upgrade to connect', color: 'text-primary' };
-    }
-    if (mode === 'profile-only') {
-      return connectedProfiles.length > 0
-        ? { text: `${connectedProfiles.length} profile${connectedProfiles.length !== 1 ? 's' : ''}`, color: 'text-green-600 dark:text-green-400' }
-        : { text: 'Not connected', color: 'text-muted-foreground' };
-    }
-    if (isConnectedToAgent) {
-      return { text: 'Connected', color: 'text-blue-600 dark:text-blue-400' };
-    }
-    if (connectedProfiles.length > 0) {
-      return { text: `${connectedProfiles.length} profile${connectedProfiles.length !== 1 ? 's' : ''}`, color: 'text-green-600 dark:text-green-400' };
-    }
-    return { text: 'Not connected', color: 'text-muted-foreground' };
-  };
-
-  const status = getStatusInfo();
-
-  const handleClick = () => {
-    if (isBlocked && onBlockedClick) {
-      onBlockedClick();
-      return;
-    }
-    if (!canConnect) return;
-    if (connectedProfiles.length > 0) {
-      onConfigure(connectedProfiles[0]);
-    } else {
-      onConnect();
-    }
-  };
+  const hasTools = mcpConfig.enabledTools && mcpConfig.enabledTools.length > 0;
 
   return (
-    <Card
-      className={cn(
-        "p-4 flex flex-col transition-all duration-200 gap-1 relative",
-        isBlocked ? "hover:bg-muted cursor-pointer hover:border-primary/50" : (canConnect ? "hover:bg-muted cursor-pointer" : "opacity-60 cursor-not-allowed")
-      )}
-      onClick={handleClick}
-    >
-      <div className={cn("absolute top-4 right-4 text-xs", status.color)}>
-        {status.text}
+    <div className="group border bg-card rounded-2xl p-4 transition-all duration-200 hover:border-sidebar-primary/50">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+          <Server className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-sm leading-tight truncate mb-1">{mcpConfig.name}</h3>
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-mono">
+            {mcpConfig.config?.url || 'Custom Configuration'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Future: Edit/Delete buttons */}
+        </div>
       </div>
 
-      <div className="w-[40px] h-[40px] rounded-xl border border-border bg-background flex items-center justify-center mb-4 relative">
-        {app.logo ? (
-          <img src={app.logo} alt={app.name} className="w-5 h-5 object-contain" />
-        ) : (
-          <span className="text-foreground text-sm font-medium">{app.name.charAt(0)}</span>
-        )}
-        {isBlocked && (
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-            <Lock className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={2.5} />
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            {hasTools ? `${mcpConfig.enabledTools.length} tools active` : 'Connected'}
           </div>
-        )}
+        </div>
       </div>
-
-      <h3 className="font-medium text-lg leading-tight">{app.name}</h3>
-
-      <p className="text-sm text-muted-foreground flex-1 line-clamp-2 leading-snug mb-4 mt-1">
-        {app.description || `Builds user interfaces and interactive web pages.`}
-      </p>
-
-      <Button
-        variant={isBlocked ? "secondary" : "default"}
-        className={cn("w-full", isBlocked && "bg-white text-black hover:bg-white/90 border-white/20")}
-        disabled={!canConnect && !isBlocked}
-      >
-        {isBlocked ? (
-          <>
-            <Lock className="h-3.5 w-3.5 mr-2" />
-            Upgrade
-          </>
-        ) : (
-          <>
-            <span className="text-lg font-light mr-2">+</span> Add
-          </>
-        )}
-      </Button>
-    </Card>
+    </div>
   );
 };
+
+// ... existing components ...
 
 export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
   onToolsSelected,
@@ -306,9 +248,12 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
   const [selectedApp, setSelectedApp] = useState<ComposioToolkit | null>(null);
   const [showConnector, setShowConnector] = useState(false);
   const [showConnectedApps, setShowConnectedApps] = useState(true);
+  const [showCustomMCPs, setShowCustomMCPs] = useState(true);
   const [showToolsManager, setShowToolsManager] = useState(false);
   const [selectedConnectedApp, setSelectedConnectedApp] = useState<ConnectedApp | null>(null);
   const [showCustomMCPDialog, setShowCustomMCPDialog] = useState(false);
+
+  // ... (existing state and hooks) ...
 
   const [internalSelectedAgentId, setInternalSelectedAgentId] = useState<string | undefined>(selectedAgentId);
   const queryClient = useQueryClient();
@@ -331,7 +276,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
 
   const currentAgentId = selectedAgentId ?? internalSelectedAgentId;
   const { data: agent, isLoading: isLoadingAgent } = useAgent(currentAgentId || '');
-  const { mutate: updateAgent, isPending: isUpdatingAgent } = useUpdateAgentMCPs(); // Use the MCP-specific hook
+  const { mutate: updateAgent, isPending: isUpdatingAgent } = useUpdateAgentMCPs();
 
   const handleAgentSelect = (agentId: string | undefined) => {
     if (onAgentChange) {
@@ -359,6 +304,12 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
     return getAgentConnectedApps(agent, profiles || [], allToolkits);
   }, [agent, profiles, allToolkits, currentAgentId]);
 
+  const customMCPs = useMemo(() => {
+    if (!currentAgentId || !agent?.custom_mcps) return [];
+    // Filter for MCPs that do NOT have a profile_id (meaning they are generic/custom)
+    return agent.custom_mcps.filter((mcp: any) => !mcp.config?.profile_id);
+  }, [agent, currentAgentId]);
+
   const isLoadingConnectedApps = currentAgentId && (isLoadingAgent || isLoadingProfiles || isLoading);
 
   const filteredToolkits = useMemo(() => {
@@ -380,6 +331,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
     }
   }, [initialSelectedApp, allToolkits, selectedApp]);
 
+  // ... (handleConnect, handleConfigure, handleToggleTools, handleManageTools, handleConnectionComplete, handleCustomMCPSave implementations remain the same) ...
   const handleConnect = (app: ComposioToolkit) => {
     if (mode !== 'profile-only' && !currentAgentId && showAgentSelector) {
       toast.error('Please select an agent first');
@@ -453,6 +405,9 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
       type: customConfig.type || 'sse',
       config: customConfig.config || {},
       enabledTools: customConfig.enabledTools || [],
+      oauth_client_id: customConfig.oauth_client_id,
+      oauth_client_secret: customConfig.oauth_client_secret,
+      custom_headers: customConfig.custom_headers
     };
 
     // Get current custom MCPs from agent
@@ -482,66 +437,13 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
 
   return (
     <div className="h-full w-full overflow-hidden flex">
-      {/*<div className="w-64 h-full overflow-hidden border-r bg-muted/20">
-        <div className="h-full flex flex-col">
-          <div className="flex-shrink-0 p-4 border-b">
-            <h3 className="text-sm font-medium text-muted-foreground">Categories</h3>
-          </div>
-          
-          <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-1">
-                <button
-                  onClick={() => setSelectedCategory('')}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors text-left",
-                    selectedCategory === '' 
-                      ? "bg-muted-foreground/20 text-muted-foreground" 
-                      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <span className="text-base">📁</span>
-                  <span>All Apps</span>
-                </button>
-
-                {isLoadingCategories ? (
-                  <div className="space-y-2">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-3 px-3 py-2">
-                        <Skeleton className="w-4 h-4 bg-muted rounded" />
-                        <Skeleton className="flex-1 h-4 bg-muted rounded" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors text-left",
-                        selectedCategory === category.id 
-                          ? "bg-muted-foreground/20 text-muted-foreground" 
-                          : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <span className="text-base">{CATEGORY_EMOJIS[category.id] || '📁'}</span>
-                      <span className="truncate">{category.name}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        </div>
-      </div>*/}
       <div className="flex-1 h-full overflow-hidden">
         <div className="h-full flex flex-col">
           <div className="flex-shrink-0 border-b p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1 min-w-0 pr-4">
                 <h2 className="text-xl font-semibold">
-                  {mode === 'profile-only' ? 'Connect New App' : 'App Integrations'}
+                  {mode === 'profile-only' ? 'Connect New App' : 'Connectors'}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {mode === 'profile-only'
@@ -552,13 +454,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
               </div>
               <div className="flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  {/* {showAgentSelector && (
-                    <AgentSelector
-                      selectedAgentId={currentAgentId}
-                      onAgentSelect={handleAgentSelect}
-                      isSunaAgent={agent?.metadata?.is_suna_default}
-                    />
-                  )} */}
+                  {/* Agent Selector Placeholder */}
                 </div>
               </div>
             </div>
@@ -608,59 +504,91 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
             <ScrollArea className="h-full">
               <div className="p-6 space-y-6">
                 {currentAgentId && (
-                  <Collapsible open={showConnectedApps} onOpenChange={setShowConnectedApps}>
-                    <CollapsibleTrigger asChild>
-                      <div className="w-full hover:underline flex items-center justify-between p-0 h-auto">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-medium">Connected to this Worker</h3>
-                          {isLoadingConnectedApps ? (
-                            <Skeleton className="w-6 h-5 rounded ml-2" />
-                          ) : connectedApps.length > 0 && (
-                            <Badge variant="outline" className="ml-2">
-                              {connectedApps.length}
-                            </Badge>
+                  <div className="space-y-4">
+                    {/* Connected Composio Apps */}
+                    <Collapsible open={showConnectedApps} onOpenChange={setShowConnectedApps}>
+                      <CollapsibleTrigger asChild>
+                        <div className="w-full hover:underline flex items-center justify-between p-0 h-auto cursor-pointer">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-medium">Standard Connectors</h3>
+                            {isLoadingConnectedApps ? (
+                              <Skeleton className="w-6 h-5 rounded ml-2" />
+                            ) : connectedApps.length > 0 && (
+                              <Badge variant="outline" className="ml-2">
+                                {connectedApps.length}
+                              </Badge>
+                            )}
+                          </div>
+                          {showConnectedApps ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
                           )}
                         </div>
-                        {showConnectedApps ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-4">
-                      {isLoadingConnectedApps ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                          {Array.from({ length: 3 }).map((_, i) => (
-                            <ConnectedAppSkeleton key={i} />
-                          ))}
-                        </div>
-                      ) : connectedApps.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4 mx-auto">
-                            <Zap className="h-8 w-8 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-4">
+                        {isLoadingConnectedApps ? (
+                          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {Array.from({ length: 3 }).map((_, i) => (
+                              <ConnectedAppSkeleton key={i} />
+                            ))}
                           </div>
-                          <h4 className="text-sm font-medium mb-2">No connected apps</h4>
-                          <p className="text-xs">Connect apps below to manage tools for this Worker.</p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
-                          {connectedApps.map((connectedApp) => (
-                            <ConnectedAppCard
-                              key={connectedApp.profile.profile_id}
-                              connectedApp={connectedApp}
-                              onToggleTools={handleToggleTools}
-                              onConfigure={handleConfigure}
-                              onManageTools={handleManageTools}
-                              isUpdating={isUpdatingAgent}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
+                        ) : connectedApps.length === 0 ? (
+                          <div className="text-center py-4 text-muted-foreground border border-dashed rounded-lg">
+                            <h4 className="text-sm font-medium">No standard apps connected</h4>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
+                            {connectedApps.map((connectedApp) => (
+                              <ConnectedAppCard
+                                key={connectedApp.profile.profile_id}
+                                connectedApp={connectedApp}
+                                onToggleTools={handleToggleTools}
+                                onConfigure={handleConfigure}
+                                onManageTools={handleManageTools}
+                                isUpdating={isUpdatingAgent}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Custom MCP Servers */}
+                    {customMCPs.length > 0 && (
+                      <Collapsible open={showCustomMCPs} onOpenChange={setShowCustomMCPs}>
+                        <CollapsibleTrigger asChild>
+                          <div className="w-full hover:underline flex items-center justify-between p-0 h-auto cursor-pointer mt-6">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-lg font-medium">Custom MCP Servers</h3>
+                              <Badge variant="outline" className="ml-2 bg-orange-500/10 text-orange-600 border-orange-500/20">
+                                {customMCPs.length}
+                              </Badge>
+                            </div>
+                            {showCustomMCPs ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {customMCPs.map((mcp: any, i: number) => (
+                              <CustomMCPCard
+                                key={i}
+                                mcpConfig={mcp}
+                                onRemove={() => { }}
+                              />
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </div>
                 )}
-                <div>
+
+                <div className="pt-2">
                   <h3 className="text-lg font-medium mb-4">
                     {currentAgentId ? 'Available Apps' : 'Browse Apps'}
                   </h3>
