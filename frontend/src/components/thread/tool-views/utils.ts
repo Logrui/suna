@@ -105,6 +105,11 @@ export function getToolTitle(toolName: string): string {
     'list-calls': 'Call History',
     'list_calls': 'Call History',
 
+    'save-project-memory': 'Save Project Memory',
+    'save_project_memory': 'Save Project Memory',
+    'delete-project-memory': 'Delete Project Memory',
+    'delete_project_memory': 'Delete Project Memory',
+
     'generic-tool': 'Tool',
     'default': 'Tool',
   };

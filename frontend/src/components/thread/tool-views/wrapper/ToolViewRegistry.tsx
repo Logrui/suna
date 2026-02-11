@@ -26,6 +26,7 @@ import { ConfigureProfileForAgentToolView } from '../configure-profile-for-agent
 import { GetCredentialProfilesToolView } from '../get-credential-profiles/get-credential-profiles';
 import { GetCurrentAgentConfigToolView } from '../get-current-agent-config/get-current-agent-config';
 import { TaskListToolView } from '../task-list/TaskListToolView';
+import { ProjectMemoryToolView } from '../project-memory/ProjectMemoryToolView';
 import { ListPresentationTemplatesToolView } from '../presentation-tools/ListPresentationTemplatesToolView';
 import { PresentationViewer } from '../presentation-tools/PresentationViewer';
 import { ListPresentationsToolView } from '../presentation-tools/ListPresentationsToolView';
@@ -151,6 +152,11 @@ const defaultRegistry: ToolViewRegistryType = {
   'update-tasks': TaskListToolView,
   'delete-tasks': TaskListToolView,
   'clear-all': TaskListToolView,
+
+  'save-project-memory': ProjectMemoryToolView,
+  'save_project_memory': ProjectMemoryToolView,
+  'delete-project-memory': ProjectMemoryToolView,
+  'delete_project_memory': ProjectMemoryToolView,
 
 
   'expose-port': ExposePortToolView,

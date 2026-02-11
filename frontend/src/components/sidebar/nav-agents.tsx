@@ -12,7 +12,8 @@ import {
   Plus,
   ChevronDown,
   Check,
-  Pencil
+  Pencil,
+  Brain
 } from "lucide-react"
 import { ThreadIcon } from "./thread-icon"
 import { toast } from "sonner"
@@ -52,6 +53,8 @@ import { createThreadInProject } from '@/lib/api/threads';
 import { useThreads, useUpdateThreadMutation } from '@/hooks/threads/use-threads';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
+import { useProjectMemoriesModalStore } from '@/stores/use-project-memories-modal-store';
+import { ProjectMemoriesModal } from '@/components/project-memories/ProjectMemoriesModal';
 
 // Date group header component
 const DateGroupHeader: React.FC<{ dateGroup: string }> = ({ dateGroup }) => {
@@ -106,6 +109,7 @@ const SingleChatCard: React.FC<{
 }) => {
     const [isHoveringCard, setIsHoveringCard] = useState(false);
     const isRenaming = renamingId === thread.threadId;
+    const { openModal: openMemoriesModal } = useProjectMemoriesModalStore();
 
     return (
       <SpotlightCard
@@ -180,8 +184,8 @@ const SingleChatCard: React.FC<{
                   {isUpdating ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    <Check 
-                      className="h-3.5 w-3.5 text-primary cursor-pointer hover:scale-110 transition-transform" 
+                    <Check
+                      className="h-3.5 w-3.5 text-primary cursor-pointer hover:scale-110 transition-transform"
                       onClick={onConfirmRename}
                     />
                   )}
@@ -247,6 +251,16 @@ const SingleChatCard: React.FC<{
                     >
                       <Pencil className="mr-2 h-4 w-4" />
                       Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openMemoriesModal(projectGroup.projectId, projectGroup.projectName);
+                      }}
+                    >
+                      <Brain className="mr-2 h-4 w-4" />
+                      Project Memory
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -369,7 +383,7 @@ export function NavAgents() {
       const displayName = project?.name || 'Unnamed Project';
       const iconName = project?.icon_name;
       const updatedAt = thread.updated_at || project?.updated_at || new Date().toISOString();
-      
+
       // Prioritize explicit name column, then metadata title, then fallback to "New Chat"
       const rawThreadName = thread.name?.trim() || thread.metadata?.title?.trim() || 'New Chat';
 
@@ -590,7 +604,7 @@ export function NavAgents() {
         threadId: renamingId,
         data: { title: renamingValue.trim() }
       });
-      
+
       queryClient.invalidateQueries({ queryKey: threadKeys.all });
       toast.success('Thread renamed');
       setRenamingId(null);
@@ -1000,8 +1014,8 @@ export function NavAgents() {
                                             {updateThreadMutation.isPending ? (
                                               <Loader2 className="h-3 w-3 animate-spin" />
                                             ) : (
-                                              <Check 
-                                                className="h-3 w-3 text-primary cursor-pointer" 
+                                              <Check
+                                                className="h-3 w-3 text-primary cursor-pointer"
                                                 onClick={confirmRename}
                                               />
                                             )}
@@ -1164,6 +1178,9 @@ export function NavAgents() {
           isDeleting={isDeletingSingle || isDeletingMultiple}
         />
       )}
+
+      {/* Project Memories Modal — global, driven by Zustand store */}
+      <ProjectMemoriesModal />
     </div>
   );
 }
