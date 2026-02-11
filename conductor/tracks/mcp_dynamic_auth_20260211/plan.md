@@ -3,9 +3,9 @@
 This plan outlines the steps to implement the "Dynamic MCP OAuth & Advanced Configuration" feature in Suna Kortix.
 
 ## Phase 1: Backend Infrastructure & Discovery Services
-- [ ] **Task 1.1**: Update `CustomMCPConnectionRequest` in `backend/core/mcp_module/api.py` to include `oauth_client_id`, `oauth_client_secret`, and `custom_headers`.
-- [ ] **Task 1.2**: Implement strict header validation in `CustomMCPDiscoverRequest`.
-- [ ] **Task 1.3**: Extend `MCPService` (`mcp_service.py`) and `_connect_server_internal` to parse and store custom headers from the `config` dictionary.
+- [x] **Task 1.1**: Update `CustomMCPConnectionRequest` in `backend/core/mcp_module/api.py` to include `oauth_client_id`, `oauth_client_secret`, and `custom_headers`.
+- [x] **Task 1.2**: Implement strict header validation in `CustomMCPDiscoverRequest`.
+- [x] **Task 1.3**: Extend `MCPService` (`mcp_service.py`) and `_connect_server_internal` to parse and store custom headers from the `config` dictionary.
 
 ## Phase 2: OAuth Handshake (New Endpoints)
 - [ ] **Task 2.1**: Implement `GET /v1/mcp/auth/start` endpoint in `backend/core/mcp_module/api.py`.
