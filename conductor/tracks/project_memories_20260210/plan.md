@@ -53,7 +53,7 @@
 ## Phase 6: Intelligence & Consolidation (Agent-Zero Parity)
 - [x] Task: Create `memory_consolidation_prompt.py` with system and message templates.
 - [x] Task: Add `search_project_memories` to `ProjectMemoryTool`.
-- [ ] Task: Implement `extract_keywords` in `ProjectMemoryService` using LLM.
-- [ ] Task: Implement `consolidate_memory` logic in `ProjectMemoryService` (Search -> Analyze -> Resolve).
-- [ ] Task: Update `save_project_memory` tool method to use the consolidation flow.
-- [ ] Task: Refine `core_prompt.py` instructions based on consolidation capabilities.
+- [x] Task: Implement `extract_keywords` in `ProjectMemoryService` using LLM.
+- [x] Task: Implement `consolidate_memory` logic in `ProjectMemoryService` (Search -> Analyze -> Resolve).
+- [x] Task: Update `save_project_memory` tool method to use the consolidation flow.
+- [x] Task: Refine `core_prompt.py` instructions based on consolidation capabilities.

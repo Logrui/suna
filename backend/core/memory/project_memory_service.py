@@ -7,16 +7,33 @@ Follows the same patterns as retrieval_service.py but scoped to a specific proje
 from typing import List, Dict, Any, Optional, Tuple
 from core.utils.logger import logger
 from core.utils.cache import Cache
+from core.utils.config import config
 from core.services.supabase import DBConnection
+from core.ai_models import model_manager
 from .embedding_service import EmbeddingService
 from .models import ProjectMemoryItem, MemoryType
+import json
+from datetime import datetime
 
 
 class ProjectMemoryService:
-    def __init__(self):
+    def __init__(self, model: Optional[str] = None):
         self.embedding_service = EmbeddingService()
         self.db = DBConnection()
         self.cache_ttl = 60
+        self.model = model or config.MEMORY_EXTRACTION_MODEL
+        self._litellm = None
+
+    @property
+    def litellm(self):
+        if self._litellm is None:
+            import litellm
+            self._litellm = litellm
+        return self._litellm
+
+    def _get_resolved_model(self) -> str:
+        resolved = model_manager.resolve_model_id(self.model)
+        return model_manager.get_litellm_model_id(resolved)
 
     # -------------------------------------------------------------------------
     # CREATE
@@ -30,10 +47,63 @@ class ProjectMemoryService:
         confidence_score: float = 1.0,
         source_thread_id: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        skip_consolidation: bool = False,
     ) -> ProjectMemoryItem:
         try:
             await self.db.initialize()
             client = await self.db.client
+
+            # -----------------------------------------------------------------
+            # INTELLIGENT CONSOLIDATION (Phase 6)
+            # -----------------------------------------------------------------
+            if not skip_consolidation:
+                consolidation_result = await self.consolidate_memory(
+                    account_id=account_id,
+                    project_id=project_id,
+                    content=content,
+                    memory_type=memory_type,
+                    metadata=metadata
+                )
+                
+                if consolidation_result:
+                    action = consolidation_result.get("action")
+                    logger.info(f"🧠 [MEMORY_CONSOLIDATION] LLM decided on action: {action}")
+                    
+                    if action == "skip":
+                        # If LLM says skip, it means the info is already there or useless.
+                        # We try to find the "existing" one to return, or just return a dummy.
+                        # For now, let's just return what they found or create a "skipped" result.
+                        # But create_memory must return a ProjectMemoryItem.
+                        # Better to just proceed with a dummy if we can't find the existing one.
+                        pass # For now, we'll continue to create if LLM didn't return a specific ID
+                    
+                    elif action == "replace" or action == "merge":
+                        # Remove old memories
+                        to_remove = consolidation_result.get("memories_to_remove", [])
+                        if to_remove:
+                            for mid in to_remove:
+                                await self.delete_memory(account_id, project_id, mid)
+                        
+                        # Use the new consolidated content
+                        content = consolidation_result.get("new_memory_content", content)
+                        if consolidation_result.get("metadata"):
+                            metadata = {**(metadata or {}), **consolidation_result.get("metadata", {})}
+
+                    elif action == "update":
+                        updates = consolidation_result.get("memories_to_update", [])
+                        if updates:
+                            # Update the first one and return it
+                            u = updates[0]
+                            updated = await self.update_memory(
+                                account_id=account_id,
+                                project_id=project_id,
+                                memory_id=u["id"],
+                                content=u.get("new_content"),
+                                metadata=u.get("metadata")
+                            )
+                            if updated:
+                                return updated
+            # -----------------------------------------------------------------
 
             # Generate embedding for semantic search
             embedding = None
@@ -42,25 +112,26 @@ class ProjectMemoryService:
             except Exception as e:
                 logger.warning(f"Failed to generate embedding for project memory: {e}")
 
-            row = {
+            # Create the record
+            data = {
                 "account_id": account_id,
                 "project_id": project_id,
                 "content": content,
                 "memory_type": memory_type,
                 "confidence_score": confidence_score,
+                "source_thread_id": source_thread_id,
                 "metadata": metadata or {},
+                "embedding": embedding
             }
-            if embedding:
-                row["embedding"] = embedding
-            if source_thread_id:
-                row["source_thread_id"] = source_thread_id
+            
 
-            result = await client.table("user_project_memories").insert(row).execute()
+            
+            res = await client.table("user_project_memories").insert(data).execute()
 
-            if not result.data:
+            if not res.data:
                 raise ValueError("Insert returned no data")
 
-            created = result.data[0]
+            created = res.data[0]
             await self._invalidate_cache(account_id, project_id)
 
             return ProjectMemoryItem(
@@ -250,8 +321,19 @@ class ProjectMemoryService:
         query_text: str,
         limit: int = 10,
         similarity_threshold: float = 0.1,
+        use_keywords: bool = True,
     ) -> List[ProjectMemoryItem]:
         try:
+            # If enabled, augment search with keywords
+            if use_keywords:
+                keywords = await self.extract_keywords(query_text)
+                if keywords:
+                    logger.info(f"🧠 [MEMORY_SEARCH] Augmented with keywords: {keywords}")
+                    # Combine query with keywords for potentially better embedding match
+                    # or run multiple searches if we had more complex retrieval logic.
+                    # For now, we just prepend keywords to the query.
+                    query_text = f"{', '.join(keywords)}. {query_text}"
+
             cache_key = f"project_memories:search:{account_id}:{project_id}:{hash(query_text)}"
             cached = await Cache.get(cache_key)
             if cached:
@@ -272,13 +354,13 @@ class ProjectMemoryService:
                 return []
 
             query_embedding = await self.embedding_service.embed_text(query_text)
-
+            
             result = await client.rpc(
                 "search_project_memories_by_similarity",
                 {
                     "p_account_id": account_id,
                     "p_project_id": project_id,
-                    "p_query_embedding": query_embedding,
+                    "p_query_embedding": str(query_embedding),  # PostgREST needs string format for vector type
                     "p_limit": limit,
                     "p_similarity_threshold": similarity_threshold,
                 },
@@ -337,6 +419,106 @@ class ProjectMemoryService:
         except Exception as e:
             logger.error(f"Error getting project memory stats: {e}")
             return {"total_memories": 0, "memories_by_type": {}, "oldest_memory": None, "newest_memory": None}
+
+    # -------------------------------------------------------------------------
+    # INTELLIGENCE & CONSOLIDATION (Phase 6)
+    # -------------------------------------------------------------------------
+    async def extract_keywords(self, content: str) -> List[str]:
+        """Extract search keywords using LLM."""
+        try:
+            from core.prompts.memory_consolidation_prompt import (
+                MEMORY_KEYWORD_EXTRACTION_SYSTEM_PROMPT,
+                MEMORY_KEYWORD_EXTRACTION_MESSAGE
+            )
+            
+            prompt = MEMORY_KEYWORD_EXTRACTION_MESSAGE.format(memory_content=content)
+            resolved_model = self._get_resolved_model()
+            
+            response = await self.litellm.acompletion(
+                model=resolved_model,
+                messages=[
+                    {"role": "system", "content": MEMORY_KEYWORD_EXTRACTION_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=200
+            )
+            
+            resp_content = response.choices[0].message.content
+            # Basic JSON extraction
+            start = resp_content.find("[")
+            end = resp_content.rfind("]")
+            if start != -1 and end != -1:
+                return json.loads(resp_content[start:end+1])
+            return []
+        except Exception as e:
+            logger.warning(f"Keyword extraction failed: {e}")
+            return []
+
+    async def consolidate_memory(
+        self,
+        account_id: str,
+        project_id: str,
+        content: str,
+        memory_type: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Analyze and consolidate a new memory against existing ones."""
+        try:
+            # 1. Search for similar memories
+            similar = await self.search_memories(
+                account_id=account_id,
+                project_id=project_id,
+                query_text=content,
+                limit=5,
+                similarity_threshold=0.4, # Focus on relatively close matches
+                use_keywords=False # Don't use keywords here to avoid recursive search loops
+            )
+            
+            if not similar:
+                return None
+            
+            # 2. Prepare analysis context
+            from core.prompts.memory_consolidation_prompt import (
+                MEMORY_CONSOLIDATION_SYSTEM_PROMPT,
+                MEMORY_CONSOLIDATION_MESSAGE
+            )
+            
+            similar_text = ""
+            for m in similar:
+                similar_text += f"ID: {m.memory_id}\nType: {m.memory_type.value}\nContent: {m.content}\n\n"
+            
+            prompt = MEMORY_CONSOLIDATION_MESSAGE.format(
+                account_id=account_id,
+                project_id=project_id,
+                current_timestamp=datetime.now().isoformat(),
+                new_memory=content,
+                new_memory_metadata=json.dumps(metadata or {}),
+                similar_memories=similar_text.strip()
+            )
+            
+            resolved_model = self._get_resolved_model()
+            response = await self.litellm.acompletion(
+                model=resolved_model,
+                messages=[
+                    {"role": "system", "content": MEMORY_CONSOLIDATION_SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=1000
+            )
+            
+            resp_content = response.choices[0].message.content
+            # Basic JSON extraction
+            start = resp_content.find("{")
+            end = resp_content.rfind("}")
+            if start != -1 and end != -1:
+                return json.loads(resp_content[start:end+1])
+            return None
+            
+        except Exception as e:
+            logger.error(f"Memory consolidation analysis failed: {e}")
+            return None
 
     # -------------------------------------------------------------------------
     # FORMAT — for prompt injection

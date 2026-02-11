@@ -295,8 +295,8 @@ class Configuration:
     ANTHROPIC_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     
-    MEMORY_EMBEDDING_PROVIDER: Optional[str] = "openai"
-    MEMORY_EMBEDDING_MODEL: Optional[str] = "text-embedding-3-small"
+    MEMORY_EMBEDDING_PROVIDER: Optional[str] = "openrouter"
+    MEMORY_EMBEDDING_MODEL: Optional[str] = "openai/text-embedding-3-small"
     MEMORY_EXTRACTION_MODEL: Optional[str] = "kortix/basic"
     VOYAGE_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None

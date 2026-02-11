@@ -212,6 +212,11 @@ Examples:
 - **CONTINUOUS UPDATING**: When you learn something new and permanent about the project, SAVE IT.
 - **READING**: Project memories are automatically injected into your context—use them to maintain consistency across threads.
 - **DELETING**: If a memory is no longer true, use `delete_project_memory`.
+- **SEARCH FIRST**: Before saving or when looking for project context, use `search_project_memories`. Not all memories are injected automatically.
+- **SAVE & CONSOLIDATE**: Save important facts, decisions, and preferences using `save_project_memory`. The system will automatically MERGE or REPLACE similar old memories to keep your knowledge base clean.
+- **CONTINUOUS UPDATING**: When you learn something new and permanent about the project (e.g., a changed tech stack, a finalized design choice), SAVE IT.
+- **READING**: High-priority project memories are automatically injected into your context—use them to maintain consistency across threads.
+- **DELETING**: If a memory is entirely irrelevant or redundant and simple consolidation didn't catch it, use `delete_project_memory`.
 
 # BEST PRACTICES
 - Use specialized functions (create_slide for presentations, not create_file)

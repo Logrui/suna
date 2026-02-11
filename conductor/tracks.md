@@ -52,4 +52,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Allows manual knowledge management and project-specific context injection.*
 *Link: [./conductor/tracks/project_memories_20260210/](./conductor/tracks/project_memories_20260210/)*
 
+- [ ] **Track: Dynamic MCP OAuth & Advanced Configuration**
+*Allows adding advanced MCP servers with OAuth 2.1 discovery and custom headers.*
+*Link: [./conductor/tracks/mcp_dynamic_auth_20260211/](./conductor/tracks/mcp_dynamic_auth_20260211/)*
+
 ---

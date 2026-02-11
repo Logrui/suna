@@ -1,9 +1,10 @@
 -- Project-based memories: per-project knowledge store for AI context
 -- Modeled after user_memories, adding project_id scoping
+-- IDEMPOTENT: safe to re-apply
 
 -- Reuses existing memory_type enum from 20251211102440_user_memories.sql
 
-CREATE TABLE user_project_memories (
+CREATE TABLE IF NOT EXISTS user_project_memories (
     memory_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID NOT NULL,
     project_id UUID NOT NULL,
@@ -25,19 +26,20 @@ CREATE TABLE user_project_memories (
 );
 
 -- Indexes
-CREATE INDEX idx_project_memories_account_id ON user_project_memories(account_id);
-CREATE INDEX idx_project_memories_project_id ON user_project_memories(project_id);
-CREATE INDEX idx_project_memories_memory_type ON user_project_memories(memory_type);
-CREATE INDEX idx_project_memories_created_at ON user_project_memories(created_at DESC);
-CREATE INDEX idx_project_memories_source_thread ON user_project_memories(source_thread_id)
+CREATE INDEX IF NOT EXISTS idx_project_memories_account_id ON user_project_memories(account_id);
+CREATE INDEX IF NOT EXISTS idx_project_memories_project_id ON user_project_memories(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_memories_memory_type ON user_project_memories(memory_type);
+CREATE INDEX IF NOT EXISTS idx_project_memories_created_at ON user_project_memories(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_project_memories_source_thread ON user_project_memories(source_thread_id)
     WHERE source_thread_id IS NOT NULL;
 
 -- Vector similarity index for semantic search
-CREATE INDEX idx_project_memories_embedding_vector ON user_project_memories
+CREATE INDEX IF NOT EXISTS idx_project_memories_embedding_vector ON user_project_memories
     USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
 
 -- Auto-update updated_at (reuses existing trigger function from agentpress_schema)
+DROP TRIGGER IF EXISTS trigger_update_project_memories_updated_at ON user_project_memories;
 CREATE TRIGGER trigger_update_project_memories_updated_at
     BEFORE UPDATE ON user_project_memories
     FOR EACH ROW
@@ -80,7 +82,8 @@ BEGIN
     ORDER BY upm.embedding <=> p_query_embedding
     LIMIT p_limit;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public, extensions;
 
 -- =============================================================================
 -- RPC: Get project memory statistics
@@ -116,12 +119,20 @@ BEGIN
         GROUP BY upm.memory_type, upm.created_at
     ) sub;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public, extensions;
 
 -- =============================================================================
 -- Row Level Security
 -- =============================================================================
 ALTER TABLE user_project_memories ENABLE ROW LEVEL SECURITY;
+
+-- DROP existing policies first so re-apply doesn't conflict
+DROP POLICY IF EXISTS "Users can view their own project memories" ON user_project_memories;
+DROP POLICY IF EXISTS "Users can insert their own project memories" ON user_project_memories;
+DROP POLICY IF EXISTS "Users can update their own project memories" ON user_project_memories;
+DROP POLICY IF EXISTS "Users can delete their own project memories" ON user_project_memories;
+DROP POLICY IF EXISTS "Service role has full access to project memories" ON user_project_memories;
 
 -- SELECT: user owns the account (directly or via membership)
 CREATE POLICY "Users can view their own project memories"
@@ -179,7 +190,7 @@ CREATE POLICY "Service role has full access to project memories"
     WITH CHECK (true);
 
 -- =============================================================================
--- Grants
+-- Grants (idempotent by nature)
 -- =============================================================================
 GRANT SELECT, INSERT, UPDATE, DELETE ON user_project_memories TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON user_project_memories TO service_role;
