@@ -1,0 +1,16 @@
+{
+  "custom_mcps": [
+    {
+      "name": "mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX",
+      "url": "https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX",
+      "type": "sse",
+      "config": {}
+    },
+    {
+      "name": "mcp",
+      "url": "https://mcp.desktopcommander.app/mcp",
+      "type": "sse",
+      "config": {}
+    }
+  ]
+}

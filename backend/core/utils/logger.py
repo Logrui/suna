@@ -39,8 +39,11 @@ structlog.configure(
         structlog.contextvars.merge_contextvars,
         *renderer,
     ],
-    cache_logger_on_first_use=True,
     wrapper_class=structlog.make_filtering_bound_logger(LOGGING_LEVEL),
 )
+
+# Silence noisy libraries
+for lib in ["httpx", "httpcore", "urllib3", "multipart", "watchfiles", "uvicorn", "uvicorn.access", "asyncio", "google"]:
+    logging.getLogger(lib).setLevel(logging.WARNING)
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger()

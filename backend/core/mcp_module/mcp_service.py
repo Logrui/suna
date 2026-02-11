@@ -8,15 +8,18 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from collections import OrderedDict
 from time import time
+from contextlib import AsyncExitStack
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamablehttp_client
+import httpx
 
 from core.utils.logger import logger
-from core.credentials import EncryptionService
+from core.credentials import EncryptionService, get_credential_service
 from core.utils.config import config as app_config, EnvMode
 from core.tools.utils.mcp_tool_executor import is_safe_url
+from core.services.supabase import DBConnection
 
 
 class MCPException(Exception):
@@ -54,6 +57,7 @@ class MCPConnection:
     external_user_id: Optional[str] = None
     session: Optional[ClientSession] = field(default=None, compare=False)
     tools: Optional[List[Any]] = field(default=None, compare=False)
+    exit_stack: Optional[AsyncExitStack] = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -126,43 +130,98 @@ class MCPService:
         
         try:
             server_url = await self._get_server_url(request.qualified_name, request.config, request.provider)
-            headers = self._get_headers(request.qualified_name, request.config, request.provider, request.external_user_id)
+            headers = await self._get_headers(request.qualified_name, request.config, request.provider, request.external_user_id)
             
             # Add debugging
             self._logger.debug(f"MCP connection details - Provider: {request.provider}, URL: {server_url}, Headers: {headers}")
-            
-            # Add timeout to prevent hanging
-            async with asyncio.timeout(30):
-                async with streamablehttp_client(server_url, headers=headers) as (
-                    read_stream, write_stream, _
-                ):
-                    session = ClientSession(read_stream, write_stream)
-                    await session.initialize()
+
+            async with AsyncExitStack() as stack:
+                async def attempt_connect(provider: str):
+                    if provider == 'sse':
+                        client = await stack.enter_async_context(sse_client(server_url, headers=headers))
+                    else:
+                        client = await stack.enter_async_context(streamablehttp_client(server_url, headers=headers))
                     
-                    tool_result = await session.list_tools()
-                    tools = tool_result.tools if tool_result else []
-                    
-                    connection = MCPConnection(
-                        qualified_name=request.qualified_name,
-                        name=request.name,
-                        config=request.config,
-                        enabled_tools=request.enabled_tools,
-                        provider=request.provider,
-                        external_user_id=request.external_user_id,
-                        session=session,
-                        tools=tools
-                    )
-                    
-                    # Store with timestamp for TTL tracking
-                    self._connections[request.qualified_name] = (connection, time())
-                    # Move to end (most recently used)
-                    self._connections.move_to_end(request.qualified_name)
-                    self._logger.debug(f"Connected to {request.qualified_name} ({len(tools)} tools available)")
-                    
-                    # Cleanup old connections
-                    await self._cleanup_old_connections()
-                    
-                    return connection
+                    try:
+                        # sse_client returns (read, write), streamablehttp returns (read, write, _)
+                        if len(client) == 3:
+                            read_stream, write_stream, _ = client
+                        else:
+                            read_stream, write_stream = client
+                            
+                        session = ClientSession(read_stream, write_stream)
+                        await session.initialize()
+                        tool_result = await session.list_tools()
+                        tools = tool_result.tools if tool_result else []
+                        
+                        return session, tools
+                    except Exception:
+                        # AsyncExitStack will handle cleanup automatically on exception
+                        raise
+
+                try:
+                    # Add timeout to prevent hanging
+                    async with asyncio.timeout(30):
+                        try:
+                            session, tools = await attempt_connect(request.provider)
+                        except Exception as e:
+                            # Detect signal codes in the error message or nested exceptions
+                            error_str = str(e).lower()
+                            signal_codes = ["405", "400", "401", "403"]
+                            
+                            def has_signal(ex):
+                                s = str(ex).lower()
+                                return any(code in s for code in signal_codes)
+                                
+                            is_protocol_error = any(code in error_str for code in signal_codes)
+                            
+                            # Support Python 3.11+ ExceptionGroup
+                            if not is_protocol_error and hasattr(e, 'exceptions'):
+                                for sub_e in e.exceptions:
+                                    if has_signal(sub_e):
+                                        is_protocol_error = True
+                                        break
+
+                            if request.provider == 'sse' and is_protocol_error:
+                                self._logger.warning(f"SSE connection failed ({e}), falling back to HTTP...")
+                                session, tools = await attempt_connect('http')
+                            else:
+                                raise
+                except Exception as e:
+                    # Log clearly if it's an auth error
+                    err_msg = str(e).lower()
+                    if "401" in err_msg or "unauthorized" in err_msg:
+                        self._logger.error(f"Authentication failed for {request.name}: 401 Unauthorized. Check your credentials.")
+                    elif "403" in err_msg or "forbidden" in err_msg:
+                        self._logger.error(f"Access forbidden for {request.name}: 403 Forbidden. Check your permissions.")
+                    else:
+                        self._logger.error(f"Failed to connect to {request.name}: {e}")
+                    raise MCPConnectionError(f"Failed to connect to MCP server: {e}")
+
+                # If we got here, everything succeeded. Transfer stack to connection.
+                connection_stack = stack.pop_all()
+
+                connection = MCPConnection(
+                    qualified_name=request.qualified_name,
+                    name=request.name,
+                    config=request.config,
+                    enabled_tools=request.enabled_tools,
+                    provider=request.provider,
+                    external_user_id=request.external_user_id,
+                    session=session,
+                    tools=tools,
+                    exit_stack=connection_stack
+                )
+                # Store with timestamp for TTL tracking
+                self._connections[request.qualified_name] = (connection, time())
+                # Move to end (most recently used)
+                self._connections.move_to_end(request.qualified_name)
+                self._logger.debug(f"Connected to {request.qualified_name} ({len(tools)} tools available)")
+                
+                # Cleanup old connections
+                await self._cleanup_old_connections()
+                
+                return connection
                     
         except asyncio.TimeoutError:
             error_msg = f"Connection timeout for {request.qualified_name} after 30 seconds"
@@ -218,12 +277,19 @@ class MCPService:
         connection_data = self._connections.get(qualified_name)
         if connection_data:
             connection, _ = connection_data
-            if connection and connection.session:
-                try:
-                    await connection.session.close()
-                    self._logger.debug(f"Disconnected from {qualified_name}")
-                except Exception as e:
-                    self._logger.warning(f"Error disconnecting from {qualified_name}: {str(e)}")
+            if connection:
+                if connection.session:
+                    try:
+                        await connection.session.close()
+                    except Exception as e:
+                        self._logger.warning(f"Error closing session for {qualified_name}: {str(e)}")
+                
+                if connection.exit_stack:
+                    try:
+                        await connection.exit_stack.aclose()
+                        self._logger.debug(f"Disconnected from {qualified_name}")
+                    except Exception as e:
+                        self._logger.warning(f"Error closing transport for {qualified_name}: {str(e)}")
         
         self._connections.pop(qualified_name, None)
     
@@ -466,11 +532,11 @@ class MCPService:
         else:
             raise MCPProviderError(f"Unknown provider type: {provider}")
     
-    def _get_headers(self, qualified_name: str, config: Dict[str, Any], provider: str, external_user_id: Optional[str] = None) -> Dict[str, str]:
+    async def _get_headers(self, qualified_name: str, config: Dict[str, Any], provider: str, external_user_id: Optional[str] = None) -> Dict[str, str]:
         if provider in ['custom', 'http', 'sse']:
-            return self._get_custom_headers(qualified_name, config, external_user_id)
+            return await self._get_custom_headers(qualified_name, config, external_user_id)
         elif provider == 'composio':
-            return self._get_composio_headers(qualified_name, config, external_user_id)
+            return await self._get_composio_headers(qualified_name, config, external_user_id)
         else:
             raise MCPProviderError(f"Unknown provider type: {provider}")
     
@@ -480,9 +546,29 @@ class MCPService:
             raise MCPProviderError(f"URL not provided for custom MCP server: {qualified_name}")
         return url
     
-    def _get_custom_headers(self, qualified_name: str, config: Dict[str, Any], external_user_id: Optional[str] = None) -> Dict[str, str]:
-        headers = {"Content-Type": "application/json"}
+    async def _get_custom_headers(self, qualified_name: str, config: Dict[str, Any], external_user_id: Optional[str] = None) -> Dict[str, str]:
+        headers = {}
         
+        # Local config access_token (overrides DB)
+        access_token = config.get("access_token")
+        
+        # If no access_token in config, try fetching from database using qualified_name
+        if not access_token and qualified_name and external_user_id:
+            try:
+                db = DBConnection()
+                service = get_credential_service(db)
+                credential = await service.get_credential(external_user_id, qualified_name)
+                
+                if credential and credential.config and "access_token" in credential.config:
+                    access_token = credential.config["access_token"]
+                    self._logger.debug(f"Retrieved OAuth token from database for {qualified_name}")
+            except Exception as e:
+                self._logger.warning(f"Failed to lookup MCP credential for {qualified_name}: {e}")
+
+        # Add Authorization header if we found a token
+        if access_token:
+            headers["Authorization"] = f"Bearer {access_token}"
+            
         # Original logic: check for "headers" key in config
         if "headers" in config:
             headers.update(config["headers"])
@@ -490,9 +576,6 @@ class MCPService:
         # New logic: check for "custom_headers" key in config
         if "custom_headers" in config and isinstance(config["custom_headers"], dict):
              headers.update(config["custom_headers"])
-        
-        if external_user_id:
-            headers["X-External-User-Id"] = external_user_id
         
         return headers
     

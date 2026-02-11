@@ -9,6 +9,7 @@ import { Search, Zap, X, Settings, ChevronDown, ChevronUp, Loader2, Server, Lock
 import { useComposioCategories, useComposioToolkitsInfinite } from '@/hooks/composio/use-composio';
 import { useComposioProfiles } from '@/hooks/composio/use-composio-profiles';
 import { useAgent } from '@/hooks/agents/use-agents';
+import { backendApi } from '@/lib/api-client';
 import { useUpdateAgentMCPs } from '@/hooks/agents/use-update-agent-mcps';
 import { ComposioConnector } from './composio-connector';
 import { ComposioToolsManager } from './composio-tools-manager';
@@ -18,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CustomMCPDialog } from '../mcp/custom-mcp-dialog';
+import { CustomMCPCard } from '../mcp/custom-mcp-card';
+import { CustomMCPToolsManager } from '../mcp/custom-mcp-tools-manager';
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   'popular': '🔥',
@@ -191,43 +194,7 @@ const ConnectedAppCard = ({
   );
 };
 
-const CustomMCPCard = ({
-  mcpConfig,
-  onRemove
-}: {
-  mcpConfig: any;
-  onRemove: (mcpName: string) => void;
-}) => {
-  const hasTools = mcpConfig.enabledTools && mcpConfig.enabledTools.length > 0;
-
-  return (
-    <div className="group border bg-card rounded-2xl p-4 transition-all duration-200 hover:border-sidebar-primary/50">
-      <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-          <Server className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm leading-tight truncate mb-1">{mcpConfig.name}</h3>
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-mono">
-            {mcpConfig.config?.url || 'Custom Configuration'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Future: Edit/Delete buttons */}
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            {hasTools ? `${mcpConfig.enabledTools.length} tools active` : 'Connected'}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// ... existing components ...
 
 // ... existing CustomMCPCard ...
 
@@ -352,6 +319,9 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
   const [showToolsManager, setShowToolsManager] = useState(false);
   const [selectedConnectedApp, setSelectedConnectedApp] = useState<ConnectedApp | null>(null);
   const [showCustomMCPDialog, setShowCustomMCPDialog] = useState(false);
+  const [showCustomToolsManager, setShowCustomToolsManager] = useState(false);
+  const [selectedCustomMCPForTools, setSelectedCustomMCPForTools] = useState<any | null>(null);
+  const [editingCustomIndex, setEditingCustomIndex] = useState<number | null>(null);
 
   // ... (existing state and hooks) ...
 
@@ -499,38 +469,131 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
       throw new Error('Please select an agent first');
     }
 
-    // Create MCP configuration for agent
-    const mcpConfig = {
-      name: customConfig.name || 'Custom MCP',
-      type: customConfig.type || 'sse',
-      config: customConfig.config || {},
-      enabledTools: customConfig.enabledTools || [],
-      oauth_client_id: customConfig.oauth_client_id,
-      oauth_client_secret: customConfig.oauth_client_secret,
-      custom_headers: customConfig.custom_headers
-    };
-
     // Get current custom MCPs from agent
     const currentCustomMcps = agent?.custom_mcps || [];
-    const updatedCustomMcps = [...currentCustomMcps, mcpConfig];
+
+    let updatedCustomMcps;
+    if (editingCustomIndex !== null) {
+      // Update existing
+      updatedCustomMcps = [...currentCustomMcps];
+      updatedCustomMcps[editingCustomIndex] = {
+        ...updatedCustomMcps[editingCustomIndex],
+        name: customConfig.name || 'Custom MCP',
+        type: customConfig.type || 'sse',
+        config: customConfig.config || {},
+        oauth_client_id: customConfig.oauth_client_id,
+        custom_headers: customConfig.custom_headers
+      };
+    } else {
+      // Add new
+      const mcpConfig = {
+        name: customConfig.name || 'Custom MCP',
+        qualifiedName: `custom_${customConfig.type}_${Date.now()}`,
+        type: customConfig.type || 'sse',
+        config: customConfig.config || {},
+        enabledTools: customConfig.enabledTools || [],
+        oauth_client_id: customConfig.oauth_client_id,
+        oauth_client_secret: customConfig.oauth_client_secret,
+        custom_headers: customConfig.custom_headers,
+        isCustom: true
+      };
+      updatedCustomMcps = [...currentCustomMcps, mcpConfig];
+    }
 
     // Return a promise that resolves/rejects based on the mutation result
     return new Promise((resolve, reject) => {
       updateAgent({
         agentId: currentAgentId,
         custom_mcps: updatedCustomMcps,
-        replace_mcps: true  // Use replace mode to ensure proper updates
+        replace_mcps: true
       }, {
         onSuccess: () => {
-          toast.success(`Custom MCP "${customConfig.name}" added successfully`);
+          toast.success(editingCustomIndex !== null ? 'MCP updated' : 'Custom MCP added');
           queryClient.invalidateQueries({ queryKey: ['agents', 'detail', currentAgentId] });
+          setEditingCustomIndex(null);
           resolve();
         },
         onError: (error: any) => {
-          reject(new Error(error.message || 'Failed to add custom MCP'));
+          reject(new Error(error.message || 'Failed to update MCP'));
         }
       });
     });
+  };
+
+  const handleRemoveCustomMCP = (mcp: any) => {
+    if (!currentAgentId || !agent) return;
+
+    const updatedCustomMcps = agent.custom_mcps?.filter((item: any) => {
+      // Use qualifiedName as primary ID, fallback to name+url
+      if (mcp.qualifiedName && item.qualifiedName) return item.qualifiedName !== mcp.qualifiedName;
+      return item.name !== mcp.name || item.config?.url !== mcp.config?.url;
+    }) || [];
+
+    updateAgent({
+      agentId: currentAgentId,
+      custom_mcps: updatedCustomMcps,
+      replace_mcps: true
+    }, {
+      onSuccess: () => {
+        toast.success('Integration removed');
+        queryClient.invalidateQueries({ queryKey: ['agents', 'detail', currentAgentId] });
+      }
+    });
+  };
+
+  const handleEditCustomMCP = (mcp: any) => {
+    if (!agent?.custom_mcps) return;
+
+    // Find index by reference first, then by unique properties
+    let index = agent.custom_mcps.indexOf(mcp);
+    if (index === -1) {
+      index = agent.custom_mcps.findIndex((item: any) =>
+        (mcp.qualifiedName && item.qualifiedName === mcp.qualifiedName) ||
+        (item.name === mcp.name && item.config?.url === mcp.config?.url)
+      );
+    }
+
+    if (index !== -1) {
+      setEditingCustomIndex(index);
+      setShowCustomMCPDialog(true);
+    } else {
+      console.warn('Could not find MCP to edit:', mcp);
+      toast.error('Could not find MCP to edit');
+    }
+  };
+
+  const handleConfigureCustomMCP = async (mcp: any) => {
+    try {
+      const url = mcp.config?.url;
+      if (!url) {
+        toast.error('MCP server URL is missing');
+        return;
+      }
+
+      const returnUrl = window.location.origin + '/mcp-success';
+      const params = new URLSearchParams({
+        url: url,
+        return_url: returnUrl,
+        agent_id: currentAgentId || '',
+        name: mcp.name
+      });
+
+      const response = await backendApi.get<{ redirect_url: string }>(`/mcp/auth/start?${params.toString()}`);
+
+      if (response.success && response.data?.redirect_url) {
+        window.open(response.data.redirect_url, '_blank', 'width=600,height=700,resizable=yes,scrollbars=yes');
+      } else {
+        toast.error('Failed to initiate OAuth flow');
+      }
+    } catch (error: any) {
+      console.error('OAuth initiation failed:', error);
+      toast.error('Failed to initiate OAuth flow');
+    }
+  };
+
+  const handleManageCustomTools = (mcp: any) => {
+    setSelectedCustomMCPForTools(mcp);
+    setShowCustomToolsManager(true);
   };
 
   const categories = categoriesData?.categories || [];
@@ -610,7 +673,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                       <CollapsibleTrigger asChild>
                         <div className="w-full hover:underline flex items-center justify-between p-0 h-auto cursor-pointer">
                           <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-medium">Standard Connectors</h3>
+                            <h3 className="text-lg font-medium">Connected Apps</h3>
                             {isLoadingConnectedApps ? (
                               <Skeleton className="w-6 h-5 rounded ml-2" />
                             ) : connectedApps.length > 0 && (
@@ -661,7 +724,7 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                           <div className="w-full hover:underline flex items-center justify-between p-0 h-auto cursor-pointer mt-6">
                             <div className="flex items-center gap-2">
                               <h3 className="text-lg font-medium">Custom MCP Servers</h3>
-                              <Badge variant="outline" className="ml-2 bg-orange-500/10 text-orange-600 border-orange-500/20">
+                              <Badge variant="outline" className="gap-1 bg-muted-foreground/20 text-muted-foreground">
                                 {customMCPs.length}
                               </Badge>
                             </div>
@@ -673,12 +736,15 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
                           </div>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="mt-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
                             {customMCPs.map((mcp: any, i: number) => (
                               <CustomMCPCard
-                                key={i}
-                                mcpConfig={mcp}
-                                onRemove={() => { }}
+                                key={mcp.qualifiedName || i}
+                                server={mcp}
+                                onEdit={() => handleEditCustomMCP(mcp)}
+                                onConfigure={() => handleConfigureCustomMCP(mcp)}
+                                onRemove={() => handleRemoveCustomMCP(mcp)}
+                                onManageTools={() => handleManageCustomTools(mcp)}
                               />
                             ))}
                           </div>
@@ -795,9 +861,26 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
       )}
       <CustomMCPDialog
         open={showCustomMCPDialog}
-        onOpenChange={setShowCustomMCPDialog}
+        onOpenChange={(open) => {
+          setShowCustomMCPDialog(open);
+          if (!open) setEditingCustomIndex(null);
+        }}
         onSave={handleCustomMCPSave}
+        initialData={editingCustomIndex !== null ? agent?.custom_mcps?.[editingCustomIndex] : undefined}
+        identifier={editingCustomIndex !== null ? editingCustomIndex.toString() : undefined}
       />
+      {selectedCustomMCPForTools && currentAgentId && (
+        <CustomMCPToolsManager
+          agentId={currentAgentId}
+          mcpConfig={selectedCustomMCPForTools}
+          mcpName={selectedCustomMCPForTools.name}
+          open={showCustomToolsManager}
+          onOpenChange={setShowCustomToolsManager}
+          onToolsUpdate={(tools) => {
+            queryClient.invalidateQueries({ queryKey: ['agents', 'detail', currentAgentId] });
+          }}
+        />
+      )}
     </div>
   );
 }; 

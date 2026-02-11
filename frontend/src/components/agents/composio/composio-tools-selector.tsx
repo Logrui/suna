@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -335,7 +335,7 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
   const totalTools = availableTools.length;
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn("flex flex-col flex-1 min-h-0", className)}>
       {/* Search and Controls Bar */}
       <div className="px-6 py-3 border-b bg-muted/20 flex-shrink-0">
         <div className="flex items-center gap-3 mb-3">
@@ -467,7 +467,7 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
       </div>
 
       {/* Tools List */}
-      <ScrollArea className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto thin-scrollbar">
         <div className="p-6">
           {error && (
             <Alert className="mb-6">
@@ -520,7 +520,7 @@ export const ComposioToolsSelector: React.FC<ComposioToolsSelectorProps> = ({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Footer with Save Button */}
       {showSaveButton && (

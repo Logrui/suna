@@ -11,9 +11,25 @@ class MCPConnectionManager:
     def __init__(self):
         self.connected_servers: Dict[str, Dict[str, Any]] = {}
     
+    def _get_headers(self, server_config: Dict[str, Any]) -> Dict[str, str]:
+        """Extract and build headers from server configuration."""
+        headers = (server_config.get("headers") or {}).copy()
+        
+        # Add auth if present in config (OAuth)
+        access_token = server_config.get("access_token")
+        if access_token and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {access_token}"
+            
+        # Add custom headers if present
+        custom_headers = server_config.get("custom_headers")
+        if isinstance(custom_headers, dict):
+            headers.update(custom_headers)
+            
+        return headers
+    
     async def connect_sse_server(self, server_name: str, server_config: Dict[str, Any], timeout: int = 15) -> Dict[str, Any]:
         url = server_config["url"]
-        headers = server_config.get("headers", {})
+        headers = self._get_headers(server_config)
         
         async with asyncio.timeout(timeout):
             try:
@@ -73,9 +89,10 @@ class MCPConnectionManager:
     
     async def connect_http_server(self, server_name: str, server_config: Dict[str, Any], timeout: int = 15) -> Dict[str, Any]:
         url = server_config["url"]
+        headers = self._get_headers(server_config)
         
         async with asyncio.timeout(timeout):
-            async with streamablehttp_client(url) as (read_stream, write_stream, _):
+            async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools_result = await session.list_tools()

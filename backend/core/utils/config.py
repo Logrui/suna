@@ -288,6 +288,8 @@ class Configuration:
     VERCEL_DRAIN_SECRET: Optional[str] = None  # Secret for authenticating Vercel drain webhooks
 
     # Local Inference
+    OLLAMA_ENABLED: bool = True
+    LM_STUDIO_ENABLED: bool = True
     OLLAMA_API_BASE: Optional[str] = "http://localhost:11434"
     LM_STUDIO_API_BASE: Optional[str] = "http://localhost:1234"
 

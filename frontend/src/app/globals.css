@@ -597,6 +597,38 @@
   background: oklch(0.5 0 0 / 0.2);
 }
 
+/* Thin scrollbar utility */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.5 0 0 / 0.2) transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0 0 / 0.4);
+  border-radius: 10px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0 0 / 0.5);
+}
+
+.dark .thin-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0 0 / 0.4);
+}
+
+.dark .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.7 0 0 / 0.5);
+}
+
 .scrollbar-minimal.dark:hover::-webkit-scrollbar-thumb,
 .dark .scrollbar-minimal:hover::-webkit-scrollbar-thumb {
   background: oklch(0.7 0 0 / 0.3);

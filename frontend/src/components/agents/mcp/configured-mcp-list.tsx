@@ -23,6 +23,7 @@ interface ConfiguredMcpListProps {
   configuredMCPs: MCPConfiguration[];
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
+  onConfigure?: (index: number) => void;
   onConfigureTools?: (index: number) => void;
 }
 
@@ -81,13 +82,29 @@ const MCPLogo: React.FC<{ mcp: MCPConfiguration }> = ({ mcp }) => {
   );
 };
 
+import { CustomMCPCard } from './custom-mcp-card';
+
 const MCPConfigurationItem: React.FC<{
   mcp: MCPConfiguration;
   index: number;
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
+  onConfigure?: (index: number) => void;
   onConfigureTools?: (index: number) => void;
-}> = ({ mcp, index, onEdit, onRemove, onConfigureTools }) => {
+  agentId?: string;
+}> = ({ mcp, index, onEdit, onRemove, onConfigure, onConfigureTools, agentId }) => {
+  if (mcp.isCustom && mcp.customType !== 'composio') {
+    return (
+      <CustomMCPCard
+        server={mcp}
+        onRemove={() => onRemove(index)}
+        onEdit={() => onEdit(index)}
+        onConfigure={() => (onConfigure || onEdit)(index)}
+        onManageTools={() => onConfigureTools?.(index)}
+      />
+    );
+  }
+
   const qualifiedNameForLookup = (mcp.customType === 'composio' || mcp.isComposio)
     ? mcp.mcp_qualified_name || mcp.config?.mcp_qualified_name || mcp.qualifiedName
     : mcp.qualifiedName;
@@ -150,11 +167,13 @@ const MCPConfigurationItem: React.FC<{
   );
 };
 
-export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
+export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps & { agentId?: string }> = ({
   configuredMCPs,
   onEdit,
   onRemove,
+  onConfigure,
   onConfigureTools,
+  agentId
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [mcpToDelete, setMcpToDelete] = React.useState<{ mcp: MCPConfiguration; index: number } | null>(null);
@@ -176,7 +195,7 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
 
   return (
     <>
-      <div className="space-y-2">
+      <div className="space-y-4">
         {configuredMCPs.map((mcp, index) => (
           <MCPConfigurationItem
             key={index}
@@ -184,7 +203,9 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
             index={index}
             onEdit={onEdit}
             onRemove={(idx) => handleDeleteClick(mcp, idx)}
+            onConfigure={onConfigure}
             onConfigureTools={onConfigureTools}
+            agentId={agentId}
           />
         ))}
       </div>

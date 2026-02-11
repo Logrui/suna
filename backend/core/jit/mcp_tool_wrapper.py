@@ -15,6 +15,23 @@ class MCPToolExecutor:
             'custom_config': mcp_config.get('config', {}),
             'original_name': None
         }
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Extract and build headers from config."""
+        config = self.tool_info.get('custom_config', {})
+        headers = (config.get('headers') or self.mcp_config.get('headers') or {}).copy()
+        
+        # Add auth if present in mcp_config or nested config (OAuth)
+        access_token = config.get("access_token") or self.mcp_config.get("access_token")
+        if access_token and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {access_token}"
+            
+        # Add custom headers if present
+        custom_headers = config.get("custom_headers") or self.mcp_config.get("custom_headers")
+        if isinstance(custom_headers, dict):
+            headers.update(custom_headers)
+            
+        return headers
     
     async def execute_tool(self, tool_name: str, args: Dict[str, Any]) -> Any:
         try:
@@ -85,7 +102,7 @@ class MCPToolExecutor:
                 output="Missing 'url' in SSE MCP config"
             )
         
-        headers = custom_config.get('headers', {})
+        headers = self._get_headers()
         
         try:
             async with asyncio.timeout(30):
@@ -135,9 +152,11 @@ class MCPToolExecutor:
                 output="Missing 'url' in HTTP MCP config"
             )
         
+        headers = self._get_headers()
+        
         try:
             async with asyncio.timeout(30):
-                async with streamablehttp_client(url) as (read, write, _):
+                async with streamablehttp_client(url, headers=headers) as (read, write, _):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
                         result = await session.call_tool(tool_name, arguments=args)

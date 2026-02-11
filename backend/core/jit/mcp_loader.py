@@ -1,11 +1,16 @@
 import time
 import asyncio
+import traceback
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
 from core.utils.logger import logger
 from core.jit.mcp_registry import get_toolkit_tools
 from core.jit.result_types import ActivationResult, ActivationSuccess, ActivationError, ActivationErrorType
+
+from mcp import ClientSession
+from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamablehttp_client
 
 @dataclass
 class MCPToolInfo:
@@ -27,26 +32,17 @@ class MCPJITLoader:
     
     async def rebuild_tool_map(self, fresh_config: Dict[str, Any]) -> None:
         logger.info(f"🔍 [MCP-REBUILD-DEBUG] Starting rebuild with fresh config")
-        logger.info(f"🔍 [MCP-REBUILD-DEBUG] Fresh config custom_mcps: {len(fresh_config.get('custom_mcps', []))}")
-        logger.info(f"🔍 [MCP-REBUILD-DEBUG] Fresh config configured_mcps: {len(fresh_config.get('configured_mcps', []))}")
         
-        custom_mcps_plural = fresh_config.get('custom_mcps', [])
-        custom_mcp_singular = fresh_config.get('custom_mcp', [])
+        custom_mcp = fresh_config.get('custom_mcp', [])
         configured_mcps = fresh_config.get('configured_mcps', [])
         
         logger.info(f"🔍 [MCP-REBUILD-DEBUG] Fresh config keys: {list(fresh_config.keys())}")
-        logger.info(f"🔍 [MCP-REBUILD-DEBUG] custom_mcps (plural): {len(custom_mcps_plural)}")
-        logger.info(f"🔍 [MCP-REBUILD-DEBUG] custom_mcp (singular): {len(custom_mcp_singular)}")
+        logger.info(f"🔍 [MCP-REBUILD-DEBUG] custom_mcp: {len(custom_mcp)}")
         logger.info(f"🔍 [MCP-REBUILD-DEBUG] configured_mcps: {len(configured_mcps)}")
         
-        if custom_mcp_singular:
-            logger.info(f"🔍 [MCP-REBUILD-DEBUG] Using custom_mcp (singular) format")
-            for i, mcp in enumerate(custom_mcp_singular):
+        if custom_mcp:
+            for i, mcp in enumerate(custom_mcp):
                 logger.info(f"🔍 [MCP-REBUILD-DEBUG] Fresh custom_mcp[{i}]: name={mcp.get('name')}, toolkit_slug={mcp.get('toolkit_slug')}, type={mcp.get('type')}")
-        elif custom_mcps_plural:
-            logger.info(f"🔍 [MCP-REBUILD-DEBUG] Using custom_mcps (plural) format")
-            for i, mcp in enumerate(custom_mcps_plural):
-                logger.info(f"🔍 [MCP-REBUILD-DEBUG] Fresh custom_mcps[{i}]: name={mcp.get('name')}, toolkit_slug={mcp.get('toolkit_slug')}, type={mcp.get('type')}")
         else:
             logger.warning(f"🔍 [MCP-REBUILD-DEBUG] ❌ NO CUSTOM MCPs FOUND IN FRESH CONFIG!")
         
@@ -59,7 +55,7 @@ class MCPJITLoader:
         old_agent_config = dict(self.agent_config)
         
         normalized_fresh_config = {
-            'custom_mcp': custom_mcp_singular or custom_mcps_plural,
+            'custom_mcp': custom_mcp,
             'configured_mcps': configured_mcps,
             'account_id': fresh_config.get('account_id', old_agent_config.get('account_id'))
         }
@@ -103,7 +99,8 @@ class MCPJITLoader:
         
         start_time = time.time()
         
-        custom_mcps = self.agent_config.get("custom_mcp", [])
+        # Check for both singular and plural forms of the key
+        custom_mcps = self.agent_config.get("custom_mcps") or self.agent_config.get("custom_mcp", [])
         configured_mcps = self.agent_config.get("configured_mcps", [])
         
         mode_str = "cache-only" if cache_only else "full discovery"
@@ -128,7 +125,17 @@ class MCPJITLoader:
         elapsed_ms = (time.time() - start_time) * 1000
         
         self._tool_map_built = True
-        logger.info(f"⚡ [MCP JIT] Built tool map: {len(self.tool_map)} tools from {len(custom_mcps + configured_mcps)} servers in {elapsed_ms:.1f}ms ({mode_str})")
+        logger.info(f"✅ [MCP JIT] Build complete: {len(self.tool_map)} tools from {len(custom_mcps + configured_mcps)} servers in {elapsed_ms:.1f}ms ({mode_str})")
+        
+        if self.tool_map:
+            logger.info(f"📊 [MCP JIT] Discovery Summary:")
+            toolkit_counts = {}
+            for info in self.tool_map.values():
+                toolkit_counts[info.toolkit_slug] = toolkit_counts.get(info.toolkit_slug, 0) + 1
+            for tk, count in toolkit_counts.items():
+                logger.info(f"   - {tk}: {count} tools")
+        else:
+            logger.warning("⚠️ [MCP JIT] Build complete but NO tools were mapped. Check server availability and configuration.")
         
         toolkit_counts = {}
         for tool_info in self.tool_map.values():
@@ -139,7 +146,7 @@ class MCPJITLoader:
             logger.debug(f"⚡ [MCP JIT] {toolkit}: {count} tools")
     
     async def _process_mcp_config(self, mcp_config: Dict[str, Any], config_type: str, cache_only: bool = False) -> None:
-        custom_type = mcp_config.get("customType", mcp_config.get("type", ""))
+        custom_type = mcp_config.get("customType", mcp_config.get("type", "")).lower()
         server_name = mcp_config.get('name', 'unnamed')
         
         logger.info(f"🔍 [MCP-PROCESS-DEBUG] Processing {config_type} MCP config:")
@@ -149,7 +156,7 @@ class MCPJITLoader:
         
         if custom_type in ("sse", "http", "json"):
             logger.info(f"🔍 [MCP-PROCESS-DEBUG] Processing as custom MCP (type: {custom_type})")
-            await self._process_custom_mcp_config(mcp_config, custom_type, server_name, cache_only)
+            await self._process_custom_mcp_config_internal(mcp_config, cache_only)
             return
         
         toolkit_slug = self._extract_toolkit_slug(mcp_config)
@@ -207,127 +214,162 @@ class MCPJITLoader:
                 mcp_config=mcp_config
             )
     
-    async def _process_custom_mcp_config(self, mcp_config: Dict[str, Any], custom_type: str, server_name: str, cache_only: bool = False) -> None:
+    async def _process_custom_mcp_config_internal(self, mcp_config: Dict[str, Any], cache_only: bool = False) -> None:
+        toolkit_slug = self._extract_toolkit_slug(mcp_config) or 'custom'
+        server_name = mcp_config.get('name', 'unnamed')
+        custom_type = mcp_config.get("customType", mcp_config.get("type", "http")).lower()
+        url = mcp_config.get('url') or mcp_config.get('config', {}).get('url')
+        
         logger.debug(f"⚡ [MCP JIT] Processing custom MCP: {server_name} (type: {custom_type})")
         
-        config = mcp_config.get('config', {})
-        enabled_tools = mcp_config.get('enabledTools', [])
-        
-        if cache_only:
-            if enabled_tools:
-                for tool_name in enabled_tools:
-                    if tool_name not in self.tool_map:
-                        self.tool_map[tool_name] = MCPToolInfo(
-                            tool_name=tool_name,
-                            toolkit_slug=f"custom_{custom_type}_{server_name}",
-                            mcp_config=mcp_config
-                        )
-                logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Added {len(enabled_tools)} enabled tools from config (cache-only mode)")
-            else:
-                logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: No enabled tools in config, will discover later")
-            return
-        
-        try:
-            available_tools = await self._discover_custom_mcp_tools(custom_type, config)
-            
-            if not available_tools:
-                logger.warning(f"⚠️  [MCP JIT] No tools discovered for custom MCP: {server_name}")
+        if custom_type == "json":
+            if cache_only:
+                logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: JSON type, skipping discovery in cache-only mode.")
                 return
+            tool_names = await self._discover_json_tools(mcp_config)
+        elif url:
+            if cache_only:
+                enabled_tools = mcp_config.get('enabledTools', [])
+                if enabled_tools:
+                    for tool_name in enabled_tools:
+                        if tool_name not in self.tool_map:
+                            self.tool_map[tool_name] = MCPToolInfo(
+                                tool_name=tool_name,
+                                toolkit_slug=f"custom_{custom_type}_{server_name}",
+                                mcp_config=mcp_config
+                            )
+                    logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Added {len(enabled_tools)} enabled tools from config (cache-only mode)")
+                else:
+                    logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: No enabled tools in config, will discover later")
+                return
+            tool_names = await self._discover_tools_with_fallback(mcp_config)
+        else:
+            logger.error(f"❌ [MCP JIT] Missing 'url' for custom MCP '{server_name}' of type '{custom_type}'")
+            return []
+        
+        if not tool_names:
+            logger.warning(f"⚠️ [MCP JIT] No tools discovered for '{server_name}' at {url or 'stdio'}")
+            return
+
+        enabled_tools = mcp_config.get('enabledTools', [])
+        if enabled_tools:
+            tools_to_add = [tool for tool in tool_names if tool in enabled_tools]
+            logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Filtered to {len(tools_to_add)}/{len(tool_names)} enabled tools")
+        else:
+            tools_to_add = tool_names
+            logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: No enabledTools filter, loading all {len(tools_to_add)} tools")
+        
+        final_toolkit_slug = f"custom_{custom_type}_{server_name.replace(' ', '_').lower()}" if toolkit_slug == 'custom' else toolkit_slug
+
+        for tool_name in tools_to_add:
+            if tool_name in self.tool_map:
+                logger.warning(f"⚠️  [MCP JIT] Tool '{tool_name}' already registered, skipping duplicate")
+                continue
             
-            if enabled_tools:
-                tools_to_add = [tool for tool in available_tools if tool in enabled_tools]
-                logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Filtered to {len(tools_to_add)}/{len(available_tools)} enabled tools")
-            else:
-                tools_to_add = available_tools
-                logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: No enabledTools filter, loading all {len(tools_to_add)} tools")
-            
-            toolkit_slug = f"custom_{custom_type}_{server_name.replace(' ', '_').lower()}"
-            
-            for tool_name in tools_to_add:
-                if tool_name in self.tool_map:
-                    logger.warning(f"⚠️  [MCP JIT] Tool '{tool_name}' already registered, skipping duplicate")
-                    continue
-                
-                self.tool_map[tool_name] = MCPToolInfo(
-                    tool_name=tool_name,
-                    toolkit_slug=toolkit_slug,
-                    mcp_config=mcp_config
-                )
-            
-            logger.info(f"⚡ [MCP JIT] Custom MCP {server_name}: Registered {len(tools_to_add)} tools")
-            
-        except Exception as e:
-            logger.error(f"❌ [MCP JIT] Failed to discover tools for custom MCP {server_name}: {e}")
+            logger.debug(f"📌 [MCP JIT] Mapping tool: {tool_name} -> {final_toolkit_slug}")
+            self.tool_map[tool_name] = MCPToolInfo(
+                tool_name=tool_name,
+                toolkit_slug=final_toolkit_slug,
+                mcp_config=mcp_config
+            )
+        
+        logger.info(f"✅ [MCP JIT] {server_name}: Successfully registered {len(tools_to_add)} tools")
     
     async def _discover_custom_mcp_tools(self, custom_type: str, config: Dict[str, Any]) -> List[str]:
-        if custom_type == "sse":
-            return await self._discover_sse_tools(config)
-        elif custom_type == "http":
-            return await self._discover_http_tools(config)
-        elif custom_type == "json":
+        # This method is now largely superseded by _process_custom_mcp_config_internal
+        # but kept for compatibility if other parts of the system still call it directly.
+        # It should ideally be refactored to call _discover_tools_with_fallback or _discover_json_tools.
+        if custom_type == "json":
             return await self._discover_json_tools(config)
+        elif custom_type in ("sse", "http"):
+            return await self._discover_tools_with_fallback(config)
         else:
             logger.warning(f"⚠️  [MCP JIT] Unknown custom MCP type: {custom_type}")
             return []
     
-    async def _discover_sse_tools(self, config: Dict[str, Any]) -> List[str]:
-        url = config.get('url')
-        if not url:
-            logger.error("❌ [MCP JIT] Missing 'url' in SSE MCP config")
-            return []
+    async def _discover_tools_with_fallback(self, config: Dict[str, Any]) -> List[str]:
+        """Discovery with automatic transport fallback and path probing."""
+        url = config.get('url') or config.get('config', {}).get('url')
+        custom_type = config.get("customType", config.get("type", "http")).lower()
         
-        from mcp.client.sse import sse_client
-        from mcp import ClientSession
+        if not url: return []
         
-        headers = config.get('headers', {})
+        # Build headers
+        config_nested = config.get('config', {})
+        headers = (config.get('headers') or config_nested.get('headers') or {}).copy()
         
-        try:
-            try:
-                async with sse_client(url, headers=headers) as (read_stream, write_stream):
-                    async with ClientSession(read_stream, write_stream) as session:
-                        await session.initialize()
-                        tools_result = await session.list_tools()
-                        tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
-                        tool_names = [tool.name for tool in tools]
-                        logger.debug(f"⚡ [MCP JIT] Discovered {len(tool_names)} SSE tools")
+        # 1. Try config first
+        access_token = config.get("access_token") or config_nested.get("access_token")
+        
+        # 2. Try DB lookup if missing
+        if not access_token:
+            qualified_name = config.get('qualifiedName') or config.get('name')
+            account_id = self.agent_config.get('account_id')
+            
+            if qualified_name and account_id:
+                try:
+                    from core.services.supabase import DBConnection
+                    from core.credentials import get_credential_service
+                    
+                    db = DBConnection()
+                    service = get_credential_service(db)
+                    credential = await service.get_credential(account_id, qualified_name)
+                    
+                    if credential and credential.config and "access_token" in credential.config:
+                        access_token = credential.config["access_token"]
+                        config["access_token"] = access_token
+                        logger.debug(f"🔑 [MCP JIT] Used stored credential for {qualified_name}")
+                except Exception as e:
+                    logger.warning(f"⚠️ [MCP JIT] Failed credential lookup for {qualified_name}: {e}")
+
+        if access_token and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {access_token}"
+        custom_headers = config.get("custom_headers") or config_nested.get("custom_headers")
+        if isinstance(custom_headers, dict):
+            headers.update(custom_headers)
+
+        # Paths to try
+        paths = [""]
+        if "/mcp" not in url.lower():
+            paths.append("/mcp")
+            
+        # Transport order (try preferred first, then the other)
+        transports = ["sse", "http"] if custom_type == "sse" else ["http", "sse"]
+        
+        for transport in transports:
+            for path in paths:
+                current_url = url.rstrip('/') + path if path else url
+                try:
+                    if transport == "sse":
+                        logger.debug(f"🌐 [MCP JIT] Discovery [SSE] -> {current_url}")
+                        async def _probe_sse():
+                            async with sse_client(current_url, headers=headers) as (read, write):
+                                async with ClientSession(read, write) as session:
+                                    await session.initialize()
+                                    res = await session.list_tools()
+                                    return [t.name for t in (res.tools if hasattr(res, 'tools') else res)]
+                        
+                        tool_names = await asyncio.wait_for(_probe_sse(), timeout=15.0)
+                        logger.info(f"✨ [MCP JIT] Success! {len(tool_names)} tools found via SSE at {current_url}")
                         return tool_names
-            except TypeError as e:
-                if "unexpected keyword argument" in str(e):
-                    async with sse_client(url) as (read_stream, write_stream):
-                        async with ClientSession(read_stream, write_stream) as session:
-                            await session.initialize()
-                            tools_result = await session.list_tools()
-                            tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
-                            tool_names = [tool.name for tool in tools]
-                            logger.debug(f"⚡ [MCP JIT] Discovered {len(tool_names)} SSE tools (no headers)")
-                            return tool_names
-                else:
-                    raise
-        except Exception as e:
-            logger.error(f"❌ [MCP JIT] Failed to discover SSE tools: {e}")
-            return []
-    
-    async def _discover_http_tools(self, config: Dict[str, Any]) -> List[str]:
-        url = config.get('url')
-        if not url:
-            logger.error("❌ [MCP JIT] Missing 'url' in HTTP MCP config")
-            return []
+                    else:
+                        logger.debug(f"🌐 [MCP JIT] Discovery [HTTP] -> {current_url}")
+                        async def _probe_http():
+                            async with streamablehttp_client(current_url, headers=headers) as (read, write, _):
+                                async with ClientSession(read, write) as session:
+                                    await session.initialize()
+                                    res = await session.list_tools()
+                                    return [t.name for t in (res.tools if hasattr(res, 'tools') else res)]
+                        
+                        tool_names = await asyncio.wait_for(_probe_http(), timeout=15.0)
+                        logger.info(f"✨ [MCP JIT] Success! {len(tool_names)} tools found via HTTP at {current_url}")
+                        return tool_names
+                except Exception as e:
+                    logger.debug(f"ℹ️ [MCP JIT] Probe failed ({transport} @ {current_url}): {e}")
+                    logger.debug(traceback.format_exc())
+                    continue
         
-        from mcp.client.streamable_http import streamablehttp_client
-        from mcp import ClientSession
-        
-        try:
-            async with streamablehttp_client(url) as (read_stream, write_stream, _):
-                async with ClientSession(read_stream, write_stream) as session:
-                    await session.initialize()
-                    tools_result = await session.list_tools()
-                    tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
-                    tool_names = [tool.name for tool in tools]
-                    logger.debug(f"⚡ [MCP JIT] Discovered {len(tool_names)} HTTP tools")
-                    return tool_names
-        except Exception as e:
-            logger.error(f"❌ [MCP JIT] Failed to discover HTTP tools: {e}")
-            return []
+        return []
     
     async def _discover_json_tools(self, config: Dict[str, Any]) -> List[str]:
         command = config.get('command')
@@ -532,29 +574,44 @@ class MCPJITLoader:
     async def _load_custom_mcp_schema(self, tool_name: str, toolkit_slug: str, mcp_config: Dict[str, Any], custom_type: str) -> Dict[str, Any]:
         try:
             config = mcp_config.get('config', {})
-            url = config.get('url')
+            # URL can be at top level or nested in 'config'
+            url = mcp_config.get('url') or config.get('url')
+            
+            # Calculate headers for discovery
+            # Extract headers from both mcp_config and nested config
+            headers = (mcp_config.get('headers') or {}).copy()
+            headers.update(config.get('headers', {}) or {})
+            
+            # Add auth if present in mcp_config or nested config
+            access_token = mcp_config.get("access_token") or config.get("access_token")
+            if access_token and "Authorization" not in headers:
+                headers["Authorization"] = f"Bearer {access_token}"
+                
+            # Add custom headers if present
+            custom_headers = mcp_config.get("custom_headers") or config.get("custom_headers")
+            if isinstance(custom_headers, dict):
+                headers.update(custom_headers)
             
             if custom_type == "sse":
-                return await self._load_sse_schema(tool_name, url, config)
+                return await self._load_sse_schema(tool_name, url, config, headers=headers)
             elif custom_type == "http":
-                return await self._load_http_schema(tool_name, url, config)
+                return await self._load_http_schema(tool_name, url, config, headers=headers)
             elif custom_type == "json":
                 return await self._load_json_schema(tool_name, config)
             else:
-                return await self._load_http_schema(tool_name, url, config)
+                # Default to HTTP for unknown types
+                return await self._load_http_schema(tool_name, url, config, headers=headers)
             
         except Exception as e:
-            logger.error(f"❌ [MCP JIT] Failed to load {custom_type} MCP schema for {tool_name}: {e}")
+            logger.error(f"❌ [MCP JIT] Failed to load schema for tool '{tool_name}' (toolkit: {toolkit_slug}, type: {custom_type}): {e}")
             raise
     
-    async def _load_sse_schema(self, tool_name: str, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _load_sse_schema(self, tool_name: str, url: str, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         if not url:
             raise ValueError(f"Missing 'url' in SSE MCP config for {tool_name}")
         
-        from mcp.client.sse import sse_client
-        from mcp import ClientSession
-        
-        headers = config.get('headers', {})
+        if headers is None:
+            headers = config.get('headers', {})
         
         try:
             async with sse_client(url, headers=headers) as (read_stream, write_stream):
@@ -598,14 +655,14 @@ class MCPJITLoader:
             else:
                 raise
     
-    async def _load_http_schema(self, tool_name: str, url: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _load_http_schema(self, tool_name: str, url: str, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         if not url:
             raise ValueError(f"Missing 'url' in HTTP MCP config for {tool_name}")
         
-        from mcp.client.streamable_http import streamablehttp_client
-        from mcp import ClientSession
-        
-        async with streamablehttp_client(url) as (read_stream, write_stream, _):
+        if headers is None:
+            headers = config.get('headers', {})
+            
+        async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
                 tools_result = await session.list_tools()

@@ -22,6 +22,8 @@ class LMStudioClient:
             base_url: LM Studio API base URL (e.g., http://localhost:1234)
                      If None, uses LM_STUDIO_API_BASE or defaults to localhost:1234
         """
+        self.enabled = config.LM_STUDIO_ENABLED and (base_url or config.LM_STUDIO_API_BASE)
+        
         if base_url:
             self.base_url = base_url.rstrip('/v1').rstrip('/')
         elif config.LM_STUDIO_API_BASE:
@@ -32,7 +34,10 @@ class LMStudioClient:
             self.base_url = "http://localhost:1234"
         
         self._model_cache: Dict[str, Dict[str, Any]] = {}
-        logger.debug(f"LMStudioClient initialized with base_url: {self.base_url}")
+        if self.enabled:
+            logger.debug(f"LMStudioClient initialized with base_url: {self.base_url}")
+        else:
+            logger.info("LMStudioClient initialized but disabled via configuration")
     
     async def list_models(self) -> List[Dict[str, Any]]:
         """

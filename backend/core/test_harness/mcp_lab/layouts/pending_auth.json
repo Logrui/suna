@@ -1,0 +1,7 @@
+{
+  "mcp_url": "https://mcp.desktopcommander.app/mcp",
+  "code_verifier": "25ihXY1F6_qMmeU-A0CHa19ncsFK-_Gr7kECNJ4wpG4nOaA9GOpHwTk1FpHZ6WQ5acP7JCBwRT0KzbAZxVvDRA",
+  "token_endpoint": "https://mcp.desktopcommander.app/token",
+  "client_id": "https://api.suna.syhc.dev/v1/mcp/client-metadata.json",
+  "redirect_uri": "https://api.suna.syhc.dev/v1/mcp/auth/callback"
+}

@@ -25,6 +25,8 @@ class OllamaClient:
                      2. OPENAI_COMPATIBLE_API_BASE (fallback)
                      3. Default localhost:11434
         """
+        self.enabled = config.OLLAMA_ENABLED and (base_url or config.OLLAMA_API_BASE or config.OPENAI_COMPATIBLE_API_BASE)
+        
         # Strategy 1: Use explicit OLLAMA_API_BASE if set (for Docker override)
         if base_url:
             self.base_url = base_url.rstrip('/v1').rstrip('/')
@@ -41,7 +43,10 @@ class OllamaClient:
             self.base_url = "http://localhost:11434"
         
         self._model_cache: Dict[str, Dict[str, Any]] = {}
-        logger.debug(f"OllamaClient initialized with base_url: {self.base_url}")
+        if self.enabled:
+            logger.debug(f"OllamaClient initialized with base_url: {self.base_url}")
+        else:
+            logger.info("OllamaClient initialized but disabled via configuration")
     
     async def list_models(self) -> List[Dict[str, Any]]:
         """

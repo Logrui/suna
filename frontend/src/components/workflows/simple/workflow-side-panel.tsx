@@ -263,6 +263,7 @@ export function WorkflowSidePanel({
                 open={showCustomMCPDialog}
                 onOpenChange={setShowCustomMCPDialog}
                 onSave={handleCustomMCPSave}
+                agentId={agentId}
             />
         </>
     );

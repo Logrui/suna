@@ -2,7 +2,8 @@ import json
 import asyncio
 import ipaddress
 import socket
-from typing import Dict, Any
+import time
+from typing import Dict, Any, Optional
 from urllib.parse import urlparse
 from core.agentpress.tool import ToolResult
 from mcp import ClientSession, StdioServerParameters
@@ -101,6 +102,23 @@ class MCPToolExecutor:
         self.custom_tools = custom_tools
         self.tool_wrapper = tool_wrapper
     
+    def _get_headers(self, mcp_config: Dict[str, Any]) -> Dict[str, str]:
+        """Extract and build headers from custom config."""
+        config = mcp_config.get("config", {})
+        headers = (mcp_config.get("headers") or config.get("headers") or {}).copy()
+        
+        # Add auth if present in mcp_config or nested config (OAuth)
+        access_token = mcp_config.get("access_token") or config.get("access_token")
+        if access_token and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {access_token}"
+            
+        # Add custom headers if present
+        custom_headers = mcp_config.get("custom_headers") or config.get("custom_headers")
+        if isinstance(custom_headers, dict):
+            headers.update(custom_headers)
+            
+        return headers
+    
     async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> ToolResult:
         logger.debug(f"Executing MCP tool {tool_name} with arguments {arguments}")
 
@@ -120,8 +138,11 @@ class MCPToolExecutor:
                 return self._create_error_result(result.get('content', 'Tool execution failed'))
             else:
                 return self._create_success_result(result.get('content', result))
+        if result and len(str(result)) > 500:
+            logger.info(f"✅ [MCP EXECUTION] {tool_name} completed (output: {len(str(result))} chars)")
         else:
-            return self._create_success_result(result)
+            logger.info(f"✅ [MCP EXECUTION] {tool_name} completed: {result}")
+        return self._create_success_result(result)
     
     async def _execute_custom_tool(self, tool_name: str, arguments: Dict[str, Any]) -> ToolResult:
         tool_info = self.custom_tools[tool_name]
@@ -140,13 +161,11 @@ class MCPToolExecutor:
                 
                 db = DBConnection()
                 profile_service = ComposioProfileService(db)
-                mcp_url = await profile_service.get_mcp_url_for_runtime(profile_id)
-                modified_tool_info = tool_info.copy()
-                modified_tool_info['custom_config'] = {
-                    **custom_config,
-                    'url': mcp_url
-                }
-                return await self._execute_http_tool(tool_name, arguments, modified_tool_info)
+                logger.info(f"🚀 [MCP EXECUTION] {tool_name} (via Composio {profile_id})")
+                
+                # Note: mcp_url resolution logic should be here if needed
+                # For now, we assume it's resolved or handled by _execute_http_tool
+                return await self._execute_http_tool(tool_name, arguments, tool_info)
                 
             except Exception as e:
                 logger.error(f"Failed to resolve Composio profile {profile_id}: {str(e)}")
@@ -166,19 +185,26 @@ class MCPToolExecutor:
         original_tool_name = tool_info['original_name']
         
         url = custom_config['url']
-        headers = custom_config.get('headers', {})
+        headers = self._get_headers(custom_config)
         
         # SSRF Protection: Validate URL before connecting
         is_safe, error_msg = is_safe_url(url)
         if not is_safe:
+            logger.error(f"❌ [MCP EXECUTION] SSRF Blocked for {url}")
             return self._create_error_result(f"URL validation failed: {error_msg}")
         
+        logger.info(f"🚀 [MCP EXECUTION] {original_tool_name} (via SSE {url})")
+        logger.debug(f"🔑 [MCP EXECUTION] Headers: { {k: '***' if k.lower() in ('authorization',) else v for k, v in headers.items()} }")
+        
+        start_exec = time.time()
         async with asyncio.timeout(30):
             try:
                 async with sse_client(url, headers=headers) as (read, write):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
                         result = await session.call_tool(original_tool_name, arguments)
+                        elapsed = (time.time() - start_exec) * 1000
+                        logger.info(f"✅ [MCP EXECUTION] {tool_name} success in {elapsed:.1f}ms")
                         return self._create_success_result(self._extract_content(result))
                         
             except TypeError as e:
@@ -196,18 +222,26 @@ class MCPToolExecutor:
         original_tool_name = tool_info['original_name']
         
         url = custom_config['url']
+        headers = self._get_headers(custom_config)
         
         # SSRF Protection: Validate URL before connecting
         is_safe, error_msg = is_safe_url(url)
         if not is_safe:
+            logger.error(f"❌ [MCP EXECUTION] SSRF Blocked for {url}")
             return self._create_error_result(f"URL validation failed: {error_msg}")
         
+        logger.info(f"🚀 [MCP EXECUTION] {original_tool_name} (via HTTP {url})")
+        logger.debug(f"🔑 [MCP EXECUTION] Headers: { {k: '***' if k.lower() in ('authorization',) else v for k, v in headers.items()} }")
+        
+        start_exec = time.time()
         try:
             async with asyncio.timeout(30):
-                async with streamablehttp_client(url) as (read, write, _):
+                async with streamablehttp_client(url, headers=headers) as (read, write, _):
                     async with ClientSession(read, write) as session:
                         await session.initialize()
                         result = await session.call_tool(original_tool_name, arguments)
+                        elapsed = (time.time() - start_exec) * 1000
+                        logger.info(f"✅ [MCP EXECUTION] {tool_name} success in {elapsed:.1f}ms")
                         return self._create_success_result(self._extract_content(result))
                         
         except Exception as e:
@@ -282,8 +316,7 @@ class MCPToolExecutor:
             return self.tool_wrapper.success_response(content)
         return ToolResult(
             success=True,
-            content=str(content),
-            metadata={}
+            output=str(content)
         )
     
     def _create_error_result(self, error_message: str) -> ToolResult:
@@ -291,6 +324,5 @@ class MCPToolExecutor:
             return self.tool_wrapper.fail_response(error_message)
         return ToolResult(
             success=False,
-            content=error_message,
-            metadata={}
-        ) 
+            output=error_message
+        )

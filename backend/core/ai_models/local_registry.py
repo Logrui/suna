@@ -3,6 +3,7 @@ from .models import Model, ModelProvider, ModelCapability, ModelPricing, ModelCo
 from .ollama_client import OllamaClient
 from .lmstudio_client import LMStudioClient
 from core.utils.logger import logger
+from core.utils.config import config
 
 class LocalModelRegistry:
     """
@@ -16,8 +17,16 @@ class LocalModelRegistry:
         
     async def initialize(self):
         """Discover models from local providers."""
-        await self._discover_ollama()
-        await self._discover_lmstudio()
+        # Only discover if enabled and base URL is provided
+        if config.OLLAMA_ENABLED and config.OLLAMA_API_BASE:
+            await self._discover_ollama()
+        else:
+            logger.info("Ollama discovery skipped (disabled or no base URL)")
+            
+        if config.LM_STUDIO_ENABLED and config.LM_STUDIO_API_BASE:
+            await self._discover_lmstudio()
+        else:
+            logger.info("LM Studio discovery skipped (disabled or no base URL)")
         
     async def _discover_ollama(self):
         try:

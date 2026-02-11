@@ -283,3 +283,8 @@ packages/kortix-chrome-extension/dist.pem
 # iOS Build Artifacts
 ios-build/
 ~/.gemini/
+
+# MCP Lab Secrets
+backend/core/test_harness/layouts/secrets.json
+backend/core/test_harness/layouts/secrets.*.json
+

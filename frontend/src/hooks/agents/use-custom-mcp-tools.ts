@@ -15,15 +15,20 @@ export interface CustomMCPToolsResponse {
 
 export const useCustomMCPToolsData = (agentId: string, mcpConfig: any) => {
   const queryClient = useQueryClient();
-  
+
   const { data, isLoading, error, refetch } = useQuery<CustomMCPToolsResponse>({
-    queryKey: ['custom-mcp-tools', agentId, mcpConfig?.url],
+    queryKey: ['custom-mcp-tools', agentId, mcpConfig?.url || mcpConfig?.config?.url],
     queryFn: async () => {
+      const url = mcpConfig.url || mcpConfig.config?.url;
+      const type = mcpConfig.customType || mcpConfig.type || 'sse';
+
       const response = await backendApi.get(`/agents/${agentId}/custom-mcp-tools`, {
         headers: {
-          'X-MCP-URL': mcpConfig.url,
-          'X-MCP-Type': mcpConfig.type || 'sse',
-          ...(mcpConfig.headers ? { 'X-MCP-Headers': JSON.stringify(mcpConfig.headers) } : {})
+          'X-MCP-URL': url,
+          'X-MCP-Type': type,
+          ...(mcpConfig.headers || mcpConfig.config?.headers ? {
+            'X-MCP-Headers': JSON.stringify(mcpConfig.headers || mcpConfig.config?.headers)
+          } : {})
         }
       });
       if (!response.success) {
@@ -31,15 +36,18 @@ export const useCustomMCPToolsData = (agentId: string, mcpConfig: any) => {
       }
       return response.data;
     },
-    enabled: !!agentId && !!mcpConfig?.url,
+    enabled: !!agentId && !!(mcpConfig?.url || mcpConfig?.config?.url),
     staleTime: 5 * 60 * 1000,
   });
 
   const updateToolsMutation = useMutation({
     mutationFn: async (enabledTools: string[]) => {
+      const url = mcpConfig.url || mcpConfig.config?.url;
+      const type = mcpConfig.customType || mcpConfig.type || 'sse';
+
       const response = await backendApi.post(`/agents/${agentId}/custom-mcp-tools`, {
-        url: mcpConfig.url,
-        type: mcpConfig.type || 'sse',
+        url: url,
+        type: type,
         enabled_tools: enabledTools,
       });
       if (!response.success) {

@@ -1,0 +1,521 @@
+﻿2026-02-14T03:20:37.503800Z [info     ] OllamaClient initialized but disabled via configuration filename=ollama_client.py func_name=__init__ lineno=49
+2026-02-14T03:20:37.503800Z [info     ] LMStudioClient initialized but disabled via configuration filename=lmstudio_client.py func_name=__init__ lineno=40
+2026-02-14T03:20:37.505394Z [info     ] LiteLLM Router configured with 9 fallback rules filename=llm.py func_name=setup_provider_router lineno=78
+2026-02-14T03:20:38.090666Z [debug    ] ≡ƒöì Langfuse Environment Check:  filename=langfuse.py func_name=<module> lineno=14
+2026-02-14T03:20:38.090666Z [debug    ]   - Public Key: Γ£à Set          filename=langfuse.py func_name=<module> lineno=15
+2026-02-14T03:20:38.090666Z [debug    ]   - Secret Key: Γ£à Set          filename=langfuse.py func_name=<module> lineno=16
+2026-02-14T03:20:38.090666Z [debug    ]   - Host: https://us.cloud.langfuse.com filename=langfuse.py func_name=<module> lineno=17
+2026-02-14T03:20:38.090666Z [debug    ]   - Enabled: True              filename=langfuse.py func_name=<module> lineno=18
+2026-02-14T03:20:38.090666Z [debug    ] ≡ƒöì Initializing Langfuse with host: https://us.cloud.langfuse.com filename=langfuse.py func_name=<module> lineno=22
+2026-02-14T03:20:38.472780Z [info     ] Γ£à Langfuse initialized successfully - Host: https://us.cloud.langfuse.com filename=langfuse.py func_name=<module> lineno=42
+2026-02-14T03:20:38.472780Z [info     ] ≡ƒöì Langfuse Public Key: pk-lf-d8...58da filename=langfuse.py func_name=<module> lineno=43
+2026-02-14T03:20:38.472780Z [debug    ] ≡ƒöì Testing authentication with https://us.cloud.langfuse.com... filename=langfuse.py func_name=<module> lineno=47
+2026-02-14T03:20:38.761321Z [info     ] ≡ƒöù Langfuse authentication successful with https://us.cloud.langfuse.com filename=langfuse.py func_name=<module> lineno=50
+2026-02-14T03:20:42.044359Z [debug    ] Daytona sandbox configured successfully filename=sandbox.py func_name=<module> lineno=18
+2026-02-14T03:20:42.044864Z [debug    ] Daytona API URL set to: https://app.daytona.io/api filename=sandbox.py func_name=<module> lineno=23
+2026-02-14T03:20:42.044864Z [debug    ] Daytona target set to: us      filename=sandbox.py func_name=<module> lineno=28
+≡ƒ¢á∩╕Å  Harness environment patched with NUCLEAR options.
+≡ƒñû Simulating Agent Run for: 'ping'
+2026-02-14T03:20:42.354227Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Starting rebuild with fresh config filename=mcp_loader.py func_name=rebuild_tool_map lineno=34
+2026-02-14T03:20:42.354227Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config custom_mcps: 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=35
+2026-02-14T03:20:42.354227Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config configured_mcps: 0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=36
+2026-02-14T03:20:42.354741Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config keys: ['custom_mcps', 'account_id'] filename=mcp_loader.py func_name=rebuild_tool_map lineno=42
+2026-02-14T03:20:42.354741Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] custom_mcps (plural): 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=43
+2026-02-14T03:20:42.354741Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] custom_mcp (singular): 0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=44
+2026-02-14T03:20:42.354741Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] configured_mcps: 0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=45
+2026-02-14T03:20:42.354741Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Using custom_mcps (plural) format filename=mcp_loader.py func_name=rebuild_tool_map lineno=52
+2026-02-14T03:20:42.354741Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh custom_mcps[0]: name=mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX, toolkit_slug=None, type=sse filename=mcp_loader.py func_name=rebuild_tool_map lineno=54
+2026-02-14T03:20:42.354741Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh custom_mcps[1]: name=mcp, toolkit_slug=None, type=sse filename=mcp_loader.py func_name=rebuild_tool_map lineno=54
+2026-02-14T03:20:42.355264Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Old tool map had 0 tools: [] filename=mcp_loader.py func_name=rebuild_tool_map lineno=62
+2026-02-14T03:20:42.355264Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Normalized config: custom_mcp=2, configured_mcps=0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=72
+2026-02-14T03:20:42.355264Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Updated agent config - old custom: 0, new custom: 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=75
+2026-02-14T03:20:42.355264Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Cleared tool map and reset build flag filename=mcp_loader.py func_name=rebuild_tool_map lineno=80
+2026-02-14T03:20:42.355264Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Starting build_tool_map with force_rebuild=True filename=mcp_loader.py func_name=rebuild_tool_map lineno=83
+2026-02-14T03:20:42.355264Z [debug    ] ΓÜí [MCP JIT] Processing 2 custom MCPs and 0 configured MCPs (full discovery) filename=mcp_loader.py func_name=build_tool_map lineno=116
+2026-02-14T03:20:42.355784Z [debug    ] ΓÜí [MCP JIT] custom_mcp[0]: name=mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX, toolkit=None filename=mcp_loader.py func_name=build_tool_map lineno=119
+2026-02-14T03:20:42.355784Z [debug    ] ΓÜí [MCP JIT] custom_mcp[1]: name=mcp, toolkit=None filename=mcp_loader.py func_name=build_tool_map lineno=119
+2026-02-14T03:20:42.355784Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing custom MCP config: filename=mcp_loader.py func_name=_process_mcp_config lineno=161
+2026-02-14T03:20:42.355784Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   server_name: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_process_mcp_config lineno=162
+2026-02-14T03:20:42.355784Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   custom_type: sse filename=mcp_loader.py func_name=_process_mcp_config lineno=163
+2026-02-14T03:20:42.356303Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   cache_only: False filename=mcp_loader.py func_name=_process_mcp_config lineno=164
+2026-02-14T03:20:42.356303Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing as custom MCP (type: sse) filename=mcp_loader.py func_name=_process_mcp_config lineno=167
+2026-02-14T03:20:42.356303Z [debug    ] ΓÜí [MCP JIT] Processing custom MCP: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX (type: sse) filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=232
+2026-02-14T03:20:42.356303Z [info     ] ≡ƒöæ [Harness Mock] DB lookup for 'mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX'. Available slugs: ['mcp_desktopcommander_app_mcp'] filename=runner.py func_name=get_credential lineno=156
+2026-02-14T03:20:42.356303Z [debug    ] ≡ƒöì [Harness Mock] Comparing 'mcpvalyuapikey' with 'mcpdesktopcommanderappmcp' filename=runner.py func_name=get_credential lineno=170
+2026-02-14T03:20:42.356303Z [info     ] Γ£à [Harness Mock] Single-cred fallback: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX -> mcp_desktopcommander_app_mcp filename=runner.py func_name=get_credential lineno=178
+2026-02-14T03:20:42.356303Z [debug    ] ≡ƒöæ [MCP JIT] Used stored credential for mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=329
+2026-02-14T03:20:42.356817Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [SSE] -> https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=352
+2026-02-14T03:20:42.356817Z [info     ] ≡ƒîÉ [Harness Intercept] SSE Request to: https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=runner.py func_name=mocked_sse_client lineno=77
+2026-02-14T03:20:42.356817Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_sse_client lineno=78
+2026-02-14T03:20:42.553068Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing custom MCP config: filename=mcp_loader.py func_name=_process_mcp_config lineno=161
+2026-02-14T03:20:42.553068Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   server_name: mcp filename=mcp_loader.py func_name=_process_mcp_config lineno=162
+2026-02-14T03:20:42.553068Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   custom_type: sse filename=mcp_loader.py func_name=_process_mcp_config lineno=163
+2026-02-14T03:20:42.553068Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   cache_only: False filename=mcp_loader.py func_name=_process_mcp_config lineno=164
+2026-02-14T03:20:42.553068Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing as custom MCP (type: sse) filename=mcp_loader.py func_name=_process_mcp_config lineno=167
+2026-02-14T03:20:42.553068Z [debug    ] ΓÜí [MCP JIT] Processing custom MCP: mcp (type: sse) filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=232
+2026-02-14T03:20:42.553068Z [info     ] ≡ƒöæ [Harness Mock] DB lookup for 'mcp'. Available slugs: ['mcp_desktopcommander_app_mcp'] filename=runner.py func_name=get_credential lineno=156
+2026-02-14T03:20:42.553590Z [debug    ] ≡ƒöì [Harness Mock] Comparing 'mcp' with 'mcpdesktopcommanderappmcp' filename=runner.py func_name=get_credential lineno=170
+2026-02-14T03:20:42.553590Z [info     ] Γ£à [Harness Mock] Fuzzy matched mcp to mcp_desktopcommander_app_mcp filename=runner.py func_name=get_credential lineno=172
+2026-02-14T03:20:42.553590Z [debug    ] ≡ƒöæ [MCP JIT] Used stored credential for mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=329
+2026-02-14T03:20:42.553590Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [SSE] -> https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=352
+2026-02-14T03:20:42.553590Z [info     ] ≡ƒîÉ [Harness Intercept] SSE Request to: https://mcp.desktopcommander.app/mcp filename=runner.py func_name=mocked_sse_client lineno=77
+2026-02-14T03:20:42.553590Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_sse_client lineno=78
+2026-02-14T03:20:42.838172Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (sse @ https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:42.839795Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 353, in _discover_tools_with_fallback
+  |     async with sse_client(current_url, headers=headers) as (read, write):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 79, in mocked_sse_client
+  |     async with original_sse(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 54, in sse_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 64, in sse_client
+    |     event_source.response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '405 Method Not Allowed' for url 'https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/405
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:42.839795Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [HTTP] -> https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=362
+2026-02-14T03:20:42.839795Z [info     ] ≡ƒîÉ [Harness Intercept] HTTP Request to: https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=runner.py func_name=mocked_http_client lineno=84
+2026-02-14T03:20:42.839795Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_http_client lineno=85
+2026-02-14T03:20:43.022060Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (sse @ https://mcp.desktopcommander.app/mcp): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:43.023111Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 353, in _discover_tools_with_fallback
+  |     async with sse_client(current_url, headers=headers) as (read, write):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 79, in mocked_sse_client
+  |     async with original_sse(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 54, in sse_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 64, in sse_client
+    |     event_source.response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://mcp.desktopcommander.app/mcp'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:43.023111Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [HTTP] -> https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=362
+2026-02-14T03:20:43.023111Z [info     ] ≡ƒîÉ [Harness Intercept] HTTP Request to: https://mcp.desktopcommander.app/mcp filename=runner.py func_name=mocked_http_client lineno=84
+2026-02-14T03:20:43.023111Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_http_client lineno=85
+2026-02-14T03:20:43.406658Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (http @ https://mcp.desktopcommander.app/mcp): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:43.407698Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 363, in _discover_tools_with_fallback
+  |     async with streamablehttp_client(current_url, headers=headers) as (read, write, _):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 86, in mocked_http_client
+  |     async with original_http(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 437, in streamablehttp_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 368, in handle_request_async
+    |     await self._handle_post_request(ctx)
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 252, in _handle_post_request
+    |     response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://mcp.desktopcommander.app/mcp'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:43.408212Z [warning  ] ΓÜá∩╕Å [MCP JIT] No tools discovered for 'mcp' at https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=260
+2026-02-14T03:20:43.427610Z [info     ] Γ£¿ [MCP JIT] Success! 11 tools found via HTTP at https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=369
+2026-02-14T03:20:43.428136Z [debug    ] ΓÜí [MCP JIT] Custom MCP mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX: No enabledTools filter, loading all 11 tools filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=269
+2026-02-14T03:20:43.428136Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428136Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_academic_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428136Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_financial_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428136Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_sec_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428136Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_company_research -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428660Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_patents -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428660Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_bio_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428660Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_economics_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428660Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_contents -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428660Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_datasources -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428660Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_datasources_categories -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:43.428660Z [info     ] Γ£à [MCP JIT] mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX: Successfully registered 11 tools filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=285
+2026-02-14T03:20:43.428660Z [info     ] Γ£à [MCP JIT] Build complete: 11 tools from 2 servers in 1073.4ms (full discovery) filename=mcp_loader.py func_name=build_tool_map lineno=137
+2026-02-14T03:20:43.429190Z [info     ] ≡ƒôè [MCP JIT] Discovery Summary: filename=mcp_loader.py func_name=build_tool_map lineno=140
+2026-02-14T03:20:43.429190Z [info     ]    - custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex: 11 tools filename=mcp_loader.py func_name=build_tool_map lineno=145
+2026-02-14T03:20:43.429190Z [debug    ] ΓÜí [MCP JIT] custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex: 11 tools filename=mcp_loader.py func_name=build_tool_map lineno=155
+2026-02-14T03:20:43.429190Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Γ£à Rebuilt tool map: 11 tools loaded filename=mcp_loader.py func_name=rebuild_tool_map lineno=87
+2026-02-14T03:20:43.429190Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] New tools: ['valyu_search', 'valyu_academic_search', 'valyu_financial_search', 'valyu_sec_search', 'valyu_company_research', 'valyu_patents', 'valyu_bio_search', 'valyu_economics_search', 'valyu_contents', 'valyu_datasources']... filename=mcp_loader.py func_name=rebuild_tool_map lineno=88
+2026-02-14T03:20:43.429190Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Toolkit 'custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex': 11 tools filename=mcp_loader.py func_name=rebuild_tool_map lineno=99
+
+[Turn 1] Generating System Prompt...
+2026-02-14T03:20:43.429190Z [info     ] ≡ƒöì [MCP-PROMPT-DIRECT] Loading tools DIRECTLY from current version config filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=329
+2026-02-14T03:20:43.429190Z [info     ] ≡ƒöä [MCP JIT] Updating loader with fresh config... filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=333
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Starting rebuild with fresh config filename=mcp_loader.py func_name=rebuild_tool_map lineno=34
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config custom_mcps: 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=35
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config configured_mcps: 0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=36
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config keys: ['custom_mcps', 'account_id', 'custom_mcp', 'configured_mcps'] filename=mcp_loader.py func_name=rebuild_tool_map lineno=42
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] custom_mcps (plural): 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=43
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] custom_mcp (singular): 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=44
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] configured_mcps: 0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=45
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Using custom_mcp (singular) format filename=mcp_loader.py func_name=rebuild_tool_map lineno=48
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh custom_mcp[0]: name=mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX, toolkit_slug=None, type=sse filename=mcp_loader.py func_name=rebuild_tool_map lineno=50
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh custom_mcp[1]: name=mcp, toolkit_slug=None, type=sse filename=mcp_loader.py func_name=rebuild_tool_map lineno=50
+2026-02-14T03:20:43.429707Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Old tool map had 11 tools: ['valyu_search', 'valyu_academic_search', 'valyu_financial_search', 'valyu_sec_search', 'valyu_company_research', 'valyu_patents', 'valyu_bio_search', 'valyu_economics_search', 'valyu_contents', 'valyu_datasources']... filename=mcp_loader.py func_name=rebuild_tool_map lineno=62
+2026-02-14T03:20:43.430235Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Normalized config: custom_mcp=2, configured_mcps=0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=72
+2026-02-14T03:20:43.430235Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Updated agent config - old custom: 2, new custom: 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=75
+2026-02-14T03:20:43.430235Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Cleared tool map and reset build flag filename=mcp_loader.py func_name=rebuild_tool_map lineno=80
+2026-02-14T03:20:43.430235Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Starting build_tool_map with force_rebuild=True filename=mcp_loader.py func_name=rebuild_tool_map lineno=83
+2026-02-14T03:20:43.430235Z [debug    ] ΓÜí [MCP JIT] Processing 2 custom MCPs and 0 configured MCPs (full discovery) filename=mcp_loader.py func_name=build_tool_map lineno=116
+2026-02-14T03:20:43.430235Z [debug    ] ΓÜí [MCP JIT] custom_mcp[0]: name=mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX, toolkit=None filename=mcp_loader.py func_name=build_tool_map lineno=119
+2026-02-14T03:20:43.430235Z [debug    ] ΓÜí [MCP JIT] custom_mcp[1]: name=mcp, toolkit=None filename=mcp_loader.py func_name=build_tool_map lineno=119
+2026-02-14T03:20:43.430235Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing custom MCP config: filename=mcp_loader.py func_name=_process_mcp_config lineno=161
+2026-02-14T03:20:43.430753Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   server_name: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_process_mcp_config lineno=162
+2026-02-14T03:20:43.430753Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   custom_type: sse filename=mcp_loader.py func_name=_process_mcp_config lineno=163
+2026-02-14T03:20:43.430753Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   cache_only: False filename=mcp_loader.py func_name=_process_mcp_config lineno=164
+2026-02-14T03:20:43.430753Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing as custom MCP (type: sse) filename=mcp_loader.py func_name=_process_mcp_config lineno=167
+2026-02-14T03:20:43.430753Z [debug    ] ΓÜí [MCP JIT] Processing custom MCP: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX (type: sse) filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=232
+2026-02-14T03:20:43.430753Z [info     ] ≡ƒöæ [Harness Mock] DB lookup for 'mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX'. Available slugs: ['mcp_desktopcommander_app_mcp'] filename=runner.py func_name=get_credential lineno=156
+2026-02-14T03:20:43.430753Z [debug    ] ≡ƒöì [Harness Mock] Comparing 'mcpvalyuapikey' with 'mcpdesktopcommanderappmcp' filename=runner.py func_name=get_credential lineno=170
+2026-02-14T03:20:43.430753Z [info     ] Γ£à [Harness Mock] Single-cred fallback: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX -> mcp_desktopcommander_app_mcp filename=runner.py func_name=get_credential lineno=178
+2026-02-14T03:20:43.430753Z [debug    ] ≡ƒöæ [MCP JIT] Used stored credential for mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=329
+2026-02-14T03:20:43.430753Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [SSE] -> https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=352
+2026-02-14T03:20:43.431282Z [info     ] ≡ƒîÉ [Harness Intercept] SSE Request to: https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=runner.py func_name=mocked_sse_client lineno=77
+2026-02-14T03:20:43.431282Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_sse_client lineno=78
+2026-02-14T03:20:43.599198Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing custom MCP config: filename=mcp_loader.py func_name=_process_mcp_config lineno=161
+2026-02-14T03:20:43.599198Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   server_name: mcp filename=mcp_loader.py func_name=_process_mcp_config lineno=162
+2026-02-14T03:20:43.600206Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   custom_type: sse filename=mcp_loader.py func_name=_process_mcp_config lineno=163
+2026-02-14T03:20:43.600206Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   cache_only: False filename=mcp_loader.py func_name=_process_mcp_config lineno=164
+2026-02-14T03:20:43.600206Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing as custom MCP (type: sse) filename=mcp_loader.py func_name=_process_mcp_config lineno=167
+2026-02-14T03:20:43.600206Z [debug    ] ΓÜí [MCP JIT] Processing custom MCP: mcp (type: sse) filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=232
+2026-02-14T03:20:43.600206Z [info     ] ≡ƒöæ [Harness Mock] DB lookup for 'mcp'. Available slugs: ['mcp_desktopcommander_app_mcp'] filename=runner.py func_name=get_credential lineno=156
+2026-02-14T03:20:43.600206Z [debug    ] ≡ƒöì [Harness Mock] Comparing 'mcp' with 'mcpdesktopcommanderappmcp' filename=runner.py func_name=get_credential lineno=170
+2026-02-14T03:20:43.600206Z [info     ] Γ£à [Harness Mock] Fuzzy matched mcp to mcp_desktopcommander_app_mcp filename=runner.py func_name=get_credential lineno=172
+2026-02-14T03:20:43.600712Z [debug    ] ≡ƒöæ [MCP JIT] Used stored credential for mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=329
+2026-02-14T03:20:43.600712Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [SSE] -> https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=352
+2026-02-14T03:20:43.600712Z [info     ] ≡ƒîÉ [Harness Intercept] SSE Request to: https://mcp.desktopcommander.app/mcp filename=runner.py func_name=mocked_sse_client lineno=77
+2026-02-14T03:20:43.600712Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_sse_client lineno=78
+2026-02-14T03:20:43.836227Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (sse @ https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:43.837022Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 353, in _discover_tools_with_fallback
+  |     async with sse_client(current_url, headers=headers) as (read, write):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 79, in mocked_sse_client
+  |     async with original_sse(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 54, in sse_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 64, in sse_client
+    |     event_source.response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '405 Method Not Allowed' for url 'https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/405
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:43.837022Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [HTTP] -> https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=362
+2026-02-14T03:20:43.837022Z [info     ] ≡ƒîÉ [Harness Intercept] HTTP Request to: https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=runner.py func_name=mocked_http_client lineno=84
+2026-02-14T03:20:43.837572Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_http_client lineno=85
+2026-02-14T03:20:44.003640Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (sse @ https://mcp.desktopcommander.app/mcp): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:44.004230Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 353, in _discover_tools_with_fallback
+  |     async with sse_client(current_url, headers=headers) as (read, write):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 79, in mocked_sse_client
+  |     async with original_sse(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 54, in sse_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 64, in sse_client
+    |     event_source.response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://mcp.desktopcommander.app/mcp'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:44.004230Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [HTTP] -> https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=362
+2026-02-14T03:20:44.004230Z [info     ] ≡ƒîÉ [Harness Intercept] HTTP Request to: https://mcp.desktopcommander.app/mcp filename=runner.py func_name=mocked_http_client lineno=84
+2026-02-14T03:20:44.004230Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_http_client lineno=85
+2026-02-14T03:20:44.376505Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (http @ https://mcp.desktopcommander.app/mcp): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:44.377506Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 363, in _discover_tools_with_fallback
+  |     async with streamablehttp_client(current_url, headers=headers) as (read, write, _):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 86, in mocked_http_client
+  |     async with original_http(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 437, in streamablehttp_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 368, in handle_request_async
+    |     await self._handle_post_request(ctx)
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 252, in _handle_post_request
+    |     response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://mcp.desktopcommander.app/mcp'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:44.377506Z [warning  ] ΓÜá∩╕Å [MCP JIT] No tools discovered for 'mcp' at https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=260
+2026-02-14T03:20:44.387045Z [info     ] Γ£¿ [MCP JIT] Success! 11 tools found via HTTP at https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=369
+2026-02-14T03:20:44.387045Z [debug    ] ΓÜí [MCP JIT] Custom MCP mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX: No enabledTools filter, loading all 11 tools filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=269
+2026-02-14T03:20:44.387045Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_academic_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_financial_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_sec_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_company_research -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_patents -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_bio_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_economics_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_contents -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_datasources -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.387612Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_datasources_categories -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:44.388145Z [info     ] Γ£à [MCP JIT] mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX: Successfully registered 11 tools filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=285
+2026-02-14T03:20:44.388145Z [info     ] Γ£à [MCP JIT] Build complete: 11 tools from 2 servers in 957.9ms (full discovery) filename=mcp_loader.py func_name=build_tool_map lineno=137
+2026-02-14T03:20:44.388145Z [info     ] ≡ƒôè [MCP JIT] Discovery Summary: filename=mcp_loader.py func_name=build_tool_map lineno=140
+2026-02-14T03:20:44.388145Z [info     ]    - custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex: 11 tools filename=mcp_loader.py func_name=build_tool_map lineno=145
+2026-02-14T03:20:44.388145Z [debug    ] ΓÜí [MCP JIT] custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex: 11 tools filename=mcp_loader.py func_name=build_tool_map lineno=155
+2026-02-14T03:20:44.388145Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Γ£à Rebuilt tool map: 11 tools loaded filename=mcp_loader.py func_name=rebuild_tool_map lineno=87
+2026-02-14T03:20:44.388145Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] New tools: ['valyu_search', 'valyu_academic_search', 'valyu_financial_search', 'valyu_sec_search', 'valyu_company_research', 'valyu_patents', 'valyu_bio_search', 'valyu_economics_search', 'valyu_contents', 'valyu_datasources']... filename=mcp_loader.py func_name=rebuild_tool_map lineno=88
+2026-02-14T03:20:44.388145Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Toolkit 'custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex': 11 tools filename=mcp_loader.py func_name=rebuild_tool_map lineno=99
+2026-02-14T03:20:44.388145Z [info     ] Γ£à [MCP JIT] Loader update complete. Total tools in map: 11 filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=335
+2026-02-14T03:20:44.388145Z [info     ] ≡ƒöì [MCP-PROMPT-DIRECT] Populated 1 toolkits from JIT loader filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=359
+2026-02-14T03:20:44.388145Z [info     ] ≡ƒöì [MCP-PROMPT-DIRECT] Toolkit 'mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX': 11 tools -> ['valyu_search', 'valyu_academic_search', 'valyu_financial_search', 'valyu_sec_search', 'valyu_company_research'] filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=361
+2026-02-14T03:20:44.388914Z [info     ] ≡ƒöì [MCP-PROMPT-DIRECT] Final toolkit breakdown: filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=380
+2026-02-14T03:20:44.388914Z [info     ] ≡ƒöì [MCP-PROMPT-DIRECT]   mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX: 11 tools - ['valyu_search', 'valyu_academic_search', 'valyu_financial_search', 'valyu_sec_search', 'valyu_company_research']... filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=382
+2026-02-14T03:20:44.388914Z [info     ] ΓÜí [MCP PROMPT] Appended MCP info (1620 chars) for 1 toolkits, 11 total tools filename=prompt_manager.py func_name=_append_jit_mcp_info lineno=414
+   ...Prompt generated (1631 chars)
+
+[Turn 2] Mock Agent calls 'discover_mcp_tools'...
+2026-02-14T03:20:44.388914Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Starting rebuild with fresh config filename=mcp_loader.py func_name=rebuild_tool_map lineno=34
+2026-02-14T03:20:44.388914Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config custom_mcps: 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=35
+2026-02-14T03:20:44.388914Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config configured_mcps: 0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=36
+2026-02-14T03:20:44.388914Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh config keys: ['custom_mcps', 'account_id', 'custom_mcp', 'configured_mcps'] filename=mcp_loader.py func_name=rebuild_tool_map lineno=42
+2026-02-14T03:20:44.388914Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] custom_mcps (plural): 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=43
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] custom_mcp (singular): 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=44
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] configured_mcps: 0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=45
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Using custom_mcp (singular) format filename=mcp_loader.py func_name=rebuild_tool_map lineno=48
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh custom_mcp[0]: name=mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX, toolkit_slug=None, type=sse filename=mcp_loader.py func_name=rebuild_tool_map lineno=50
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Fresh custom_mcp[1]: name=mcp, toolkit_slug=None, type=sse filename=mcp_loader.py func_name=rebuild_tool_map lineno=50
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Old tool map had 11 tools: ['valyu_search', 'valyu_academic_search', 'valyu_financial_search', 'valyu_sec_search', 'valyu_company_research', 'valyu_patents', 'valyu_bio_search', 'valyu_economics_search', 'valyu_contents', 'valyu_datasources']... filename=mcp_loader.py func_name=rebuild_tool_map lineno=62
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Normalized config: custom_mcp=2, configured_mcps=0 filename=mcp_loader.py func_name=rebuild_tool_map lineno=72
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Updated agent config - old custom: 2, new custom: 2 filename=mcp_loader.py func_name=rebuild_tool_map lineno=75
+2026-02-14T03:20:44.389469Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Cleared tool map and reset build flag filename=mcp_loader.py func_name=rebuild_tool_map lineno=80
+2026-02-14T03:20:44.389977Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Starting build_tool_map with force_rebuild=True filename=mcp_loader.py func_name=rebuild_tool_map lineno=83
+2026-02-14T03:20:44.389977Z [debug    ] ΓÜí [MCP JIT] Processing 2 custom MCPs and 0 configured MCPs (full discovery) filename=mcp_loader.py func_name=build_tool_map lineno=116
+2026-02-14T03:20:44.389977Z [debug    ] ΓÜí [MCP JIT] custom_mcp[0]: name=mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX, toolkit=None filename=mcp_loader.py func_name=build_tool_map lineno=119
+2026-02-14T03:20:44.389977Z [debug    ] ΓÜí [MCP JIT] custom_mcp[1]: name=mcp, toolkit=None filename=mcp_loader.py func_name=build_tool_map lineno=119
+2026-02-14T03:20:44.389977Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing custom MCP config: filename=mcp_loader.py func_name=_process_mcp_config lineno=161
+2026-02-14T03:20:44.389977Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   server_name: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_process_mcp_config lineno=162
+2026-02-14T03:20:44.389977Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   custom_type: sse filename=mcp_loader.py func_name=_process_mcp_config lineno=163
+2026-02-14T03:20:44.389977Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   cache_only: False filename=mcp_loader.py func_name=_process_mcp_config lineno=164
+2026-02-14T03:20:44.390531Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing as custom MCP (type: sse) filename=mcp_loader.py func_name=_process_mcp_config lineno=167
+2026-02-14T03:20:44.390531Z [debug    ] ΓÜí [MCP JIT] Processing custom MCP: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX (type: sse) filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=232
+2026-02-14T03:20:44.390531Z [info     ] ≡ƒöæ [Harness Mock] DB lookup for 'mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX'. Available slugs: ['mcp_desktopcommander_app_mcp'] filename=runner.py func_name=get_credential lineno=156
+2026-02-14T03:20:44.390531Z [debug    ] ≡ƒöì [Harness Mock] Comparing 'mcpvalyuapikey' with 'mcpdesktopcommanderappmcp' filename=runner.py func_name=get_credential lineno=170
+2026-02-14T03:20:44.390531Z [info     ] Γ£à [Harness Mock] Single-cred fallback: mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX -> mcp_desktopcommander_app_mcp filename=runner.py func_name=get_credential lineno=178
+2026-02-14T03:20:44.390531Z [debug    ] ≡ƒöæ [MCP JIT] Used stored credential for mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=329
+2026-02-14T03:20:44.390531Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [SSE] -> https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=352
+2026-02-14T03:20:44.390531Z [info     ] ≡ƒîÉ [Harness Intercept] SSE Request to: https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=runner.py func_name=mocked_sse_client lineno=77
+2026-02-14T03:20:44.390531Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_sse_client lineno=78
+2026-02-14T03:20:44.558843Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing custom MCP config: filename=mcp_loader.py func_name=_process_mcp_config lineno=161
+2026-02-14T03:20:44.559347Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   server_name: mcp filename=mcp_loader.py func_name=_process_mcp_config lineno=162
+2026-02-14T03:20:44.559347Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   custom_type: sse filename=mcp_loader.py func_name=_process_mcp_config lineno=163
+2026-02-14T03:20:44.559347Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG]   cache_only: False filename=mcp_loader.py func_name=_process_mcp_config lineno=164
+2026-02-14T03:20:44.559347Z [info     ] ≡ƒöì [MCP-PROCESS-DEBUG] Processing as custom MCP (type: sse) filename=mcp_loader.py func_name=_process_mcp_config lineno=167
+2026-02-14T03:20:44.559347Z [debug    ] ΓÜí [MCP JIT] Processing custom MCP: mcp (type: sse) filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=232
+2026-02-14T03:20:44.559347Z [info     ] ≡ƒöæ [Harness Mock] DB lookup for 'mcp'. Available slugs: ['mcp_desktopcommander_app_mcp'] filename=runner.py func_name=get_credential lineno=156
+2026-02-14T03:20:44.559347Z [debug    ] ≡ƒöì [Harness Mock] Comparing 'mcp' with 'mcpdesktopcommanderappmcp' filename=runner.py func_name=get_credential lineno=170
+2026-02-14T03:20:44.559347Z [info     ] Γ£à [Harness Mock] Fuzzy matched mcp to mcp_desktopcommander_app_mcp filename=runner.py func_name=get_credential lineno=172
+2026-02-14T03:20:44.559347Z [debug    ] ≡ƒöæ [MCP JIT] Used stored credential for mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=329
+2026-02-14T03:20:44.559347Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [SSE] -> https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=352
+2026-02-14T03:20:44.559347Z [info     ] ≡ƒîÉ [Harness Intercept] SSE Request to: https://mcp.desktopcommander.app/mcp filename=runner.py func_name=mocked_sse_client lineno=77
+2026-02-14T03:20:44.559347Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_sse_client lineno=78
+2026-02-14T03:20:44.825558Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (sse @ https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:44.826089Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 353, in _discover_tools_with_fallback
+  |     async with sse_client(current_url, headers=headers) as (read, write):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 79, in mocked_sse_client
+  |     async with original_sse(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 54, in sse_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 64, in sse_client
+    |     event_source.response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '405 Method Not Allowed' for url 'https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/405
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:44.826610Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [HTTP] -> https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=362
+2026-02-14T03:20:44.826610Z [info     ] ≡ƒîÉ [Harness Intercept] HTTP Request to: https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=runner.py func_name=mocked_http_client lineno=84
+2026-02-14T03:20:44.826610Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_http_client lineno=85
+2026-02-14T03:20:45.010323Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (sse @ https://mcp.desktopcommander.app/mcp): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:45.011329Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 353, in _discover_tools_with_fallback
+  |     async with sse_client(current_url, headers=headers) as (read, write):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 79, in mocked_sse_client
+  |     async with original_sse(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 210, in __aenter__
+  |     return await anext(self.gen)
+  |            ^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 54, in sse_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\sse.py", line 64, in sse_client
+    |     event_source.response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://mcp.desktopcommander.app/mcp'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:45.011329Z [debug    ] ≡ƒîÉ [MCP JIT] Discovery [HTTP] -> https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=362
+2026-02-14T03:20:45.011329Z [info     ] ≡ƒîÉ [Harness Intercept] HTTP Request to: https://mcp.desktopcommander.app/mcp filename=runner.py func_name=mocked_http_client lineno=84
+2026-02-14T03:20:45.011329Z [info     ] ≡ƒôï [Harness Intercept] Headers: {'Authorization': 'Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6ImVlNjdjMWY5LWVjZjItNGNiOC1iMGI0LWViODUyNzYzYWJkZSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29sdmJrb3pjdWZjYnB0Zm9nYXR3LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiJlN2RiNTg2NC04MzhiLTQyY2EtYmM3My1mNTcyOTJiZTY3YzAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzcxMDM5MTk1LCJpYXQiOjE3NzEwMzU1OTUsImVtYWlsIjoieWhjc2FuY3Rpb25AZ21haWwuY29tIiwicGhvbmUiOiIiLCJhcHBfbWV0YWRhdGEiOnsicHJvdmlkZXIiOiJlbWFpbCIsInByb3ZpZGVycyI6WyJlbWFpbCJdfSwidXNlcl9tZXRhZGF0YSI6eyJhdmF0YXJfdXJsIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSnBfRlB4TGJ2U1lpSG05N2pQMVY0OGpMRGljNXJOQVZ2ektqdmE0SkRmWDZCR0EtUTk9czk2LWMiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZnVsbF9uYW1lIjoiU2Vla2luZyBBbHBoYSIsInByb3ZpZGVyIjoiZ29vZ2xlIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoib3RwIiwidGltZXN0YW1wIjoxNzcxMDM1NTk1fV0sInNlc3Npb25faWQiOiJkOWU0MWE4OC1iYTg1LTRiZTQtOGU2Ny1lNWE5NzE0MGFmMzYiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.yzgWP1wE0JFtfFqXotHb2dB6DBXROXWXDT6aeA3iDYX8mmukeHfpWpMec9kb0xlM2dZJtY21z3J9ixqy-KfVqg'} filename=runner.py func_name=mocked_http_client lineno=85
+2026-02-14T03:20:45.414296Z [info     ] Γ£¿ [MCP JIT] Success! 11 tools found via HTTP at https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=369
+2026-02-14T03:20:45.415380Z [debug    ] ΓÜí [MCP JIT] Custom MCP mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX: No enabledTools filter, loading all 11 tools filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=269
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_academic_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_financial_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_sec_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_company_research -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_patents -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_bio_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.415380Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_economics_search -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.416385Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_contents -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.416385Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_datasources -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.416385Z [debug    ] ≡ƒôî [MCP JIT] Mapping tool: valyu_datasources_categories -> custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=278
+2026-02-14T03:20:45.416385Z [info     ] Γ£à [MCP JIT] mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX: Successfully registered 11 tools filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=285
+2026-02-14T03:20:45.416888Z [debug    ] Γä╣∩╕Å [MCP JIT] Probe failed (http @ https://mcp.desktopcommander.app/mcp): unhandled errors in a TaskGroup (1 sub-exception) filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=372
+2026-02-14T03:20:45.417924Z [debug    ]   + Exception Group Traceback (most recent call last):
+  |   File "d:\Homelab\suna\backend\core\jit\mcp_loader.py", line 363, in _discover_tools_with_fallback
+  |     async with streamablehttp_client(current_url, headers=headers) as (read, write, _):
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "d:\Homelab\suna\backend\core\test_harness\mcp_lab\runner.py", line 86, in mocked_http_client
+  |     async with original_http(url, headers=headers, **kwargs) as client:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "C:\Users\schen\AppData\Roaming\uv\python\cpython-3.12.9-windows-x86_64-none\Lib\contextlib.py", line 231, in __aexit__
+  |     await self.gen.athrow(value)
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 437, in streamablehttp_client
+  |     async with anyio.create_task_group() as tg:
+  |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 783, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 368, in handle_request_async
+    |     await self._handle_post_request(ctx)
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\mcp\client\streamable_http.py", line 252, in _handle_post_request
+    |     response.raise_for_status()
+    |   File "D:\Homelab\suna\backend\.venv\Lib\site-packages\httpx\_models.py", line 829, in raise_for_status
+    |     raise HTTPStatusError(message, request=request, response=self)
+    | httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'https://mcp.desktopcommander.app/mcp'
+    | For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+    +------------------------------------
+ filename=mcp_loader.py func_name=_discover_tools_with_fallback lineno=373
+2026-02-14T03:20:45.417924Z [warning  ] ΓÜá∩╕Å [MCP JIT] No tools discovered for 'mcp' at https://mcp.desktopcommander.app/mcp filename=mcp_loader.py func_name=_process_custom_mcp_config_internal lineno=260
+2026-02-14T03:20:45.417924Z [info     ] Γ£à [MCP JIT] Build complete: 11 tools from 2 servers in 1027.9ms (full discovery) filename=mcp_loader.py func_name=build_tool_map lineno=137
+2026-02-14T03:20:45.418452Z [info     ] ≡ƒôè [MCP JIT] Discovery Summary: filename=mcp_loader.py func_name=build_tool_map lineno=140
+2026-02-14T03:20:45.418452Z [info     ]    - custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex: 11 tools filename=mcp_loader.py func_name=build_tool_map lineno=145
+2026-02-14T03:20:45.418452Z [debug    ] ΓÜí [MCP JIT] custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex: 11 tools filename=mcp_loader.py func_name=build_tool_map lineno=155
+2026-02-14T03:20:45.418452Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Γ£à Rebuilt tool map: 11 tools loaded filename=mcp_loader.py func_name=rebuild_tool_map lineno=87
+2026-02-14T03:20:45.418452Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] New tools: ['valyu_search', 'valyu_academic_search', 'valyu_financial_search', 'valyu_sec_search', 'valyu_company_research', 'valyu_patents', 'valyu_bio_search', 'valyu_economics_search', 'valyu_contents', 'valyu_datasources']... filename=mcp_loader.py func_name=rebuild_tool_map lineno=88
+2026-02-14T03:20:45.418452Z [info     ] ≡ƒöì [MCP-REBUILD-DEBUG] Toolkit 'custom_sse_mcp?valyuapikey=16doiorluv4rvvzwqhrdo2p2w0cqd1zn9t4rqgex': 11 tools filename=mcp_loader.py func_name=rebuild_tool_map lineno=99
+   Γ£à Discovered 11 tools.
+
+[Turn 3] Mock Agent executes 'ping'...
+   Γ¥î Tool not found!

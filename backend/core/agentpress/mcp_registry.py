@@ -360,6 +360,8 @@ class MCPRegistry:
                             logger.debug(f"✅ [MCP REGISTRY] Loaded schema for {tool_name} (requested)")
                     
                     await self._cache_toolkit_schemas(toolkit_slug, toolkit_schemas)
+                    elapsed = (time.time() - toolkit_start) * 1000
+                    logger.info(f"✨ [MCP REGISTRY] Successfully loaded {len(toolkit_schemas)} schemas for toolkit '{toolkit_slug}' in {elapsed:.1f}ms")
                 
                 except Exception as e:
                     logger.warning(f"⚠️  [MCP REGISTRY] Failed to load schemas for {toolkit_slug}: {e}")
@@ -374,22 +376,43 @@ class MCPRegistry:
         """Load schemas from custom MCP servers (SSE, HTTP, JSON/stdio)"""
         schemas = {}
         
+        # Calculate headers for discovery
+        config_nested = config.get('config', {})
+        headers = (config.get('headers') or config_nested.get('headers') or {}).copy()
+        
+        # Add auth if present in config or nested config
+        access_token = config.get("access_token") or config_nested.get("access_token")
+        if access_token and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {access_token}"
+            
+        # Add custom headers if present
+        custom_headers = config.get("custom_headers") or config_nested.get("custom_headers")
+        if isinstance(custom_headers, dict):
+            headers.update(custom_headers)
+            
+        logger.debug(f"🔍 [MCP REGISTRY] Requesting schemas for custom type: {custom_type}")
+        logger.debug(f"⚙️ [MCP REGISTRY] Config: { {k: '***' if k.lower() in ('access_token', 'headers') else v for k, v in config.items()} }")
+        
+        start_load = time.time()
         try:
             if custom_type == "sse":
-                schemas = await self._load_sse_mcp_schemas(config)
+                schemas = await self._load_sse_mcp_schemas(config, headers=headers)
             elif custom_type == "http":
-                schemas = await self._load_http_mcp_schemas(config)
+                schemas = await self._load_http_mcp_schemas(config, headers=headers)
             elif custom_type == "json":
                 schemas = await self._load_json_mcp_schemas(config)
             else:
                 # Default to HTTP for unknown types
-                schemas = await self._load_http_mcp_schemas(config)
+                schemas = await self._load_http_mcp_schemas(config, headers=headers)
         except Exception as e:
             logger.error(f"❌ [MCP REGISTRY] Failed to load custom MCP schemas ({custom_type}): {e}")
-        
+            raise
+            
+        elapsed = (time.time() - start_load) * 1000
+        logger.info(f"✨ [MCP REGISTRY] Custom {custom_type} schema load complete. Found {len(schemas)} tools in {elapsed:.1f}ms.")
         return schemas
-    
-    async def _load_sse_mcp_schemas(self, config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+
+    async def _load_sse_mcp_schemas(self, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Dict[str, Any]]:
         """Load schemas from SSE MCP server"""
         url = config.get('url')
         if not url:
@@ -399,7 +422,9 @@ class MCPRegistry:
         from mcp.client.sse import sse_client
         from mcp import ClientSession
         
-        headers = config.get('headers', {})
+        if headers is None:
+            headers = config.get('headers', {})
+            
         schemas = {}
         
         try:
@@ -457,7 +482,7 @@ class MCPRegistry:
         
         return schemas
     
-    async def _load_http_mcp_schemas(self, config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    async def _load_http_mcp_schemas(self, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Dict[str, Any]]:
         """Load schemas from HTTP/Streamable HTTP MCP server"""
         url = config.get('url')
         if not url:
@@ -467,10 +492,13 @@ class MCPRegistry:
         from mcp.client.streamable_http import streamablehttp_client
         from mcp import ClientSession
         
+        if headers is None:
+            headers = config.get('headers', {})
+            
         schemas = {}
         
         try:
-            async with streamablehttp_client(url) as (read_stream, write_stream, _):
+            async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools_result = await session.list_tools()
@@ -568,6 +596,7 @@ class MCPRegistry:
                 return self._fail_response(f"MCP tool {tool_name} has no active instance")
             
             # Call the tool method
+            logger.info(f"🚀 [MCP EXECUTION] Calling {tool_name} with {len(args)} args...")
             method = getattr(tool_info.instance, tool_name)
             result = await method(**args) if args else await method()
             
@@ -578,7 +607,7 @@ class MCPRegistry:
             context.execution_stats['tools_executed'] += 1
             context.execution_stats['total_execution_time_ms'] += execution_time_ms
             
-            logger.debug(f"✅ [MCP EXECUTION] {tool_name} executed in {execution_time_ms:.1f}ms")
+            logger.info(f"✅ [MCP EXECUTION] {tool_name} completed in {execution_time_ms:.1f}ms")
             return result
             
         except Exception as e:

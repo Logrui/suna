@@ -11,11 +11,11 @@ host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 # Determine if Langfuse should be enabled
 enabled = bool(public_key and secret_key)
 
-logger.debug(f"🔍 Langfuse Environment Check:")
-logger.debug(f"  - Public Key: {'✅ Set' if public_key else '❌ Missing'}")
-logger.debug(f"  - Secret Key: {'✅ Set' if secret_key else '❌ Missing'}")
-logger.debug(f"  - Host: {host}")
-logger.debug(f"  - Enabled: {enabled}")
+#logger.debug(f"🔍 Langfuse Environment Check:")
+#logger.debug(f"  - Public Key: {'✅ Set' if public_key else '❌ Missing'}")
+#logger.debug(f"  - Secret Key: {'✅ Set' if secret_key else '❌ Missing'}")
+#logger.debug(f"  - Host: {host}")
+#logger.debug(f"  - Enabled: {enabled}")
 
 # Initialize client using singleton pattern
 if enabled:

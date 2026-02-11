@@ -243,6 +243,30 @@ export function DashboardContent() {
     }
   }, [searchParams, queryClient, router, setSidebarOpen]);
 
+  // Handle MCP OAuth success notification on dashboard
+  React.useEffect(() => {
+    const mcpAuth = searchParams.get('mcp_auth');
+    const agentIdParam = searchParams.get('agent_id');
+
+    if (mcpAuth === 'success') {
+      toast.success('MCP Server linked successfully!');
+
+      // If we have an agent_id in the URL, invalidate its specific detail query
+      if (agentIdParam) {
+        queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentIdParam] });
+      } else {
+        // Fallback: invalidate all agent queries
+        queryClient.invalidateQueries({ queryKey: ['agents'] });
+      }
+
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('mcp_auth');
+      url.searchParams.delete('agent_id');
+      router.replace(url.pathname + url.search, { scroll: false });
+    }
+  }, [searchParams, queryClient, router]);
+
   // Handle expired link notification for logged-in users
   React.useEffect(() => {
     const linkExpired = searchParams.get('linkExpired');

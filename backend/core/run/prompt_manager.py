@@ -257,15 +257,15 @@ If relevant context seems missing, ask a clarifying question.
                 
                 if fresh_mcp_config:
                     logger.debug(f"🔄 [MCP PROMPT] Using fresh MCP config from current version: {len(fresh_mcp_config.get('configured_mcps', []))} configured, {len(fresh_mcp_config.get('custom_mcp', []))} custom")
-                    # Map to the format this method expects (custom_mcps vs custom_mcp)
+                    # Standardized config format
                     agent_config = {
                         'configured_mcps': fresh_mcp_config.get('configured_mcps', []),
-                        'custom_mcps': fresh_mcp_config.get('custom_mcp', [])  # Map custom_mcp to custom_mcps for this method
+                        'custom_mcp': fresh_mcp_config.get('custom_mcp', [])
                     }
             except Exception as e:
                 logger.warning(f"Failed to load fresh MCP config, using provided config: {e}")
         
-        if not (agent_config and (agent_config.get('configured_mcps') or agent_config.get('custom_mcps')) and mcp_wrapper_instance and mcp_wrapper_instance._initialized):
+        if not (agent_config and (agent_config.get('configured_mcps') or agent_config.get('custom_mcp')) and mcp_wrapper_instance and mcp_wrapper_instance._initialized):
             return system_content
         
         mcp_info = "\n\n--- MCP Tools Available ---\n"
@@ -323,64 +323,49 @@ If relevant context seems missing, ask a clarifying question.
                 fresh_mcp_config = await version_service.get_current_mcp_config(agent_id, user_id)
                 
                 if fresh_mcp_config:
-                    custom_mcps = fresh_mcp_config.get('custom_mcp', [])
+                    custom_mcp = fresh_mcp_config.get('custom_mcp', [])
                     configured_mcps = fresh_mcp_config.get('configured_mcps', [])
                     
                     logger.info(f"🔍 [MCP-PROMPT-DIRECT] Loading tools DIRECTLY from current version config")
-                    logger.info(f"🔍 [MCP-PROMPT-DIRECT] custom_mcp count: {len(custom_mcps)}, configured_mcps count: {len(configured_mcps)}")
-                    
-                    for mcp in custom_mcps:
-                        mcp_name = mcp.get('name', 'unknown')
-                        toolkit_slug = mcp.get('toolkit_slug', '')
-                        enabled_tools = mcp.get('enabledTools', [])
-                        mcp_type = mcp.get('type') or mcp.get('customType', '')
-                        
-                        logger.info(f"🔍 [MCP-PROMPT-DIRECT] Processing custom_mcp: name={mcp_name}, toolkit={toolkit_slug}, type={mcp_type}, enabledTools={len(enabled_tools)}")
-                        
-                        if enabled_tools:
-                            if mcp_type in ('sse', 'http', 'json'):
-                                display_name = mcp_name.upper().replace(' ', '_')
-                            else:
-                                display_name = toolkit_slug.upper() if toolkit_slug else mcp_name.upper().replace(' ', '_')
-                            
-                            if display_name not in toolkit_tools:
-                                toolkit_tools[display_name] = []
-                            
-                            for tool in enabled_tools:
-                                if tool not in toolkit_tools[display_name]:
-                                    toolkit_tools[display_name].append(tool)
-                            
-                            logger.info(f"🔍 [MCP-PROMPT-DIRECT] ✅ Added {len(enabled_tools)} tools for {display_name}")
-                    
-                    for mcp in configured_mcps:
-                        mcp_name = mcp.get('name', 'unknown')
-                        toolkit_slug = mcp.get('toolkit_slug', '')
-                        enabled_tools = mcp.get('enabledTools', [])
-                        qualified_name = mcp.get('qualifiedName', '')
-                        
-                        if not toolkit_slug and qualified_name:
-                            toolkit_slug = qualified_name.split('.')[-1]
-                        
-                        logger.info(f"🔍 [MCP-PROMPT-DIRECT] Processing configured_mcp: name={mcp_name}, toolkit={toolkit_slug}, enabledTools={len(enabled_tools)}")
-                        
-                        if enabled_tools:
-                            display_name = toolkit_slug.upper() if toolkit_slug else mcp_name.upper().replace(' ', '_')
-                            
-                            if display_name not in toolkit_tools:
-                                toolkit_tools[display_name] = []
-                            
-                            for tool in enabled_tools:
-                                if tool not in toolkit_tools[display_name]:
-                                    toolkit_tools[display_name].append(tool)
-                            
-                            logger.info(f"🔍 [MCP-PROMPT-DIRECT] ✅ Added {len(enabled_tools)} tools for {display_name}")
                     
                     if mcp_loader:
                         try:
+                            logger.info(f"🔄 [MCP JIT] Updating loader with fresh config...")
                             await mcp_loader.rebuild_tool_map(fresh_mcp_config)
-                            logger.debug(f"🔄 [MCP JIT] Updated loader with current version config")
+                            logger.info(f"✅ [MCP JIT] Loader update complete. Total tools in map: {len(mcp_loader.tool_map)}")
+                            
+                            # Populate toolkit_tools from the authoritative JIT loader map
+                            toolkit_tools = {}
+                            for tool_name, tool_info in mcp_loader.tool_map.items():
+                                toolkit = tool_info.toolkit_slug
+                                # Prefer human-readable name from config if available
+                                mcp_config = getattr(tool_info, 'mcp_config', {})
+                                display_name = mcp_config.get('name')
+                                
+                                if not display_name:
+                                    display_name = toolkit.replace('custom_sse_', '').replace('custom_http_', '').replace('custom_json_', '').replace('_', ' ').title()
+                                
+                                # Special handling for standard toolkits like google_drive
+                                if toolkit == 'google_drive':
+                                    display_name = "Google Drive"
+                                
+                                if display_name not in toolkit_tools:
+                                    toolkit_tools[display_name] = []
+                                
+                                # Prevent duplicates
+                                if tool_name not in toolkit_tools[display_name]:
+                                    toolkit_tools[display_name].append(tool_name)
+                                
+                            logger.info(f"🔍 [MCP-PROMPT-DIRECT] Populated {len(toolkit_tools)} toolkits from JIT loader")
+                            for k, v in toolkit_tools.items():
+                                logger.info(f"🔍 [MCP-PROMPT-DIRECT] Toolkit '{k}': {len(v)} tools -> {v[:5]}")
                         except Exception as e:
-                            logger.warning(f"Failed to update mcp_loader (non-critical): {e}")
+                            logger.error(f"❌Failed to update/read mcp_loader: {e}", exc_info=True)
+                            # Fallback to manual parsing if JIT fails
+                            toolkit_tools = PromptManager._parse_tools_from_config(fresh_mcp_config)
+                    else:
+                        logger.warning("⚠️ mcp_loader not available, falling back to static config parsing")
+                        toolkit_tools = PromptManager._parse_tools_from_config(fresh_mcp_config)
                 else:
                     logger.warning(f"🔍 [MCP-PROMPT-DIRECT] ❌ No fresh config returned from version service")
             except Exception as e:
@@ -429,6 +414,57 @@ If relevant context seems missing, ask a clarifying question.
         logger.info(f"⚡ [MCP PROMPT] Appended MCP info ({len(mcp_jit_info)} chars) for {len(toolkit_tools)} toolkits, {total_tools} total tools")
         return system_content + mcp_jit_info
     
+    @staticmethod
+    def _parse_tools_from_config(fresh_mcp_config: dict) -> dict:
+        toolkit_tools = {}
+        if not fresh_mcp_config:
+            return toolkit_tools
+            
+        custom_mcps = fresh_mcp_config.get('custom_mcp', [])
+        configured_mcps = fresh_mcp_config.get('configured_mcps', [])
+        
+        logger.info(f"🔍 [MCP-PROMPT-FALLBACK] Parsing config: {len(custom_mcps)} custom, {len(configured_mcps)} configured")
+        
+        for mcp in custom_mcps:
+            mcp_name = mcp.get('name', 'unknown')
+            toolkit_slug = mcp.get('toolkit_slug', '')
+            enabled_tools = mcp.get('enabledTools', [])
+            mcp_type = mcp.get('type') or mcp.get('customType', '')
+            
+            if enabled_tools:
+                if mcp_type in ('sse', 'http', 'json'):
+                    display_name = mcp_name.upper().replace(' ', '_')
+                else:
+                    display_name = toolkit_slug.upper() if toolkit_slug else mcp_name.upper().replace(' ', '_')
+                
+                if display_name not in toolkit_tools:
+                    toolkit_tools[display_name] = []
+                
+                for tool in enabled_tools:
+                    if tool not in toolkit_tools[display_name]:
+                        toolkit_tools[display_name].append(tool)
+        
+        for mcp in configured_mcps:
+            mcp_name = mcp.get('name', 'unknown')
+            toolkit_slug = mcp.get('toolkit_slug', '')
+            enabled_tools = mcp.get('enabledTools', [])
+            qualified_name = mcp.get('qualifiedName', '')
+            
+            if not toolkit_slug and qualified_name:
+                toolkit_slug = qualified_name.split('.')[-1]
+            
+            if enabled_tools:
+                display_name = toolkit_slug.upper() if toolkit_slug else mcp_name.upper().replace(' ', '_')
+                
+                if display_name not in toolkit_tools:
+                    toolkit_tools[display_name] = []
+                
+                for tool in enabled_tools:
+                    if tool not in toolkit_tools[display_name]:
+                        toolkit_tools[display_name].append(tool)
+                        
+        return toolkit_tools
+
     @staticmethod
     def _append_xml_tool_calling_instructions(system_content: str, xml_tool_calling: bool, tool_registry) -> str:
         if not (xml_tool_calling and tool_registry):

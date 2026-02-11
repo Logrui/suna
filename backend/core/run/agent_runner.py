@@ -741,34 +741,31 @@ class AgentRunner:
                 logger.info(f"🔍 [AGENT-MCP-DEBUG] fresh configured_mcp[{i}]: name={mcp.get('name')}, toolkit_slug={mcp.get('toolkit_slug')}")
             
             old_custom_mcps = len(self.config.agent_config.get("custom_mcps", []))
-            old_configured_mcps = len(self.config.agent_config.get("configured_mcps", []))
             
             agent_config_update = {
-                'custom_mcps': fresh_config.get('custom_mcp', []),
+                'custom_mcp': fresh_config.get('custom_mcp', []),
                 'configured_mcps': fresh_config.get('configured_mcps', [])
             }
             self.config.agent_config.update(agent_config_update)
             
-            logger.info(f"🔍 [AGENT-MCP-DEBUG] Updated agent config: old custom={old_custom_mcps}, new custom={len(self.config.agent_config.get('custom_mcps', []))}")
-            logger.info(f"🔍 [AGENT-MCP-DEBUG] Updated agent config: old configured={old_configured_mcps}, new configured={len(self.config.agent_config.get('configured_mcps', []))}")
-            
+            logger.info(f"🔍 [AGENT-MCP-DEBUG] Updated agent config: new custom={len(self.config.agent_config.get('custom_mcp', []))}, new configured={len(self.config.agent_config.get('configured_mcps', []))}")
             self.thread_manager.tool_registry.invalidate_mcp_cache()
         else:
             logger.warning(f"🔍 [AGENT-MCP-DEBUG] ❌ No fresh config loaded")
         
-        custom_mcps = self.config.agent_config.get("custom_mcps", [])
+        custom_mcp = self.config.agent_config.get("custom_mcp", [])
         configured_mcps = self.config.agent_config.get("configured_mcps", [])
         
-        logger.debug(f"⚡ [MCP JIT] Loading MCPs: {len(custom_mcps)} custom, {len(configured_mcps)} configured")
-        for i, mcp in enumerate(custom_mcps):
+        logger.debug(f"⚡ [MCP JIT] Loading MCPs: {len(custom_mcp)} custom, {len(configured_mcps)} configured")
+        for i, mcp in enumerate(custom_mcp):
             logger.debug(f"⚡ [MCP JIT] Custom MCP {i}: name={mcp.get('name')}, toolkit_slug={mcp.get('toolkit_slug')}, type={mcp.get('type')}")
         
-        if custom_mcps or configured_mcps:
+        if custom_mcp or configured_mcps:
             try:
                 from core.jit.mcp_loader import MCPJITLoader
                 
                 mcp_config = {
-                    'custom_mcp': custom_mcps,
+                    'custom_mcp': custom_mcp,
                     'configured_mcps': configured_mcps,
                     'account_id': self.config.account_id or self.config.agent_config.get('account_id')
                 }

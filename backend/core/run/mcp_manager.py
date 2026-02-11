@@ -15,8 +15,8 @@ class MCPManager:
         if agent_config.get('configured_mcps'):
             all_mcps.extend(agent_config['configured_mcps'])
         
-        if agent_config.get('custom_mcps'):
-            for custom_mcp in agent_config['custom_mcps']:
+        if agent_config.get('custom_mcp'):
+            for custom_mcp in agent_config['custom_mcp']:
                 custom_type = custom_mcp.get('customType', custom_mcp.get('type', 'sse'))
                 
                 if custom_type == 'composio':

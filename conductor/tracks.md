@@ -52,8 +52,23 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Allows manual knowledge management and project-specific context injection.*
 *Link: [./conductor/tracks/project_memories_20260210/](./conductor/tracks/project_memories_20260210/)*
 
-- [ ] **Track: Dynamic MCP OAuth & Advanced Configuration**
+- [~] **Track: Dynamic MCP OAuth & Advanced Configuration**
 *Allows adding advanced MCP servers with OAuth 2.1 discovery and custom headers.*
 *Link: [./conductor/tracks/mcp_dynamic_auth_20260211/](./conductor/tracks/mcp_dynamic_auth_20260211/)*
 
+
+- [~] **Track: Refine Custom MCP OAuth (2-Stage Flow)**
+*Implements a 2-stage integration process for custom MCP servers to improve OAuth reliability and UX.*
+*Link: [./conductor/tracks/feature_custom_mcp_oauth_2stage_20260212/](./conductor/tracks/feature_custom_mcp_oauth_2stage_20260212/)*
+
 ---
+
+- [~] **Track: MCP Test Harness & Lab (Component Isolation)**
+*Enable offline, dependency-free testing of MCP Discovery and Execution.*
+*Link: [./conductor/tracks/mcp_test_harness_20260213/](./conductor/tracks/mcp_test_harness_20260213/)*
+
+
+- [~] **Track: MCP Test Harness & Lab (Component Isolation)**
+*Enable offline, dependency-free testing of MCP Discovery and Execution.*
+*Link: [./conductor/tracks/mcp_test_harness_20260213/](./conductor/tracks/mcp_test_harness_20260213/)*
+

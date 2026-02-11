@@ -113,36 +113,24 @@ class CredentialService:
     ) -> str:
         logger.debug(f"Storing credential for {mcp_qualified_name}")
         
-        credential_id = str(uuid.uuid4())
         encrypted_config, config_hash = self._encryption.encrypt_config(config)
         encoded_config = base64.b64encode(encrypted_config).decode('utf-8')
         
         client = await self._db.client
         
-        existing = await client.table('user_mcp_credentials').select('credential_id')\
-            .eq('account_id', account_id)\
-            .eq('mcp_qualified_name', mcp_qualified_name)\
-            .eq('is_active', True)\
-            .execute()
-        
-        if existing.data:
-            await client.table('user_mcp_credentials').update({
-                'is_active': False,
-                'updated_at': datetime.now(timezone.utc).isoformat()
-            }).eq('credential_id', existing.data[0]['credential_id']).execute()
-        
-        result = await client.table('user_mcp_credentials').insert({
-            'credential_id': credential_id,
+        # Use upsert to handle existing records and avoid unique constraint violations
+        # We target account_id and mcp_qualified_name as the conflict columns
+        result = await client.table('user_mcp_credentials').upsert({
             'account_id': account_id,
             'mcp_qualified_name': mcp_qualified_name,
             'display_name': display_name,
             'encrypted_config': encoded_config,
             'config_hash': config_hash,
             'is_active': True,
-            'created_at': datetime.now(timezone.utc).isoformat(),
             'updated_at': datetime.now(timezone.utc).isoformat()
-        }).execute()
+        }, on_conflict='account_id,mcp_qualified_name').execute()
         
+        credential_id = result.data[0]['credential_id']
         logger.debug(f"Stored credential {credential_id} for {mcp_qualified_name}")
         return credential_id
     

@@ -39,6 +39,21 @@ export default function AgentConfigPage() {
   const { data: agent, isLoading } = useAgent(agentId);
   const updateAgentMutation = useUpdateAgent();
 
+  // Handle OAuth success toast and refresh
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('mcp_auth') === 'success') {
+        toast.success('MCP Server linked successfully!');
+        // Invalidate query to ensure we have the latest agent data with the new MCP
+        queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentId] });
+        // Clean up URL
+        const decodePath = window.location.pathname;
+        window.history.replaceState({}, '', decodePath);
+      }
+    }
+  }, [agentId, queryClient]);
+
   // Sync local name with agent name
   useEffect(() => {
     if (agent?.name) {

@@ -281,9 +281,11 @@ class ComposioProfileService:
             query = client.table('user_mcp_credential_profiles').select('*').eq('account_id', account_id)
             
             if toolkit_slug:
-                query = query.eq('mcp_qualified_name', f"composio.{toolkit_slug}")
-            else:
-                query = query.like('mcp_qualified_name', 'composio.%')
+                # Handle both composio slug and direct qualified name
+                if toolkit_slug.startswith('custom_'):
+                     query = query.eq('mcp_qualified_name', toolkit_slug)
+                else:
+                     query = query.eq('mcp_qualified_name', f"composio.{toolkit_slug}")
             
             result = await query.execute()
             

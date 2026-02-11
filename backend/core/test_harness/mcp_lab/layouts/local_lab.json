@@ -1,0 +1,17 @@
+{
+    "account_id": "harness_user",
+    "custom_mcp": [
+        {
+            "name": "desktop_commander",
+            "url": "https://mcp.desktopcommander.app/mcp",
+            "type": "http",
+            "config": {}
+        },
+        {
+            "name": "valyu_ai",
+            "url": "https://mcp.valyu.ai/mcp?valyuApiKey=16DoiorLuv4rvvzwQhRdo2p2W0CqD1ZN9t4RQGeX",
+            "type": "http",
+            "config": {}
+        }
+    ]
+}

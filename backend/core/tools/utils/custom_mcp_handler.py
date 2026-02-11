@@ -41,7 +41,14 @@ class CustomMCPHandler:
     
     async def _initialize_single_custom_mcp(self, config: Dict[str, Any]):
         custom_type = config.get('customType', 'sse')
-        server_config = config.get('config', {})
+        server_config = config.get('config', {}).copy()
+        
+        # Merge top-level auth/config if they are in the parent but missing in nested config
+        # This occurs in common configuration patterns for the UI and DB
+        for key in ['access_token', 'custom_headers', 'url', 'auth_type']:
+            if key in config and key not in server_config:
+                server_config[key] = config[key]
+        
         enabled_tools = config.get('enabledTools', config.get('enabled_tools', []))
         server_name = config.get('name', 'Unknown')
         
