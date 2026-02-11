@@ -16,14 +16,14 @@ This plan outlines the steps to implement the "Dynamic MCP OAuth & Advanced Conf
     - [x] Call `CredentialService.store_credential` to securely encrypt and save the token/headers.
 
 ## Phase 3: Frontend Integration
-- [ ] **Task 3.1**: Modify `apps/frontend/src/components/agents/mcp/custom-mcp-dialog.tsx`:
-    - [ ] Add the "Advanced Settings" collapsed panel.
-    - [ ] Add Form Inputs for `oauth_client_id` and `oauth_client_secret`.
-    - [ ] Implement a dynamic list component for Custom Headers (`Key` + `Value` + `Delete` button).
-    - [ ] Validate non-empty keys before submission.
-- [ ] **Task 3.2**: Implement the "Connect" button flow.
-    - [ ] Update `useCustomMCPTools` hook to detect authorization-required states (e.g., failed discovery with 401).
-    - [ ] Create a handler to trigger `window.location.href = backendUrl + '/v1/mcp/auth/start?url=' + mcpUrl + '&return_url=' + window.location.href`.
+- [x] **Task 3.1**: Modify `apps/frontend/src/components/agents/mcp/custom-mcp-dialog.tsx`:
+    - [x] Add the "Advanced Settings" collapsed panel.
+    - [x] Add Form Inputs for `oauth_client_id` and `oauth_client_secret`.
+    - [x] Implement a dynamic list component for Custom Headers (`Key` + `Value` + `Delete` button).
+    - [x] Validate non-empty keys before submission.
+- [x] **Task 3.2**: Implement the "Connect" button flow.
+    - [x] Update `useCustomMCPTools` hook to detect authorization-required states (e.g., failed discovery with 401).
+    - [x] Create a handler to trigger `window.location.href = backendUrl + '/v1/mcp/auth/start?url=' + mcpUrl + '&return_url=' + window.location.href`.
 
 ## Phase 4: Integration Testing & Docs
 - [ ] **Task 4.1**: Create a local test MCP server (or mock) that requires specific headers.
