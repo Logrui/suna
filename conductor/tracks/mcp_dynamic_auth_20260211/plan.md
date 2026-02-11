@@ -8,12 +8,12 @@ This plan outlines the steps to implement the "Dynamic MCP OAuth & Advanced Conf
 - [x] **Task 1.3**: Extend `MCPService` (`mcp_service.py`) and `_connect_server_internal` to parse and store custom headers from the `config` dictionary.
 
 ## Phase 2: OAuth Handshake (New Endpoints)
-- [ ] **Task 2.1**: Implement `GET /v1/mcp/auth/start` endpoint in `backend/core/mcp_module/api.py`.
-    - [ ] Create `MCPAuthService.py` or modify `MCPService.py` for metadata discovery (`/.well-known/oauth-authorization-server`) and state generation.
-    - [ ] Implement Dynamic Client Registration logic (optional fallback if configured).
-- [ ] **Task 2.2**: Implement `GET /v1/mcp/auth/callback` endpoint in `backend/core/mcp_module/api.py`.
-    - [ ] Handle code exchange with the detected token endpoint.
-    - [ ] Call `CredentialService.store_credential` to securely encrypt and save the token/headers.
+- [x] **Task 2.1**: Implement `GET /v1/mcp/auth/start` endpoint in `backend/core/mcp_module/api.py`.
+    - [x] Create `MCPAuthService.py` or modify `MCPService.py` for metadata discovery (`/.well-known/oauth-authorization-server`) and state generation.
+    - [x] Implement Dynamic Client Registration logic (optional fallback if configured).
+- [x] **Task 2.2**: Implement `GET /v1/mcp/auth/callback` endpoint in `backend/core/mcp_module/api.py`.
+    - [x] Handle code exchange with the detected token endpoint.
+    - [x] Call `CredentialService.store_credential` to securely encrypt and save the token/headers.
 
 ## Phase 3: Frontend Integration
 - [ ] **Task 3.1**: Modify `apps/frontend/src/components/agents/mcp/custom-mcp-dialog.tsx`:
