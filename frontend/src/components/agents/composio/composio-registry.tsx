@@ -229,6 +229,106 @@ const CustomMCPCard = ({
   );
 };
 
+// ... existing CustomMCPCard ...
+
+const AppCard = ({ app, profiles, onConnect, onConfigure, isConnectedToAgent, currentAgentId, mode, isBlocked, onBlockedClick }: {
+  app: ComposioToolkit;
+  profiles: ComposioProfile[];
+  onConnect: () => void;
+  onConfigure: (profile: ComposioProfile) => void;
+  isConnectedToAgent: boolean;
+  currentAgentId?: string;
+  mode?: 'full' | 'profile-only';
+  isBlocked?: boolean;
+  onBlockedClick?: () => void;
+}) => {
+  const connectedProfiles = profiles.filter(p => p.is_connected);
+  const canConnect = mode === 'profile-only' ? true : (!isConnectedToAgent && currentAgentId);
+
+  const getStatusInfo = () => {
+    if (isBlocked) {
+      return { text: 'Upgrade to connect', color: 'text-primary' };
+    }
+    if (mode === 'profile-only') {
+      return connectedProfiles.length > 0
+        ? { text: `${connectedProfiles.length} profile${connectedProfiles.length !== 1 ? 's' : ''}`, color: 'text-green-600 dark:text-green-400' }
+        : { text: 'Not connected', color: 'text-muted-foreground' };
+    }
+    if (isConnectedToAgent) {
+      return { text: 'Connected', color: 'text-blue-600 dark:text-blue-400' };
+    }
+    if (connectedProfiles.length > 0) {
+      return { text: `${connectedProfiles.length} profile${connectedProfiles.length !== 1 ? 's' : ''}`, color: 'text-green-600 dark:text-green-400' };
+    }
+    return { text: 'Not connected', color: 'text-muted-foreground' };
+  };
+
+  const status = getStatusInfo();
+
+  const handleClick = () => {
+    if (isBlocked && onBlockedClick) {
+      onBlockedClick();
+      return;
+    }
+    if (!canConnect) return;
+    if (connectedProfiles.length > 0) {
+      onConfigure(connectedProfiles[0]);
+    } else {
+      onConnect();
+    }
+  };
+
+  return (
+    <Card
+      className={cn(
+        "p-4 flex flex-col transition-all duration-200 gap-1 relative",
+        isBlocked ? "hover:bg-muted cursor-pointer hover:border-primary/50" : (canConnect ? "hover:bg-muted cursor-pointer" : "opacity-60 cursor-not-allowed")
+      )}
+      onClick={handleClick}
+    >
+      <div className={cn("absolute top-4 right-4 text-xs", status.color)}>
+        {status.text}
+      </div>
+
+      <div className="w-[40px] h-[40px] rounded-xl border border-border bg-background flex items-center justify-center mb-4 relative">
+        {app.logo ? (
+          <img src={app.logo} alt={app.name} className="w-5 h-5 object-contain" />
+        ) : (
+          <span className="text-foreground text-sm font-medium">{app.name.charAt(0)}</span>
+        )}
+        {isBlocked && (
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+            <Lock className="h-2.5 w-2.5 text-primary-foreground" strokeWidth={2.5} />
+          </div>
+        )}
+      </div>
+
+      <h3 className="font-medium text-lg leading-tight">{app.name}</h3>
+
+      <p className="text-sm text-muted-foreground flex-1 line-clamp-2 leading-snug mb-4 mt-1">
+        {app.description || `Builds user interfaces and interactive web pages.`}
+      </p>
+
+      <Button
+        variant={isBlocked ? "secondary" : "default"}
+        className={cn("w-full", isBlocked && "bg-white text-black hover:bg-white/90 border-white/20")}
+        disabled={!canConnect && !isBlocked}
+      >
+        {isBlocked ? (
+          <>
+            <Lock className="h-3.5 w-3.5 mr-2" />
+            Upgrade
+          </>
+        ) : (
+          <>
+            <span className="text-lg font-light mr-2">+</span> Add
+          </>
+        )}
+      </Button>
+    </Card>
+  );
+};
+
 // ... existing components ...
 
 export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
