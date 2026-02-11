@@ -362,7 +362,10 @@ class MCPService:
                 )
         
         try:
-            async with streamablehttp_client(url) as (read_stream, write_stream, _):
+            # Generate headers using the helper method which now supports custom_headers
+            headers = self._get_custom_headers("", config)
+
+            async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tool_result = await session.list_tools()
@@ -417,7 +420,10 @@ class MCPService:
                 )
         
         try:
-            async with sse_client(url) as (read_stream, write_stream):
+             # Generate headers using the helper method which now supports custom_headers
+            headers = self._get_custom_headers("", config)
+
+            async with sse_client(url, headers=headers) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tool_result = await session.list_tools()
@@ -477,8 +483,13 @@ class MCPService:
     def _get_custom_headers(self, qualified_name: str, config: Dict[str, Any], external_user_id: Optional[str] = None) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
         
+        # Original logic: check for "headers" key in config
         if "headers" in config:
             headers.update(config["headers"])
+            
+        # New logic: check for "custom_headers" key in config
+        if "custom_headers" in config and isinstance(config["custom_headers"], dict):
+             headers.update(config["custom_headers"])
         
         if external_user_id:
             headers["X-External-User-Id"] = external_user_id

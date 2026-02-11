@@ -13,6 +13,13 @@ class CustomMCPConnectionRequest(BaseModel):
     url: str
     config: Optional[Dict[str, Any]] = {}
 
+    # OAuth Configuration Fields (for documentation & validation)
+    oauth_client_id: Optional[str] = None
+    oauth_client_secret: Optional[str] = None
+    
+    # Custom Headers Configuration
+    custom_headers: Optional[Dict[str, str]] = None
+
 
 class CustomMCPConnectionResponse(BaseModel):
     success: bool
@@ -26,7 +33,12 @@ class CustomMCPConnectionResponse(BaseModel):
 
 class CustomMCPDiscoverRequest(BaseModel):
     type: str
-    config: Dict[str, Any]
+    config: Dict[str, Any] # This still accepts the raw config dict, validation happens inside service layer or via Pydantic model usage if we typed it strictly.
+
+    # We can explicitly add the optional fields here too if we want them to show up in the schema for Discovery
+    oauth_client_id: Optional[str] = None
+    oauth_client_secret: Optional[str] = None
+    custom_headers: Optional[Dict[str, str]] = None
 
 
 @router.post("/mcp/discover-custom-tools", summary="Discover Custom MCP Tools", operation_id="discover_custom_mcp_tools")

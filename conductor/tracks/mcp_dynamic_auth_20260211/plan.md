@@ -1,29 +1,38 @@
 # Implementation Plan: Dynamic MCP OAuth & Advanced Configuration
 
-## Phase 1: Infrastructure & Data Model
-- [ ] **Task 1.1**: Update MCP configuration models (Database or Pydantic) in the backend to store `oauth_client_id`, `oauth_client_secret`, and `custom_headers`.
-- [ ] **Task 1.2**: Update `CustomMCPConnectionResult` and related schemas to propagate these fields.
-- [ ] **Task 1.3**: Add logic to `MCPService` to inject custom headers into outgoing `streamablehttp_client` requests.
+This plan outlines the steps to implement the "Dynamic MCP OAuth & Advanced Configuration" feature in Suna Kortix.
 
-## Phase 2: OAuth Backend Implementation
-- [ ] **Task 2.1**: Implement metadata discovery service for `/.well-known/oauth-authorization-server`.
-- [ ] **Task 2.2**: Implement Dynamic Client Registration (DCR) helper.
-- [ ] **Task 2.3**: Create FastAPI endpoints:
-    - `POST /mcp/auth/start`: Initiates the OAuth flow.
-    - `GET /mcp/auth/callback`: Handles the redirect and token exchange.
-- [ ] **Task 2.4**: Implement Token Management (Secure storage of access/refresh tokens pinned to the MCP server configuration).
+## Phase 1: Backend Infrastructure & Discovery Services
+- [ ] **Task 1.1**: Update `CustomMCPConnectionRequest` in `backend/core/mcp_module/api.py` to include `oauth_client_id`, `oauth_client_secret`, and `custom_headers`.
+- [ ] **Task 1.2**: Implement strict header validation in `CustomMCPDiscoverRequest`.
+- [ ] **Task 1.3**: Extend `MCPService` (`mcp_service.py`) and `_connect_server_internal` to parse and store custom headers from the `config` dictionary.
 
-## Phase 3: Frontend UI Enhancements
-- [ ] **Task 3.1**: Modify `CustomMCPDialog.tsx` to include the "Advanced Settings" accordion.
-- [ ] **Task 3.2**: Implement the custom header list component (dynamic rows).
-- [ ] **Task 3.3**: Add inputs for OAuth Client ID and Secret.
-- [ ] **Task 3.4**: Integrate the "Connect" button logic and handle the redirect state.
+## Phase 2: OAuth Handshake (New Endpoints)
+- [ ] **Task 2.1**: Implement `GET /v1/mcp/auth/start` endpoint in `backend/core/mcp_module/api.py`.
+    - [ ] Create `MCPAuthService.py` or modify `MCPService.py` for metadata discovery (`/.well-known/oauth-authorization-server`) and state generation.
+    - [ ] Implement Dynamic Client Registration logic (optional fallback if configured).
+- [ ] **Task 2.2**: Implement `GET /v1/mcp/auth/callback` endpoint in `backend/core/mcp_module/api.py`.
+    - [ ] Handle code exchange with the detected token endpoint.
+    - [ ] Call `CredentialService.store_credential` to securely encrypt and save the token/headers.
 
-## Phase 4: Integration & Refinement
-- [ ] **Task 4.1**: Test the end-to-end flow with Desktop Commander.
-- [ ] **Task 4.2**: Verify that static headers are correctly applied during discovery and execution.
-- [ ] **Task 4.3**: Polishing: Improved error messages for failed handshakes.
+## Phase 3: Frontend Integration
+- [ ] **Task 3.1**: Modify `apps/frontend/src/components/agents/mcp/custom-mcp-dialog.tsx`:
+    - [ ] Add the "Advanced Settings" collapsed panel.
+    - [ ] Add Form Inputs for `oauth_client_id` and `oauth_client_secret`.
+    - [ ] Implement a dynamic list component for Custom Headers (`Key` + `Value` + `Delete` button).
+    - [ ] Validate non-empty keys before submission.
+- [ ] **Task 3.2**: Implement the "Connect" button flow.
+    - [ ] Update `useCustomMCPTools` hook to detect authorization-required states (e.g., failed discovery with 401).
+    - [ ] Create a handler to trigger `window.location.href = backendUrl + '/v1/mcp/auth/start?url=' + mcpUrl + '&return_url=' + window.location.href`.
 
-## Phase 5: Documentation & Cleanup
-- [ ] **Task 5.1**: Add a technical guide for adding custom MCP servers with auth.
-- [ ] **Task 5.2**: Update the project README if necessary.
+## Phase 4: Integration Testing & Docs
+- [ ] **Task 4.1**: Create a local test MCP server (or mock) that requires specific headers.
+    - [ ] Verify manual header injection works.
+- [ ] **Task 4.2**: Test with "Desktop Commander" (production environment).
+    - [ ] Verify the OAuth redirect loop completes successfully.
+    - [ ] Verify tokens are stored encrypted in DB.
+- [ ] **Task 4.3**: Add backend documentation (OpenAPI updates) and user guide.
+
+## Phase 5: Refinement
+- [ ] **Task 5.1**: Ensure error handling for timeouts or unreachable OAuth metadata endpoints is user-friendly.
+- [ ] **Task 5.2**: Clean up logging (remove sensitive tokens from logs).
