@@ -23,7 +23,8 @@ class JITLoader:
         return [
             'expand_msg_tool', 
             'message_tool', 
-            'task_list_tool', 
+            'task_list_tool',
+            'project_memory_tool',
             'sb_shell_tool',
             'sb_files_tool',
             'sb_file_reader_tool',

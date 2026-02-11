@@ -179,7 +179,7 @@ class ModelRegistry:
                 context_window=200_000,
                 capabilities=[
                     ModelCapability.CHAT,
-                    ModelCapability.FUNCTION_CALLING,AA
+                    ModelCapability.FUNCTION_CALLING,
                     ModelCapability.VISION,
                     ModelCapability.PROMPT_CACHING,
                 ],

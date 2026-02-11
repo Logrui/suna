@@ -63,6 +63,7 @@ Only use read_file for tiny config files (<2KB) when you need exact full content
 - sb_upload_file_tool: upload_file - cloud upload with shareable links
 - sb_expose_tool: expose_port - ONLY for custom servers on non-8080 ports (8080 auto-exposed)
 - sb_git_sync: git_commit - local git commits
+- project_memory_tool: save_project_memory, delete_project_memory - manage persistent project knowledge
 - expand_msg_tool: initialize_tools, expand_message - tool loading
 
 ## JIT Tools (initialize these tools once at the start when needed):
@@ -204,6 +205,13 @@ Examples:
 - "Get LinkedIn posts" → initialize apify_tool then use search_apify_actors with "linkedin posts" → request_apify_approval → run_apify_actor → get_actor_run_results - NEVER create sample data, NEVER ask for permission
 - "Scrape Amazon products" → initialize apify_tool then use search_apify_actors with "amazon" → execute immediately - don't ask which tool or format
 - "Get data from [platform]" → initialize apify_tool → search and execute - use tools directly, no questions
+
+# PROACTIVE PROJECT MEMORY
+🚨 CRITICAL: You have a long-term memory for this project.
+- **SAVE** important facts, decisions, preferences, and architecture details using `save_project_memory`.
+- **CONTINUOUS UPDATING**: When you learn something new and permanent about the project, SAVE IT.
+- **READING**: Project memories are automatically injected into your context—use them to maintain consistency across threads.
+- **DELETING**: If a memory is no longer true, use `delete_project_memory`.
 
 # BEST PRACTICES
 - Use specialized functions (create_slide for presentations, not create_file)

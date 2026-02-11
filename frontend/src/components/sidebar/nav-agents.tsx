@@ -337,6 +337,7 @@ export function NavAgents() {
   } = useDeleteMultipleThreads();
 
   const updateThreadMutation = useUpdateThreadMutation();
+  const { openModal: openMemoriesModal } = useProjectMemoriesModalStore();
 
   // Use threads directly from response
   const currentThreads = threadsResponse?.threads || [];
@@ -923,29 +924,49 @@ export function NavAgents() {
                                   </div>
 
                                   {/* Actions */}
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    {/* New chat button */}
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                                    {/* Three-dot dropdown menu */}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
                                         <button
-                                          className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground opacity-0 group-hover/project:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                                          disabled={isCreatingChat}
+                                          className="p-1 rounded-lg hover:bg-accent transition-colors text-muted-foreground opacity-0 group-hover/project:opacity-100"
                                           onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                          }}
+                                        >
+                                          <MoreHorizontal className="h-4 w-4 rotate-90" />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-48">
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.preventDefault();
                                             e.stopPropagation();
                                             handleCreateNewChat(projectGroup.projectId);
                                           }}
+                                          disabled={isCreatingChat}
                                         >
                                           {isCreatingChat ? (
-                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                           ) : (
-                                            <Plus className="h-3.5 w-3.5" />
+                                            <Plus className="mr-2 h-4 w-4" />
                                           )}
-                                        </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="right">
-                                        {isCreatingChat ? 'Creating...' : 'New chat'}
-                                      </TooltipContent>
-                                    </Tooltip>
+                                          New chat
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            openMemoriesModal(projectGroup.projectId, projectGroup.projectName);
+                                          }}
+                                        >
+                                          <Brain className="mr-2 h-4 w-4" />
+                                          Project Memory
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
 
                                     {/* Chevron */}
                                     <ChevronDown className={cn(

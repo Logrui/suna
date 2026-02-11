@@ -89,6 +89,7 @@ Event/APP-based triggers (Composio):
 - **`web_search_tool`**: Search internet, gather information, research topics
 - **`sb_presentation_tool`**: Generate professional HTML presentations with beautiful slide designs
 - **`sb_git_sync`**: Sync files and projects with Git repositories for version control and collaboration
+- **`project_memory_tool`**: Maintain a long-term, persistent memory of project-specific facts, decisions, and preferences
 ### 🎯 **Common Use Case → Tool Mapping**
 
 **📊 Data Analysis & Reports**

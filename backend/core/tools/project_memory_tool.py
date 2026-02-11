@@ -61,11 +61,10 @@ class ProjectMemoryTool(SandboxToolsBase):
             "name": "save_project_memory",
             "description": (
                 "Save an important fact, decision, or preference as a persistent project memory. "
-                "This memory will be automatically provided as context in all future conversations "
-                "within this project. Use this when you learn something important about the project "
-                "that should be remembered. Be concise but specific — each memory should be "
-                "self-contained. **🚨 PARAMETER NAMES**: Use EXACTLY these parameter names: "
-                "`content` (REQUIRED), `memory_type` (optional)."
+                "BEFORE SAVING: Use search_project_memories to check if similar information already exists. "
+                "The system will automatically try to consolidate (merge/replace/update) if similar memories exist. "
+                "Be concise but specific — each memory should be self-contained. "
+                "**🚨 PARAMETER NAMES**: Use EXACTLY these parameter names: `content` (REQUIRED), `memory_type` (optional)."
             ),
             "parameters": {
                 "type": "object",
@@ -175,3 +174,60 @@ class ProjectMemoryTool(SandboxToolsBase):
         except Exception as e:
             logger.error(f"Error deleting project memory: {e}")
             return self.fail_response(f"Failed to delete project memory: {str(e)}")
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "search_project_memories",
+            "description": (
+                "Search the project's persistent knowledge base for specific facts, decisions, or preferences. "
+                "Use this find information that might not have been automatically injected into the context. "
+                "**🚨 PARAMETER NAMES**: Use EXACTLY this parameter name: `query` (REQUIRED)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "**REQUIRED** — The search query. Can be a concept, technology name, or a specific question."
+                        ),
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Max number of results (default 10).",
+                    },
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+        },
+    })
+    async def search_project_memories(self, query: str, limit: int = 10) -> ToolResult:
+        """Search project memories."""
+        try:
+            if not query or not query.strip():
+                return self.fail_response("Search query cannot be empty")
+
+            from core.memory.project_memory_service import project_memory_service
+
+            memories = await project_memory_service.search_memories(
+                account_id=self.account_id,
+                project_id=self.project_id,
+                query_text=query.strip(),
+                limit=limit
+            )
+
+            if not memories:
+                return self.success_response(f"No memories found matching '{query}'")
+
+            formatted = []
+            for m in memories:
+                formatted.append(f"ID: {m.memory_id}\nType: {m.memory_type.value}\nContent: {m.content}\n")
+
+            return self.success_response("\n---\n".join(formatted))
+
+        except Exception as e:
+            logger.error(f"Error searching project memories: {e}")
+            return self.fail_response(f"Failed to search project memories: {str(e)}")
