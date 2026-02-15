@@ -1,0 +1,29 @@
+{
+  "name": "Valyu AI Tool Discovery & Call",
+  "turns": [
+    {
+      "id": 1,
+      "type": "message",
+      "content": "Search for the latest news on Model Context Protocol."
+    },
+    {
+      "id": 2,
+      "type": "tool_call",
+      "tool_name": "discover_mcp_tools",
+      "args": {
+        "filter": "valyu_search"
+      }
+    },
+    {
+      "id": 3,
+      "type": "tool_call",
+      "tool_name": "execute_mcp_tool",
+      "args": {
+        "tool_name": "valyu_search",
+        "args": {
+          "query": "Model Context Protocol latest news"
+        }
+      }
+    }
+  ]
+}

@@ -26,6 +26,7 @@
     - [x] Turn 2: Mock Agent calling `discover_mcp_tools`.
     - [x] Turn 3: Mock Agent calling a specific tool (e.g., `list_devices` or `research`).
 - [x] Handle Tool result propagation back to "Agent" turn.
+- [x] **Verified**: Successfully retrieved 41 tools from Valyu (unauthenticated) and Desktop Commander (authenticated) in a single unified tool map.
 
 ## Phase 5: Traceability & Reliability
 - [ ] Ensure `langfuse` client is initialized and flushed in the harness.

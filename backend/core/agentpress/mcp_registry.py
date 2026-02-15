@@ -265,11 +265,11 @@ class MCPRegistry:
                 
                 mcp_config = first_tool_info.mcp_config
                 custom_type = mcp_config.get("customType", mcp_config.get("type", "http"))
-                config = mcp_config.get("config", {})
                 
                 logger.info(f"📥 [MCP REGISTRY] Loading schemas for custom MCP {toolkit_slug} (type: {custom_type})")
                 
-                toolkit_schemas = await self._load_custom_mcp_schemas(custom_type, config)
+                # Pass the full mcp_config, _load_custom_mcp_schemas handles nesting
+                toolkit_schemas = await self._load_custom_mcp_schemas(custom_type, mcp_config)
                 
                 for tool_name in tools:
                     if tool_name in toolkit_schemas:

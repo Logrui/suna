@@ -1,7 +1,7 @@
 {
   "mcp_url": "https://mcp.desktopcommander.app/mcp",
-  "code_verifier": "25ihXY1F6_qMmeU-A0CHa19ncsFK-_Gr7kECNJ4wpG4nOaA9GOpHwTk1FpHZ6WQ5acP7JCBwRT0KzbAZxVvDRA",
+  "code_verifier": "ZID_vImZ6Z_ID_vImZ6Z_ID_vImZ6Z_ID_vImZ6Z_I",
   "token_endpoint": "https://mcp.desktopcommander.app/token",
-  "client_id": "https://api.suna.syhc.dev/v1/mcp/client-metadata.json",
+  "client_id": "mcp_client_1771136860747_o8t8idb701p",
   "redirect_uri": "https://api.suna.syhc.dev/v1/mcp/auth/callback"
 }

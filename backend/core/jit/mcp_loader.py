@@ -354,6 +354,10 @@ class MCPJITLoader:
                         return tool_names
                     else:
                         logger.debug(f"🌐 [MCP JIT] Discovery [HTTP] -> {current_url}")
+                        logger.info(f"📤 [MCP JIT] Discovery Headers: { {k: '***' if k.lower() == 'authorization' else v for k, v in headers.items()} }")
+                        if "Authorization" in headers:
+                            logger.info(f"🔑 [MCP JIT] Auth Token present in probe: Bearer {'*' * 10}{headers['Authorization'][-5:]}")
+                        
                         async def _probe_http():
                             async with streamablehttp_client(current_url, headers=headers) as (read, write, _):
                                 async with ClientSession(read, write) as session:

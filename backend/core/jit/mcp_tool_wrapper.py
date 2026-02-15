@@ -94,7 +94,7 @@ class MCPToolExecutor:
         from core.agentpress.tool import ToolResult
         
         custom_config = self.tool_info['custom_config']
-        url = custom_config.get('url')
+        url = custom_config.get('url') or self.mcp_config.get('url')
         
         if not url:
             return ToolResult(
@@ -103,6 +103,9 @@ class MCPToolExecutor:
             )
         
         headers = self._get_headers()
+        logger.info(f"📤 [MCP EXEC] Outgoing Headers: { {k: '***' if k.lower() == 'authorization' else v for k, v in headers.items()} }")
+        if "Authorization" in headers:
+            logger.info(f"🔑 [MCP EXEC] Auth Token present: Bearer {'*' * 10}{headers['Authorization'][-5:]}")
         
         try:
             async with asyncio.timeout(30):
@@ -144,7 +147,7 @@ class MCPToolExecutor:
         from core.agentpress.tool import ToolResult
         
         custom_config = self.tool_info['custom_config']
-        url = custom_config.get('url')
+        url = custom_config.get('url') or self.mcp_config.get('url')
         
         if not url:
             return ToolResult(
@@ -153,6 +156,9 @@ class MCPToolExecutor:
             )
         
         headers = self._get_headers()
+        logger.info(f"📤 [MCP EXEC] Outgoing Headers: { {k: '***' if k.lower() == 'authorization' else v for k, v in headers.items()} }")
+        if "Authorization" in headers:
+            logger.info(f"🔑 [MCP EXEC] Auth Token present: Bearer {'*' * 10}{headers['Authorization'][-5:]}")
         
         try:
             async with asyncio.timeout(30):

@@ -1,0 +1,27 @@
+{
+  "name": "Desktop Commander Tool Discovery & Call",
+  "turns": [
+    {
+      "id": 1,
+      "type": "message",
+      "content": "List my connected devices."
+    },
+    {
+      "id": 2,
+      "type": "tool_call",
+      "tool_name": "discover_mcp_tools",
+      "args": {
+        "filter": "list_devices"
+      }
+    },
+    {
+      "id": 3,
+      "type": "tool_call",
+      "tool_name": "execute_mcp_tool",
+      "args": {
+        "tool_name": "list_devices",
+        "args": {}
+      }
+    }
+  ]
+}
