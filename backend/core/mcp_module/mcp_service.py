@@ -19,6 +19,7 @@ from core.utils.logger import logger
 from core.credentials import EncryptionService, get_credential_service
 from core.utils.config import config as app_config, EnvMode
 from core.utils.ssrf import is_safe_url
+from core.utils.mcp_config_schema import get_config_value
 from core.services.supabase import DBConnection
 from core.mcp_module.custom_mcp_registry_service import CustomMCPConnectionResult
 from core.mcp_module.exceptions import (
@@ -91,10 +92,10 @@ class MCPService:
         provider = mcp_config.get('type', mcp_config.get('provider', 'custom'))
         
         request = MCPConnectionRequest(
-            qualified_name=mcp_config.get('qualifiedName', mcp_config.get('name', '')),
+            qualified_name=get_config_value(mcp_config, "qualified_name", mcp_config.get('name', '')),
             name=mcp_config.get('name', ''),
             config=mcp_config.get('config', {}),
-            enabled_tools=mcp_config.get('enabledTools', mcp_config.get('enabled_tools', [])),
+            enabled_tools=get_config_value(mcp_config, "enabled_tools", []),
             provider=provider,  # Use the determined provider
             external_user_id=external_user_id
         )
@@ -213,10 +214,10 @@ class MCPService:
             provider = config.get('type', config.get('provider', 'custom'))
             
             request = MCPConnectionRequest(
-                qualified_name=config.get('qualifiedName', config.get('name', '')),
+                qualified_name=get_config_value(config, "qualified_name", config.get('name', '')),
                 name=config.get('name', ''),
                 config=config.get('config', {}),
-                enabled_tools=config.get('enabledTools', config.get('enabled_tools', [])),
+                enabled_tools=get_config_value(config, "enabled_tools", []),
                 provider=provider,  # Use the determined provider
                 external_user_id=config.get('external_user_id')
             )

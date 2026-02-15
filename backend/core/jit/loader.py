@@ -243,14 +243,14 @@ class JITLoader:
     
     @staticmethod
     async def _create_mcp_tool_wrapper(tool_name: str, schema: Dict, tool_info):
-        from core.jit.mcp_tool_wrapper import MCPToolExecutor
-        
+        from core.tools.utils.mcp_tool_executor import MCPToolExecutor
+
         class MCPToolWrapper:
             def __init__(self, tool_name: str, schema: Dict, tool_info):
                 self.tool_name = tool_name
                 self.schema = schema
                 self.tool_info = tool_info
-                self._executor = MCPToolExecutor(tool_info.mcp_config)
+                self._executor = MCPToolExecutor.from_mcp_config(tool_info.mcp_config)
             
             def __getattr__(self, method_name: str):
                 """Handle dynamic method calls for MCP tools (same pattern as legacy MCPToolWrapper)"""

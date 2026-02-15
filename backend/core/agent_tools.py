@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request, Body
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
 from core.utils.config import config, EnvMode
+from core.utils.mcp_config_schema import get_config_value
 
 from . import core_utils as utils
 from .core_utils import _get_version_service
@@ -70,13 +71,13 @@ async def get_custom_mcp_tools_for_agent(
                     existing_mcp = mcp
                     break
             else:
-                if (mcp.get('customType') == mcp_type and 
+                if (get_config_value(mcp, "custom_type") == mcp_type and
                     mcp.get('config', {}).get('url') == mcp_url):
                     existing_mcp = mcp
                     break
-        
+
         tools = []
-        enabled_tools = existing_mcp.get('enabledTools', []) if existing_mcp else []
+        enabled_tools = get_config_value(existing_mcp, "enabled_tools", []) if existing_mcp else []
         
         for tool in discovery_result.tools:
             tools.append({
@@ -146,7 +147,7 @@ async def update_custom_mcp_tools_for_agent(
                     updated = True
                     break
             else:
-                if (mcp.get('customType') == mcp_type and 
+                if (get_config_value(mcp, "custom_type") == mcp_type and
                     mcp.get('config', {}).get('url') == mcp_url):
                     custom_mcps[i]['enabledTools'] = enabled_tools
                     updated = True
@@ -344,7 +345,7 @@ async def update_agent_custom_mcps(
             )
             logger.debug(f"Created version {new_version.version_id} for agent {agent_id}")
             
-            total_enabled_tools = sum(len(mcp.get('enabledTools', [])) for mcp in new_custom_mcps)
+            total_enabled_tools = sum(len(get_config_value(mcp, "enabled_tools", [])) for mcp in new_custom_mcps)
         except Exception as e:
             logger.error(f"Failed to create version for custom MCP tools update: {e}")
             raise HTTPException(status_code=500, detail="Failed to save changes")
@@ -408,7 +409,7 @@ async def get_agent_tools(
     mcp_tools = []
     for mcp in configured_mcps + custom_mcps:
         server = mcp.get('name')
-        enabled_tools = mcp.get('enabledTools') or mcp.get('enabled_tools') or []
+        enabled_tools = get_config_value(mcp, "enabled_tools", [])
         
         # Extract Composio-specific metadata if available
         mcp_config = mcp.get('config', {})

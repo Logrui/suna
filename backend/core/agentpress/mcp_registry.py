@@ -6,6 +6,7 @@ from enum import Enum
 
 from core.utils.logger import logger
 from core.agentpress.tool import ToolResult
+from core.utils.mcp_config_schema import get_config_value
 
 
 class MCPToolStatus(Enum):
@@ -264,7 +265,7 @@ class MCPRegistry:
                     continue
                 
                 mcp_config = first_tool_info.mcp_config
-                custom_type = mcp_config.get("customType", mcp_config.get("type", "http"))
+                custom_type = get_config_value(mcp_config, "custom_type", "http")
                 
                 logger.info(f"📥 [MCP REGISTRY] Loading schemas for custom MCP {toolkit_slug} (type: {custom_type})")
                 

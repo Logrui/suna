@@ -8,6 +8,7 @@ from core.utils.logger import logger
 from core.jit.mcp_registry import get_toolkit_tools
 from core.jit.result_types import ActivationResult, ActivationSuccess, ActivationError, ActivationErrorType
 from core.utils.ssrf import is_safe_url
+from core.utils.mcp_config_schema import get_config_value
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -147,7 +148,7 @@ class MCPJITLoader:
             logger.debug(f"⚡ [MCP JIT] {toolkit}: {count} tools")
     
     async def _process_mcp_config(self, mcp_config: Dict[str, Any], config_type: str, cache_only: bool = False) -> None:
-        custom_type = mcp_config.get("customType", mcp_config.get("type", "")).lower()
+        custom_type = get_config_value(mcp_config, "custom_type", "").lower()
         server_name = mcp_config.get('name', 'unnamed')
         
         logger.info(f"🔍 [MCP-PROCESS-DEBUG] Processing {config_type} MCP config:")
@@ -167,11 +168,11 @@ class MCPJITLoader:
             logger.warning(f"🔍 [MCP-PROCESS-DEBUG] ❌ No toolkit_slug found in {config_type} MCP config: {mcp_config}")
             return
 
-        enabled_tools = mcp_config.get('enabledTools', [])
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG] enabledTools from config: {len(enabled_tools)} tools")
+        enabled_tools = get_config_value(mcp_config, "enabled_tools", [])
+        logger.info(f"🔍 [MCP-PROCESS-DEBUG] enabled_tools from config: {len(enabled_tools)} tools")
         
         if enabled_tools:
-            logger.info(f"🔍 [MCP-PROCESS-DEBUG] ✅ Using enabledTools DIRECTLY from config (bypassing registry cache)")
+            logger.info(f"🔍 [MCP-PROCESS-DEBUG] ✅ Using enabled_tools DIRECTLY from config (bypassing registry cache)")
             logger.info(f"🔍 [MCP-PROCESS-DEBUG] {toolkit_slug}: {len(enabled_tools)} enabled tools: {enabled_tools[:10]}{'...' if len(enabled_tools) > 10 else ''}")
             
             for tool_name in enabled_tools:
@@ -188,7 +189,7 @@ class MCPJITLoader:
             return
         
         account_id = self.agent_config.get('account_id')
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG] No enabledTools in config, querying registry for toolkit: {toolkit_slug}")
+        logger.info(f"🔍 [MCP-PROCESS-DEBUG] No enabled_tools in config, querying registry for toolkit: {toolkit_slug}")
         
         available_tools = await get_toolkit_tools(toolkit_slug, account_id=account_id, cache_only=cache_only)
         
@@ -218,7 +219,7 @@ class MCPJITLoader:
     async def _process_custom_mcp_config_internal(self, mcp_config: Dict[str, Any], cache_only: bool = False) -> None:
         toolkit_slug = self._extract_toolkit_slug(mcp_config) or 'custom'
         server_name = mcp_config.get('name', 'unnamed')
-        custom_type = mcp_config.get("customType", mcp_config.get("type", "http")).lower()
+        custom_type = get_config_value(mcp_config, "custom_type", "http").lower()
         url = mcp_config.get('url') or mcp_config.get('config', {}).get('url')
         
         logger.debug(f"⚡ [MCP JIT] Processing custom MCP: {server_name} (type: {custom_type})")
@@ -230,7 +231,7 @@ class MCPJITLoader:
             tool_names = await self._discover_json_tools(mcp_config)
         elif url:
             if cache_only:
-                enabled_tools = mcp_config.get('enabledTools', [])
+                enabled_tools = get_config_value(mcp_config, "enabled_tools", [])
                 if enabled_tools:
                     for tool_name in enabled_tools:
                         if tool_name not in self.tool_map:

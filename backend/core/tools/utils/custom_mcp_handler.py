@@ -6,6 +6,7 @@ from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from core.utils.logger import logger
+from core.utils.mcp_config_schema import get_config_value
 from .mcp_connection_manager import MCPConnectionManager
 
 
@@ -40,16 +41,16 @@ class CustomMCPHandler:
             return e
     
     async def _initialize_single_custom_mcp(self, config: Dict[str, Any]):
-        custom_type = config.get('customType', 'sse')
+        custom_type = get_config_value(config, "custom_type", "sse")
         server_config = config.get('config', {}).copy()
-        
+
         # Merge top-level auth/config if they are in the parent but missing in nested config
         # This occurs in common configuration patterns for the UI and DB
         for key in ['access_token', 'custom_headers', 'url', 'auth_type']:
             if key in config and key not in server_config:
                 server_config[key] = config[key]
-        
-        enabled_tools = config.get('enabledTools', config.get('enabled_tools', []))
+
+        enabled_tools = get_config_value(config, "enabled_tools", [])
         server_name = config.get('name', 'Unknown')
         
         # logger.debug(f"Initializing custom MCP: {server_name} (type: {custom_type})")

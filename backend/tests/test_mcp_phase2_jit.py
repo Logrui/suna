@@ -267,11 +267,11 @@ class TestSSRFInJITDiscovery:
 
 
 class TestSSRFInJITExecutor:
-    """SSRF validation in jit/mcp_tool_wrapper.py MCPToolExecutor."""
+    """SSRF validation in unified MCPToolExecutor (direct/JIT mode)."""
 
     @pytest.mark.asyncio
     async def test_jit_executor_sse_blocks_private_url(self):
-        from core.jit.mcp_tool_wrapper import MCPToolExecutor as JITExecutor
+        from core.tools.utils.mcp_tool_executor import MCPToolExecutor
         from core.agentpress.tool import ToolResult
 
         config = {
@@ -279,7 +279,7 @@ class TestSSRFInJITExecutor:
             "url": "http://192.168.1.1:8080/mcp",
             "config": {"url": "http://192.168.1.1:8080/mcp"},
         }
-        executor = JITExecutor(config)
+        executor = MCPToolExecutor.from_mcp_config(config)
 
         result = await executor.execute_tool("some_tool", {"arg": "val"})
         assert isinstance(result, ToolResult)
@@ -288,7 +288,7 @@ class TestSSRFInJITExecutor:
 
     @pytest.mark.asyncio
     async def test_jit_executor_http_blocks_private_url(self):
-        from core.jit.mcp_tool_wrapper import MCPToolExecutor as JITExecutor
+        from core.tools.utils.mcp_tool_executor import MCPToolExecutor
         from core.agentpress.tool import ToolResult
 
         config = {
@@ -296,7 +296,7 @@ class TestSSRFInJITExecutor:
             "url": "http://10.0.0.1/mcp",
             "config": {"url": "http://10.0.0.1/mcp"},
         }
-        executor = JITExecutor(config)
+        executor = MCPToolExecutor.from_mcp_config(config)
 
         result = await executor.execute_tool("some_tool", {"arg": "val"})
         assert isinstance(result, ToolResult)

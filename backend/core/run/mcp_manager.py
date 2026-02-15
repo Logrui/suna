@@ -3,6 +3,7 @@ from core.agentpress.thread_manager import ThreadManager
 from core.tools.mcp_tool_wrapper import MCPToolWrapper
 from core.agentpress.tool import SchemaType
 from core.utils.logger import logger
+from core.utils.mcp_config_schema import get_config_value
 
 class MCPManager:
     def __init__(self, thread_manager: ThreadManager, account_id: str):
@@ -17,30 +18,30 @@ class MCPManager:
         
         if agent_config.get('custom_mcp'):
             for custom_mcp in agent_config['custom_mcp']:
-                custom_type = custom_mcp.get('customType', custom_mcp.get('type', 'sse'))
-                
+                custom_type = get_config_value(custom_mcp, "custom_type", "sse")
+
                 if custom_type == 'composio':
-                    qualified_name = custom_mcp.get('qualifiedName')
+                    qualified_name = get_config_value(custom_mcp, "qualified_name")
                     if not qualified_name:
                         qualified_name = f"composio.{custom_mcp['name'].replace(' ', '_').lower()}"
-                    
+
                     mcp_config = {
                         'name': custom_mcp['name'],
                         'qualifiedName': qualified_name,
                         'config': custom_mcp.get('config', {}),
-                        'enabledTools': custom_mcp.get('enabledTools', []),
+                        'enabledTools': get_config_value(custom_mcp, "enabled_tools", []),
                         'instructions': custom_mcp.get('instructions', ''),
                         'isCustom': True,
                         'customType': 'composio'
                     }
                     all_mcps.append(mcp_config)
                     continue
-                
+
                 mcp_config = {
                     'name': custom_mcp['name'],
                     'qualifiedName': f"custom_{custom_type}_{custom_mcp['name'].replace(' ', '_').lower()}",
                     'config': custom_mcp['config'],
-                    'enabledTools': custom_mcp.get('enabledTools', []),
+                    'enabledTools': get_config_value(custom_mcp, "enabled_tools", []),
                     'instructions': custom_mcp.get('instructions', ''),
                     'isCustom': True,
                     'customType': custom_type
