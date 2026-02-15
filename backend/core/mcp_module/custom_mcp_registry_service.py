@@ -11,7 +11,7 @@ from mcp.client.streamable_http import streamablehttp_client
 
 from core.utils.logger import logger
 from core.utils.config import config as app_config, EnvMode
-from core.tools.utils.mcp_tool_executor import is_safe_url
+from core.utils.ssrf import is_safe_url
 from core.utils.mcp_helpers import get_custom_mcp_qualified_name
 
 @dataclass(frozen=True)

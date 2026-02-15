@@ -1,10 +1,7 @@
 import json
 import asyncio
-import ipaddress
-import socket
 import time
 from typing import Dict, Any, Optional
-from urllib.parse import urlparse
 from core.agentpress.tool import ToolResult
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
@@ -12,88 +9,7 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 from core.mcp_module import mcp_service
 from core.utils.logger import logger
-
-
-# SSRF Protection: Blocked hostnames and IP ranges
-BLOCKED_HOSTNAMES = {
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    '::1',
-    'metadata.google.internal',
-    'metadata.goog',
-    '169.254.169.254',  # AWS/GCP metadata service
-    'metadata.azure.com',
-    'kubernetes.default.svc',
-}
-
-# Private IP ranges that should be blocked
-PRIVATE_IP_RANGES = [
-    ipaddress.ip_network('10.0.0.0/8'),
-    ipaddress.ip_network('172.16.0.0/12'),
-    ipaddress.ip_network('192.168.0.0/16'),
-    ipaddress.ip_network('127.0.0.0/8'),
-    ipaddress.ip_network('169.254.0.0/16'),  # Link-local
-    ipaddress.ip_network('::1/128'),  # IPv6 loopback
-    ipaddress.ip_network('fc00::/7'),  # IPv6 private
-    ipaddress.ip_network('fe80::/10'),  # IPv6 link-local
-]
-
-
-def is_safe_url(url: str) -> tuple[bool, str]:
-    """
-    Validate URL to prevent SSRF attacks.
-    
-    Returns:
-        tuple: (is_safe: bool, error_message: str)
-    """
-    try:
-        parsed = urlparse(url)
-        
-        # Only allow http and https
-        if parsed.scheme not in ('http', 'https'):
-            return False, f"Invalid URL scheme: {parsed.scheme}. Only http/https allowed."
-        
-        hostname = parsed.hostname
-        if not hostname:
-            return False, "Invalid URL: no hostname"
-        
-        # Check against blocked hostnames
-        hostname_lower = hostname.lower()
-        if hostname_lower in BLOCKED_HOSTNAMES:
-            logger.warning(f"SSRF blocked: attempt to connect to blocked hostname {hostname}")
-            return False, "Connection to this host is not allowed"
-        
-        # Try to resolve hostname and check IP
-        try:
-            # Get all IP addresses for the hostname
-            addr_infos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-            
-            for family, _, _, _, sockaddr in addr_infos:
-                ip_str = sockaddr[0]
-                try:
-                    ip = ipaddress.ip_address(ip_str)
-                    
-                    # Check against private IP ranges
-                    for private_range in PRIVATE_IP_RANGES:
-                        if ip in private_range:
-                            logger.warning(f"SSRF blocked: {hostname} resolves to private IP {ip_str}")
-                            return False, "Connection to private/internal networks is not allowed"
-                            
-                except ValueError:
-                    continue  # Skip if can't parse as IP
-                    
-        except socket.gaierror:
-            # DNS resolution failed - could be intentional to bypass checks
-            # Be cautious and allow (some legitimate services may have DNS issues)
-            logger.debug(f"DNS resolution failed for {hostname}, allowing connection")
-            pass
-        
-        return True, ""
-        
-    except Exception as e:
-        logger.error(f"URL validation error: {str(e)}")
-        return False, "Invalid URL format"
+from core.utils.ssrf import is_safe_url, BLOCKED_HOSTNAMES, PRIVATE_IP_RANGES
 
 
 class MCPToolExecutor:

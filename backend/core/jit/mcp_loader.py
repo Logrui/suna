@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from core.utils.logger import logger
 from core.jit.mcp_registry import get_toolkit_tools
 from core.jit.result_types import ActivationResult, ActivationSuccess, ActivationError, ActivationErrorType
+from core.utils.ssrf import is_safe_url
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -291,8 +292,14 @@ class MCPJITLoader:
         """Discovery with automatic transport fallback and path probing."""
         url = config.get('url') or config.get('config', {}).get('url')
         custom_type = config.get("customType", config.get("type", "http")).lower()
-        
+
         if not url: return []
+
+        # SSRF Protection: Validate URL before connecting
+        safe, error_msg = is_safe_url(url)
+        if not safe:
+            logger.error(f"❌ [MCP JIT] SSRF Blocked during discovery for {url}: {error_msg}")
+            return []
         
         # Build headers
         config_nested = config.get('config', {})
@@ -613,7 +620,12 @@ class MCPJITLoader:
     async def _load_sse_schema(self, tool_name: str, url: str, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         if not url:
             raise ValueError(f"Missing 'url' in SSE MCP config for {tool_name}")
-        
+
+        # SSRF Protection
+        safe, error_msg = is_safe_url(url)
+        if not safe:
+            raise ValueError(f"SSRF blocked for {tool_name}: {error_msg}")
+
         if headers is None:
             headers = config.get('headers', {})
         
@@ -662,7 +674,12 @@ class MCPJITLoader:
     async def _load_http_schema(self, tool_name: str, url: str, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         if not url:
             raise ValueError(f"Missing 'url' in HTTP MCP config for {tool_name}")
-        
+
+        # SSRF Protection
+        safe, error_msg = is_safe_url(url)
+        if not safe:
+            raise ValueError(f"SSRF blocked for {tool_name}: {error_msg}")
+
         if headers is None:
             headers = config.get('headers', {})
             

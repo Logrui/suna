@@ -18,7 +18,7 @@ import httpx
 from core.utils.logger import logger
 from core.credentials import EncryptionService, get_credential_service
 from core.utils.config import config as app_config, EnvMode
-from core.tools.utils.mcp_tool_executor import is_safe_url
+from core.utils.ssrf import is_safe_url
 from core.services.supabase import DBConnection
 from core.mcp_module.custom_mcp_registry_service import CustomMCPConnectionResult
 from core.mcp_module.exceptions import (

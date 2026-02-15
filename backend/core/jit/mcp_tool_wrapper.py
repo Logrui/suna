@@ -1,6 +1,7 @@
 import asyncio
 from typing import Dict, Any
 from core.utils.logger import logger
+from core.utils.ssrf import is_safe_url
 
 
 class MCPToolExecutor:
@@ -101,12 +102,18 @@ class MCPToolExecutor:
                 success=False,
                 output="Missing 'url' in SSE MCP config"
             )
-        
+
+        # SSRF Protection: Validate URL before connecting
+        safe, error_msg = is_safe_url(url)
+        if not safe:
+            logger.error(f"❌ [MCP EXEC] SSRF Blocked for {url}")
+            return ToolResult(success=False, output=f"URL validation failed: {error_msg}")
+
         headers = self._get_headers()
         logger.info(f"📤 [MCP EXEC] Outgoing Headers: { {k: '***' if k.lower() == 'authorization' else v for k, v in headers.items()} }")
         if "Authorization" in headers:
             logger.info(f"🔑 [MCP EXEC] Auth Token present: Bearer {'*' * 10}{headers['Authorization'][-5:]}")
-        
+
         try:
             async with asyncio.timeout(30):
                 try:
@@ -154,12 +161,18 @@ class MCPToolExecutor:
                 success=False,
                 output="Missing 'url' in HTTP MCP config"
             )
-        
+
+        # SSRF Protection: Validate URL before connecting
+        safe, error_msg = is_safe_url(url)
+        if not safe:
+            logger.error(f"❌ [MCP EXEC] SSRF Blocked for {url}")
+            return ToolResult(success=False, output=f"URL validation failed: {error_msg}")
+
         headers = self._get_headers()
         logger.info(f"📤 [MCP EXEC] Outgoing Headers: { {k: '***' if k.lower() == 'authorization' else v for k, v in headers.items()} }")
         if "Authorization" in headers:
             logger.info(f"🔑 [MCP EXEC] Auth Token present: Bearer {'*' * 10}{headers['Authorization'][-5:]}")
-        
+
         try:
             async with asyncio.timeout(30):
                 async with streamablehttp_client(url, headers=headers) as (read, write, _):
