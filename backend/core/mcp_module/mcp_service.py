@@ -20,31 +20,17 @@ from core.credentials import EncryptionService, get_credential_service
 from core.utils.config import config as app_config, EnvMode
 from core.tools.utils.mcp_tool_executor import is_safe_url
 from core.services.supabase import DBConnection
-
-
-class MCPException(Exception):
-    pass
-
-class MCPConnectionError(MCPException):
-    pass
-
-class MCPToolNotFoundError(MCPException):
-    pass
-
-class MCPToolExecutionError(MCPException):
-    pass
-
-class MCPProviderError(MCPException):
-    pass
-
-class MCPConfigurationError(MCPException):
-    pass
-
-class MCPAuthenticationError(MCPException):
-    pass
-
-class CustomMCPError(MCPException):
-    pass
+from core.mcp_module.custom_mcp_registry_service import CustomMCPConnectionResult
+from core.mcp_module.exceptions import (
+    MCPException,
+    MCPConnectionError,
+    MCPToolNotFoundError,
+    MCPToolExecutionError,
+    MCPProviderError,
+    MCPConfigurationError,
+    MCPAuthenticationError,
+    CustomMCPError,
+)
 
 
 @dataclass(frozen=True)
@@ -65,17 +51,6 @@ class ToolInfo:
     name: str
     description: str
     input_schema: Dict[str, Any]
-
-
-@dataclass(frozen=True)
-class CustomMCPConnectionResult:
-    success: bool
-    qualified_name: str
-    display_name: str
-    tools: List[Dict[str, Any]]
-    config: Dict[str, Any]
-    url: str
-    message: str
 
 
 @dataclass
@@ -429,7 +404,7 @@ class MCPService:
         
         try:
             # Generate headers using the helper method which now supports custom_headers
-            headers = self._get_custom_headers("", config)
+            headers = await self._get_custom_headers("", config)
 
             async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
                 async with ClientSession(read_stream, write_stream) as session:
@@ -455,7 +430,17 @@ class MCPService:
                     )
         
         except Exception as e:
-            self._logger.error(f"Error connecting to HTTP MCP server: {str(e)}")
+            # Unwrap ExceptionGroup if present (Python 3.11+ asyncio/anyio)
+            actual_error = e
+            if hasattr(e, 'exceptions') and e.exceptions:
+                actual_error = e.exceptions[0]
+            
+            error_msg = str(actual_error)
+            self._logger.error(f"Error connecting to HTTP MCP server: {error_msg}")
+            
+            # Detect Auth Requirements
+            requires_auth = "401" in error_msg or "unauthorized" in error_msg.lower()
+            
             return CustomMCPConnectionResult(
                 success=False,
                 qualified_name="",
@@ -463,7 +448,8 @@ class MCPService:
                 tools=[],
                 config=config,
                 url=url,
-                message=f"Failed to connect: {str(e)}"
+                message=f"Failed to connect: {error_msg}",
+                requires_auth=requires_auth
             )
     
     async def _discover_sse_tools(self, config: Dict[str, Any]) -> CustomMCPConnectionResult:
@@ -487,7 +473,7 @@ class MCPService:
         
         try:
              # Generate headers using the helper method which now supports custom_headers
-            headers = self._get_custom_headers("", config)
+            headers = await self._get_custom_headers("", config)
 
             async with sse_client(url, headers=headers) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as session:
@@ -513,7 +499,17 @@ class MCPService:
                     )
         
         except Exception as e:
-            self._logger.error(f"Error connecting to SSE MCP server: {str(e)}")
+            # Unwrap ExceptionGroup if present
+            actual_error = e
+            if hasattr(e, 'exceptions') and e.exceptions:
+                actual_error = e.exceptions[0]
+                
+            error_msg = str(actual_error)
+            self._logger.error(f"Error connecting to SSE MCP server: {error_msg}")
+            
+            # Detect Auth Requirements
+            requires_auth = "401" in error_msg or "unauthorized" in error_msg.lower()
+            
             return CustomMCPConnectionResult(
                 success=False,
                 qualified_name="",
@@ -521,7 +517,8 @@ class MCPService:
                 tools=[],
                 config=config,
                 url=url,
-                message=f"Failed to connect: {str(e)}"
+                message=f"Failed to connect: {error_msg}",
+                requires_auth=requires_auth
             )
 
     async def _get_server_url(self, qualified_name: str, config: Dict[str, Any], provider: str) -> str:
@@ -601,7 +598,7 @@ class MCPService:
             self._logger.error(f"Failed to resolve Composio profile {profile_id}: {str(e)}")
             raise MCPProviderError(f"Failed to resolve Composio profile: {str(e)}")
     
-    def _get_composio_headers(self, qualified_name: str, config: Dict[str, Any], external_user_id: Optional[str] = None) -> Dict[str, str]:
+    async def _get_composio_headers(self, qualified_name: str, config: Dict[str, Any], external_user_id: Optional[str] = None) -> Dict[str, str]:
         """Get headers for Composio MCP connection"""
         headers = {"Content-Type": "application/json"}
         # Composio handles auth through the URL itself

@@ -3,6 +3,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 import os
 import re
+import time
 
 from core.utils.auth_utils import verify_and_get_user_id_from_jwt
 from core.utils.logger import logger
@@ -10,6 +11,7 @@ import traceback
 from urllib.parse import urlparse, quote, urlencode
 from core.runtime_cache import invalidate_agent_config_cache
 from .mcp_service import mcp_service, MCPException
+from .custom_mcp_registry_service import mcp_registry_service
 from .exceptions import MCPAuthenticationError
 import httpx
 import hashlib
@@ -20,7 +22,7 @@ router = APIRouter(tags=["mcp"])
 
 class CustomMCPConnectionRequest(BaseModel):
     url: str
-    config: Optional[Dict[str, Any]] = {}
+    config: Optional[Dict[str, Any]] = None
 
     # OAuth Configuration Fields (for documentation & validation)
     oauth_client_id: Optional[str] = None
@@ -71,7 +73,7 @@ async def discover_custom_mcp_tools(request: CustomMCPDiscoverRequest, user_id: 
         logger.debug(f"⚙️ [MCP API] Request Config: { {k: '***' if k.lower() in ('access_token', 'oauth_client_secret', 'oauth_client_id') else v for k, v in service_config.items()} }")
         
         start_time = time.time()
-        result = await mcp_service.discover_custom_tools(request.type, service_config, user_id=user_id)
+        result = await mcp_registry_service.discover_custom_tools(request.type, service_config, user_id=user_id)
         elapsed = (time.time() - start_time) * 1000
         
         if result.success:
@@ -168,6 +170,8 @@ async def mcp_auth_start(
         
         return {"redirect_url": redirect_url}
 
+    except HTTPException:
+        raise
     except (MCPAuthenticationError, MCPException) as e:
         logger.warning(f"⚠️ [MCP AUTH] MCP OAuth discovery failed for {url}: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))

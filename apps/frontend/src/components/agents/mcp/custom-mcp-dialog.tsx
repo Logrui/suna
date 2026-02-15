@@ -3,13 +3,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle2, Zap, ChevronRight, Sparkles, Server } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Zap, ChevronRight, Sparkles, Server, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { KortixLoader } from '@/components/ui/kortix-loader';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -49,6 +50,26 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [processedConfig, setProcessedConfig] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Advanced Settings State
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [oauthClientId, setOauthClientId] = useState('');
+  const [oauthClientSecret, setOauthClientSecret] = useState('');
+  const [customHeaders, setCustomHeaders] = useState<{key: string, value: string}[]>([{ key: '', value: '' }]);
+
+  const handleAddHeader = () => {
+    setCustomHeaders([...customHeaders, { key: '', value: '' }]);
+  };
+
+  const handleRemoveHeader = (index: number) => {
+    setCustomHeaders(customHeaders.filter((_, i) => i !== index));
+  };
+
+  const handleHeaderChange = (index: number, field: 'key' | 'value', value: string) => {
+    const newHeaders = [...customHeaders];
+    newHeaders[index][field] = value;
+    setCustomHeaders(newHeaders);
+  };
 
   const validateAndDiscoverTools = async () => {
     setIsValidating(true);
@@ -69,6 +90,20 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         
         parsedConfig = { url };
         setServerName(manualServerName.trim());
+      }
+
+      // Add Advanced Configs
+      if (oauthClientId.trim()) parsedConfig.oauth_client_id = oauthClientId.trim();
+      if (oauthClientSecret.trim()) parsedConfig.oauth_client_secret = oauthClientSecret.trim();
+      
+      const headerObj: Record<string, string> = {};
+      customHeaders.forEach(h => {
+        if (h.key.trim() && h.value.trim()) {
+          headerObj[h.key.trim()] = h.value.trim();
+        }
+      });
+      if (Object.keys(headerObj).length > 0) {
+        parsedConfig.custom_headers = headerObj;
       }
 
       const supabase = createClient();
@@ -97,6 +132,28 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
 
       const data = await response.json();
       
+      // Handle requires_auth (OAuth flow needed)
+      if (data.requires_auth) {
+         // Auto-save logic will be handled here or by allowing partial save
+         // For now, we allow saving even with 0 tools if auth is required
+         if (!data.tools || data.tools.length === 0) {
+             setDiscoveredTools([]);
+             // We can proceed to save directly if auth is required
+             setProcessedConfig({ ...parsedConfig, requires_auth: true });
+             
+             // Directly save and close to trigger "Configure" state in list
+             onSave({
+                name: manualServerName.trim(),
+                type: serverType,
+                config: { ...parsedConfig, requires_auth: true },
+                enabledTools: [],
+                selectedProfileId: undefined
+             });
+             onOpenChange(false);
+             return;
+         }
+      }
+
       if (!data.tools || data.tools.length === 0) {
         throw new Error('No tools found. Please check your configuration.');
       }
@@ -144,7 +201,21 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
     setValidationError(null);
 
     try {
+      // Re-construct config to ensure we capture latest state
       const configToSave: any = { url: configText.trim() };
+      
+      if (oauthClientId.trim()) configToSave.oauth_client_id = oauthClientId.trim();
+      if (oauthClientSecret.trim()) configToSave.oauth_client_secret = oauthClientSecret.trim();
+      
+      const headerObj: Record<string, string> = {};
+      customHeaders.forEach(h => {
+        if (h.key.trim() && h.value.trim()) {
+          headerObj[h.key.trim()] = h.value.trim();
+        }
+      });
+      if (Object.keys(headerObj).length > 0) {
+        configToSave.custom_headers = headerObj;
+      }
       
       onSave({
         name: serverName,
@@ -154,14 +225,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         selectedProfileId: undefined
       });
       
-      setConfigText('');
-      setManualServerName('');
-      setDiscoveredTools([]);
-      setSelectedTools(new Set());
-      setServerName('');
-      setProcessedConfig(null);
-      setValidationError(null);
-      setStep('setup');
+      handleReset();
       onOpenChange(false);
     } catch (error: any) {
       setValidationError(error.message || 'Failed to save MCP configuration. Please try again.');
@@ -194,6 +258,10 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
     setSelectedTools(new Set());
     setServerName('');
     setProcessedConfig(null);
+    setOauthClientId('');
+    setOauthClientSecret('');
+    setCustomHeaders([{ key: '', value: '' }]);
+    setIsAdvancedOpen(false);
     
     setValidationError(null);
     setStep('setup');
@@ -309,6 +377,78 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
                     Enter the complete URL to your MCP server endpoint
                   </p>
                 </div>
+
+                <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen} className="border rounded-lg p-4 bg-muted/20">
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center justify-between cursor-pointer w-full">
+                      <Label className="text-sm font-medium cursor-pointer">Advanced Settings (OAuth & Headers)</Label>
+                      {isAdvancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="clientId" className="text-xs font-medium">OAuth Client ID</Label>
+                      <Input
+                        id="clientId"
+                        value={oauthClientId}
+                        onChange={(e) => setOauthClientId(e.target.value)}
+                        placeholder="Optional: Client ID for OAuth flow"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="clientSecret" className="text-xs font-medium">OAuth Client Secret</Label>
+                      <Input
+                        id="clientSecret"
+                        type="password"
+                        value={oauthClientSecret}
+                        onChange={(e) => setOauthClientSecret(e.target.value)}
+                        placeholder="Optional: Client Secret for OAuth flow"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Custom Headers (e.g. API Keys)</Label>
+                      <div className="space-y-2">
+                        {customHeaders.map((header, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input
+                              placeholder="Key (e.g. X-API-Key)"
+                              value={header.key}
+                              onChange={(e) => handleHeaderChange(index, 'key', e.target.value)}
+                              className="h-8 text-sm flex-1"
+                            />
+                            <Input
+                              placeholder="Value"
+                              value={header.value}
+                              onChange={(e) => handleHeaderChange(index, 'value', e.target.value)}
+                              className="h-8 text-sm flex-1"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveHeader(index)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              type="button"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddHeader}
+                          className="w-full h-8 text-xs gap-1"
+                          type="button"
+                        >
+                          <Plus className="h-3 w-3" /> Add Header
+                        </Button>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
 
               {validationError && (

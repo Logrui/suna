@@ -152,6 +152,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
             onEdit={handleEditMCP}
             onRemove={handleRemoveMCP}
             onConfigureTools={handleConfigureTools}
+            agentId={selectedAgentId}
           />
         </div>
       )}

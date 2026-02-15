@@ -52,25 +52,23 @@ This file tracks all major tracks for the project. Each track has its own detail
 *Allows manual knowledge management and project-specific context injection.*
 *Link: [./conductor/tracks/project_memories_20260210/](./conductor/tracks/project_memories_20260210/)*
 
-- [~] **Track: Dynamic MCP OAuth & Advanced Configuration**
-*Allows adding advanced MCP servers with OAuth 2.1 discovery and custom headers.*
+- [~] **Track: Advanced MCP Server Support Refactor (Master Track)**
+*Comprehensive refactor of the full MCP pipeline: bug fixes, execution layer consolidation, config normalization, test harness, 2-stage OAuth frontend. Consolidates 4 prior MCP tracks.*
+*Link: [./conductor/tracks/advanced_mcp_server_support_refactor/](./conductor/tracks/advanced_mcp_server_support_refactor/)*
+**Status**: Spec and plan complete. 8 phases, 109 tasks. Backend first, frontend second.
+
+---
+
+### Archived MCP Tracks (Consolidated into Advanced MCP Server Support Refactor)
+
+- [archived] **Track: Dynamic MCP OAuth & Advanced Configuration**
 *Link: [./conductor/tracks/mcp_dynamic_auth_20260211/](./conductor/tracks/mcp_dynamic_auth_20260211/)*
-**Status**: Backend complete, verified via harness. UI implementation pending.
 
-- [~] **Track: Refine Custom MCP OAuth (2-Stage Flow)**
-*Implements a 2-stage integration process for custom MCP servers to improve OAuth reliability and UX.*
+- [archived] **Track: Refine Custom MCP OAuth (2-Stage Flow)**
 *Link: [./conductor/tracks/feature_custom_mcp_oauth_2stage_20260212/](./conductor/tracks/feature_custom_mcp_oauth_2stage_20260212/)*
-**Status**: Card architecture and backend callback logic complete. Confirmation UI pending.
 
----
-
-- [~] **Track: MCP Test Harness & Lab (Component Isolation)**
-*Enable offline, dependency-free testing of MCP Discovery and Execution.*
+- [archived] **Track: MCP Test Harness & Lab (Component Isolation)**
 *Link: [./conductor/tracks/mcp_test_harness_20260213/](./conductor/tracks/mcp_test_harness_20260213/)*
-**Status**: ~85% Complete. Proved OAuth handshake and unified tool discovery for both Bearer and API Key servers.
 
-
----
-
-- [x] **Track: Establish an isolated CLI-based agent execution environment for E2E verification of MCP tool calls and worker infrastructure.**
-*Link: [./tracks/agent_harness_20260215/](./tracks/agent_harness_20260215/)*
+- [archived] **Track: Agent Harness (Isolated CLI Agent Execution)**
+*Link: [./conductor/tracks/agent_harness_20260215/](./conductor/tracks/agent_harness_20260215/)*

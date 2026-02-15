@@ -60,7 +60,7 @@ async def get_custom_mcp_tools_for_agent(
                 logger.warning("Failed to parse X-MCP-Headers as JSON")
         
         from core.mcp_module import mcp_service
-        discovery_result = await mcp_service.discover_custom_tools(mcp_type, mcp_config, user_id=user_id)
+        discovery_result = await mcp_service.discover_custom_tools(mcp_type, mcp_config)
         
         existing_mcp = None
         for mcp in custom_mcps:
@@ -89,7 +89,8 @@ async def get_custom_mcp_tools_for_agent(
             'tools': tools,
             'has_mcp_config': existing_mcp is not None,
             'server_type': mcp_type,
-            'server_url': mcp_url
+            'server_url': mcp_url,
+            'requires_auth': getattr(discovery_result, 'requires_auth', False)
         }
         
     except HTTPException:
@@ -181,13 +182,20 @@ async def update_custom_mcp_tools_for_agent(
                     logger.error(f"Failed to get Composio profile config: {e}")
                     raise HTTPException(status_code=400, detail=f"Failed to get Composio profile: {str(e)}")
             else:
+                # Extract full config if provided, otherwise default to url
+                mcp_config_data = request.get('config', {})
+                if not mcp_config_data:
+                    mcp_config_data = {"url": mcp_url}
+                else:
+                    # Ensure URL is set in config if passed separately
+                    if 'url' not in mcp_config_data:
+                        mcp_config_data['url'] = mcp_url
+
                 new_mcp_config = {
-                    "name": f"Custom MCP ({mcp_type.upper()})",
+                    "name": request.get('name') or f"Custom MCP ({mcp_type.upper()})",
                     "customType": mcp_type,
                     "type": mcp_type,
-                    "config": {
-                        "url": mcp_url
-                    },
+                    "config": mcp_config_data,
                     "enabledTools": enabled_tools
                 }
                 custom_mcps.append(new_mcp_config)

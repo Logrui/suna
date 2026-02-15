@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { MCPConfiguration } from './types';
 import { useCredentialProfilesForMcp } from '@/hooks/mcp/use-credential-profiles';
+import { CustomMCPAuthConfirmation } from './custom-mcp-auth-confirmation';
 
 import { useComposioToolkits } from '@/hooks/composio/use-composio';
 
@@ -24,6 +25,7 @@ interface ConfiguredMcpListProps {
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
   onConfigureTools?: (index: number) => void;
+  agentId?: string;
 }
 
 const extractAppSlug = (mcp: MCPConfiguration): { type: 'composio', slug: string } | null => {
@@ -87,7 +89,9 @@ const MCPConfigurationItem: React.FC<{
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
   onConfigureTools?: (index: number) => void;
-}> = ({ mcp, index, onEdit, onRemove, onConfigureTools }) => {
+  onAuthRequest: (mcp: MCPConfiguration) => void;
+  agentId?: string;
+}> = ({ mcp, index, onEdit, onRemove, onConfigureTools, onAuthRequest, agentId }) => {
   const qualifiedNameForLookup = (mcp.customType === 'composio' || mcp.isComposio)
     ? mcp.mcp_qualified_name || mcp.config?.mcp_qualified_name || mcp.qualifiedName
     : mcp.qualifiedName;
@@ -96,6 +100,18 @@ const MCPConfigurationItem: React.FC<{
   const selectedProfile = profiles.find(p => p.profile_id === profileId);
 
   const hasCredentialProfile = !!profileId && !!selectedProfile;
+  
+  // Detect if OAuth/Auth is needed
+  // Condition: Explicit requires_auth flag OR (custom HTTP/SSE without access_token but with client_id)
+  const isAuthRequired = mcp.config?.requires_auth === true || 
+    (mcp.isCustom && 
+     !mcp.config?.access_token && 
+     (mcp.config?.oauth_client_id || mcp.config?.custom_headers)) ||
+    (mcp.isCustom && (!mcp.enabledTools || mcp.enabledTools.length === 0));
+     
+  const handleConnect = () => {
+    onAuthRequest(mcp);
+  };
 
   return (
     <SpotlightCard className="bg-card border border-border">
@@ -107,6 +123,11 @@ const MCPConfigurationItem: React.FC<{
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h4 className="text-sm font-medium text-foreground truncate">{mcp.name}</h4>
+              {isAuthRequired && (
+                <Badge variant="secondary" className="text-[10px] h-5 bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">
+                  Needs Auth
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span>{mcp.enabledTools?.length || 0} tools enabled</span>
@@ -122,17 +143,27 @@ const MCPConfigurationItem: React.FC<{
           </div>
         </div>
         <div className="flex items-center gap-2 ml-4">
-          {onConfigureTools && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 bg-card border border-border hover:bg-muted"
-              onClick={() => onConfigureTools(index)}
-              title="Configure tools"
-              type="button"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
+          {isAuthRequired ? (
+             <Button 
+               size="sm" 
+               className="bg-primary text-primary-foreground hover:bg-primary/90"
+               onClick={handleConnect}
+             >
+               Connect
+             </Button>
+          ) : (
+            onConfigureTools && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 bg-card border border-border hover:bg-muted"
+                onClick={() => onConfigureTools(index)}
+                title="Configure tools"
+                type="button"
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+            )
           )}
           <Button
             variant="outline"
@@ -155,9 +186,14 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
   onEdit,
   onRemove,
   onConfigureTools,
+  agentId,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [mcpToDelete, setMcpToDelete] = React.useState<{ mcp: MCPConfiguration; index: number } | null>(null);
+  
+  // Auth Confirmation State
+  const [authConfirmationOpen, setAuthConfirmationOpen] = React.useState(false);
+  const [mcpToAuth, setMcpToAuth] = React.useState<MCPConfiguration | null>(null);
 
   const handleDeleteClick = (mcp: MCPConfiguration, index: number) => {
     setMcpToDelete({ mcp, index });
@@ -170,6 +206,32 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
       setMcpToDelete(null);
       setDeleteDialogOpen(false);
     }
+  };
+  
+  const handleAuthRequest = (mcp: MCPConfiguration) => {
+    setMcpToAuth(mcp);
+    setAuthConfirmationOpen(true);
+  };
+  
+  const confirmAuth = () => {
+    if (!mcpToAuth) return;
+    
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+    const mcpUrl = mcpToAuth.config?.url;
+    
+    if (!mcpUrl) {
+      console.error("Missing MCP URL for connection");
+      return;
+    }
+    
+    // Construct the OAuth start URL
+    // Endpoint: /v1/mcp/auth/start?url=...&return_url=...&agent_id=...&name=...
+    const returnUrl = window.location.href;
+    const authStartUrl = `${backendUrl}/mcp/auth/start?url=${encodeURIComponent(mcpUrl)}&return_url=${encodeURIComponent(returnUrl)}&agent_id=${agentId || ''}&name=${encodeURIComponent(mcpToAuth.name)}`;
+    
+    // Redirect to backend auth start
+    window.location.href = authStartUrl;
+    setAuthConfirmationOpen(false);
   };
 
   if (configuredMCPs.length === 0) return null;
@@ -185,9 +247,21 @@ export const ConfiguredMcpList: React.FC<ConfiguredMcpListProps> = ({
             onEdit={onEdit}
             onRemove={(idx) => handleDeleteClick(mcp, idx)}
             onConfigureTools={onConfigureTools}
+            onAuthRequest={handleAuthRequest}
+            agentId={agentId}
           />
         ))}
       </div>
+      
+      {mcpToAuth && (
+        <CustomMCPAuthConfirmation
+          open={authConfirmationOpen}
+          onOpenChange={setAuthConfirmationOpen}
+          onConfirm={confirmAuth}
+          serverName={mcpToAuth.name}
+          serverUrl={mcpToAuth.config?.url || ''}
+        />
+      )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

@@ -1,0 +1,18 @@
+{
+  "track_id": "advanced_mcp_server_support_refactor",
+  "title": "Advanced MCP Server Support Refactor",
+  "created": "2026-02-15",
+  "status": "in_progress",
+  "type": "refactor",
+  "consolidates": [
+    "mcp_dynamic_auth_20260211",
+    "feature_custom_mcp_oauth_2stage_20260212",
+    "mcp_test_harness_20260213",
+    "agent_harness_20260215"
+  ],
+  "phases": 8,
+  "total_tasks": 109,
+  "completed_phases": ["phase_1"],
+  "current_phase": "phase_2",
+  "priority": "high"
+}

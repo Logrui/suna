@@ -232,8 +232,8 @@ class CredentialService:
             config = self._encryption.decrypt_config(encrypted_config, data['config_hash'])
         except Exception as e:
             logger.error(f"Failed to decrypt credential {data['credential_id']}: {e}")
-            config = {}
-        
+            raise ValueError(f"Failed to decrypt credential {data.get('mcp_qualified_name', 'unknown')}: {e}")
+
         return MCPCredential(
             credential_id=data['credential_id'],
             account_id=data['account_id'],

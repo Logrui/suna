@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(jj describe:*)",
+      "Bash(jj new:*)",
+      "Bash(docker compose exec:*)",
+      "Bash(docker compose up:*)",
+      "Bash(jj st:*)",
+      "Bash(jj log:*)",
+      "Bash(jj diff:*)",
+      "Bash(jj squash:*)"
+    ]
+  }
+}

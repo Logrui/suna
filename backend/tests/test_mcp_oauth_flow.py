@@ -174,7 +174,7 @@ async def test_custom_headers_discovery():
         "custom_headers": {"X-Test-Key": "test-value-123"}
     }
     
-    with patch("core.mcp_module.mcp_service.MCPService.discover_custom_tools", new_callable=AsyncMock) as mock_discover:
+    with patch("core.mcp_module.api.mcp_registry_service.discover_custom_tools", new_callable=AsyncMock) as mock_discover:
         mock_discover.return_value.success = True
         mock_discover.return_value.tools = [{"name": "test_tool", "description": "test", "inputSchema": {}}]
         mock_discover.return_value.qualified_name = "test_mcp"
