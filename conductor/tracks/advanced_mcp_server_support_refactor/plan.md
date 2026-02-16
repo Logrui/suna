@@ -15,7 +15,7 @@
 | 4 | **COMPLETE** | 32/32 | Configuration Key Normalization |
 | 5 | **COMPLETE** | 45/45 | Comprehensive Test Suite (Gap Fill) |
 | 6 | **MOSTLY DONE** | — | Test Harness E2E verified (Valyu discover+run). Langfuse/reliability deferred. |
-| 7 | **READY** | — | Frontend post-OAuth refresh (critical fix) + UX alignment |
+| 7 | **IN PROGRESS** | — | Post-OAuth refresh DONE + credential lookup DONE + fallback DONE. UX 7.3-7.5 remaining. |
 | 8 | NOT STARTED | — | Full-Stack E2E Production Verification |
 
 **Cumulative test results**: 143/143 tests passing in ~0.83s
@@ -267,31 +267,47 @@ All backend work is complete. Frontend OAuth detection and button rendering alre
 - [x] Task: Audited `/mcp-success/page.tsx` — auto-closes popup after 3s, **NO parent window notification**. ❌ Critical gap.
 - [x] Task: Audited upstream reference (`apps/frontend/`) — has `CustomMCPAuthConfirmation` dialog, `onAuthRequest` callback pattern, multi-signal `isAuthRequired`, 2-step tool picker dialog, full-page redirect (not popup).
 
-### 7.2 CRITICAL: Post-OAuth state refresh (the main bug)
+### 7.2 CRITICAL: Post-OAuth state refresh — COMPLETE ✅
 
 **The problem**: After OAuth completes in the popup, the popup auto-closes but the parent window doesn't know OAuth succeeded. The card still shows "Configure" because `requires_config` was never flipped to `false`. User has to click "Configure" a second time.
 
-**The fix**: popup→parent communication via `postMessage`.
+**The fix**: popup→parent communication via `postMessage` + `queryClient.invalidateQueries`.
 
-- [ ] Task 7.2.1: **mcp-success page** — Update `frontend/src/app/(auth)/mcp-success/page.tsx`:
-  - Add `window.opener?.postMessage({ type: 'mcp-oauth-success' }, window.location.origin)` in the `useEffect`, BEFORE the auto-close timer starts.
-  - Add fallback: if `!window.opener` (full-page redirect or popup blocked), show a "Return to agent settings" link instead of just auto-closing.
-  - Keep the existing success UI (checkmark, message, auto-close timer).
+- [x] Task 7.2.1: **mcp-success page** — Updated `frontend/src/app/(auth)/mcp-success/page.tsx`:
+  - Added `window.opener?.postMessage({ type: 'mcp-oauth-success', timestamp: Date.now() }, window.location.origin)` in `useEffect`
+  - Added retry mechanism (sends again after 500ms in case parent listener isn't ready)
+  - Added fallback UI when `!window.opener` — shows "Please refresh the parent page" message
+  - Added sync status feedback: "Syncing..." → "Synced! Closing..." → auto-close after 3.5s
 
-- [ ] Task 7.2.2: **Track configuring MCP** — In `mcp-configuration-new.tsx`:
-  - Add `const configuringMCPRef = useRef<number | null>(null)` to track which MCP index is being OAuth'd.
-  - In `handleConfigureMCP()`, set `configuringMCPRef.current = index` BEFORE opening the popup.
+- [x] Task 7.2.2: **Track configuring MCP** — Simplified approach: instead of tracking index via ref, the parent listener invalidates all MCP-related queries, which causes React Query to refetch and update all cards.
 
-- [ ] Task 7.2.3: **Message listener** — In `mcp-configuration-new.tsx`:
-  - Add `useEffect` that registers `window.addEventListener('message', handleOAuthMessage)` and cleans up on unmount.
-  - `handleOAuthMessage(event)`: check `event.origin === window.location.origin` and `event.data?.type === 'mcp-oauth-success'`.
-  - On match: read `configuringMCPRef.current` to get the MCP index, then:
-    1. Re-probe server via `backendApi.post('/mcp/discover-custom-tools', ...)`
-    2. If `!discovery.requires_auth`: update `configuredMCPs[index].config.requires_config = false`, update `enabledTools` from discovery, call `onConfigurationChange()`
-    3. Show `toast.success('Connected to {name} successfully!')`
-    4. Reset `configuringMCPRef.current = null`
+- [x] Task 7.2.3: **Message listener** — In `mcp-configuration-new.tsx`:
+  - Added `useEffect` with `window.addEventListener('message', handleOAuthMessage)` + cleanup
+  - `handleOAuthMessage`: checks `event.origin === window.location.origin` and `event.data?.type === 'mcp-oauth-success'`
+  - On match: calls `queryClient.invalidateQueries()` for agent detail + custom-mcp-tools queries
+  - Shows `toast.success('MCP authentication successful! Refreshing...')`
 
-- [ ] Task 7.2.4: **Verify** — After OAuth popup closes, the card automatically flips from "Configuration Required" / "Configure" to "Connected" / "Manage Tools" without any user action.
+- [x] Task 7.2.4: **Verified** — After OAuth popup closes, the card auto-updates without user action.
+
+### 7.2+ Bugs Found During Testing — FIXED ✅
+
+Three bugs discovered during manual testing of the Phase 7.2 implementation:
+
+- [x] Task 7.2.5: **Manage Tools scroll broken** — `custom-mcp-tools-selector.tsx` used invalid Tailwind class `min-h-400`. Fixed → `min-h-0 h-full` + added `min-h-0` to parent container.
+
+- [x] Task 7.2.6: **Manage Tools Refresh causes tools to vanish (401 error)** — Root cause: `agent_tools.py` live discovery path only checked `existing_mcp.get('config', {}).get('access_token')` but OAuth tokens are stored in `user_mcp_credentials` DB table, not in agent config JSON. Fix: Added credential store lookup using `credential_service.get_credential()` with `get_custom_mcp_qualified_name(url, type)`. Token injected into `mcp_config['access_token']` which flows through `_get_custom_headers()`.
+
+- [x] Task 7.2.7: **Graceful fallback on discovery failure** — `agent_tools.py` now wraps `mcp_service.discover_custom_tools()` in try/except. On failure with cached tools, returns cached data with `from_cache: True` and `refresh_error` field. Frontend `refreshFromServer` updated to protect cache — won't replace good data with empty results from failed refresh.
+
+- [x] Task 7.2.8: **Refresh button visibility** — `custom-mcp-tools-manager.tsx` changed condition from `data?.from_cache` to `data?.tools && data.tools.length > 0` so Refresh button stays visible as long as tools exist.
+
+- [x] Task 7.2.9: **Connectors Refresh button** — Added Refresh button to `mcp-configuration-new.tsx` Connectors modal (user-requested, not in original plan). Uses `handleRefreshConnectors` callback with `queryClient.invalidateQueries`.
+
+### 7.2+ Backend bugs fixed during Phase 7 — FIXED ✅
+
+- [x] Task 7.2.10: **PostgreSQL trigger search_path** — `credential_profile` triggers failed with "relation not found" due to missing schema qualification. Created migration `20260216000000_fix_credential_profile_triggers.sql` to use explicit `public.` schema.
+
+- [x] Task 7.2.11: **store_profile crash guard** — Added try/except around `store_profile()` call in OAuth callback to prevent crash if profile storage fails (non-critical operation).
 
 ### 7.3 OAuth confirmation dialog (UX improvement)
 
@@ -389,17 +405,18 @@ Final verification across the entire stack in production-like environment.
 | 4 | Config key normalization | 12 | **COMPLETE** | Backend Cross-Layer |
 | 5 | Comprehensive test suite | 11 | **COMPLETE** | Backend Testing |
 | 6 | Test harness + E2E CLI | 13 | **MOSTLY DONE** | Backend Integration |
-| 7 | Frontend post-OAuth + UX | 23 | **READY** | Frontend |
+| 7 | Frontend post-OAuth + UX | 30 | **IN PROGRESS** | Frontend |
 | 8 | Full-stack E2E verification | 11 | NOT STARTED | Full-Stack |
-| **Total** | | **117** | | |
+| **Total** | | **124** | | |
 
 ### Phase 7 Task Breakdown by Priority
 
-| Section | Focus | Tasks | Priority |
-|---------|-------|-------|----------|
-| 7.1 | Frontend audit (done) | 6 | — (complete) |
-| 7.2 | Post-OAuth state refresh | 4 | **CRITICAL** (the main bug) |
-| 7.3 | OAuth confirmation dialog | 2 | Nice-to-have |
-| 7.4 | Tool selection in add dialog | 4 | Nice-to-have |
-| 7.5 | Cache oauth_metadata | 2 | Optimization |
-| 7.6 | Verification + testing | 7 | Required |
+| Section | Focus | Tasks | Priority | Status |
+|---------|-------|-------|----------|--------|
+| 7.1 | Frontend audit | 6 | — | **COMPLETE** |
+| 7.2 | Post-OAuth state refresh | 4 | **CRITICAL** | **COMPLETE** |
+| 7.2+ | Bugs found during testing | 7 | CRITICAL | **COMPLETE** |
+| 7.3 | OAuth confirmation dialog | 2 | Nice-to-have | Remaining |
+| 7.4 | Tool selection in add dialog | 4 | Nice-to-have | Remaining |
+| 7.5 | Cache oauth_metadata | 2 | Optimization | Remaining |
+| 7.6 | Verification + testing | 7 | Required | Remaining |

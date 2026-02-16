@@ -191,8 +191,8 @@ class TestDiscoverEndpointAdditional:
             assert service_config["oauth_client_secret"] == "my_secret"
 
     @pytest.mark.asyncio
-    async def test_mcp_exception_returns_500(self, auth_headers):
-        """MCPException in the service layer should return 500."""
+    async def test_mcp_exception_returns_400(self, auth_headers):
+        """Generic MCPException in the service layer should return 400 (not 500)."""
         payload = {"type": "http", "config": {"url": "https://broken.com"}}
 
         with patch(
@@ -208,7 +208,7 @@ class TestDiscoverEndpointAdditional:
                     "/v1/mcp/discover-custom-tools", json=payload, headers=auth_headers
                 )
 
-            assert response.status_code == 500
+            assert response.status_code == 400
             assert "Connection pool exhausted" in response.json()["detail"]
 
 

@@ -290,11 +290,29 @@ class ExpandMessageTool(Tool):
                 logger.info(f"🔄 [MCP REGISTRY] Syncing registry: loader has {loader_tool_count} tools, registry has {registry_tool_count}")
                 init_mcp_registry_from_loader(mcp_loader)
                 mcp_registry._initialized = True
-                
+
                 account_id = getattr(self.thread_manager, 'account_id', None)
                 warmed = await mcp_registry.prewarm_schemas(account_id)
                 if warmed > 0:
                     logger.info(f"⚡ [MCP REGISTRY] Pre-warmed {warmed} schemas from Redis cache")
+            else:
+                # DROP POINT 22: Registry sync SKIPPED — uses count comparison, not content comparison
+                # If loader has same or fewer tools but DIFFERENT tools (e.g., stale tools from previous run),
+                # the registry will serve stale data instead of the current agent's tools.
+                loader_tools = set(mcp_loader.tool_map.keys()) if mcp_loader.tool_map else set()
+                registry_tools = set(mcp_registry._tools.keys()) if mcp_registry._tools else set()
+                only_in_loader = loader_tools - registry_tools
+                only_in_registry = registry_tools - loader_tools
+                if only_in_loader or only_in_registry:
+                    logger.warning(
+                        f"⚠️ [MCP DROP-POINT-22] Registry sync SKIPPED (count-based: loader={loader_tool_count} <= "
+                        f"registry={registry_tool_count}) but tool CONTENT DIFFERS! "
+                        f"Tools in loader but NOT registry ({len(only_in_loader)}): {list(only_in_loader)[:10]}. "
+                        f"Tools in registry but NOT loader ({len(only_in_registry)}): {list(only_in_registry)[:10]}. "
+                        f"The LLM may see STALE tools from a previous agent run!"
+                    )
+                else:
+                    logger.debug(f"🔍 [MCP DROP-POINT-22] Registry sync skipped (loader={loader_tool_count}, registry={registry_tool_count}) — content matches, OK")
         
         account_id = getattr(self.thread_manager, 'account_id', None)
         discovery_info = await mcp_registry.get_discovery_info(filter, load_schemas=True, account_id=account_id)

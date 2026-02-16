@@ -126,6 +126,7 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       // Proactive discovery to see if auth is even needed
       let requiresConfig = false;
       let discoveredTools: string[] = [];
+      let discoveredToolObjects: Array<{ name: string; description?: string }> = [];
       let serverTypeDetected: 'http' | 'sse' = serverType;
 
       const discoveryResponse = await backendApi.post('/mcp/discover-custom-tools', {
@@ -136,7 +137,8 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       if (discoveryResponse.success && discoveryResponse.data?.success) {
         const discovery = discoveryResponse.data;
         requiresConfig = discovery.requires_auth || false;
-        discoveredTools = discovery.tools?.map((t: any) => t.name) || [];
+        discoveredToolObjects = discovery.tools?.map((t: any) => ({ name: t.name, description: t.description })) || [];
+        discoveredTools = discoveredToolObjects.map(t => t.name);
         serverTypeDetected = 'sse';
       } else {
         // Fallback to HTTP probe
@@ -148,7 +150,8 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         if (httpDiscovery.success && httpDiscovery.data?.success) {
           const discovery = httpDiscovery.data;
           requiresConfig = discovery.requires_auth || false;
-          discoveredTools = discovery.tools?.map((t: any) => t.name) || [];
+          discoveredToolObjects = discovery.tools?.map((t: any) => ({ name: t.name, description: t.description })) || [];
+          discoveredTools = discoveredToolObjects.map(t => t.name);
           serverTypeDetected = 'http';
         }
       }
@@ -163,6 +166,8 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         type: serverTypeDetected,
         config: configToSave,
         enabledTools: discoveredTools,
+        // Cache full tool objects so Manage Tools modal can display them without a live server call
+        tools: discoveredToolObjects,
         oauth_client_id: oauthClientId.trim() || undefined,
         custom_headers: Object.keys(headersDict).length > 0 ? headersDict : undefined,
         isCustom: true

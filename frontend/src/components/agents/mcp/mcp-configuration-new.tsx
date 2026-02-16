@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Zap, Server, Store, Settings, Lock } from 'lucide-react'
+import { Zap, Server, Store, Settings, Lock, RefreshCw } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MCPConfigurationProps, MCPConfiguration as MCPConfigurationType } from './types';
 import { ConfiguredMcpList } from './configured-mcp-list';
 import { CustomMCPDialog } from './custom-mcp-dialog';
+import { CustomMCPAuthConfirmation } from './custom-mcp-auth-confirmation';
 import { ComposioRegistry } from '../composio/composio-registry';
 import { ComposioToolsManager } from '../composio/composio-tools-manager';
 import { CustomMCPToolsManager } from './custom-mcp-tools-manager';
@@ -33,8 +34,128 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
   const [selectedAgentId, setSelectedAgentId] = useState<string | undefined>(agentId);
   const queryClient = useQueryClient();
 
+  // Phase 7.2: Track which MCP index is currently going through OAuth
+  const configuringMCPIndexRef = useRef<number | null>(null);
+  // Phase 7.3: Auth confirmation dialog state
+  const [showAuthConfirmation, setShowAuthConfirmation] = useState(false);
+  const [pendingAuthMCP, setPendingAuthMCP] = useState<{ index: number; name: string; url: string } | null>(null);
+
+  const [isRefreshingConnectors, setIsRefreshingConnectors] = useState(false);
+
   const { data: accountState } = useAccountState();
   const { openPricingModal } = usePricingModalStore();
+
+  // Refresh the connectors list by invalidating agent data from the server
+  const handleRefreshConnectors = useCallback(async () => {
+    if (!agentId) return;
+    setIsRefreshingConnectors(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentId] });
+      toast.success('Integrations refreshed');
+    } catch {
+      toast.error('Failed to refresh integrations');
+    } finally {
+      // Small delay so the spinner is visible even on fast refreshes
+      setTimeout(() => setIsRefreshingConnectors(false), 600);
+    }
+  }, [agentId, queryClient]);
+
+  // ──────────────────────────────────────────────
+  // Phase 7.2: Listen for postMessage from OAuth popup
+  // When /mcp-success sends { type: 'mcp-oauth-success' },
+  // we re-probe the server to discover tools and flip state.
+  // ──────────────────────────────────────────────
+  const handleOAuthSuccess = useCallback(async () => {
+    const index = configuringMCPIndexRef.current;
+    if (index === null || index < 0 || index >= configuredMCPs.length) {
+      console.warn('[MCP OAuth] Received success but no MCP index tracked');
+      // Even without a tracked index, invalidate agent data so a manual refresh isn't needed
+      if (agentId) {
+        queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentId] });
+      }
+      return;
+    }
+
+    const mcp = configuredMCPs[index];
+    const url = mcp.config?.url;
+    if (!url) return;
+
+    toast.loading('OAuth complete — discovering tools...', { id: 'mcp-oauth-refresh' });
+
+    try {
+      const discoveryResponse = await backendApi.post('/mcp/discover-custom-tools', {
+        type: mcp.customType || 'sse',
+        config: mcp.config
+      }, { showErrors: false });
+
+      if (discoveryResponse.success && discoveryResponse.data?.success) {
+        const discovery = discoveryResponse.data;
+        const toolNames = discovery.tools?.map((t: any) => t.name) || [];
+        const toolObjects = discovery.tools?.map((t: any) => ({ name: t.name, description: t.description })) || [];
+
+        const updatedMCPs = [...configuredMCPs];
+        updatedMCPs[index] = {
+          ...updatedMCPs[index],
+          config: {
+            ...updatedMCPs[index].config,
+            requires_config: false,
+            oauth_metadata: discovery.oauth_metadata || undefined,
+          },
+          enabledTools: toolNames.length > 0 ? toolNames : updatedMCPs[index].enabledTools,
+          // Cache full tool objects so Manage Tools modal works without live server calls
+          tools: toolObjects,
+        };
+        onConfigurationChange(updatedMCPs);
+        toast.success(`${mcp.name} connected! ${toolNames.length} tools ready.`, { id: 'mcp-oauth-refresh' });
+      } else {
+        // Discovery after OAuth may still fail if backend needs time
+        // Mark as connected optimistically since OAuth itself succeeded
+        const updatedMCPs = [...configuredMCPs];
+        updatedMCPs[index] = {
+          ...updatedMCPs[index],
+          config: {
+            ...updatedMCPs[index].config,
+            requires_config: false,
+          },
+        };
+        onConfigurationChange(updatedMCPs);
+        toast.success(`${mcp.name} authenticated! Tools will be available shortly.`, { id: 'mcp-oauth-refresh' });
+      }
+    } catch (err) {
+      console.error('[MCP OAuth] Post-OAuth re-probe failed:', err);
+      // Still mark as connected — OAuth succeeded, tools may load later
+      const updatedMCPs = [...configuredMCPs];
+      updatedMCPs[index] = {
+        ...updatedMCPs[index],
+        config: {
+          ...updatedMCPs[index].config,
+          requires_config: false,
+        },
+      };
+      onConfigurationChange(updatedMCPs);
+      toast.success(`${mcp.name} authenticated successfully.`, { id: 'mcp-oauth-refresh' });
+    } finally {
+      configuringMCPIndexRef.current = null;
+      // Invalidate agent queries so the parent form data reloads with fresh server state
+      if (agentId) {
+        queryClient.invalidateQueries({ queryKey: ['agents', 'detail', agentId] });
+      }
+    }
+  }, [configuredMCPs, onConfigurationChange, agentId, queryClient]);
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      // Only accept messages from our own origin
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'mcp-oauth-success') {
+        console.log('[MCP OAuth] Received success postMessage from popup');
+        handleOAuthSuccess();
+      }
+    };
+
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [handleOAuthSuccess]);
 
   const isFreeTier = accountState && (
     accountState.subscription?.tier_key === 'free' ||
@@ -82,7 +203,7 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
           return;
         }
 
-        // 1. Proactive discovery - Does it even need auth?
+        // 1. Proactive discovery — does the server even need auth?
         toast.loading('Probing MCP server identity...', { id: 'mcp-configure' });
 
         const discoveryResponse = await backendApi.post('/mcp/discover-custom-tools', {
@@ -102,7 +223,8 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
               ...updatedMCPs[index],
               config: {
                 ...updatedMCPs[index].config,
-                requires_config: false // Mark as connected
+                requires_config: false,
+                oauth_metadata: discovery.oauth_metadata || undefined,
               },
               enabledTools: discovery.tools?.map((t: any) => t.name) || []
             };
@@ -111,24 +233,11 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
           }
         }
 
-        // 2. If discovery says auth required OR if discovery failed but we have a URL, proceed to OAuth
+        // 2. Auth required — show confirmation dialog (Phase 7.3)
         toast.dismiss('mcp-configure');
+        setPendingAuthMCP({ index, name: mcp.name, url });
+        setShowAuthConfirmation(true);
 
-        const returnUrl = window.location.origin + '/mcp-success';
-        const params = new URLSearchParams({
-          url: url,
-          return_url: returnUrl,
-          agent_id: agentId || '',
-          name: mcp.name
-        });
-
-        const response = await backendApi.get<{ redirect_url: string }>(`/mcp/auth/start?${params.toString()}`);
-
-        if (response.success && response.data?.redirect_url) {
-          window.open(response.data.redirect_url, '_blank', 'width=600,height=700,resizable=yes,scrollbars=yes');
-        } else {
-          toast.error('Failed to initiate OAuth flow');
-        }
       } catch (error: any) {
         console.error('OAuth initiation failed:', error);
         toast.error('Failed to initiate OAuth flow');
@@ -136,6 +245,41 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
       }
     } else {
       handleEditMCP(index);
+    }
+  };
+
+  // Phase 7.3: Called when user confirms the auth dialog
+  const handleAuthConfirmed = async () => {
+    setShowAuthConfirmation(false);
+    if (!pendingAuthMCP) return;
+
+    const { index, name, url } = pendingAuthMCP;
+    setPendingAuthMCP(null);
+
+    // Track which index is being OAuth'd so the postMessage handler knows
+    configuringMCPIndexRef.current = index;
+
+    try {
+      const returnUrl = window.location.origin + '/mcp-success';
+      const params = new URLSearchParams({
+        url,
+        return_url: returnUrl,
+        agent_id: agentId || '',
+        name,
+      });
+
+      const response = await backendApi.get<{ redirect_url: string }>(`/mcp/auth/start?${params.toString()}`);
+
+      if (response.success && response.data?.redirect_url) {
+        window.open(response.data.redirect_url, '_blank', 'width=600,height=700,resizable=yes,scrollbars=yes');
+      } else {
+        toast.error('Failed to initiate OAuth flow');
+        configuringMCPIndexRef.current = null;
+      }
+    } catch (error: any) {
+      console.error('OAuth initiation failed:', error);
+      toast.error('Failed to initiate OAuth flow');
+      configuringMCPIndexRef.current = null;
     }
   };
 
@@ -210,6 +354,20 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
             Custom MCP
           </Button>
         </div>
+        {configuredMCPs.length > 0 && (
+          <Button
+            onClick={handleRefreshConnectors}
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 text-muted-foreground hover:text-primary"
+            disabled={isRefreshingConnectors}
+            type="button"
+            title="Refresh integration status"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingConnectors ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        )}
       </div>
 
       {configuredMCPs.length === 0 && (
@@ -290,6 +448,15 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
           onToolsUpdate={handleCustomToolsUpdate}
         />
       )}
+
+      {/* Phase 7.3: OAuth Confirmation Dialog */}
+      <CustomMCPAuthConfirmation
+        open={showAuthConfirmation}
+        onOpenChange={setShowAuthConfirmation}
+        onConfirm={handleAuthConfirmed}
+        serverName={pendingAuthMCP?.name || ''}
+        serverUrl={pendingAuthMCP?.url || ''}
+      />
     </div>
   );
 };

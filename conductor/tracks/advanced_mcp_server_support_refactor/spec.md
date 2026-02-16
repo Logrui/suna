@@ -311,7 +311,9 @@ Prior track specs and plans archived in `conductor/tracks/` (see Section 1).
 29. ✅ **OAuth detection on add**: `custom-mcp-dialog.tsx` correctly reads `requires_auth` from backend discover response and saves `requires_config: true` — *verified via code audit*
 30. ✅ **Configure vs Manage Tools rendering**: `custom-mcp-card.tsx` correctly shows "Configure" button when `requires_config: true` and "Manage Tools" when `false` — *verified via code audit*
 31. ✅ **OAuth popup initiation**: `handleConfigureMCP()` in `mcp-configuration-new.tsx` correctly calls `/mcp/auth/start` with `url`, `return_url`, `agent_id`, `name` params and opens popup — *verified via code audit*
-32. ⏳ **Post-OAuth state refresh**: `/mcp-success` page must notify parent window → flip `requires_config: false` → re-discover tools — *Phase 7 critical fix*
+32. ✅ **Post-OAuth state refresh**: `mcp-success/page.tsx` sends `postMessage` to parent → `mcp-configuration-new.tsx` listens and calls `queryClient.invalidateQueries()` → card auto-flips from "Configure" to "Manage Tools" — *Phase 7.2 DONE*
+32a. ✅ **OAuth credential lookup for live discovery**: `agent_tools.py` now retrieves OAuth tokens from `user_mcp_credentials` table via `credential_service.get_credential()` for live tool refresh — *Phase 7.2+ bug fix*
+32b. ✅ **Graceful discovery fallback**: `agent_tools.py` returns cached tools with `refresh_error` field when live discovery fails; frontend protects cache from empty results — *Phase 7.2+ bug fix*
 33. ⏳ **OAuth confirmation dialog**: Port `CustomMCPAuthConfirmation` from upstream for pre-redirect confirmation — *Phase 7 nice-to-have*
 34. ⏳ **Tool selection on add**: Add step 2 tool picker to `custom-mcp-dialog.tsx` — *Phase 7 nice-to-have*
 35. ⏳ **Full Add→Configure→Use flow**: E2E manual verification of unsecured (Valyu) and OAuth (Desktop Commander) servers — *Phase 7/8*

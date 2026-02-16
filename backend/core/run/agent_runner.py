@@ -91,7 +91,7 @@ class AgentRunner:
             from core.services.browser_extension import get_thread_browser_id
             self.browser_id = await get_thread_browser_id(self.config.thread_id)
             if self.browser_id:
-                logger.info(f"🌐 Browser extension configured for thread: {self.browser_id}")
+                logger.info(f"[Kortix Operator] Browser extension configured for thread: {self.browser_id}")
         except Exception as e:
             logger.debug(f"Could not fetch browser_id (non-fatal): {e}")
         
@@ -294,7 +294,7 @@ class AgentRunner:
             from core.services.browser_extension import get_thread_browser_id
             self.browser_id = await get_thread_browser_id(self.config.thread_id)
             if self.browser_id:
-                logger.info(f"🌐 Browser extension configured for thread: {self.browser_id}")
+                logger.info(f"[Kortix Operator] Browser extension configured for thread: {self.browser_id}")
                 # Update thread_manager for JIT activation support
                 if hasattr(self, 'thread_manager'):
                     self.thread_manager.browser_id = self.browser_id
@@ -713,11 +713,26 @@ class AgentRunner:
         
         try:
             agent_id = self.config.agent_config.get('agent_id')
-            logger.info(f"🔍 [AGENT-MCP-DEBUG] Loading fresh config for agent_id: {agent_id}, account_id: {self.account_id}")
-            
+            # DROP POINT 2: account_id resolution — self.account_id may not be set yet
+            # setup() calls us at line 206, but self.account_id is assigned at line 213 (if config has it) or line 264 (from DB)
+            _has_self_account_id = hasattr(self, 'account_id') and self.account_id is not None
+            _config_account_id = getattr(self.config, 'account_id', None)
+            _resolved_account_id = (self.account_id if _has_self_account_id else None) or _config_account_id
+
+            if not _resolved_account_id:
+                logger.error(f"❌ [MCP DROP-POINT-2] account_id is MISSING at JIT loader init! "
+                             f"hasattr(self, 'account_id')={hasattr(self, 'account_id')}, "
+                             f"self.config.account_id={_config_account_id}. "
+                             f"Version service will get None account_id — may return wrong/empty config!")
+            else:
+                logger.info(f"🔍 [MCP DROP-POINT-2] account_id resolved: {_resolved_account_id} "
+                            f"(from {'self.account_id' if _has_self_account_id else 'config.account_id'})")
+
+            logger.info(f"🔍 [AGENT-MCP-DEBUG] Loading fresh config for agent_id: {agent_id}, account_id: {_resolved_account_id}")
+
             from core.versioning.version_service import get_version_service
             version_service = await get_version_service()
-            fresh_config = await version_service.get_current_mcp_config(agent_id, self.account_id)
+            fresh_config = await version_service.get_current_mcp_config(agent_id, _resolved_account_id)
             
             logger.info(f"🔍 [AGENT-MCP-DEBUG] Version service returned: {fresh_config is not None}")
             if fresh_config:
@@ -726,7 +741,11 @@ class AgentRunner:
                 logger.warning(f"🔍 [AGENT-MCP-DEBUG] ❌ Version service returned None/empty config")
                 
         except Exception as e:
-            logger.error(f"🔍 [AGENT-MCP-DEBUG] ❌ Failed to load fresh config via version service: {e}", exc_info=True)
+            logger.error(f"❌ [MCP DROP-POINT-2] Failed to load fresh config via version service: "
+                         f"type={type(e).__name__}, error={e}", exc_info=True)
+            if isinstance(e, AttributeError):
+                logger.error(f"❌ [MCP DROP-POINT-2] AttributeError confirms account_id was not set when "
+                             f"_initialize_mcp_jit_loader was called. This is the known timing bug.")
             fresh_config = None
         
         if fresh_config:

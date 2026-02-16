@@ -415,7 +415,7 @@ class MCPRegistry:
 
     async def _load_sse_mcp_schemas(self, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Dict[str, Any]]:
         """Load schemas from SSE MCP server"""
-        url = config.get('url')
+        url = config.get('url') or config.get('config', {}).get('url')
         if not url:
             logger.error("❌ [MCP REGISTRY] Missing 'url' in SSE MCP config")
             return {}
@@ -485,7 +485,7 @@ class MCPRegistry:
     
     async def _load_http_mcp_schemas(self, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Dict[str, Any]]:
         """Load schemas from HTTP/Streamable HTTP MCP server"""
-        url = config.get('url')
+        url = config.get('url') or config.get('config', {}).get('url')
         if not url:
             logger.error("❌ [MCP REGISTRY] Missing 'url' in HTTP MCP config")
             return {}

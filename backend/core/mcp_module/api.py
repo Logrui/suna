@@ -12,7 +12,7 @@ from urllib.parse import urlparse, quote, urlencode
 from core.runtime_cache import invalidate_agent_config_cache
 from .mcp_service import mcp_service, MCPException
 from .custom_mcp_registry_service import mcp_registry_service
-from .exceptions import MCPAuthenticationError
+from .exceptions import MCPAuthenticationError, MCPConnectionError, MCPConfigurationError
 import httpx
 import hashlib
 from core.utils.mcp_helpers import get_custom_mcp_qualified_name
@@ -93,9 +93,22 @@ async def discover_custom_mcp_tools(request: CustomMCPDiscoverRequest, user_id: 
             requires_auth=result.requires_auth
         )
         
+    except MCPAuthenticationError as e:
+        logger.warning(f"⚠️ [MCP API] Auth required for discovery: {str(e)}")
+        raise HTTPException(status_code=401, detail=str(e))
+    except MCPConfigurationError as e:
+        logger.warning(f"⚠️ [MCP API] Configuration error in discovery: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except MCPConnectionError as e:
+        logger.warning(f"⚠️ [MCP API] Connection error in discovery: {str(e)}")
+        raise HTTPException(status_code=503, detail=str(e))
     except MCPException as e:
-        logger.error(f"Error discovering custom MCP tools: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ [MCP API] MCP error discovering tools: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"❌ [MCP API] Unexpected error discovering tools: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Internal error during discovery: {str(e)}")
 
 # ==========================================
 # OAuth 2.1 Handshake Endpoints
@@ -249,7 +262,11 @@ async def mcp_auth_callback(
                 logger.error(f"❌ [MCP AUTH] Token exchange failed with status {response.status_code}: {response.text}")
                 raise HTTPException(status_code=400, detail="Failed to exchange authorization code for token")
             
-            token_data = response.json()
+            try:
+                token_data = response.json()
+            except Exception:
+                logger.error(f"❌ [MCP AUTH] Token endpoint returned non-JSON response: {response.text[:200]}")
+                raise HTTPException(status_code=502, detail="MCP server returned invalid token response")
             access_token = token_data.get("access_token")
             
             if not access_token:
@@ -358,16 +375,19 @@ async def mcp_auth_callback(
         )
 
         # 3.1 ALSO store as a Profile so Agent Tools can discover it
-        # This is critical for the Agent Builder system to see this authenticated server
-        logger.info(f"💾 [MCP AUTH] Storing profile for auth lookup: {qualified_name} (Display: {display_name})")
-        await profile_service.store_profile(
-            account_id=user_id,
-            mcp_qualified_name=qualified_name,
-            profile_name=display_name,
-            display_name=display_name,
-            config=config_payload,
-            is_default=True
-        )
+        # Best-effort: profile storage should not block the OAuth flow
+        try:
+            logger.info(f"💾 [MCP AUTH] Storing profile for auth lookup: {qualified_name} (Display: {display_name})")
+            await profile_service.store_profile(
+                account_id=user_id,
+                mcp_qualified_name=qualified_name,
+                profile_name=display_name,
+                display_name=display_name,
+                config=config_payload,
+                is_default=True
+            )
+        except Exception as e:
+            logger.warning(f"⚠️ [MCP AUTH] Profile storage failed (non-blocking): {e}. Credential was stored successfully.")
 
         # 5. Update Agent if agent_id was provided
         if agent_id:
@@ -433,7 +453,6 @@ async def mcp_auth_callback(
                 logger.info(f"Successfully associated OAuth MCP {display_name} ({len(enabled_tool_names)} tools) with agent {agent_id}")
             except Exception as e:
                 logger.error(f"Failed to automatically associate MCP with agent {agent_id}: {str(e)}")
-                import traceback
                 traceback.print_exc()
         else:
             logger.info("No agent_id provided or found for association. Skipping auto-link.")
@@ -461,10 +480,21 @@ async def mcp_auth_callback(
         if agent_id and f"agent_id={agent_id}" not in final_redirect:
             final_redirect += f"&agent_id={agent_id}"
             
-        print(f"DEBUG: [MCP-AUTH] Final redirect URL: {final_redirect}")
+        logger.info(f"✅ [MCP AUTH] Final redirect URL: {final_redirect}")
         return RedirectResponse(url=final_redirect, status_code=303)
 
+    except HTTPException:
+        raise
+    except MCPAuthenticationError as e:
+        logger.warning(f"⚠️ [MCP AUTH] Authentication error in callback: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Authentication error: {str(e)}")
+    except httpx.TimeoutException as e:
+        logger.error(f"❌ [MCP AUTH] Token exchange timed out: {str(e)}")
+        raise HTTPException(status_code=504, detail="Token exchange timed out")
+    except httpx.NetworkError as e:
+        logger.error(f"❌ [MCP AUTH] Network error during token exchange: {str(e)}")
+        raise HTTPException(status_code=503, detail="Network error during token exchange")
     except Exception as e:
         traceback.print_exc()
-        logger.error(f"OAuth Callback failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ [MCP AUTH] OAuth Callback failed: {e}")
+        raise HTTPException(status_code=500, detail=f"OAuth callback failed: {str(e)}")

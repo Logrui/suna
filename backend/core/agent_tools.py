@@ -18,17 +18,18 @@ router = APIRouter(tags=["agent-tools"])
 async def get_custom_mcp_tools_for_agent(
     agent_id: str,
     request: Request,
+    refresh: bool = False,
     user_id: str = Depends(verify_and_get_user_id_from_jwt)
 ):
-    logger.debug(f"Getting custom MCP tools for agent {agent_id}, user {user_id}")
+    logger.debug(f"Getting custom MCP tools for agent {agent_id}, user {user_id}, refresh={refresh}")
     try:
         client = await utils.db.client
         agent_result = await client.table('agents').select('current_version_id').eq('agent_id', agent_id).eq('account_id', user_id).execute()
         if not agent_result.data:
             raise HTTPException(status_code=404, detail="Worker not found")
-        
+
         agent = agent_result.data[0]
- 
+
         agent_config = {}
         if agent.get('current_version_id'):
             version_result = await client.table('agent_versions')\
@@ -38,35 +39,21 @@ async def get_custom_mcp_tools_for_agent(
                 .execute()
             if version_result.data and version_result.data.get('config'):
                 agent_config = version_result.data['config']
-        
-        tools = agent_config.get('tools', {})
-        custom_mcps = tools.get('custom_mcp', [])
-        
+
+        tools_config = agent_config.get('tools', {})
+        custom_mcps = tools_config.get('custom_mcp', [])
+
         mcp_url = request.headers.get('X-MCP-URL')
         mcp_type = request.headers.get('X-MCP-Type', 'sse')
-        
+
         if not mcp_url:
             raise HTTPException(status_code=400, detail="X-MCP-URL header is required")
-        
-        mcp_config = {
-            'url': mcp_url,
-            'type': mcp_type
-        }
-        
-        if 'X-MCP-Headers' in request.headers:
-            import json
-            try:
-                mcp_config['headers'] = json.loads(request.headers['X-MCP-Headers'])
-            except json.JSONDecodeError:
-                logger.warning("Failed to parse X-MCP-Headers as JSON")
-        
-        from core.mcp_module import mcp_service
-        discovery_result = await mcp_service.discover_custom_tools(mcp_type, mcp_config)
-        
+
+        # Find existing MCP config in agent's saved configuration
         existing_mcp = None
         for mcp in custom_mcps:
             if mcp_type == 'composio':
-                if (mcp.get('type') == 'composio' and 
+                if (mcp.get('type') == 'composio' and
                     mcp.get('config', {}).get('profile_id') == mcp_url):
                     existing_mcp = mcp
                     break
@@ -76,24 +63,141 @@ async def get_custom_mcp_tools_for_agent(
                     existing_mcp = mcp
                     break
 
-        tools = []
         enabled_tools = get_config_value(existing_mcp, "enabled_tools", []) if existing_mcp else []
-        
-        for tool in discovery_result.tools:
-            tools.append({
-                'name': tool['name'],
-                'description': tool.get('description', f'Tool from {mcp_type.upper()} MCP server'),
-                'enabled': tool['name'] in enabled_tools
-            })
-        
-        return {
-            'tools': tools,
-            'has_mcp_config': existing_mcp is not None,
-            'server_type': mcp_type,
-            'server_url': mcp_url,
-            'requires_auth': getattr(discovery_result, 'requires_auth', False)
+
+        # ── Cache-first strategy ──
+        # Use cached tool data from the agent config when available.
+        # This avoids a live server call every time the Manage Tools modal opens.
+        # The cached tools list comes from either:
+        #   - "tools" array (full objects with name+description, set by OAuth callback or discovery)
+        #   - "enabledTools" array (just names, set by the frontend dialog on first add)
+        cached_tools = existing_mcp.get('tools', []) if existing_mcp else []
+
+        if cached_tools and not refresh:
+            # We have full tool objects cached — use them directly
+            logger.debug(f"Using {len(cached_tools)} cached tools for {mcp_url}")
+            tools = []
+            for tool in cached_tools:
+                tool_name = tool.get('name', '') if isinstance(tool, dict) else str(tool)
+                tools.append({
+                    'name': tool_name,
+                    'description': tool.get('description', f'Tool from {mcp_type.upper()} MCP server') if isinstance(tool, dict) else f'Tool from {mcp_type.upper()} MCP server',
+                    'enabled': tool_name in enabled_tools
+                })
+
+            return {
+                'tools': tools,
+                'has_mcp_config': True,
+                'server_type': mcp_type,
+                'server_url': mcp_url,
+                'requires_auth': False,
+                'from_cache': True
+            }
+
+        if enabled_tools and not cached_tools and not refresh:
+            # We only have tool names (no descriptions) — still return them from cache
+            # rather than hitting the live server
+            logger.debug(f"Using {len(enabled_tools)} cached tool names for {mcp_url}")
+            tools = []
+            for tool_name in enabled_tools:
+                tools.append({
+                    'name': tool_name,
+                    'description': f'Tool from {mcp_type.upper()} MCP server',
+                    'enabled': True
+                })
+
+            return {
+                'tools': tools,
+                'has_mcp_config': True,
+                'server_type': mcp_type,
+                'server_url': mcp_url,
+                'requires_auth': False,
+                'from_cache': True
+            }
+
+        # ── Live discovery fallback ──
+        # Only hit the live server if: no cached data, or caller explicitly requested refresh
+        logger.info(f"Live discovery for {mcp_url} (refresh={refresh}, cached_tools={len(cached_tools)}, enabled_tools={len(enabled_tools)})")
+
+        mcp_config = {
+            'url': mcp_url,
+            'type': mcp_type
         }
-        
+
+        if 'X-MCP-Headers' in request.headers:
+            try:
+                mcp_config['headers'] = json.loads(request.headers['X-MCP-Headers'])
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse X-MCP-Headers as JSON")
+
+        # Merge access_token from stored credentials (OAuth'd servers).
+        # Tokens are stored in user_mcp_credentials table, NOT in agent config JSON.
+        access_token = None
+        if existing_mcp and existing_mcp.get('config', {}).get('access_token'):
+            # Legacy: token stored directly in agent config (rare)
+            access_token = existing_mcp['config']['access_token']
+        else:
+            # Primary path: look up from credential store
+            try:
+                from core.credentials import get_credential_service
+                from core.utils.mcp_helpers import get_custom_mcp_qualified_name
+                credential_service = get_credential_service(utils.db)
+                qualified_name = get_custom_mcp_qualified_name(mcp_url, mcp_type)
+                credential = await credential_service.get_credential(user_id, qualified_name)
+                if credential and credential.config and 'access_token' in credential.config:
+                    access_token = credential.config['access_token']
+                    logger.debug(f"Found stored OAuth token for {qualified_name}")
+            except Exception as e:
+                logger.warning(f"Failed to look up stored credential for {mcp_url}: {e}")
+
+        if access_token:
+            mcp_config['access_token'] = access_token
+
+        from core.mcp_module import mcp_service
+        try:
+            discovery_result = await mcp_service.discover_custom_tools(mcp_type, mcp_config)
+
+            tools = []
+            for tool in discovery_result.tools:
+                tools.append({
+                    'name': tool['name'],
+                    'description': tool.get('description', f'Tool from {mcp_type.upper()} MCP server'),
+                    'enabled': tool['name'] in enabled_tools
+                })
+
+            return {
+                'tools': tools,
+                'has_mcp_config': existing_mcp is not None,
+                'server_type': mcp_type,
+                'server_url': mcp_url,
+                'requires_auth': getattr(discovery_result, 'requires_auth', False),
+                'from_cache': False
+            }
+        except Exception as discovery_error:
+            logger.warning(f"Live discovery failed for {mcp_url}: {discovery_error}")
+            # Graceful fallback: return cached data rather than empty/error
+            if cached_tools:
+                logger.info(f"Falling back to {len(cached_tools)} cached tools after discovery failure")
+                tools = []
+                for tool in cached_tools:
+                    tool_name = tool.get('name', '') if isinstance(tool, dict) else str(tool)
+                    tools.append({
+                        'name': tool_name,
+                        'description': tool.get('description', f'Tool from {mcp_type.upper()} MCP server') if isinstance(tool, dict) else f'Tool from {mcp_type.upper()} MCP server',
+                        'enabled': tool_name in enabled_tools
+                    })
+                return {
+                    'tools': tools,
+                    'has_mcp_config': True,
+                    'server_type': mcp_type,
+                    'server_url': mcp_url,
+                    'requires_auth': False,
+                    'from_cache': True,
+                    'refresh_error': str(discovery_error)
+                }
+            # No cached data either — re-raise
+            raise
+
     except HTTPException:
         raise
     except Exception as e:

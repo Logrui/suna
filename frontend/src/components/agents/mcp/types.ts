@@ -1,9 +1,11 @@
 export interface MCPConfiguration {
   name: string;
   qualifiedName: string;
-  mcp_qualified_name?: string; 
+  mcp_qualified_name?: string;
   config: Record<string, any>;
   enabledTools: string[];
+  /** Cached tool objects (name + description) for Manage Tools modal */
+  tools?: Array<{ name: string; description?: string }>;
   selectedProfileId?: string;
   isCustom?: boolean;
   customType?: 'http' | 'sse' | 'composio';

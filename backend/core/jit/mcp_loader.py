@@ -122,8 +122,20 @@ class MCPJITLoader:
             process_tasks.append(self._process_mcp_config(mcp_config, "configured", cache_only=cache_only))
         
         if process_tasks:
-            await asyncio.gather(*process_tasks, return_exceptions=True)
-        
+            results = await asyncio.gather(*process_tasks, return_exceptions=True)
+            # DROP POINT 9: asyncio.gather swallows exceptions when return_exceptions=True
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    mcp_source = "custom" if i < len(custom_mcps) else "configured"
+                    mcp_idx = i if i < len(custom_mcps) else i - len(custom_mcps)
+                    all_mcps = custom_mcps + configured_mcps
+                    mcp_name = all_mcps[i].get('name', 'unnamed') if i < len(all_mcps) else f"index-{i}"
+                    logger.error(
+                        f"❌ [MCP DROP-POINT-9] Exception SWALLOWED by asyncio.gather for {mcp_source} MCP "
+                        f"'{mcp_name}' (task {i}/{len(results)}): {type(result).__name__}: {result}",
+                        exc_info=result
+                    )
+
         elapsed_ms = (time.time() - start_time) * 1000
         
         self._tool_map_built = True
@@ -160,7 +172,18 @@ class MCPJITLoader:
             logger.info(f"🔍 [MCP-PROCESS-DEBUG] Processing as custom MCP (type: {custom_type})")
             await self._process_custom_mcp_config_internal(mcp_config, cache_only)
             return
-        
+
+        # DROP POINT 10: custom_type is empty or unrecognized — falls through to Composio/configured path
+        if config_type == "custom" and custom_type not in ("sse", "http", "json"):
+            logger.warning(
+                f"⚠️ [MCP DROP-POINT-10] Custom MCP '{server_name}' has custom_type='{custom_type}' which is NOT "
+                f"in ('sse','http','json') — it will be routed to the COMPOSIO/configured path instead of custom discovery! "
+                f"This is likely wrong. Config keys: {list(mcp_config.keys())}, "
+                f"has 'type': {bool(mcp_config.get('type'))}, has 'customType': {bool(mcp_config.get('customType'))}, "
+                f"has 'custom_type': {bool(mcp_config.get('custom_type'))}, "
+                f"raw config (truncated): {str(mcp_config)[:300]}"
+            )
+
         toolkit_slug = self._extract_toolkit_slug(mcp_config)
         logger.info(f"🔍 [MCP-PROCESS-DEBUG]   extracted toolkit_slug: {toolkit_slug}")
         
@@ -233,16 +256,34 @@ class MCPJITLoader:
             if cache_only:
                 enabled_tools = get_config_value(mcp_config, "enabled_tools", [])
                 if enabled_tools:
+                    # DROP POINT 27: cache_only uses raw server_name, but full-discovery normalizes it
+                    # This means the same server gets DIFFERENT toolkit_slugs depending on the mode,
+                    # causing duplicate or orphaned tool entries when both paths run.
+                    cache_slug = f"custom_{custom_type}_{server_name}"
+                    normalized_slug = f"custom_{custom_type}_{server_name.replace(' ', '_').lower()}"
+                    if cache_slug != normalized_slug:
+                        logger.warning(
+                            f"⚠️ [MCP DROP-POINT-27] Slug INCONSISTENCY for '{server_name}': "
+                            f"cache_only slug='{cache_slug}' vs full-discovery slug='{normalized_slug}'. "
+                            f"Tools registered now will have a DIFFERENT toolkit_slug than tools registered "
+                            f"during full enrichment, causing duplicates or mismatches in the registry!"
+                        )
                     for tool_name in enabled_tools:
                         if tool_name not in self.tool_map:
                             self.tool_map[tool_name] = MCPToolInfo(
                                 tool_name=tool_name,
-                                toolkit_slug=f"custom_{custom_type}_{server_name}",
+                                toolkit_slug=cache_slug,
                                 mcp_config=mcp_config
                             )
-                    logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Added {len(enabled_tools)} enabled tools from config (cache-only mode)")
+                    logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Added {len(enabled_tools)} enabled tools from config (cache-only mode, slug={cache_slug})")
                 else:
-                    logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: No enabled tools in config, will discover later")
+                    logger.warning(
+                        f"⚠️ [MCP DROP-POINT-14] Custom MCP '{server_name}' has cache_only=True but NO enabledTools in config! "
+                        f"This means ZERO tools will be registered for this server until full enrichment runs. "
+                        f"type={custom_type}, url={url}, config_keys={list(mcp_config.keys())}, "
+                        f"has_config_sub={bool(mcp_config.get('config'))}, "
+                        f"config_sub_keys={list(mcp_config.get('config', {}).keys()) if mcp_config.get('config') else 'N/A'}"
+                    )
                 return
             tool_names = await self._discover_tools_with_fallback(mcp_config)
         else:

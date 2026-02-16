@@ -47,12 +47,14 @@ export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
       
       // Map 'sse' backend type to 'http' for frontend display
       const displayType = customMcp.type === 'sse' ? 'http' : (customMcp.type || customMcp.customType);
-      
+
       return {
         name: customMcp.name,
         qualifiedName: customMcp.qualifiedName || `custom_${displayType}_${customMcp.name.replace(' ', '_').toLowerCase()}`,
         config: customMcp.config,
         enabledTools: customMcp.enabledTools,
+        // Preserve cached tool objects for Manage Tools modal
+        ...(customMcp.tools ? { tools: customMcp.tools } : {}),
         isCustom: true,
         customType: displayType
       };
@@ -78,13 +80,15 @@ export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
         
         // Map 'http' to 'sse' for backend compatibility
         const backendType = mcp.customType === 'http' ? 'sse' : mcp.customType;
-        
+
         return {
           name: mcp.name,
           type: backendType,
           customType: mcp.customType,
           config: mcp.config,
-          enabledTools: mcp.enabledTools
+          enabledTools: mcp.enabledTools,
+          // Preserve cached tool objects for Manage Tools modal
+          ...(mcp.tools ? { tools: mcp.tools } : {})
         };
       });
 

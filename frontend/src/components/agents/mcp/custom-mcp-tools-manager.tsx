@@ -41,11 +41,13 @@ export const CustomMCPToolsManager: React.FC<CustomMCPToolsManagerProps> = ({
         error,
         updateMutation,
         isUpdating,
-        refetch
+        refetch,
+        refreshFromServer,
     } = useCustomMCPToolsData(agentId, mcpConfig);
 
     const [selectedToolNames, setSelectedToolNames] = useState<string[]>([]);
     const [hasChanges, setHasChanges] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Initialize selected tools from the data
     useEffect(() => {
@@ -83,6 +85,18 @@ export const CustomMCPToolsManager: React.FC<CustomMCPToolsManagerProps> = ({
         }
     };
 
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await refreshFromServer();
+            toast.success('Tools refreshed from server');
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to refresh tools');
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-3xl h-[85vh] overflow-hidden flex flex-col p-0 rounded-3xl gap-0 border-border/40 shadow-2xl">
@@ -99,15 +113,30 @@ export const CustomMCPToolsManager: React.FC<CustomMCPToolsManagerProps> = ({
                                 </DialogDescription>
                             </div>
                         </div>
-                        {hasChanges && (
-                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 animate-enter px-3 py-1">
-                                Unsaved Changes
-                            </Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {data?.tools && data.tools.length > 0 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleRefresh}
+                                    disabled={isRefreshing || isLoading}
+                                    className="rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/5"
+                                    title="Refresh tools from server"
+                                >
+                                    <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", isRefreshing && "animate-spin")} />
+                                    Refresh
+                                </Button>
+                            )}
+                            {hasChanges && (
+                                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 animate-enter px-3 py-1">
+                                    Unsaved Changes
+                                </Badge>
+                            )}
+                        </div>
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-hidden flex flex-col p-8 pt-6 pb-4">
+                <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-8 pt-6 pb-4">
                     {error ? (
                         <div className="flex-1 flex flex-col items-center justify-center space-y-4">
                             <Alert variant="destructive" className="max-w-md rounded-2xl">

@@ -1,6 +1,6 @@
 # Track: Advanced MCP Server Support Refactor
 
-**Status**: Phases 1-6 COMPLETE, Phase 7 READY (Frontend)
+**Status**: Phases 1-6 COMPLETE, Phase 7 IN PROGRESS (Frontend — core fixes done, UX polish remaining)
 **Priority**: High
 **Created**: 2026-02-15
 
@@ -14,7 +14,7 @@
 | 4 | **COMPLETE** | 32 | Config normalization (`get_config_value()`, `CanonicalMCPConfig`) |
 | 5 | **COMPLETE** | 45 | Comprehensive gap-fill test suite |
 | 6 | **MOSTLY DONE** | — | Harness E2E verified: discover (4/4 steps), run (3 turns), Valyu 11 tools |
-| 7 | **READY** | — | Frontend post-OAuth refresh (critical) + UX alignment. 23 tasks. |
+| 7 | **IN PROGRESS** | — | Post-OAuth refresh DONE, credential lookup DONE, graceful fallback DONE. UX polish remaining (7.3-7.5). |
 | 8 | NOT STARTED | — | Full-stack E2E production verification |
 
 **Total tests**: 143 passing in ~0.83s
@@ -68,27 +68,41 @@ docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests
 
 5. **SSRF protection on all paths**: `is_safe_url()` validation added to JIT discovery and execution paths, matching the existing protection in the legacy executor.
 
-## Phase 7 Frontend Analysis Summary
+## Phase 7 Frontend — Implementation Progress
 
-**Completed code audit** of all frontend MCP components (6 files in `frontend/src/components/agents/mcp/` + `/mcp-success` page). Compared against upstream reference (`apps/frontend/`).
+**Code audit** complete. Core functionality implemented and deployed. UX polish tasks remain.
 
-### What Already Works ✅
-- **OAuth detection**: Dialog reads `requires_auth` from backend, saves as `requires_config` ✅
-- **Button rendering**: Card shows "Configure" vs "Manage Tools" based on `requires_config` ✅
-- **OAuth popup initiation**: `handleConfigureMCP()` calls `/mcp/auth/start` with correct params ✅
-- **Component wiring**: `ConfiguredMcpList` → `CustomMCPCard` → callbacks properly connected ✅
+### Completed ✅
+- **7.1 Frontend audit** — All 6 MCP frontend files + mcp-success page audited against upstream
+- **7.2 Post-OAuth state refresh** — CRITICAL FIX DONE:
+  - `mcp-success/page.tsx`: Added `window.opener.postMessage({ type: 'mcp-oauth-success' })` with retry mechanism and fallback UI
+  - `mcp-configuration-new.tsx`: Added `useEffect` message listener for `mcp-oauth-success`, auto-refreshes MCP state via `queryClient.invalidateQueries`
+  - Card now auto-flips from "Configure" → "Manage Tools" after OAuth popup completes
+- **7.2+ Backend bug: OAuth credential lookup for live discovery** — FIXED:
+  - `agent_tools.py`: Live tool discovery (refresh=true) now looks up OAuth tokens from `user_mcp_credentials` table via `credential_service.get_credential()`, not just from agent config JSON
+  - Token injected into `mcp_config['access_token']` → flows through `_get_custom_headers()` → `Authorization: Bearer` header
+- **7.2+ Backend bug: Graceful fallback on discovery failure** — FIXED:
+  - `agent_tools.py`: Wrapped `mcp_service.discover_custom_tools()` in try/except. On failure with cached tools, returns cached data with `from_cache: True` + `refresh_error` field
+  - `use-custom-mcp-tools.ts`: `refreshFromServer` protects cache — won't replace good data with empty result from failed refresh
+  - `custom-mcp-tools-manager.tsx`: Refresh button stays visible as long as tools exist (not just when from_cache)
+- **Connectors Refresh button** — Added to `mcp-configuration-new.tsx` Connectors modal (not in original plan, user-requested)
+- **Manage Tools scroll fix** — Fixed invalid Tailwind class `min-h-400` → `min-h-0 h-full` in `custom-mcp-tools-selector.tsx`
+- **Backend: PostgreSQL trigger search_path fix** — Migration for `credential_profile` triggers to use explicit `public.` schema
+- **Backend: try/except guard around store_profile** — Prevents crash if profile storage fails during OAuth callback
 
-### Critical Gap ❌
-- **Post-OAuth state refresh**: After OAuth popup closes, parent window doesn't know. Card stays stuck on "Configure". User has to click Configure again. Fix: `postMessage` from popup → event listener in parent → auto re-probe → flip state.
+### Remaining 🔲
+- **7.3** OAuth confirmation dialog (port `CustomMCPAuthConfirmation` from upstream) — nice UX
+- **7.4** Tool selection in add dialog (2-step flow with checkboxes) — nice UX
+- **7.5** Cache `oauth_metadata` from discovery response — optimization
+- **7.6** Verification + manual testing (Valyu unsecured + Desktop Commander OAuth E2E)
 
-### UX Gaps (nice-to-have)
-- **No OAuth confirmation dialog**: Upstream has `CustomMCPAuthConfirmation` (Shield icon + "Proceed to Login"). We go straight to redirect.
-- **No tool selection on add**: We auto-enable all discovered tools. Upstream has 2-step dialog with checkboxes.
-- **oauth_metadata discarded**: Backend returns it, frontend ignores it, forces re-probe every Configure click.
-
-### Phase 7 Priority Order
-1. **7.2** Post-OAuth state refresh (4 tasks) — **CRITICAL, the main bug**
-2. **7.3** OAuth confirmation dialog (2 tasks) — nice UX
-3. **7.4** Tool selection in add dialog (4 tasks) — nice UX
-4. **7.5** Cache oauth_metadata (2 tasks) — optimization
-5. **7.6** Verification + testing (7 tasks) — required
+### Key Files Modified (Phase 7)
+| File | Changes |
+|------|---------|
+| `frontend/src/app/(auth)/mcp-success/page.tsx` | postMessage to parent, retry, fallback UI |
+| `frontend/src/components/agents/mcp/mcp-configuration-new.tsx` | OAuth message listener, Connectors Refresh button |
+| `frontend/src/components/agents/mcp/custom-mcp-tools-selector.tsx` | Scroll fix (min-h-0 h-full) |
+| `frontend/src/components/agents/mcp/custom-mcp-tools-manager.tsx` | Refresh button visibility fix |
+| `frontend/src/hooks/agents/use-custom-mcp-tools.ts` | Cache protection, refresh_error type |
+| `backend/core/agent_tools.py` | Credential lookup + graceful discovery fallback |
+| `backend/supabase/migrations/20260216000000_fix_credential_profile_triggers.sql` | PostgreSQL trigger search_path fix |
