@@ -14,8 +14,8 @@
 | 3 | **COMPLETE** | 31/31 | Layer 3 Execution Consolidation |
 | 4 | **COMPLETE** | 32/32 | Configuration Key Normalization |
 | 5 | **COMPLETE** | 45/45 | Comprehensive Test Suite (Gap Fill) |
-| 6 | IN PROGRESS | — | Test Harness Completion + E2E CLI |
-| 7 | NOT STARTED | — | Frontend 2-Stage OAuth (needs user) |
+| 6 | **MOSTLY DONE** | — | Test Harness E2E verified (Valyu discover+run). Langfuse/reliability deferred. |
+| 7 | **READY** | — | Frontend post-OAuth refresh (critical fix) + UX alignment |
 | 8 | NOT STARTED | — | Full-Stack E2E Production Verification |
 
 **Cumulative test results**: 143/143 tests passing in ~0.83s
@@ -243,40 +243,107 @@ Complete the CLI test harness and verify against real MCP servers.
 
 ---
 
-## Phase 7: Frontend — 2-Stage OAuth & MCP Configuration
+## Phase 7: Frontend — Post-OAuth Refresh & UX Alignment
 
-All backend work is complete. Now update the frontend to match the stabilized API contracts.
+All backend work is complete. Frontend OAuth detection and button rendering already work correctly (verified via code audit in spec.md §2.6). The critical gap is post-OAuth state management. UX improvements are secondary.
 
-### 7.1 Audit current frontend state
-- [ ] Task: Read and audit `frontend/src/components/agents/mcp/` — all components, verify against current backend API contracts
-- [ ] Task: Read and audit `frontend/src/hooks/agents/use-custom-mcp-tools.ts` — verify API calls match refactored endpoints
-- [ ] Task: Read upstream reference `apps/frontend/src/components/agents/mcp/custom-mcp-auth-confirmation.tsx` — understand the OAuth confirmation UI pattern
+**Frontend files in scope** (all in `frontend/src/components/agents/mcp/`):
+- `mcp-configuration-new.tsx` — Main orchestrator (handleConfigureMCP, handleConfigureTools)
+- `configured-mcp-list.tsx` — List component routing custom MCPs to CustomMCPCard
+- `custom-mcp-card.tsx` — Card with Configure/Manage Tools buttons (reads requires_config)
+- `custom-mcp-dialog.tsx` — Add/edit dialog (probes server, saves requires_config)
+- `custom-mcp-tools-manager.tsx` — Tool enable/disable manager
+- `frontend/src/app/(auth)/mcp-success/page.tsx` — OAuth callback landing page
 
-### 7.2 Fix API integration issues
-- [ ] Task: Fix OAuth redirect URL construction — use dynamic URL based on current origin instead of hardcoded `/mcp-success`
-- [ ] Task: Stabilize React Query keys in `use-custom-mcp-tools.ts` — normalize the query key to use `qualifiedName` instead of fallback URL pattern
-- [ ] Task: Fix mixed proxy/direct API routes in `use-secure-mcp.ts` — use consistent routing strategy
+**Upstream reference** (read-only, for design patterns): `apps/frontend/src/components/agents/mcp/`
 
-### 7.3 Implement 2-stage registration flow
-- [ ] Task: Update `custom-mcp-dialog.tsx` — simplify to capture URL/name only (Stage 1: register). Remove inline OAuth/tool-discovery from the add dialog.
-- [ ] Task: Update `custom-mcp-card.tsx` — show "Configuration Required" status for servers needing OAuth. Add "Configure" button that opens confirmation dialog.
-- [ ] Task: Port `CustomMCPAuthConfirmation` component from `apps/frontend/` — adapt to our routing and API patterns. Show summary of upcoming OAuth redirect before initiating.
-- [ ] Task: Wire "Configure" button → confirmation dialog → `window.location.href = /v1/mcp/auth/start?...` with correct params (url, return_url, agent_id)
+**Priority order**: 7.2 (critical fix) → 7.3 (UX) → 7.4 (UX) → 7.5 (optimization) → 7.6 (verification)
 
-### 7.4 Implement success callback handling
-- [ ] Task: Update `frontend/src/app/(auth)/mcp-success/page.tsx` — handle OAuth callback redirect, show success toast, redirect to agent config page
-- [ ] Task: Verify React Query cache invalidation after OAuth success — tools should auto-refresh in the tool selector
+### 7.1 Frontend audit — COMPLETE (code audit)
+- [x] Task: Audited `custom-mcp-card.tsx` — OAuth detection via `requires_config` ✅. Shows Configure (amber) vs Manage Tools (green).
+- [x] Task: Audited `custom-mcp-dialog.tsx` — reads `requires_auth` from backend discover endpoint, saves as `requires_config: true`. ✅
+- [x] Task: Audited `configured-mcp-list.tsx` — routes custom MCPs to `CustomMCPCard` with `onConfigure`/`onManageTools` callbacks. ✅
+- [x] Task: Audited `mcp-configuration-new.tsx` — `handleConfigureMCP()` re-probes server, calls `/mcp/auth/start`, opens popup. ✅
+- [x] Task: Audited `/mcp-success/page.tsx` — auto-closes popup after 3s, **NO parent window notification**. ❌ Critical gap.
+- [x] Task: Audited upstream reference (`apps/frontend/`) — has `CustomMCPAuthConfirmation` dialog, `onAuthRequest` callback pattern, multi-signal `isAuthRequired`, 2-step tool picker dialog, full-page redirect (not popup).
 
-### 7.5 Tool management UI
-- [ ] Task: Verify `custom-mcp-tools-manager.tsx` works with refactored backend — tools load correctly, selection persists
-- [ ] Task: Verify `custom-mcp-tools-selector.tsx` displays all discovered tools with correct names and descriptions
-- [ ] Task: Verify tool enable/disable saves correctly to agent config via `update_custom_mcp_tools_for_agent` endpoint
+### 7.2 CRITICAL: Post-OAuth state refresh (the main bug)
 
-### 7.6 Phase 7 Verification
-- [ ] Task: Run backend test suite — all still passing (no backend changes in this phase)
-- [ ] Task: Manual walkthrough: add Valyu (unsecured) — verify 2-stage flow, tools appear, selectable
-- [ ] Task: Manual walkthrough: add Desktop Commander (OAuth) — verify 2-stage flow, "Configure" button, OAuth redirect, callback, tools appear
-- [ ] Task: Conductor — User Manual Verification 'Phase 7: Frontend' (Protocol in workflow.md)
+**The problem**: After OAuth completes in the popup, the popup auto-closes but the parent window doesn't know OAuth succeeded. The card still shows "Configure" because `requires_config` was never flipped to `false`. User has to click "Configure" a second time.
+
+**The fix**: popup→parent communication via `postMessage`.
+
+- [ ] Task 7.2.1: **mcp-success page** — Update `frontend/src/app/(auth)/mcp-success/page.tsx`:
+  - Add `window.opener?.postMessage({ type: 'mcp-oauth-success' }, window.location.origin)` in the `useEffect`, BEFORE the auto-close timer starts.
+  - Add fallback: if `!window.opener` (full-page redirect or popup blocked), show a "Return to agent settings" link instead of just auto-closing.
+  - Keep the existing success UI (checkmark, message, auto-close timer).
+
+- [ ] Task 7.2.2: **Track configuring MCP** — In `mcp-configuration-new.tsx`:
+  - Add `const configuringMCPRef = useRef<number | null>(null)` to track which MCP index is being OAuth'd.
+  - In `handleConfigureMCP()`, set `configuringMCPRef.current = index` BEFORE opening the popup.
+
+- [ ] Task 7.2.3: **Message listener** — In `mcp-configuration-new.tsx`:
+  - Add `useEffect` that registers `window.addEventListener('message', handleOAuthMessage)` and cleans up on unmount.
+  - `handleOAuthMessage(event)`: check `event.origin === window.location.origin` and `event.data?.type === 'mcp-oauth-success'`.
+  - On match: read `configuringMCPRef.current` to get the MCP index, then:
+    1. Re-probe server via `backendApi.post('/mcp/discover-custom-tools', ...)`
+    2. If `!discovery.requires_auth`: update `configuredMCPs[index].config.requires_config = false`, update `enabledTools` from discovery, call `onConfigurationChange()`
+    3. Show `toast.success('Connected to {name} successfully!')`
+    4. Reset `configuringMCPRef.current = null`
+
+- [ ] Task 7.2.4: **Verify** — After OAuth popup closes, the card automatically flips from "Configuration Required" / "Configure" to "Connected" / "Manage Tools" without any user action.
+
+### 7.3 OAuth confirmation dialog (UX improvement)
+
+Add a pre-redirect confirmation so users know they're about to leave the page.
+
+- [ ] Task 7.3.1: Create `frontend/src/components/agents/mcp/custom-mcp-auth-confirmation.tsx`:
+  - Port from `apps/frontend/src/components/agents/mcp/custom-mcp-auth-confirmation.tsx`.
+  - Props: `open`, `onOpenChange`, `onConfirm`, `serverName`, `serverUrl`.
+  - UI: AlertDialog with Shield icon, server name, server URL in mono box, "Proceed to Login" + "Cancel" buttons.
+  - Adapt styling to our fork conventions (rounded corners, consistent with other dialogs).
+
+- [ ] Task 7.3.2: Wire confirmation in `mcp-configuration-new.tsx`:
+  - Add state: `const [authConfirmOpen, setAuthConfirmOpen] = useState(false)` and `const [mcpToAuth, setMcpToAuth] = useState<{index: number, mcp: MCPConfigurationType} | null>(null)`.
+  - In `handleConfigureMCP()`: after the re-probe determines auth is needed, instead of immediately opening popup:
+    1. Set `mcpToAuth = { index, mcp: configuredMCPs[index] }`
+    2. Set `authConfirmOpen = true`
+  - New `handleConfirmAuth()`: reads `mcpToAuth`, does the actual `/mcp/auth/start` call + popup open. Sets `configuringMCPRef.current`.
+  - Render `<CustomMCPAuthConfirmation>` at the bottom of the component.
+
+### 7.4 Tool selection in add dialog (UX improvement)
+
+Add a Step 2 tool picker so users can deselect unwanted tools when adding a non-auth MCP.
+
+- [ ] Task 7.4.1: Add step state to `custom-mcp-dialog.tsx`:
+  - `const [step, setStep] = useState<'setup' | 'tools'>('setup')`
+  - `const [discoveredTools, setDiscoveredTools] = useState<{name: string, description: string}[]>([])`
+  - `const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set())`
+
+- [ ] Task 7.4.2: After discovery succeeds with tools (non-auth case):
+  - Instead of immediately calling `onSave()`, set `discoveredTools` and `selectedTools` (all selected by default), then `setStep('tools')`.
+  - Show tool list with checkboxes, Select All / Deselect All button.
+  - "Save" button in step 2 calls `onSave()` with `enabledTools: Array.from(selectedTools)`.
+
+- [ ] Task 7.4.3: Auth case behavior (unchanged):
+  - When `requires_auth: true` with 0 tools: save immediately with empty `enabledTools` and `requires_config: true`. Skip tool selection.
+
+- [ ] Task 7.4.4: Back button in step 2 returns to step 1 (setup).
+
+### 7.5 Cache oauth_metadata (optimization)
+
+- [ ] Task 7.5.1: In `custom-mcp-dialog.tsx`, when discovery returns `requires_auth: true`, also save `oauth_metadata` from the response into the config blob: `config.oauth_metadata = discovery.oauth_metadata`.
+- [ ] Task 7.5.2: In `handleConfigureMCP()`, check `mcp.config.oauth_metadata`. If present, skip the re-probe and go directly to the confirmation dialog / OAuth popup. This eliminates one network round-trip.
+
+### 7.6 Tool management & verification
+
+- [ ] Task 7.6.1: Verify `custom-mcp-tools-manager.tsx` works with refactored backend — tool list loads from discovery, selection persists.
+- [ ] Task 7.6.2: Verify Manage Tools flow: click "Manage Tools" → tools manager opens → toggle tools → save → `enabledTools` array updates in config.
+- [ ] Task 7.6.3: Run backend test suite — all 143 tests still passing (no backend changes in this phase).
+- [ ] Task 7.6.4: Docker build test: `docker compose up -d --build frontend` — verify frontend compiles without errors.
+- [ ] Task 7.6.5: Manual walkthrough — **Unsecured server (Valyu)**: Custom MCP → URL + name → tools discovered → tool picker → select tools → save → card shows "Connected" + "Manage Tools" → Manage Tools works.
+- [ ] Task 7.6.6: Manual walkthrough — **OAuth server**: Custom MCP → URL + name → requires_auth → saves with Configure state → card shows "Configuration Required" + "Configure" → Configure → confirmation dialog → "Proceed to Login" → OAuth popup → authorize → popup notifies parent → card auto-flips to "Connected" + "Manage Tools".
+- [ ] Task 7.6.7: Conductor — User Manual Verification 'Phase 7: Frontend' (Protocol in workflow.md)
 
 ---
 
@@ -314,14 +381,25 @@ Final verification across the entire stack in production-like environment.
 
 ## Task Summary
 
-| Phase | Focus | Task Count | Layer |
-|-------|-------|------------|-------|
-| 1 | Core MCP Module bug fixes | 16 | Backend Layer 1 |
-| 2 | JIT Loader bug fixes | 15 | Backend Layer 2 |
-| 3 | Execution consolidation | 16 | Backend Layer 3 |
-| 4 | Config key normalization | 12 | Backend Cross-Layer |
-| 5 | Comprehensive test suite | 11 | Backend Testing |
-| 6 | Test harness + E2E CLI | 13 | Backend Integration |
-| 7 | Frontend 2-stage OAuth | 15 | Frontend |
-| 8 | Full-stack E2E verification | 11 | Full-Stack |
-| **Total** | | **109** | |
+| Phase | Focus | Task Count | Status | Layer |
+|-------|-------|------------|--------|-------|
+| 1 | Core MCP Module bug fixes | 16 | **COMPLETE** | Backend Layer 1 |
+| 2 | JIT Loader bug fixes | 15 | **COMPLETE** | Backend Layer 2 |
+| 3 | Execution consolidation | 16 | **COMPLETE** | Backend Layer 3 |
+| 4 | Config key normalization | 12 | **COMPLETE** | Backend Cross-Layer |
+| 5 | Comprehensive test suite | 11 | **COMPLETE** | Backend Testing |
+| 6 | Test harness + E2E CLI | 13 | **MOSTLY DONE** | Backend Integration |
+| 7 | Frontend post-OAuth + UX | 23 | **READY** | Frontend |
+| 8 | Full-stack E2E verification | 11 | NOT STARTED | Full-Stack |
+| **Total** | | **117** | | |
+
+### Phase 7 Task Breakdown by Priority
+
+| Section | Focus | Tasks | Priority |
+|---------|-------|-------|----------|
+| 7.1 | Frontend audit (done) | 6 | — (complete) |
+| 7.2 | Post-OAuth state refresh | 4 | **CRITICAL** (the main bug) |
+| 7.3 | OAuth confirmation dialog | 2 | Nice-to-have |
+| 7.4 | Tool selection in add dialog | 4 | Nice-to-have |
+| 7.5 | Cache oauth_metadata | 2 | Optimization |
+| 7.6 | Verification + testing | 7 | Required |

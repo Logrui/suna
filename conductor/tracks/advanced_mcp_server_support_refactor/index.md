@@ -1,6 +1,6 @@
 # Track: Advanced MCP Server Support Refactor
 
-**Status**: Phases 1-5 COMPLETE, Phase 6 in progress
+**Status**: Phases 1-6 COMPLETE, Phase 7 READY (Frontend)
 **Priority**: High
 **Created**: 2026-02-15
 
@@ -14,7 +14,7 @@
 | 4 | **COMPLETE** | 32 | Config normalization (`get_config_value()`, `CanonicalMCPConfig`) |
 | 5 | **COMPLETE** | 45 | Comprehensive gap-fill test suite |
 | 6 | **MOSTLY DONE** | — | Harness E2E verified: discover (4/4 steps), run (3 turns), Valyu 11 tools |
-| 7 | NOT STARTED | — | Frontend 2-stage OAuth (needs user for manual testing) |
+| 7 | **READY** | — | Frontend post-OAuth refresh (critical) + UX alignment. 23 tasks. |
 | 8 | NOT STARTED | — | Full-stack E2E production verification |
 
 **Total tests**: 143 passing in ~0.83s
@@ -67,3 +67,28 @@ docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests
 4. **Shared `build_mcp_headers()`**: Single header-building function in `mcp_helpers.py`, replacing 4+ duplicate implementations across layers.
 
 5. **SSRF protection on all paths**: `is_safe_url()` validation added to JIT discovery and execution paths, matching the existing protection in the legacy executor.
+
+## Phase 7 Frontend Analysis Summary
+
+**Completed code audit** of all frontend MCP components (6 files in `frontend/src/components/agents/mcp/` + `/mcp-success` page). Compared against upstream reference (`apps/frontend/`).
+
+### What Already Works ✅
+- **OAuth detection**: Dialog reads `requires_auth` from backend, saves as `requires_config` ✅
+- **Button rendering**: Card shows "Configure" vs "Manage Tools" based on `requires_config` ✅
+- **OAuth popup initiation**: `handleConfigureMCP()` calls `/mcp/auth/start` with correct params ✅
+- **Component wiring**: `ConfiguredMcpList` → `CustomMCPCard` → callbacks properly connected ✅
+
+### Critical Gap ❌
+- **Post-OAuth state refresh**: After OAuth popup closes, parent window doesn't know. Card stays stuck on "Configure". User has to click Configure again. Fix: `postMessage` from popup → event listener in parent → auto re-probe → flip state.
+
+### UX Gaps (nice-to-have)
+- **No OAuth confirmation dialog**: Upstream has `CustomMCPAuthConfirmation` (Shield icon + "Proceed to Login"). We go straight to redirect.
+- **No tool selection on add**: We auto-enable all discovered tools. Upstream has 2-step dialog with checkboxes.
+- **oauth_metadata discarded**: Backend returns it, frontend ignores it, forces re-probe every Configure click.
+
+### Phase 7 Priority Order
+1. **7.2** Post-OAuth state refresh (4 tasks) — **CRITICAL, the main bug**
+2. **7.3** OAuth confirmation dialog (2 tasks) — nice UX
+3. **7.4** Tool selection in add dialog (4 tasks) — nice UX
+4. **7.5** Cache oauth_metadata (2 tasks) — optimization
+5. **7.6** Verification + testing (7 tasks) — required

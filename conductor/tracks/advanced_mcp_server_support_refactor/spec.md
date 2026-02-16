@@ -102,11 +102,61 @@ Same concept uses different keys depending on which layer handles it:
 - `jit/mcp_loader.py`
 - `mcp_module/mcp_service.py`
 
-### 2.6 Frontend Issues
-- OAuth URL construction uses hardcoded `/mcp-success` path
-- Query key instability from URL fallback pattern in `use-custom-mcp-tools.ts`
-- Mixed proxy and direct API routes in `use-secure-mcp.ts`
-- Missing OAuth confirmation UI (exists in upstream `apps/frontend/` but not in our `frontend/`)
+### 2.6 Frontend Issues (Detailed Analysis — Feb 2026)
+
+**Files analyzed**: `frontend/src/components/agents/mcp/` — all 7 key files
+**Upstream reference**: `apps/frontend/src/components/agents/mcp/` — upstream stock code for comparison
+
+#### 2.6.1 OAuth Detection — WORKING ✅
+The detection chain works correctly end-to-end:
+1. `custom-mcp-dialog.tsx:131-138` — calls `/mcp/discover-custom-tools`, reads `requires_auth` from response
+2. `custom-mcp-dialog.tsx:156-158` — saves `requires_config: requiresConfig` into config blob
+3. `custom-mcp-card.tsx:38-39` — reads `requires_config`, derives `isConnected = !requiresConfig`
+4. `custom-mcp-card.tsx:113-162` — renders "Connected" (green) vs "Configuration Required" (amber), and "Manage Tools" vs "Configure" button
+
+#### 2.6.2 Post-OAuth State Update — BROKEN ❌ (Critical Gap)
+After OAuth completes in the popup:
+- `/mcp-success` page only shows a success message and auto-closes after 3 seconds
+- **No `window.opener.postMessage()`** to notify parent window
+- **No state update** to flip `requires_config` from `true` to `false`
+- **No tool re-discovery** after authentication succeeds
+- **Result**: After successful OAuth, the card still shows "Configure" — user must click Configure again to re-probe. Poor UX.
+
+#### 2.6.3 oauth_metadata Discarded — Minor Gap
+Backend returns `requires_auth` + `oauth_metadata` from discover endpoint. Frontend saves only `requires_config` boolean, discarding `oauth_metadata`. Forces a re-discovery on every "Configure" click.
+
+#### 2.6.4 Missing OAuth Confirmation UI
+Upstream has `CustomMCPAuthConfirmation` dialog (shield icon, server URL, "Proceed to Login" button). Our fork goes directly from Configure click → OAuth redirect. Low severity.
+
+#### 2.6.5 Missing Tool Selection UI in Add Dialog
+Our `custom-mcp-dialog.tsx` auto-saves all discovered tools without a selection step. Upstream has a 2-step dialog (setup → pick tools). Medium severity — users can't deselect unwanted tools during registration.
+
+#### 2.6.6 Callback Routing — Working but Popup-Based
+`mcp-configuration-new.tsx:117-128` uses popup (`window.open()`) approach. Backend redirects to `/mcp-success` after token exchange. No communication back to parent window (see 2.6.2).
+
+#### 2.6.7 Fork vs Upstream Architecture Comparison
+| Feature | Our Fork (`frontend/`) | Upstream (`apps/frontend/`) |
+|---------|----------------------|---------------------------|
+| MCP card component | `custom-mcp-card.tsx` (separate) | Inline in `configured-mcp-list.tsx` |
+| Auth detection | `requires_config` boolean | `isAuthRequired` multi-signal heuristic |
+| OAuth trigger | `onConfigure` → popup | `onAuthRequest` → full-page redirect |
+| Auth confirmation | Missing | `CustomMCPAuthConfirmation` dialog |
+| Tool selection on add | Auto-enable all | 2-step dialog with checkboxes |
+| Post-OAuth | Popup auto-closes, no state update | Full-page redirect, natural refresh |
+
+#### 2.6.8 Component Wiring Trace (Our Fork)
+```
+mcp-configuration-new.tsx (orchestrator)
+  ├── ConfiguredMcpList (passes onConfigure, onConfigureTools)
+  │   └── MCPConfigurationItem (routes custom MCPs → CustomMCPCard)
+  │       └── CustomMCPCard (reads requires_config, shows Configure/Manage Tools)
+  │           ├── Configure → onConfigure(idx) → handleConfigureMCP(idx)
+  │           │   └── Re-probes server → if auth: /mcp/auth/start popup
+  │           └── Manage Tools → onManageTools(idx) → handleConfigureTools(idx)
+  │               └── Opens CustomMCPToolsManager dialog
+  ├── CustomMCPDialog (add/edit server)
+  └── CustomMCPToolsManager (manage enabled tools)
+```
 
 ## 3. Implementation Order
 
@@ -180,12 +230,29 @@ Test coverage must include:
 - Verify harness works with the unified execution layer
 - E2E validation against Desktop Commander (OAuth) and Valyu (API Key)
 
-### 4.6 Frontend: 2-Stage OAuth & MCP Configuration
-- Fix OAuth redirect URL construction
-- Stabilize React Query keys for custom MCP tools
-- Port `CustomMCPAuthConfirmation` component from upstream reference (`apps/frontend/`)
-- Implement full 2-stage flow: register (URL/name) → configure (OAuth) as separate steps
-- Complete E2E production verification of the add → configure → use flow
+### 4.6 Frontend: Post-OAuth Refresh & UX Improvements
+
+Based on detailed analysis (Section 2.6), the frontend OAuth detection and button rendering already work. The primary gaps are post-OAuth state management and UX polish.
+
+#### 4.6.1 Post-OAuth State Refresh (CRITICAL — must fix)
+- **Problem**: After OAuth popup closes, parent window has no idea OAuth succeeded
+- **Fix**: Add `window.opener.postMessage({ type: 'mcp-oauth-success', mcpName: ... })` to `/mcp-success` page
+- **Fix**: Add `window.addEventListener('message', ...)` in `mcp-configuration-new.tsx` to handle the message
+- **On message**: Re-probe the server via `/mcp/discover-custom-tools`, flip `requires_config: false`, update enabled tools, trigger state save
+
+#### 4.6.2 OAuth Confirmation Dialog (nice-to-have)
+- Port `CustomMCPAuthConfirmation` from upstream `apps/frontend/`
+- Wire between Configure button click and OAuth redirect
+- Show server name, URL, and "Proceed to Login" before redirect
+
+#### 4.6.3 Tool Selection in Add Dialog (nice-to-have)
+- Add Step 2 to `custom-mcp-dialog.tsx` — after discovery succeeds and returns tools, show tool picker with checkboxes
+- Allow users to deselect unwanted tools before saving
+- Skip Step 2 if `requires_auth: true` (no tools discovered yet — save immediately with empty enabledTools)
+
+#### 4.6.4 Preserve oauth_metadata (optimization)
+- Save `oauth_metadata` from discovery response into config blob alongside `requires_config`
+- Use cached metadata in `handleConfigureMCP()` instead of re-probing the server
 
 ## 5. Reference Documents
 
@@ -241,8 +308,13 @@ Prior track specs and plans archived in `conductor/tracks/` (see Section 1).
 28. ✅ **Executable in Docker**: All 143 tests run via single Docker command in ~0.83s — *Phase 5*
 
 ### 6.7 Frontend Integration
-29. ⏳ **Frontend OAuth works**: Pending — *Phase 7*
-30. ⏳ **Frontend tool management**: Pending — *Phase 7*
+29. ✅ **OAuth detection on add**: `custom-mcp-dialog.tsx` correctly reads `requires_auth` from backend discover response and saves `requires_config: true` — *verified via code audit*
+30. ✅ **Configure vs Manage Tools rendering**: `custom-mcp-card.tsx` correctly shows "Configure" button when `requires_config: true` and "Manage Tools" when `false` — *verified via code audit*
+31. ✅ **OAuth popup initiation**: `handleConfigureMCP()` in `mcp-configuration-new.tsx` correctly calls `/mcp/auth/start` with `url`, `return_url`, `agent_id`, `name` params and opens popup — *verified via code audit*
+32. ⏳ **Post-OAuth state refresh**: `/mcp-success` page must notify parent window → flip `requires_config: false` → re-discover tools — *Phase 7 critical fix*
+33. ⏳ **OAuth confirmation dialog**: Port `CustomMCPAuthConfirmation` from upstream for pre-redirect confirmation — *Phase 7 nice-to-have*
+34. ⏳ **Tool selection on add**: Add step 2 tool picker to `custom-mcp-dialog.tsx` — *Phase 7 nice-to-have*
+35. ⏳ **Full Add→Configure→Use flow**: E2E manual verification of unsecured (Valyu) and OAuth (Desktop Commander) servers — *Phase 7/8*
 
 ## 7. Out of Scope
 - Composio integration refactor (separate track)
