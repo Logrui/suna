@@ -47,7 +47,7 @@ Keep titles short, descriptive, and action-oriented when appropriate."""
         user_message = f"Generate an extremely brief title (2-4 words only) for this chat thread that starts with this message: \"{prompt}\""
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]
 
-        logger.debug(f"Calling LLM ({model_name}) for thread {thread_id} naming.")
+        logger.debug(f"[THREAD-NAMING] Calling LLM ({model_name}) for thread {thread_id} naming.")
         response = await make_llm_api_call(
             messages=messages, 
             model_name=model_name, 
@@ -57,13 +57,13 @@ Keep titles short, descriptive, and action-oriented when appropriate."""
             stream=False
         )
         
-        logger.debug(f"LLM response for thread {thread_id}: {response}")
+        # logger.debug(f"[THREAD-NAMING] response for thread {thread_id}: {response}")
 
         generated_name = None
         
         if response and response.get('choices') and response['choices'][0].get('message'):
             raw_content = response['choices'][0]['message'].get('content', '').strip()
-            logger.debug(f"Raw LLM content for thread {thread_id}: {raw_content}")
+            logger.debug(f"[THREAD-NAMING] Raw LLM content for thread {thread_id}: {raw_content}")
             try:
                 parsed_response = json.loads(raw_content)
                 
@@ -72,35 +72,35 @@ Keep titles short, descriptive, and action-oriented when appropriate."""
                     title = parsed_response.get('title', '').strip()
                     if title:
                         generated_name = title.strip('\'" \n\t')
-                        logger.debug(f"LLM generated name for thread {thread_id}: '{generated_name}'")
+                        logger.debug(f"[THREAD-NAMING] LLM generated name for thread {thread_id}: '{generated_name}'")
                 else:
-                    logger.warning(f"LLM returned non-dict JSON for thread {thread_id}: {parsed_response}")
+                    logger.warning(f"[THREAD-NAMING] LLM returned non-dict JSON for thread {thread_id}: {parsed_response}")
                     
             except json.JSONDecodeError as e:
-                logger.warning(f"Failed to parse LLM JSON response for thread {thread_id}: {e}. Raw content: {raw_content}")
+                logger.warning(f"[THREAD-NAMING] Failed to parse LLM JSON response for thread {thread_id}: {e}. Raw content: {raw_content}")
                 # Fallback to extracting title from raw content
                 cleaned_content = raw_content.strip('\'" \n\t{}')
                 if cleaned_content:
                     generated_name = cleaned_content[:50]  # Limit fallback title length
         else:
-            logger.warning(f"Failed to get valid response from LLM for thread {thread_id} naming. Response: {response}")
+            logger.warning(f"[THREAD-NAMING] Failed to get valid response from LLM for thread {thread_id} naming. Response: {response}")
 
         if generated_name:
-            logger.info(f"Storing thread {thread_id} with name: '{generated_name}'")
+            logger.info(f"[THREAD-NAMING] Storing thread {thread_id} with name: '{generated_name}'")
             
             update_result = await client.table('threads').update({"name": generated_name}).eq("thread_id", thread_id).execute()
             if hasattr(update_result, 'data') and update_result.data:
-                logger.debug(f"Successfully updated thread {thread_id} with name")
+                logger.debug(f"[THREAD-NAMING] Successfully updated thread {thread_id} with name")
             else:
-                logger.error(f"Failed to update thread {thread_id} in database. Update result: {update_result}")
+                logger.error(f"[THREAD-NAMING] Failed to update thread {thread_id} in database. Update result: {update_result}")
 
         else:
-            logger.warning(f"No generated name, skipping database update for thread {thread_id}.")
+            logger.warning(f"[THREAD-NAMING] No generated name, skipping database update for thread {thread_id}.")
 
     except Exception as e:
-        logger.error(f"Error in background naming task for thread {thread_id}: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"[THREAD-NAMING] Error in background naming task for thread {thread_id}: {str(e)}\n{traceback.format_exc()}")
     finally:
-        logger.debug(f"Finished background naming task for thread: {thread_id}")
+        logger.debug(f"[THREAD-NAMING] Finished background naming task for thread: {thread_id}")
 
 
 async def generate_thread_branch_title(thread_id: str):
@@ -111,7 +111,7 @@ async def generate_thread_branch_title(thread_id: str):
     Args:
         thread_id: The thread ID to update
     """
-    logger.info(f"Starting background task to generate name for branched thread: {thread_id}")
+    logger.info(f"[THREAD-NAMING] Starting background task to generate name for branched thread: {thread_id}")
     
     try:
         from core.agentpress.context_manager import ContextManager
@@ -124,7 +124,7 @@ async def generate_thread_branch_title(thread_id: str):
         
         # Fetch up to 25 recent messages for context
         try:
-            logger.debug(f"Fetching history for branched thread {thread_id}")
+            logger.debug(f"[THREAD-NAMING] Fetching history for branched thread {thread_id}")
             messages_result = await client.table('messages')\
                 .select('type,content,message_id,tool_calls,tool_call_id,role')\
                 .eq('thread_id', thread_id)\
@@ -134,7 +134,7 @@ async def generate_thread_branch_title(thread_id: str):
                 
             history_messages = []
             if messages_result.data:
-                logger.debug(f"Found {len(messages_result.data)} raw messages for context")
+                logger.debug(f"[THREAD-NAMING] Found {len(messages_result.data)} raw messages for context")
                 # Reverse to get chronological order (oldest -> newest)
                 raw_messages = list(reversed(messages_result.data))
                 
@@ -165,9 +165,9 @@ async def generate_thread_branch_title(thread_id: str):
                         # For naming, we focus on text content mainly.
                         history_messages.append({"role": role, "content": str(content)})
                         
-            logger.debug(f"Compiled {len(history_messages)} history messages for prompt context")
+            logger.debug(f"[THREAD-NAMING] Compiled {len(history_messages)} history messages for prompt context")
         except Exception as e:
-            logger.warning(f"Failed to fetch/compress message history for branched thread {thread_id}: {e}")
+            logger.warning(f"[THREAD-NAMING] Failed to fetch/compress message history for branched thread {thread_id}: {e}")
             history_messages = []
 
         system_prompt = """You are a helpful assistant that generates extremely concise titles (2-4 words maximum) for chat threads.
@@ -187,7 +187,7 @@ Keep titles short, descriptive, and action-oriented."""
         
         messages = [{"role": "system", "content": system_prompt}] + history_messages + [{"role": "user", "content": instruction_message}]
 
-        logger.debug(f"Calling LLM ({model_name}) for branched thread {thread_id} naming with {len(history_messages)} msgs.")
+        logger.debug(f"[THREAD-NAMING] Calling LLM ({model_name}) for branched thread {thread_id} naming with {len(history_messages)} msgs.")
         response = await make_llm_api_call(
             messages=messages, 
             model_name=model_name, 
@@ -197,28 +197,28 @@ Keep titles short, descriptive, and action-oriented."""
             stream=False
         )
         
-        logger.debug(f"LLM response for branched thread {thread_id}: {response}")
+        logger.debug(f"[THREAD-NAMING] LLM response for branched thread {thread_id}: {response}")
 
         generated_name = None
         
         if response and response.get('choices') and response['choices'][0].get('message'):
             raw_content = response['choices'][0]['message'].get('content', '').strip()
-            logger.debug(f"Raw LLM content for branched thread {thread_id}: {raw_content}")
+            logger.debug(f"[THREAD-NAMING] Raw LLM content for branched thread {thread_id}: {raw_content}")
             try:
                 parsed_response = json.loads(raw_content)
                 if isinstance(parsed_response, dict):
                     title = parsed_response.get('title', '').strip()
                     if title:
                         generated_name = title.strip('\'" \n\t')
-                        logger.debug(f"Generated branched name: {generated_name}")
+                        logger.debug(f"[THREAD-NAMING] Generated branched name: {generated_name}")
             except json.JSONDecodeError:
                 pass
         
         if generated_name:
-            logger.info(f"Storing branched thread {thread_id} with name: '{generated_name}'")
+            logger.info(f"[THREAD-NAMING] Storing branched thread {thread_id} with name: '{generated_name}'")
             await client.table('threads').update({"name": generated_name}).eq("thread_id", thread_id).execute()
         else:
-            logger.warning(f"No generated name for branched thread {thread_id}")
+            logger.warning(f"[THREAD-NAMING] No generated name for branched thread {thread_id}")
 
     except Exception as e:
-        logger.error(f"Error in branch naming task for {thread_id}: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"[THREAD-NAMING] Error in branch naming task for {thread_id}: {str(e)}\n{traceback.format_exc()}")

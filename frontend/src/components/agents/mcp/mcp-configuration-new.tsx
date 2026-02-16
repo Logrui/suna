@@ -291,21 +291,28 @@ export const MCPConfigurationNew: React.FC<MCPConfigurationProps> = ({
         ...updatedMCPs[editingIndex],
         name: customConfig.name,
         config: customConfig.config,
-        customType: customConfig.type as 'http' | 'sse'
+        customType: customConfig.type as 'http' | 'sse',
+        // Persist detected transport from discovery (sse, streamable-http)
+        ...(customConfig.detectedTransport ? { detectedTransport: customConfig.detectedTransport } : {}),
       };
       onConfigurationChange(updatedMCPs);
       setEditingIndex(null);
       return;
     }
 
+    // Use backend-provided qualifiedName when available; fallback to deterministic name-based format
+    const fallbackQualifiedName = `custom_mcp_${customConfig.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40)}`;
     const mcpConfig: MCPConfigurationType = {
       name: customConfig.name,
-      qualifiedName: `custom_${customConfig.type}_${Date.now()}`,
+      qualifiedName: customConfig.qualifiedName || fallbackQualifiedName,
       config: customConfig.config,
       enabledTools: customConfig.enabledTools || [],
       selectedProfileId: customConfig.selectedProfileId,
       isCustom: true,
-      customType: customConfig.type as 'http' | 'sse'
+      customType: customConfig.type as 'http' | 'sse',
+      // Persist detected transport from discovery (sse, streamable-http)
+      // so runtime can dispatch directly without fallback overhead
+      ...(customConfig.detectedTransport ? { detectedTransport: customConfig.detectedTransport } : {}),
     };
     onConfigurationChange([...configuredMCPs, mcpConfig]);
   };

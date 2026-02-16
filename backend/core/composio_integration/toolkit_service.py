@@ -269,7 +269,7 @@ class ToolkitService:
             return logo
             
         except Exception as e:
-            logger.error(f"Failed to get toolkit icon for {toolkit_slug}: {e}")
+            logger.warning(f"Failed to get toolkit icon for {toolkit_slug}: {e}")
             return None
 
     async def get_detailed_toolkit_info(self, toolkit_slug: str) -> Optional[DetailedToolkitInfo]:

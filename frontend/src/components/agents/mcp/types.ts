@@ -9,6 +9,8 @@ export interface MCPConfiguration {
   selectedProfileId?: string;
   isCustom?: boolean;
   customType?: 'http' | 'sse' | 'composio';
+  /** Actual transport detected during discovery: "sse", "streamable-http", or "http" */
+  detectedTransport?: string;
   isComposio?: boolean;
   toolkitSlug?: string;
 }

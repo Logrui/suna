@@ -122,6 +122,10 @@ async def mcp_auth_start(url: str, return_url: str, agent_id: Optional[str]):
 | **HTTP** | `custom_mcp_registry_service.py` | `_discover_http_tools()` | 75-206 |
 | **SSE** | `custom_mcp_registry_service.py` | `_discover_sse_tools()` | 208-362 |
 
+**Transport Detection**: During discovery, the actual transport protocol is detected and returned as `detected_transport` in the API response. Values: `"sse"`, `"streamable-http"`, `"http"`. This is persisted in agent config as `detectedTransport` for direct dispatch at runtime.
+
+**Canonical qualifiedName**: Discovery now generates deterministic names using `generate_custom_mcp_qualified_name(display_name, url)` → `custom_mcp_{normalized_name}_{url_hash[:6]}` (defined in `mcp_helpers.py`). Replaces three inconsistent formats that previously caused credential lookup misses.
+
 **Where Tools Are Stored (Cached)**:
 
 After discovery, tools are stored in **agent version config**:
@@ -130,8 +134,9 @@ After discovery, tools are stored in **agent version config**:
 # api.py:393-403 (OAuth callback)
 new_custom_mcp = {
     "name": display_name,
-    "qualifiedName": qualified_name,
+    "qualifiedName": qualified_name,  # Canonical: custom_mcp_{name}_{hash[:6]}
     "type": discovery_type,
+    "detectedTransport": detected_transport,  # "sse" or "streamable-http"
     "config": config_payload,
     "enabledTools": enabled_tool_names,  # Tool NAMES only
     "tools": discovered_tools  # Full tool objects cached here
@@ -151,7 +156,8 @@ agents table:
 agent_versions table:
   ├─ config (JSON) → tools → custom_mcp → [array of MCP configs]
   │   └─ Each MCP config includes:
-  │       ├─ name, qualifiedName, type
+  │       ├─ name, qualifiedName (canonical: custom_mcp_{name}_{hash}), type
+  │       ├─ detectedTransport: "sse" | "streamable-http"  # Runtime dispatch hint
   │       ├─ config (contains URL, auth tokens)
   │       ├─ enabledTools: ["tool1", "tool2"]  # Tool names
   │       └─ tools: [{name, description, inputSchema}]  # Full schemas
@@ -369,6 +375,28 @@ async def _load_http_schema(self, tool_name: str, url: str, config, headers):
                     return schema
 ```
 
+**SSE → Streamable HTTP Fallback** (in `mcp_registry.py`, `mcp_tool_wrapper.py`, `mcp_tool_executor.py`):
+
+When SSE connections fail (HTTP 405, `ExceptionGroup` from `anyio` TaskGroup), the system
+automatically retries using `streamablehttp_client`. This handles servers like Valyu AI that
+only support POST-based Streamable HTTP transport:
+
+```python
+# mcp_registry.py schema loading fallback (simplified)
+try:
+    async with sse_client(url, headers=headers) as (read, write):
+        # ... SSE attempt
+except (Exception, ExceptionGroup) as e:
+    if _is_sse_to_http_fallback(e):  # 405 or wrapped ExceptionGroup
+        async with streamablehttp_client(url, headers=headers) as (read, write, _):
+            # ... Streamable HTTP retry (succeeds for POST-only servers)
+```
+
+**Transport direct dispatch**: If `detectedTransport` is present in config:
+- `"streamable-http"` → skip SSE, use `streamablehttp_client` directly
+- `"sse"` → use `sse_client` directly
+- Missing → fallback chain (SSE first, then Streamable HTTP)
+
 **Tool Execution** (`mcp_tool_wrapper.py` or via MCPToolExecutor):
 
 ```python
@@ -427,8 +455,9 @@ await connection.session.call_tool(tool_name, arguments)
 │    "tools": {                                                   │
 │      "custom_mcp": [{                                          │
 │        "name": "My MCP",                                       │
-│        "qualifiedName": "custom_http_mymcp",                  │
+│        "qualifiedName": "custom_mcp_my_mcp_a1b2c3",          │
 │        "type": "http",                                         │
+│        "detectedTransport": "streamable-http",  ← Transport   │
 │        "config": {url, auth tokens},                          │
 │        "enabledTools": ["tool_a", "tool_b"],  ← Stage 4       │
 │        "tools": [{name, description, schema}]  ← Cached!      │
@@ -474,7 +503,9 @@ await connection.session.call_tool(tool_name, arguments)
 │  2. JITLoader.activate_tool("tool_a")                          │
 │  3. _load_tool_schema("tool_a")                                │
 │     ├─ Resolves mcp_config from tool_map[tool_a]              │
-│     ├─ CONNECTS TO MCP SERVER (HTTP/SSE)                       │
+│     ├─ Check detectedTransport for direct dispatch             │
+│     ├─ CONNECTS TO MCP SERVER (Streamable HTTP / SSE)          │
+│     ├─ SSE fails? → Fallback to streamablehttp_client          │
 │     ├─ Calls session.list_tools()  ← FIRST SERVER CALL         │
 │     ├─ Extracts schema for tool_a                              │
 │     └─ Caches in schema_cache                                  │
@@ -496,7 +527,8 @@ await connection.session.call_tool(tool_name, arguments)
 | **3** | Core MCP | `mcp_service.py:405-549`, `custom_mcp_registry_service.py` | Discovery |
 | **4** | Version Service | `agent_tools.py:102-364`, `version_service.py` | Tool config storage |
 | **5** | JIT | `agent_runner.py:34-98`, `mcp_loader.py:92-215` | Tool map building |
-| **6** | JIT + Executor | `mcp_loader.py:453-720`, `mcp_tool_wrapper.py` | Schema loading + execution |
+| **6** | JIT + Executor | `mcp_loader.py:453-720`, `mcp_tool_wrapper.py`, `mcp_tool_executor.py` | Schema loading + execution + SSE→HTTP fallback |
+| **X** | Transport | `mcp_helpers.py`, `mcp_registry.py`, `credential_service.py` | qualifiedName, transport fallback, credential lookup |
 
 ---
 
@@ -593,6 +625,32 @@ await connection.session.call_tool(tool_name, arguments)
 |-------|----------|-------|---------|
 | 12-69 | `register_mcp_tools()` | 5-6 | Register MCPs in thread manager |
 | 53-66 | Initialize wrapper | 5-6 | Create MCPToolWrapper |
+
+### `backend/core/utils/mcp_helpers.py`
+
+| Function | Stage | Purpose |
+|----------|-------|---------|
+| `generate_custom_mcp_qualified_name()` | 3 | Canonical qualifiedName: `custom_mcp_{name}_{hash[:6]}` |
+| `_legacy_url_hash_qualified_name()` | - | Legacy format for backward-compat lookups |
+| `resolve_qualified_name_from_config()` | 5-6 | Extract or generate qualifiedName from config dict |
+
+### `backend/core/credentials/credential_service.py`
+
+| Function | Stage | Purpose |
+|----------|-------|---------|
+| `get_credential_with_fallback()` | 6 | Try canonical format, then legacy `custom_http_`/`custom_sse_` |
+
+### `backend/core/agentpress/mcp_registry.py`
+
+| Function | Stage | Purpose |
+|----------|-------|---------|
+| `_load_tools_for_server()` | 6 | Schema loading with SSE→Streamable HTTP fallback |
+
+### `backend/core/tools/utils/mcp_tool_executor.py`
+
+| Function | Stage | Purpose |
+|----------|-------|---------|
+| `execute_tool()` | 6 | Unified tool execution with SSE→Streamable HTTP fallback |
 
 ---
 
@@ -702,7 +760,8 @@ When LLM calls tool_a(args):
 |--------|-----------|---------|---------|---------|---------|
 | **System** | Core MCP | Core MCP | Version Service | JIT | JIT + Executor |
 | **Server Calls** | Auth only | ✅ Discovery | ❌ | ❌ | ✅ Schema load + execution |
-| **Data Stored** | Tokens | Tool schemas | enabledTools + cached tools | Tool map (in-memory) | Schema cache |
+| **Transport** | - | Detect + persist | Store detectedTransport | Read detectedTransport | Direct dispatch or fallback |
+| **Data Stored** | Tokens | Tool schemas + transport | enabledTools + cached tools + transport | Tool map (in-memory) | Schema cache |
 | **Location** | Credentials DB | Agent config | Agent config | ThreadManager | JITLoader |
 | **Deferred?** | ❌ | ❌ | ❌ | Enrichment phase | Yes (lazy load) |
 

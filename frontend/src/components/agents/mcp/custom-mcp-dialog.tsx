@@ -128,18 +128,24 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
       let discoveredTools: string[] = [];
       let discoveredToolObjects: Array<{ name: string; description?: string }> = [];
       let serverTypeDetected: 'http' | 'sse' = serverType;
+      let backendQualifiedName: string | undefined;
 
       const discoveryResponse = await backendApi.post('/mcp/discover-custom-tools', {
         type: 'sse', // Try SSE first
         config: configPayload
       }, { showErrors: false });
 
+      let detectedTransport: string | undefined;
+
       if (discoveryResponse.success && discoveryResponse.data?.success) {
         const discovery = discoveryResponse.data;
         requiresConfig = discovery.requires_auth || false;
         discoveredToolObjects = discovery.tools?.map((t: any) => ({ name: t.name, description: t.description })) || [];
         discoveredTools = discoveredToolObjects.map(t => t.name);
-        serverTypeDetected = 'sse';
+        // Use backend's detected_transport to determine the actual transport type
+        detectedTransport = discovery.detected_transport;
+        serverTypeDetected = detectedTransport === 'streamable-http' ? 'http' : 'sse';
+        backendQualifiedName = discovery.qualified_name;
       } else {
         // Fallback to HTTP probe
         const httpDiscovery = await backendApi.post('/mcp/discover-custom-tools', {
@@ -152,7 +158,9 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
           requiresConfig = discovery.requires_auth || false;
           discoveredToolObjects = discovery.tools?.map((t: any) => ({ name: t.name, description: t.description })) || [];
           discoveredTools = discoveredToolObjects.map(t => t.name);
+          detectedTransport = discovery.detected_transport || 'streamable-http';
           serverTypeDetected = 'http';
+          backendQualifiedName = discovery.qualified_name;
         }
       }
 
@@ -168,6 +176,10 @@ export const CustomMCPDialog: React.FC<CustomMCPDialogProps> = ({
         enabledTools: discoveredTools,
         // Cache full tool objects so Manage Tools modal can display them without a live server call
         tools: discoveredToolObjects,
+        // Pass backend-generated qualifiedName for consistent credential lookup
+        qualifiedName: backendQualifiedName,
+        // Pass detected transport so runtime knows the actual protocol (avoids fallback overhead)
+        detectedTransport: detectedTransport,
         oauth_client_id: oauthClientId.trim() || undefined,
         custom_headers: Object.keys(headersDict).length > 0 ? headersDict : undefined,
         isCustom: true

@@ -1,6 +1,7 @@
 # MCP Pipeline Documentation Suite
 
-**4 documents explaining the complete MCP system architecture**
+**4+ documents explaining the complete MCP system architecture**
+**Updated**: 2026-02-16 — Now covers Streamable HTTP transport, SSE→HTTP fallback, canonical qualifiedName format
 
 ---
 
@@ -12,7 +13,8 @@
    - **Content**:
      - Executive summary of 3 systems
      - Detailed stage-by-stage explanation
-     - Architecture diagram
+     - Architecture diagram with transport detection
+     - SSE→Streamable HTTP fallback chain (Stage 6)
      - All files with line numbers
      - Data flow examples
    - **Best for**: Understanding the complete pipeline
@@ -29,14 +31,15 @@
    - **Best for**: Developers modifying or debugging specific systems
 
 ### 3. **MCP_QUICK_REFERENCE.md** 📌 FOR YOUR DESK
-   - **Length**: ~300 lines
+   - **Length**: ~400 lines
    - **Audience**: Quick lookup during development
    - **Content**:
      - 6 stages at a glance
      - Stage cheat sheet
-     - Critical files list
-     - Data structure reference
+     - Critical files list (including transport & credential helpers)
+     - Data structure reference (with `detectedTransport` and canonical `qualifiedName`)
      - Function call chains
+     - Transport fallback chain diagram
      - Decision tree
      - Debugging tips
    - **Best for**: Quick reference, printing
@@ -100,6 +103,17 @@ Tables showing:
 **See**: `MCP_QUICK_REFERENCE.md:Lines ~280-320` (Debugging Tips)
 
 Or check full debugging flow in `MCP_SYSTEM_CLASSIFICATION.md:Lines ~450-500`
+
+### "SSE connection fails with 405 or ExceptionGroup"
+
+**See**: `MCP_PIPELINE_TRACE.md` Stage 6 section — SSE → Streamable HTTP Fallback
+
+**See**: `MCP_QUICK_REFERENCE.md` — Transport Fallback Chain diagram
+
+### "Credentials are not being found at runtime"
+
+Check that `qualifiedName` matches between credential store and runtime lookup.
+**See**: `MCP_QUICK_REFERENCE.md` — qualifiedName Canonical Format section
 
 ---
 
@@ -190,6 +204,12 @@ The `enabledTools` array in agent config determines what tools are available to 
 
 ### Insight #5: Stage 5 is Extremely Fast
 Building the tool map reads from config only (no network). It completes in <50ms typically. Schema loading (Stage 6) is what's slow (200-500ms per tool).
+
+### Insight #6: Transport Detection Eliminates Fallback Overhead
+During discovery, the actual transport protocol (SSE vs Streamable HTTP) is detected and saved as `detectedTransport`. On subsequent runs, this lets the runtime dispatch directly to the correct transport client without trying SSE first and failing.
+
+### Insight #7: Canonical qualifiedName Prevents Credential Misses
+A single deterministic format (`custom_mcp_{name}_{hash[:6]}`) replaces three inconsistent formats. Fallback lookup in `credential_service.py` also checks legacy `custom_http_`/`custom_sse_` formats for backward compatibility.
 
 ---
 
@@ -282,6 +302,9 @@ After reading these documents, you should know:
 ✅ "Can I change enabledTools at runtime?"
 ✅ "Why is discovery so fast/slow?"
 ✅ "Where do JIT server calls happen?"
+✅ "What happens when SSE fails with 405?"
+✅ "What is the canonical qualifiedName format?"
+✅ "How does transport detection persistence work?"
 
 ---
 

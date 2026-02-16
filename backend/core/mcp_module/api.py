@@ -15,7 +15,7 @@ from .custom_mcp_registry_service import mcp_registry_service
 from .exceptions import MCPAuthenticationError, MCPConnectionError, MCPConfigurationError
 import httpx
 import hashlib
-from core.utils.mcp_helpers import get_custom_mcp_qualified_name
+from core.utils.mcp_helpers import get_custom_mcp_qualified_name, generate_custom_mcp_qualified_name
 
 router = APIRouter(tags=["mcp"])
 
@@ -42,6 +42,7 @@ class CustomMCPConnectionResponse(BaseModel):
     message: str
     oauth_metadata: Optional[Dict[str, Any]] = None
     requires_auth: bool = False
+    detected_transport: str = "unknown"  # "sse", "streamable-http", or "unknown" — actual transport that succeeded
 
 
 class CustomMCPDiscoverRequest(BaseModel):
@@ -90,7 +91,8 @@ async def discover_custom_mcp_tools(request: CustomMCPDiscoverRequest, user_id: 
             url=result.url,
             message=result.message,
             oauth_metadata=result.oauth_metadata,
-            requires_auth=result.requires_auth
+            requires_auth=result.requires_auth,
+            detected_transport=result.detected_transport,
         )
         
     except MCPAuthenticationError as e:
@@ -364,8 +366,8 @@ async def mcp_auth_callback(
             logger.warning(f"⚠️ [MCP AUTH] Proactive tool discovery failed during OAuth callback for {mcp_url}: {e}")
 
         logger.debug(f"📊 [MCP AUTH] Discovery complete. Type={discovery_type}, Tools={len(discovered_tools)}")
-        qualified_name = get_custom_mcp_qualified_name(mcp_url, discovery_type)
-        logger.info(f"💾 [MCP AUTH] Storing credentials for qualified_name={qualified_name}")
+        qualified_name = generate_custom_mcp_qualified_name(display_name, mcp_url)
+        logger.info(f"💾 [MCP AUTH] Storing credentials for qualified_name={qualified_name} (display: {display_name})")
         
         await credential_service.store_credential(
             account_id=user_id,

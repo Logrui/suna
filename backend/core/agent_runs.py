@@ -133,7 +133,7 @@ async def _load_agent_config(client, agent_id: Optional[str], account_id: str, u
         else:
             t_loader = time.time()
             agent_data = await loader.load_agent(agent_id, user_id, load_config=True)
-            logger.info(f"⏱️ [TIMING] Agent loader (DB path): {(time.time() - t_loader)*1000:.1f}ms | Total: {(time.time() - t_start)*1000:.1f}ms")
+            # logger.info(f"⏱️ [TIMING] Agent loader (DB path): {(time.time() - t_loader)*1000:.1f}ms | Total: {(time.time() - t_start)*1000:.1f}ms")
             logger.debug(f"Using agent {agent_data.name} ({agent_id}) version {agent_data.version_name}")
     else:
         logger.debug(f"[AGENT LOAD] Loading default agent")
@@ -863,7 +863,7 @@ async def start_agent_run(
     await _trigger_agent_background(agent_run_id, thread_id, project_id, effective_model, agent_id, account_id)
     logger.debug(f"⏱️ [TIMING] Worker dispatch: {(time.time() - t_dispatch) * 1000:.1f}ms")
     
-    logger.info(f"⏱️ [TIMING] start_agent_run total: {(time.time() - t_start) * 1000:.1f}ms")
+    # logger.info(f"⏱️ [TIMING] start_agent_run total: {(time.time() - t_start) * 1000:.1f}ms")
     
     return {
         "thread_id": thread_id,
@@ -954,7 +954,7 @@ async def unified_agent_start(
                 memory_enabled=memory_enabled_bool,
             )
             
-            logger.info(f"⏱️ [TIMING] 🎯 Optimistic API Request Total: {(time.time() - api_request_start) * 1000:.1f}ms")
+            # logger.info(f"⏱️ [TIMING] 🎯 Optimistic API Request Total: {(time.time() - api_request_start) * 1000:.1f}ms")
             
             return {
                 "thread_id": result["thread_id"],
@@ -1104,7 +1104,7 @@ async def unified_agent_start(
             message_content=message_content,
         )
         
-        logger.info(f"⏱️ [TIMING] 🎯 API Request Total: {(time.time() - api_request_start) * 1000:.1f}ms")
+        # logger.info(f"⏱️ [TIMING] 🎯 API Request Total: {(time.time() - api_request_start) * 1000:.1f}ms")
         
         return {"thread_id": result["thread_id"], "agent_run_id": result["agent_run_id"], "status": "running"}
     
@@ -1177,7 +1177,7 @@ async def start_agent_on_thread(
             "status": "ready",
         }).eq('thread_id', thread_id).execute()
         
-        logger.info(f"⏱️ [TIMING] 🎯 Start Agent on Thread Total: {(time.time() - api_request_start) * 1000:.1f}ms")
+        # logger.info(f"⏱️ [TIMING] 🎯 Start Agent on Thread Total: {(time.time() - api_request_start) * 1000:.1f}ms")
         
         return {"thread_id": result["thread_id"], "agent_run_id": result["agent_run_id"], "status": "running"}
     

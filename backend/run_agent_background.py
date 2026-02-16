@@ -157,7 +157,7 @@ async def initialize():
     if not instance_id:
         instance_id = str(uuid.uuid4())[:8]
     
-    logger.info(f"Initializing worker async resources with Redis at {redis_host}:{redis_port}")
+    #logger.info(f"Initializing worker async resources with Redis at {redis_host}:{redis_port}")
     await retry(lambda: redis.initialize_async())
     
     await redis.verify_connection()
@@ -257,27 +257,27 @@ async def load_agent_config(agent_id: Optional[str], account_id: Optional[str]) 
                 'custom_mcps': cached_mcps.get('custom_mcps', []),
                 'triggers': cached_mcps.get('triggers', []),
             }
-            logger.info(f"⏱️ [TIMING] ⚡ Suna config from memory + Redis MCPs: {(time.time() - t) * 1000:.1f}ms")
+           # logger.info(f"⏱️ [TIMING] ⚡ Suna config from memory + Redis MCPs: {(time.time() - t) * 1000:.1f}ms")
         else:
             cached_config = await get_cached_agent_config(agent_id)
             
             if cached_config:
                 agent_config = cached_config
-                logger.info(f"⏱️ [TIMING] ⚡ Custom agent config from cache: {(time.time() - t) * 1000:.1f}ms")
+               # logger.info(f"⏱️ [TIMING] ⚡ Custom agent config from cache: {(time.time() - t) * 1000:.1f}ms")
             elif account_id:
                 from core.agent_loader import get_agent_loader
                 loader = await get_agent_loader()
                 
                 agent_data = await loader.load_agent(agent_id, account_id, load_config=True)
                 agent_config = agent_data.to_dict()
-                logger.info(f"⏱️ [TIMING] Agent config from DB (cached for next time): {(time.time() - t) * 1000:.1f}ms")
+               # logger.info(f"⏱️ [TIMING] Agent config from DB (cached for next time): {(time.time() - t) * 1000:.1f}ms")
             else:
                 from core.agent_loader import get_agent_loader
                 loader = await get_agent_loader()
                 
                 agent_data = await loader.load_agent(agent_id, agent_id, load_config=True)
                 agent_config = agent_data.to_dict()
-                logger.info(f"⏱️ [TIMING] Agent config from DB (public agent): {(time.time() - t) * 1000:.1f}ms")
+               # logger.info(f"⏱️ [TIMING] Agent config from DB (public agent): {(time.time() - t) * 1000:.1f}ms")
         
         return agent_config
     except Exception as e:
@@ -417,7 +417,7 @@ async def process_agent_responses(
     async for response in agent_gen:
         if not first_response_logged:
             first_token_time = (time.time() - worker_start) * 1000
-            logger.info(f"⏱️ [TIMING] 🎯 FIRST RESPONSE from agent: {first_token_time:.1f}ms from job start")
+            # logger.info(f"⏱️ [TIMING] 🎯 FIRST RESPONSE from agent: {first_token_time:.1f}ms from job start")
             first_response_logged = True
         
         if stop_signal_checker_state.get('stop_signal_received'):
@@ -557,7 +557,7 @@ async def run_agent_background(
         request_id=request_id,
     )
     
-    logger.info(f"⏱️ [TIMING] Worker received job at {worker_start}")
+    # logger.info(f"⏱️ [TIMING] Worker received job at {worker_start}")
 
     t = time.time()
     try:
@@ -578,7 +578,7 @@ async def run_agent_background(
         sentry.sentry.set_tag("thread_id", thread_id)
         
         timings['lock_acquisition'] = (time.time() - worker_start) * 1000 - timings['initialize']
-        logger.info(f"⏱️ [TIMING] Worker init: {timings['initialize']:.1f}ms | Lock: {timings['lock_acquisition']:.1f}ms")
+        # logger.info(f"⏱️ [TIMING] Worker init: {timings['initialize']:.1f}ms | Lock: {timings['lock_acquisition']:.1f}ms")
         logger.info(f"Starting background agent run: {agent_run_id} for thread: {thread_id} (Instance: {instance_id})")
         
         from core.ai_models import model_manager
@@ -678,7 +678,7 @@ async def run_agent_background(
         )
         
         total_to_ready = (time.time() - worker_start) * 1000
-        logger.info(f"⏱️ [TIMING] 🏁 Worker ready for first LLM call: {total_to_ready:.1f}ms from job start")
+        # logger.info(f"⏱️ [TIMING] 🏁 Worker ready for first LLM call: {total_to_ready:.1f}ms from job start")
 
         final_status, error_message, complete_tool_called, ask_tool_called, total_responses = await process_agent_responses(
             agent_gen, agent_run_id, redis_keys, trace, worker_start, stop_signal_checker_state

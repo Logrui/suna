@@ -135,35 +135,48 @@ class MCPAuthService:
         
         return code_verifier, code_challenge
         
-    async def get_auth_headers(self, mcp_url: str, user_id: Optional[str] = None) -> Dict[str, str]:
+    async def get_auth_headers(
+        self,
+        mcp_url: str,
+        user_id: Optional[str] = None,
+        display_name: Optional[str] = None
+    ) -> Dict[str, str]:
         """
         Retrieve existing auth headers for an MCP URL if registered.
-        Used primarily during discovery updates.
+
+        Uses fallback chain: new canonical format first, then legacy URL-hash formats.
         """
         if not user_id:
             return {}
-            
+
         try:
             from core.credentials import get_credential_service
-            from core.utils.mcp_helpers import get_custom_mcp_qualified_name
-            
-            # Try to match existing credential. We'll need to check various types.
+            from core.utils.mcp_helpers import generate_custom_mcp_qualified_name, _legacy_url_hash_qualified_name
+
             service = get_credential_service(self._db)
-            
-            # Check SSE first as it's most common for discovery-based custom MCPs
-            qualified_name = get_custom_mcp_qualified_name(mcp_url, "sse")
-            credential = await service.get_credential(user_id, qualified_name)
-            
+            credential = None
+
+            # 1. Try new canonical format if display_name is available
+            if display_name:
+                canonical_qn = generate_custom_mcp_qualified_name(display_name, mcp_url)
+                credential = await service.get_credential(user_id, canonical_qn)
+                if credential:
+                    logger.debug(f"🔑 Auth headers found via canonical qualifiedName: {canonical_qn}")
+
+            # 2. Fallback: legacy URL-hash formats (SSE first, then HTTP)
             if not credential:
-                # Try HTTP
-                qualified_name = get_custom_mcp_qualified_name(mcp_url, "http")
-                credential = await service.get_credential(user_id, qualified_name)
-            
+                for transport in ["sse", "http"]:
+                    legacy_qn = _legacy_url_hash_qualified_name(mcp_url, transport)
+                    credential = await service.get_credential(user_id, legacy_qn)
+                    if credential:
+                        logger.debug(f"🔑 Auth headers found via legacy {transport} format: {legacy_qn}")
+                        break
+
             if credential and credential.config and "access_token" in credential.config:
                 return {"Authorization": f"Bearer {credential.config['access_token']}"}
         except Exception as e:
             logger.debug(f"Failed to fetch existing MCP auth headers for discovery: {e}")
-            
+
         return {}
 
 mcp_auth_service = MCPAuthService()

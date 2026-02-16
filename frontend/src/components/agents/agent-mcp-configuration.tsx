@@ -56,7 +56,9 @@ export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
         // Preserve cached tool objects for Manage Tools modal
         ...(customMcp.tools ? { tools: customMcp.tools } : {}),
         isCustom: true,
-        customType: displayType
+        customType: displayType,
+        // Preserve detected transport for direct runtime dispatch
+        ...(customMcp.detectedTransport ? { detectedTransport: customMcp.detectedTransport } : {})
       };
     })
   ];
@@ -83,8 +85,12 @@ export const AgentMCPConfiguration: React.FC<AgentMCPConfigurationProps> = ({
 
         return {
           name: mcp.name,
+          qualifiedName: mcp.qualifiedName,
           type: backendType,
           customType: mcp.customType,
+          // Persist the actual transport detected during discovery (sse, streamable-http)
+          // so runtime can dispatch directly without fallback overhead
+          ...(mcp.detectedTransport ? { detectedTransport: mcp.detectedTransport } : {}),
           config: mcp.config,
           enabledTools: mcp.enabledTools,
           // Preserve cached tool objects for Manage Tools modal

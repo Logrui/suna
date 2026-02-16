@@ -4,18 +4,19 @@ from core.tools.mcp_tool_wrapper import MCPToolWrapper
 from core.agentpress.tool import SchemaType
 from core.utils.logger import logger
 from core.utils.mcp_config_schema import get_config_value
+from core.utils.mcp_helpers import resolve_qualified_name_from_config
 
 class MCPManager:
     def __init__(self, thread_manager: ThreadManager, account_id: str):
         self.thread_manager = thread_manager
         self.account_id = account_id
-    
+
     async def register_mcp_tools(self, agent_config: dict) -> Optional[MCPToolWrapper]:
         all_mcps = []
-        
+
         if agent_config.get('configured_mcps'):
             all_mcps.extend(agent_config['configured_mcps'])
-        
+
         if agent_config.get('custom_mcp'):
             for custom_mcp in agent_config['custom_mcp']:
                 custom_type = get_config_value(custom_mcp, "custom_type", "sse")
@@ -37,9 +38,12 @@ class MCPManager:
                     all_mcps.append(mcp_config)
                     continue
 
+                # Use canonical qualifiedName: prefer saved value, generate from name+URL otherwise
+                qualified_name = resolve_qualified_name_from_config(custom_mcp)
+
                 mcp_config = {
                     'name': custom_mcp['name'],
-                    'qualifiedName': f"custom_{custom_type}_{custom_mcp['name'].replace(' ', '_').lower()}",
+                    'qualifiedName': qualified_name,
                     'config': custom_mcp['config'],
                     'enabledTools': get_config_value(custom_mcp, "enabled_tools", []),
                     'instructions': custom_mcp.get('instructions', ''),

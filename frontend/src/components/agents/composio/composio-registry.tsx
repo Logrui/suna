@@ -486,9 +486,11 @@ export const ComposioRegistry: React.FC<ComposioRegistryProps> = ({
       };
     } else {
       // Add new
+      const configName = customConfig.name || 'Custom MCP';
+      const fallbackQualifiedName = `custom_mcp_${configName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40)}`;
       const mcpConfig = {
-        name: customConfig.name || 'Custom MCP',
-        qualifiedName: `custom_${customConfig.type}_${Date.now()}`,
+        name: configName,
+        qualifiedName: customConfig.qualifiedName || fallbackQualifiedName,
         type: customConfig.type || 'sse',
         config: customConfig.config || {},
         enabledTools: customConfig.enabledTools || [],

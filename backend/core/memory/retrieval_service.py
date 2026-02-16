@@ -53,7 +53,7 @@ class MemoryRetrievalService:
                 'search_memories_by_similarity',
                 {
                     'p_account_id': account_id,
-                    'p_query_embedding': query_embedding,
+                    'p_query_embedding': str(query_embedding),  # PostgREST needs string format for vector type
                     'p_limit': retrieval_limit,
                     'p_similarity_threshold': similarity_threshold
                 }

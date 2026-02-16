@@ -151,6 +151,49 @@ class CredentialService:
         
         return self._map_to_credential(result.data[0])
     
+    async def get_credential_with_fallback(
+        self,
+        account_id: str,
+        qualified_name: str,
+        url: Optional[str] = None
+    ) -> Optional[MCPCredential]:
+        """
+        Try multiple qualifiedName formats to find a credential.
+
+        Lookup order:
+        1. Exact match on qualified_name (new canonical format)
+        2. Legacy URL-hash format: custom_{type}_{md5(url)[:8]} for http
+        3. Legacy URL-hash format: custom_{type}_{md5(url)[:8]} for sse
+
+        Args:
+            account_id: The user's account ID
+            qualified_name: Primary qualifiedName to try (new canonical format)
+            url: Optional MCP server URL for legacy fallback lookups
+
+        Returns:
+            MCPCredential if found under any format, None otherwise
+        """
+        # 1. Try exact match (new canonical format)
+        cred = await self.get_credential(account_id, qualified_name)
+        if cred:
+            logger.debug(f"🔑 Credential found via canonical qualifiedName: {qualified_name}")
+            return cred
+
+        # 2. Try legacy URL-hash formats
+        if url:
+            from core.utils.mcp_helpers import _legacy_url_hash_qualified_name
+            for transport in ["http", "sse"]:
+                legacy_qn = _legacy_url_hash_qualified_name(url, transport)
+                cred = await self.get_credential(account_id, legacy_qn)
+                if cred:
+                    logger.info(f"🔑 Credential found via legacy {transport} format: {legacy_qn} "
+                                f"(canonical was: {qualified_name})")
+                    return cred
+
+        logger.debug(f"🔑 No credential found for {qualified_name}"
+                     f"{f' (also tried legacy lookups for {url})' if url else ''}")
+        return None
+
     async def get_user_credentials(self, account_id: str) -> List[MCPCredential]:
         client = await self._db.client
         result = await client.table('user_mcp_credentials').select('*')\
@@ -158,7 +201,7 @@ class CredentialService:
             .eq('is_active', True)\
             .order('created_at', desc=True)\
             .execute()
-        
+
         return [self._map_to_credential(data) for data in result.data]
     
     async def delete_credential(

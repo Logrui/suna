@@ -550,13 +550,17 @@ class MCPService:
         # Local config access_token (overrides DB)
         access_token = config.get("access_token")
         
-        # If no access_token in config, try fetching from database using qualified_name
+        # If no access_token in config, try fetching from database using qualified_name (with fallback)
         if not access_token and qualified_name and external_user_id:
             try:
                 db = DBConnection()
                 service = get_credential_service(db)
-                credential = await service.get_credential(external_user_id, qualified_name)
-                
+                # Use fallback chain: canonical format → legacy URL-hash formats
+                url = config.get("url", "")
+                credential = await service.get_credential_with_fallback(
+                    external_user_id, qualified_name, url=url
+                )
+
                 if credential and credential.config and "access_token" in credential.config:
                     access_token = credential.config["access_token"]
                     self._logger.debug(f"Retrieved OAuth token from database for {qualified_name}")

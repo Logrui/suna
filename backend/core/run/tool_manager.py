@@ -71,7 +71,7 @@ class ToolManager:
             
             total = (time.time() - start) * 1000
             timing_str = " | ".join([f"{k}: {v:.1f}ms" for k, v in timings.items()])
-            logger.info(f"⏱️ [TIMING] Tool registration breakdown: {timing_str}")
+            # logger.info(f"⏱️ [TIMING] Tool registration breakdown: {timing_str}")
             logger.info(f"⚠️  [LEGACY] Tool registration complete. {len(self.thread_manager.tool_registry.tools)} functions in {total:.1f}ms")
     
     def _register_core_tools(self):

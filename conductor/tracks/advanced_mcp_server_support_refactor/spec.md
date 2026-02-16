@@ -48,6 +48,8 @@ The MCP system is **not** two competing systems. It is a **three-layer pipeline*
 | 5 | **Build runtime tool map** from cached config | JIT Loader | No (reads cache only) |
 | 6 | **Execute** tools (lazy schema load + call MCP server) | Execution Layer | Yes (MCP server) |
 
+**Transport detection and persistence**: Stage 3 (Discovery) detects the actual transport protocol (SSE vs Streamable HTTP) and returns it as `detected_transport`. This is persisted through the frontend into the agent config as `detectedTransport`. At Stage 6, the runtime checks `detectedTransport` and dispatches directly to the correct transport — skipping the SSE→Streamable HTTP fallback chain when the transport is already known.
+
 **Key insight**: Layers 1 and 2 are complementary and correctly separated. The problem is **only in Layer 3 (Execution)**, where two parallel execution paths exist:
 
 | Execution Path | Entry | Used When |
@@ -95,7 +97,27 @@ Same concept uses different keys depending on which layer handles it:
 | Server URL | `config.url` | `config.url` or `config.serverUrl` | `url` or `config.url` |
 | Custom headers | `custom_headers` | `config.headers` | `custom_headers` |
 
-### 2.5 Header Extraction Duplication (Cross-Layer)
+### 2.5 qualifiedName Generation Inconsistency (Cross-Layer)
+Three independent `qualifiedName` generation patterns existed, causing credential lookup misses:
+
+| Location | Format | Example |
+|---|---|---|
+| Backend OAuth callback (`mcp_helpers.py`) | `custom_{type}_{md5(url)[:8]}` | `custom_http_a1b2c3d4` |
+| Frontend save (`mcp-configuration-new.tsx`) | `custom_{type}_{Date.now()}` | `custom_http_1739734616000` |
+| Backend runtime (`mcp_manager.py`) | `custom_{type}_{name_slug}` | `custom_sse_desktop_commander` |
+
+**Result**: Credentials stored under one format → runtime looks up under a different format → credential miss → no auth → 401 → tools vanish.
+
+**Additional bug**: `agent-mcp-configuration.tsx` dropped `qualifiedName` entirely when serializing for backend save.
+
+**Fix**: Canonical format `custom_mcp_{normalized_name}_{url_hash[:6]}` via `generate_custom_mcp_qualified_name()` + fallback lookup in `get_credential_with_fallback()`.
+
+### 2.6a Transport Protocol Mismatch (Stage 3→6)
+MCP servers may support only Streamable HTTP (POST-based) but the runtime assumed SSE (GET-based). Servers like Valyu AI respond with 405 Method Not Allowed to SSE GET requests.
+
+**Fix**: SSE→Streamable HTTP fallback in schema loading and execution. Discovery detects actual transport type (`detected_transport`), frontend persists it (`detectedTransport`), runtime dispatches directly when known.
+
+### 2.6b Header Extraction Duplication (Cross-Layer)
 `_get_headers()` is implemented 4+ times across files with subtle differences:
 - `tools/utils/mcp_tool_executor.py`
 - `tools/utils/mcp_connection_manager.py`
@@ -276,6 +298,8 @@ Prior track specs and plans archived in `conductor/tracks/` (see Section 1).
 6. ✅ **Credential safety**: `map_to_credential()` raises ValueError on decryption failure — *Phase 1*
 7. ✅ **Shared utilities**: `build_mcp_headers()` in `mcp_helpers.py`, `get_config_value()` in `mcp_config_schema.py` — *Phases 3-4*
 8. ✅ **No duplicate definitions**: Single `CustomMCPConnectionResult` in `custom_mcp_registry_service.py`, single exception hierarchy in `exceptions.py` — *Phase 1*
+8a. ✅ **Canonical qualifiedName**: Deterministic `custom_mcp_{name}_{hash}` format via `generate_custom_mcp_qualified_name()`. Fallback credential lookup via `get_credential_with_fallback()` for legacy compat. Frontend preserves `qualifiedName` through save round-trips. — *Phase 7+*
+8b. ✅ **Streamable HTTP transport support**: SSE→Streamable HTTP fallback in schema loading and execution. Transport detection during discovery persisted as `detectedTransport` for direct dispatch. 14 dedicated transport tests. — *Phase 7+*
 
 ### 6.2 Composio Regression
 9. ✅ **Composio discovery intact**: 12 Composio regression tests across Phases 1-5, all passing — *Phases 1-5*
@@ -305,7 +329,7 @@ Prior track specs and plans archived in `conductor/tracks/` (see Section 1).
 25. ✅ **Stage 6 execution tests**: Unified executor tested for SSE/HTTP/JSON/Composio dispatch, SSRF, headers, result types — *Phase 3*
 26. ✅ **Auth tests**: OAuth metadata discovery (RFC 9419 chain), PKCE S256, state round-trip, state tampering — *Phase 5*
 27. ✅ **Composio regression tests**: 12 dedicated Composio tests across all 5 phases — *Phases 1-5*
-28. ✅ **Executable in Docker**: All 143 tests run via single Docker command in ~0.83s — *Phase 5*
+28. ✅ **Executable in Docker**: All 157 tests (143 core + 14 transport) run via single Docker command — *Phases 5, 7+*
 
 ### 6.7 Frontend Integration
 29. ✅ **OAuth detection on add**: `custom-mcp-dialog.tsx` correctly reads `requires_auth` from backend discover response and saves `requires_config: true` — *verified via code audit*
@@ -314,6 +338,8 @@ Prior track specs and plans archived in `conductor/tracks/` (see Section 1).
 32. ✅ **Post-OAuth state refresh**: `mcp-success/page.tsx` sends `postMessage` to parent → `mcp-configuration-new.tsx` listens and calls `queryClient.invalidateQueries()` → card auto-flips from "Configure" to "Manage Tools" — *Phase 7.2 DONE*
 32a. ✅ **OAuth credential lookup for live discovery**: `agent_tools.py` now retrieves OAuth tokens from `user_mcp_credentials` table via `credential_service.get_credential()` for live tool refresh — *Phase 7.2+ bug fix*
 32b. ✅ **Graceful discovery fallback**: `agent_tools.py` returns cached tools with `refresh_error` field when live discovery fails; frontend protects cache from empty results — *Phase 7.2+ bug fix*
+32c. ✅ **qualifiedName round-trip**: `agent-mcp-configuration.tsx` preserves `qualifiedName` through save serialization. Frontend uses deterministic names instead of `Date.now()`. — *Phase 7+*
+32d. ✅ **Transport detection persistence**: `custom-mcp-dialog.tsx` reads `detected_transport` from backend → `mcp-configuration-new.tsx` saves as `detectedTransport` in agent config → `agent-mcp-configuration.tsx` preserves through round-trips → runtime dispatches directly. — *Phase 7+*
 33. ⏳ **OAuth confirmation dialog**: Port `CustomMCPAuthConfirmation` from upstream for pre-redirect confirmation — *Phase 7 nice-to-have*
 34. ⏳ **Tool selection on add**: Add step 2 tool picker to `custom-mcp-dialog.tsx` — *Phase 7 nice-to-have*
 35. ⏳ **Full Add→Configure→Use flow**: E2E manual verification of unsecured (Valyu) and OAuth (Desktop Commander) servers — *Phase 7/8*

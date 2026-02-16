@@ -327,7 +327,7 @@ class AgentRunner:
         register_start = time.time()
         use_spark = True
         tool_manager.register_all_tools(agent_id=agent_id, disabled_tools=disabled_tools, use_spark=use_spark)
-        logger.info(f"⏱️ [TIMING] register_all_tools() with SPARK={use_spark}: {(time.time() - register_start) * 1000:.1f}ms")
+        # logger.info(f"⏱️ [TIMING] register_all_tools() with SPARK={use_spark}: {(time.time() - register_start) * 1000:.1f}ms")
         
         is_suna_agent = (self.config.agent_config and self.config.agent_config.get('is_suna_default', False)) or (self.config.agent_config is None)
         logger.debug(f"Agent config check: agent_config={self.config.agent_config is not None}, is_suna_default={is_suna_agent}")
@@ -340,7 +340,7 @@ class AgentRunner:
         else:
             logger.debug("Not a Suna agent, skipping Suna-specific tool registration")
         
-        logger.info(f"⏱️ [TIMING] setup_tools() total: {(time.time() - start) * 1000:.1f}ms")
+        # logger.info(f"⏱️ [TIMING] setup_tools() total: {(time.time() - start) * 1000:.1f}ms")
     
     async def _setup_tools_async(self):
         loop = asyncio.get_event_loop()
@@ -442,10 +442,10 @@ class AgentRunner:
             setup_start = time.time()
             if config.ENABLE_BOOTSTRAP_MODE:
                 await self.setup_bootstrap()
-                logger.info(f"⏱️ [TIMING] AgentRunner.setup_bootstrap() completed in {(time.time() - setup_start) * 1000:.1f}ms")
+                # logger.info(f"⏱️ [TIMING] AgentRunner.setup_bootstrap() completed in {(time.time() - setup_start) * 1000:.1f}ms")
             else:
                 await self.setup()
-                logger.info(f"⏱️ [TIMING] AgentRunner.setup() completed in {(time.time() - setup_start) * 1000:.1f}ms")
+                # logger.info(f"⏱️ [TIMING] AgentRunner.setup() completed in {(time.time() - setup_start) * 1000:.1f}ms")
             
             parallel_start = time.time()
             setup_tools_task = asyncio.create_task(self._setup_tools_async())
@@ -464,7 +464,7 @@ class AgentRunner:
                 mcp_wrapper_instance = None
             
             tools_elapsed = (time.time() - parallel_start) * 1000
-            logger.info(f"⏱️ [TIMING] Tool setup: {tools_elapsed:.1f}ms (MCP deferred to enrichment)")
+            # logger.info(f"⏱️ [TIMING] Tool setup: {tools_elapsed:.1f}ms (MCP deferred to enrichment)")
             
             prompt_start = time.time()
             
@@ -480,7 +480,7 @@ class AgentRunner:
                     thread_id=self.config.thread_id,
                     client=self.client
                 )
-                logger.info(f"⏱️ [TIMING] build_minimal_prompt() in {(time.time() - prompt_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars) [BOOTSTRAP MODE]")
+                # logger.info(f"⏱️ [TIMING] build_minimal_prompt() in {(time.time() - prompt_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars) [BOOTSTRAP MODE]")
             else:
                 if self.enrichment_complete:
                     logger.info("⚡ [PROMPT] Using FULL prompt (enrichment complete)")
@@ -496,7 +496,7 @@ class AgentRunner:
                     mcp_loader=getattr(self.thread_manager, 'mcp_loader', None),
                     project_id=self.config.project_id
                 )
-                logger.info(f"⏱️ [TIMING] build_system_prompt() in {(time.time() - prompt_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars)")
+                # logger.info(f"⏱️ [TIMING] build_system_prompt() in {(time.time() - prompt_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars)")
             
             if memory_context:
                 self.thread_manager.set_memory_context(memory_context)
@@ -508,7 +508,7 @@ class AgentRunner:
             latest_user_message_content = None
             
             total_setup = (time.time() - run_start) * 1000
-            logger.info(f"⏱️ [TIMING] 🚀 TOTAL AgentRunner setup: {total_setup:.1f}ms (ready for first LLM call) [Message query deferred]")
+            # logger.info(f"⏱️ [TIMING] 🚀 TOTAL AgentRunner setup: {total_setup:.1f}ms (ready for first LLM call) [Message query deferred]")
 
             while continue_execution and iteration_count < self.config.max_iterations:
                 self.turn_number += 1
@@ -529,7 +529,7 @@ class AgentRunner:
                         mcp_loader=getattr(self.thread_manager, 'mcp_loader', None),
                         project_id=self.config.project_id
                     )
-                    logger.info(f"⏱️ [TIMING] Upgraded to full prompt in {(time.time() - prompt_upgrade_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars)")
+                    # logger.info(f"⏱️ [TIMING] Upgraded to full prompt in {(time.time() - prompt_upgrade_start) * 1000:.1f}ms ({len(str(system_message.get('content', '')))} chars)")
                     self.thread_manager._system_prompt = system_message
 
                 if cancellation_event and cancellation_event.is_set():

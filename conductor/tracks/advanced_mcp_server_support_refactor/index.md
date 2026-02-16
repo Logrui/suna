@@ -1,6 +1,6 @@
 # Track: Advanced MCP Server Support Refactor
 
-**Status**: Phases 1-6 COMPLETE, Phase 7 IN PROGRESS (Frontend — core fixes done, UX polish remaining)
+**Status**: Phases 1-6 COMPLETE, Phase 7 IN PROGRESS (Frontend — core fixes done, transport persistence done, UX polish remaining)
 **Priority**: High
 **Created**: 2026-02-15
 
@@ -14,10 +14,10 @@
 | 4 | **COMPLETE** | 32 | Config normalization (`get_config_value()`, `CanonicalMCPConfig`) |
 | 5 | **COMPLETE** | 45 | Comprehensive gap-fill test suite |
 | 6 | **MOSTLY DONE** | — | Harness E2E verified: discover (4/4 steps), run (3 turns), Valyu 11 tools |
-| 7 | **IN PROGRESS** | — | Post-OAuth refresh DONE, credential lookup DONE, graceful fallback DONE. UX polish remaining (7.3-7.5). |
+| 7 | **IN PROGRESS** | 14 | Post-OAuth refresh, credential lookup, graceful fallback, qualifiedName standardization, Streamable HTTP transport detection + persistence. UX polish remaining (7.3-7.5). |
 | 8 | NOT STARTED | — | Full-stack E2E production verification |
 
-**Total tests**: 143 passing in ~0.83s
+**Total tests**: 157 passing (143 core + 14 transport)
 
 ## Test Files
 
@@ -28,11 +28,12 @@
 | `tests/test_mcp_phase3_executor.py` | 3 | 31 | Unified executor: dual-mode, SSRF, dispatch, headers |
 | `tests/test_mcp_phase4_config.py` | 4 | 32 | Config normalization, CanonicalMCPConfig, backward compat |
 | `tests/test_mcp_phase5_coverage.py` | 5 | 45 | Auth service, registry, helpers, Composio, edge cases |
+| `tests/test_mcp_registry_transport.py` | 7+ | 14 | SSE→Streamable HTTP fallback, transport detection, direct dispatch |
 
 ## Run All Tests
 
 ```bash
-docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests/test_mcp_phase1_core.py tests/test_mcp_phase2_jit.py tests/test_mcp_phase3_executor.py tests/test_mcp_phase4_config.py tests/test_mcp_phase5_coverage.py -v"
+docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests/test_mcp_phase1_core.py tests/test_mcp_phase2_jit.py tests/test_mcp_phase3_executor.py tests/test_mcp_phase4_config.py tests/test_mcp_phase5_coverage.py tests/test_mcp_registry_transport.py -v"
 ```
 
 ## Documents
@@ -68,6 +69,10 @@ docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests
 
 5. **SSRF protection on all paths**: `is_safe_url()` validation added to JIT discovery and execution paths, matching the existing protection in the legacy executor.
 
+6. **Canonical qualifiedName format**: `custom_mcp_{normalized_name}_{url_hash[:6]}` — human-readable, deterministic, transport-agnostic. `generate_custom_mcp_qualified_name()` in `mcp_helpers.py`. Fallback credential lookup (`get_credential_with_fallback()`) checks legacy formats for backward compatibility.
+
+7. **Streamable HTTP transport support**: SSE→Streamable HTTP fallback in schema loading and tool execution. Discovery detects actual transport type and returns `detected_transport` field. Frontend persists as `detectedTransport` in agent config. Runtime uses `detectedTransport` for direct dispatch — skips SSE attempt when transport is known, eliminating fallback overhead.
+
 ## Phase 7 Frontend — Implementation Progress
 
 **Code audit** complete. Core functionality implemented and deployed. UX polish tasks remain.
@@ -90,6 +95,12 @@ docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests
 - **Backend: PostgreSQL trigger search_path fix** — Migration for `credential_profile` triggers to use explicit `public.` schema
 - **Backend: try/except guard around store_profile** — Prevents crash if profile storage fails during OAuth callback
 
+### Completed (Post-7.2) ✅
+- **qualifiedName standardization** — Canonical `custom_mcp_{name}_{url_hash[:6]}` format across 11 files (backend + frontend). Fallback credential lookup supports legacy formats. Frontend preserves `qualifiedName` through save round-trips.
+- **Streamable HTTP transport detection** — Backend discovery returns `detected_transport` field. Frontend persists as `detectedTransport` in agent config. Runtime uses it for direct dispatch (skips SSE when `streamable-http` detected).
+- **SSE→Streamable HTTP fallback** — Schema loading (`mcp_registry.py`) and tool execution (`mcp_tool_wrapper.py`, `mcp_tool_executor.py`) all fall back from SSE to Streamable HTTP on connection failure. Handles `ExceptionGroup` from anyio TaskGroup.
+- **Transport test suite** — 14 tests in `test_mcp_registry_transport.py`: 9 unit tests (schema loading fallback, direct dispatch, ExceptionGroup handling) + 5 integration tests (full discovery→execute pipeline with transport routing).
+
 ### Remaining 🔲
 - **7.3** OAuth confirmation dialog (port `CustomMCPAuthConfirmation` from upstream) — nice UX
 - **7.4** Tool selection in add dialog (2-step flow with checkboxes) — nice UX
@@ -106,3 +117,15 @@ docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests
 | `frontend/src/hooks/agents/use-custom-mcp-tools.ts` | Cache protection, refresh_error type |
 | `backend/core/agent_tools.py` | Credential lookup + graceful discovery fallback |
 | `backend/supabase/migrations/20260216000000_fix_credential_profile_triggers.sql` | PostgreSQL trigger search_path fix |
+| `backend/core/agentpress/mcp_registry.py` | SSE→Streamable HTTP fallback in schema loading, `detectedTransport` direct dispatch |
+| `backend/core/jit/mcp_tool_wrapper.py` | SSE→Streamable HTTP fallback in JIT execution |
+| `backend/core/tools/utils/mcp_tool_executor.py` | SSE→Streamable HTTP fallback in unified execution |
+| `backend/core/mcp_module/custom_mcp_registry_service.py` | `detected_transport` in `CustomMCPConnectionResult` |
+| `backend/core/mcp_module/api.py` | `detected_transport` in API response + qualifiedName standardization |
+| `backend/core/utils/mcp_helpers.py` | `generate_custom_mcp_qualified_name()`, `resolve_qualified_name_from_config()` |
+| `backend/core/credentials/credential_service.py` | `get_credential_with_fallback()` for legacy format compat |
+| `backend/tests/test_mcp_registry_transport.py` | 14 transport routing tests (unit + integration) |
+| `frontend/src/components/agents/mcp/types.ts` | `detectedTransport` field in `MCPConfiguration` interface |
+| `frontend/src/components/agents/agent-mcp-configuration.tsx` | `detectedTransport` + `qualifiedName` persistence in round-trips |
+| `frontend/src/components/agents/mcp/custom-mcp-dialog.tsx` | Reads `detected_transport` from backend discovery response |
+| `frontend/src/components/agents/mcp/mcp-configuration-new.tsx` | Persists `detectedTransport` in save paths, deterministic qualifiedName |

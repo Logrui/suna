@@ -6,13 +6,14 @@
 - **Implementation Plan**: [plan.md](./plan.md)
 - **Metadata**: [metadata.json](./metadata.json)
 
-## Reference Documents (Repo Root)
+## Reference Documents (in `docs/`)
 
-- [mcp-systems-codemap.md](/mcp-systems-codemap.md) — Full-stack architecture codemap
-- [MCP_PIPELINE_TRACE.md](/MCP_PIPELINE_TRACE.md) — Stage-by-stage pipeline trace
-- [MCP_MENTAL_MODEL_ANSWER.md](/MCP_MENTAL_MODEL_ANSWER.md) — Pipeline stage ownership
-- [MCP_SYSTEM_CLASSIFICATION.md](/MCP_SYSTEM_CLASSIFICATION.md) — System membership and dependencies
-- [MCP_QUICK_REFERENCE.md](/MCP_QUICK_REFERENCE.md) — Quick lookup reference
+- [MCP_PIPELINE_TRACE.md](./MCP_PIPELINE_TRACE.md) — Stage-by-stage pipeline trace (includes SSE→Streamable HTTP fallback)
+- [MCP_MENTAL_MODEL_ANSWER.md](./MCP_MENTAL_MODEL_ANSWER.md) — Pipeline stage ownership
+- [MCP_SYSTEM_CLASSIFICATION.md](./MCP_SYSTEM_CLASSIFICATION.md) — System membership and dependencies
+- [MCP_QUICK_REFERENCE.md](./MCP_QUICK_REFERENCE.md) — Quick lookup reference (includes transport detection & qualifiedName format)
+- [mcp-architecture-codemap.md](./mcp-architecture-codemap.md) — JIT loading & execution architecture
+- [README_MCP_DOCS.md](./README_MCP_DOCS.md) — Documentation suite overview and navigation
 
 ## Archived Tracks (Consolidated Into This One)
 

@@ -62,7 +62,7 @@ class MCPRegistry:
         self._initialized = False
         self._redis_client = None
         
-        logger.info("🏗️ [MCP REGISTRY] Initialized isolated MCP tool registry")
+        logger.info("🏗️ [AGENTPRESS MCP REGISTRY] Initialized isolated MCP tool registry")
     
     def register_tool_info(self, tool_info: MCPToolInfo) -> None:
         tool_name = tool_info.tool_name
@@ -76,11 +76,11 @@ class MCPRegistry:
         
         self._status_index[tool_info.status].add(tool_name)
         
-        logger.debug(f"🔧 [MCP REGISTRY] Registered {tool_name} from {toolkit}")
+        logger.debug(f"🔧 [AGENTPRESS MCP REGISTRY] Registered {tool_name} from {toolkit}")
     
     def activate_tool(self, tool_name: str, instance: Any, schema: Optional[Dict] = None) -> bool:
         if tool_name not in self._tools:
-            logger.warning(f"⚠️  [MCP REGISTRY] Cannot activate unknown tool: {tool_name}")
+            logger.warning(f"⚠️  [AGENTPRESS MCP REGISTRY] Cannot activate unknown tool: {tool_name}")
             return False
         
         tool_info = self._tools[tool_name]
@@ -91,7 +91,7 @@ class MCPRegistry:
         tool_info.schema = schema
         tool_info.load_time_ms = time.time() * 1000
         
-        logger.info(f"✅ [MCP REGISTRY] Activated {tool_name} successfully")
+        logger.info(f"✅ [AGENTPRESS MCP REGISTRY] Activated {tool_name} successfully")
         return True
     
     def _update_tool_status(self, tool_name: str, new_status: MCPToolStatus) -> None:
@@ -133,7 +133,7 @@ class MCPRegistry:
                 self._redis_client = await redis_service.get_client()
                 return True
             except Exception as e:
-                logger.debug(f"⚠️ [MCP REGISTRY] Redis not available: {e}")
+                logger.debug(f"⚠️ [AGENTPRESS MCP REGISTRY] Redis not available: {e}")
                 return False
         return True
     
@@ -197,7 +197,7 @@ class MCPRegistry:
                     tools_needing_schemas.append(tool_name)
         
         if load_schemas and tools_needing_schemas:
-            logger.info(f"📥 [MCP REGISTRY] Loading {len(tools_needing_schemas)} schemas from MCP servers...")
+            logger.info(f"📥 [AGENTPRESS MCP REGISTRY] Loading {len(tools_needing_schemas)} schemas from MCP servers...")
             schemas_loaded = await self._load_schemas_from_mcp(tools_needing_schemas, account_id)
             available_tools.update(schemas_loaded)
         
@@ -267,7 +267,7 @@ class MCPRegistry:
                 mcp_config = first_tool_info.mcp_config
                 custom_type = get_config_value(mcp_config, "custom_type", "http")
                 
-                logger.info(f"📥 [MCP REGISTRY] Loading schemas for custom MCP {toolkit_slug} (type: {custom_type})")
+                logger.info(f"📥 [AGENTPRESS MCP REGISTRY] Loading schemas for custom MCP {toolkit_slug} (type: {custom_type})")
                 
                 # Pass the full mcp_config, _load_custom_mcp_schemas handles nesting
                 toolkit_schemas = await self._load_custom_mcp_schemas(custom_type, mcp_config)
@@ -277,13 +277,13 @@ class MCPRegistry:
                         schemas[tool_name] = toolkit_schemas[tool_name]
                         if tool_name in self._tools:
                             self._tools[tool_name].schema = toolkit_schemas[tool_name]
-                        logger.debug(f"✅ [MCP REGISTRY] Loaded schema for custom MCP tool {tool_name}")
+                        logger.debug(f"✅ [AGENTPRESS MCP REGISTRY] Loaded schema for custom MCP tool {tool_name}")
                 
                 if toolkit_schemas:
                     await self._cache_toolkit_schemas(toolkit_slug, toolkit_schemas)
                 
             except Exception as e:
-                logger.warning(f"⚠️  [MCP REGISTRY] Failed to load schemas for custom MCP {toolkit_slug}: {e}")
+                logger.warning(f"⚠️  [AGENTPRESS MCP REGISTRY] Failed to load schemas for custom MCP {toolkit_slug}: {e}")
                 continue
         
         # Load Composio MCP schemas
@@ -301,19 +301,19 @@ class MCPRegistry:
                                 schemas[tool_name] = cached_schemas[tool_name]
                                 if tool_name in self._tools:
                                     self._tools[tool_name].schema = cached_schemas[tool_name]
-                                logger.debug(f"⚡ [MCP SCHEMA CACHE] Using cached schema for {tool_name}")
+                                logger.debug(f"⚡ [AGENTPRESS MCP SCHEMA CACHE] Using cached schema for {tool_name}")
                         continue
                     if not account_id:
                         account_id = self._tools[tools[0]].mcp_config.get('account_id')
                     
                     if not account_id:
-                        logger.warning(f"⚠️  [MCP REGISTRY] No account_id available for {toolkit_slug}")
+                        logger.warning(f"⚠️  [AGENTPRESS MCP REGISTRY] No account_id available for {toolkit_slug}")
                         continue
                     
                     profiles = await profile_service.get_profiles(account_id, toolkit_slug=toolkit_slug)
                     
                     if not profiles or len(profiles) == 0:
-                        logger.warning(f"⚠️  [MCP REGISTRY] No profile found for {toolkit_slug}")
+                        logger.warning(f"⚠️  [AGENTPRESS MCP REGISTRY] No profile found for {toolkit_slug}")
                         continue
                     
                     profile = profiles[0]
@@ -321,7 +321,7 @@ class MCPRegistry:
                     mcp_url = profile_config.get('mcp_url')
                     
                     if not mcp_url:
-                        logger.warning(f"⚠️  [MCP REGISTRY] No MCP URL for {toolkit_slug}")
+                        logger.warning(f"⚠️  [AGENTPRESS MCP REGISTRY] No MCP URL for {toolkit_slug}")
                         continue
                     
                     from core.mcp_module.mcp_service import mcp_service
@@ -331,7 +331,7 @@ class MCPRegistry:
                     )
                     
                     if not result.success:
-                        logger.warning(f"⚠️  [MCP REGISTRY] Failed to discover tools from {toolkit_slug}: {result.message}")
+                        logger.warning(f"⚠️  [AGENTPRESS MCP REGISTRY] Failed to discover tools from {toolkit_slug}: {result.message}")
                         continue
                     
                     toolkit_schemas = {}
@@ -354,22 +354,22 @@ class MCPRegistry:
                         
                         if tool_name in self._tools and not self._tools[tool_name].schema:
                             self._tools[tool_name].schema = schema
-                            logger.debug(f"⚡ [MCP REGISTRY] Cached schema for {tool_name} (opportunistic)")
+                            logger.debug(f"⚡ [AGENTPRESS MCP REGISTRY] Cached schema for {tool_name} (opportunistic)")
                         
                         if tool_name in tools:
                             schemas[tool_name] = schema
-                            logger.debug(f"✅ [MCP REGISTRY] Loaded schema for {tool_name} (requested)")
+                            logger.debug(f"✅ [AGENTPRESS MCP REGISTRY] Loaded schema for {tool_name} (requested)")
                     
                     await self._cache_toolkit_schemas(toolkit_slug, toolkit_schemas)
                     elapsed = (time.time() - toolkit_start) * 1000
-                    logger.info(f"✨ [MCP REGISTRY] Successfully loaded {len(toolkit_schemas)} schemas for toolkit '{toolkit_slug}' in {elapsed:.1f}ms")
+                    logger.info(f"✨ [AGENTPRESS MCP REGISTRY] Successfully loaded {len(toolkit_schemas)} schemas for toolkit '{toolkit_slug}' in {elapsed:.1f}ms")
                 
                 except Exception as e:
-                    logger.warning(f"⚠️  [MCP REGISTRY] Failed to load schemas for {toolkit_slug}: {e}")
+                    logger.warning(f"⚠️  [AGENTPRESS MCP REGISTRY] Failed to load schemas for {toolkit_slug}: {e}")
                     continue
         
         except Exception as e:
-            logger.error(f"❌ [MCP REGISTRY] Failed to load Composio schemas: {e}")
+            logger.error(f"❌ [AGENTPRESS MCP REGISTRY] Failed to load Composio schemas: {e}")
         
         return schemas
     
@@ -391,12 +391,17 @@ class MCPRegistry:
         if isinstance(custom_headers, dict):
             headers.update(custom_headers)
             
-        logger.debug(f"🔍 [MCP REGISTRY] Requesting schemas for custom type: {custom_type}")
-        logger.debug(f"⚙️ [MCP REGISTRY] Config: { {k: '***' if k.lower() in ('access_token', 'headers') else v for k, v in config.items()} }")
+        logger.debug(f"🔍 [AGENTPRESS MCP REGISTRY] Requesting schemas for custom type: {custom_type}")
+        logger.debug(f"⚙️ [AGENTPRESS MCP REGISTRY] Config: { {k: '***' if k.lower() in ('access_token', 'headers') else v for k, v in config.items()} }")
         
         start_load = time.time()
         try:
-            if custom_type == "sse":
+            # Check detectedTransport for direct dispatch (skip SSE fallback overhead)
+            detected_transport = config.get("detectedTransport", "")
+            if detected_transport == "streamable-http":
+                logger.info(f"⚡ [AGENTPRESS MCP REGISTRY] Direct Streamable HTTP schema load (detectedTransport={detected_transport})")
+                schemas = await self._load_http_mcp_schemas(config, headers=headers)
+            elif custom_type == "sse":
                 schemas = await self._load_sse_mcp_schemas(config, headers=headers)
             elif custom_type == "http":
                 schemas = await self._load_http_mcp_schemas(config, headers=headers)
@@ -406,88 +411,109 @@ class MCPRegistry:
                 # Default to HTTP for unknown types
                 schemas = await self._load_http_mcp_schemas(config, headers=headers)
         except Exception as e:
-            logger.error(f"❌ [MCP REGISTRY] Failed to load custom MCP schemas ({custom_type}): {e}")
+            logger.error(f"❌ [AGENTPRESS MCP REGISTRY] Failed to load custom MCP schemas ({custom_type}): {e}")
             raise
             
         elapsed = (time.time() - start_load) * 1000
-        logger.info(f"✨ [MCP REGISTRY] Custom {custom_type} schema load complete. Found {len(schemas)} tools in {elapsed:.1f}ms.")
+        logger.info(f"✨ [AGENTPRESS MCP REGISTRY] Custom {custom_type} schema load complete. Found {len(schemas)} tools in {elapsed:.1f}ms.")
+        return schemas
+
+    def _extract_tool_schemas(self, tools_result) -> Dict[str, Dict[str, Any]]:
+        """Extract OpenAI-format tool schemas from an MCP tools/list result"""
+        tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
+        schemas = {}
+        for tool in tools:
+            schema = {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description or f"Execute {tool.name}",
+                    "parameters": tool.inputSchema if hasattr(tool, 'inputSchema') else {
+                        "type": "object",
+                        "properties": {},
+                        "required": []
+                    }
+                }
+            }
+            schemas[tool.name] = schema
         return schemas
 
     async def _load_sse_mcp_schemas(self, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Dict[str, Any]]:
-        """Load schemas from SSE MCP server"""
+        """Load schemas from SSE MCP server, with Streamable HTTP fallback on failure.
+
+        Many modern MCP servers (e.g., Valyu, servers on Vercel) use Streamable HTTP
+        (POST-based) transport but get registered with type='sse' because the frontend
+        discovery probes SSE first and the backend's SSE discovery has an internal fallback.
+
+        This method mirrors that fallback: try SSE first, on failure try Streamable HTTP.
+        """
         url = config.get('url') or config.get('config', {}).get('url')
         if not url:
-            logger.error("❌ [MCP REGISTRY] Missing 'url' in SSE MCP config")
+            logger.error("❌ [AGENTPRESS MCP REGISTRY] Missing 'url' in SSE MCP config")
             return {}
-        
+
         from mcp.client.sse import sse_client
+        from mcp.client.streamable_http import streamablehttp_client
         from mcp import ClientSession
-        
+
         if headers is None:
             headers = config.get('headers', {})
-            
+
         schemas = {}
-        
+
+        # --- Attempt 1: Standard SSE transport (GET-based) ---
+        sse_error = None
         try:
             try:
                 async with sse_client(url, headers=headers) as (read_stream, write_stream):
                     async with ClientSession(read_stream, write_stream) as session:
                         await session.initialize()
                         tools_result = await session.list_tools()
-                        tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
-                        
-                        for tool in tools:
-                            schema = {
-                                "type": "function",
-                                "function": {
-                                    "name": tool.name,
-                                    "description": tool.description or f"Execute {tool.name}",
-                                    "parameters": tool.inputSchema if hasattr(tool, 'inputSchema') else {
-                                        "type": "object",
-                                        "properties": {},
-                                        "required": []
-                                    }
-                                }
-                            }
-                            schemas[tool.name] = schema
-                        
-                        logger.debug(f"⚡ [MCP REGISTRY] Discovered {len(schemas)} SSE schemas")
+                        schemas = self._extract_tool_schemas(tools_result)
+                        logger.debug(f"⚡ [AGENTPRESS MCP REGISTRY] Discovered {len(schemas)} SSE schemas")
+                        return schemas
             except TypeError as e:
                 if "unexpected keyword argument" in str(e):
                     async with sse_client(url) as (read_stream, write_stream):
                         async with ClientSession(read_stream, write_stream) as session:
                             await session.initialize()
                             tools_result = await session.list_tools()
-                            tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
-                            
-                            for tool in tools:
-                                schema = {
-                                    "type": "function",
-                                    "function": {
-                                        "name": tool.name,
-                                        "description": tool.description or f"Execute {tool.name}",
-                                        "parameters": tool.inputSchema if hasattr(tool, 'inputSchema') else {
-                                            "type": "object",
-                                            "properties": {},
-                                            "required": []
-                                        }
-                                    }
-                                }
-                                schemas[tool.name] = schema
-                            
-                            logger.debug(f"⚡ [MCP REGISTRY] Discovered {len(schemas)} SSE schemas (no headers)")
+                            schemas = self._extract_tool_schemas(tools_result)
+                            logger.debug(f"⚡ [AGENTPRESS MCP REGISTRY] Discovered {len(schemas)} SSE schemas (no headers)")
+                            return schemas
                 else:
                     raise
-        except Exception as e:
-            logger.error(f"❌ [MCP REGISTRY] Failed to load SSE schemas: {e}")
-        
+        except (Exception, BaseException) as e:
+            sse_error = e
+            # Log but don't return yet — try Streamable HTTP fallback
+            logger.info(f"ℹ️ [AGENTPRESS MCP REGISTRY] SSE transport failed for {url}: {type(e).__name__}. Trying Streamable HTTP fallback...")
+
+        # --- Attempt 2: Streamable HTTP transport (POST-based) ---
+        try:
+            async with streamablehttp_client(url, headers=headers) as (read_stream, write_stream, _):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    tools_result = await session.list_tools()
+                    schemas = self._extract_tool_schemas(tools_result)
+                    logger.info(f"✅ [AGENTPRESS MCP REGISTRY] Streamable HTTP fallback succeeded for {url}. Found {len(schemas)} tools.")
+                    return schemas
+        except (Exception, BaseException) as http_err:
+            logger.warning(f"⚠️ [AGENTPRESS MCP REGISTRY] Streamable HTTP fallback also failed for {url}: {type(http_err).__name__}: {http_err}")
+
+        # --- Both failed: log the original SSE error details ---
+        if sse_error:
+            logger.error(f"❌ [AGENTPRESS MCP REGISTRY] All transports failed for SSE config. Original SSE error: {type(sse_error).__name__}: {sse_error}")
+            if hasattr(sse_error, 'exceptions'):
+                for i, sub_exc in enumerate(sse_error.exceptions):
+                    logger.error(f"❌ [AGENTPRESS MCP REGISTRY] SSE TaskGroup sub-exception [{i}]: {type(sub_exc).__name__}: {sub_exc}", exc_info=sub_exc)
+
         return schemas
     
     async def _load_http_mcp_schemas(self, config: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Dict[str, Any]]:
         """Load schemas from HTTP/Streamable HTTP MCP server"""
         url = config.get('url') or config.get('config', {}).get('url')
         if not url:
-            logger.error("❌ [MCP REGISTRY] Missing 'url' in HTTP MCP config")
+            logger.error("❌ [AGENTPRESS MCP REGISTRY] Missing 'url' in HTTP MCP config")
             return {}
         
         from mcp.client.streamable_http import streamablehttp_client
@@ -503,34 +529,21 @@ class MCPRegistry:
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools_result = await session.list_tools()
-                    tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
-                    
-                    for tool in tools:
-                        schema = {
-                            "type": "function",
-                            "function": {
-                                "name": tool.name,
-                                "description": tool.description or f"Execute {tool.name}",
-                                "parameters": tool.inputSchema if hasattr(tool, 'inputSchema') else {
-                                    "type": "object",
-                                    "properties": {},
-                                    "required": []
-                                }
-                            }
-                        }
-                        schemas[tool.name] = schema
-                    
-                    logger.debug(f"⚡ [MCP REGISTRY] Discovered {len(schemas)} HTTP schemas")
+                    schemas = self._extract_tool_schemas(tools_result)
+                    logger.debug(f"⚡ [AGENTPRESS MCP REGISTRY] Discovered {len(schemas)} HTTP schemas")
         except Exception as e:
-            logger.error(f"❌ [MCP REGISTRY] Failed to load HTTP schemas: {e}")
-        
+            logger.error(f"❌ [AGENTPRESS MCP REGISTRY] Failed to load HTTP schemas from {url}: {type(e).__name__}: {e}", exc_info=True)
+            if hasattr(e, 'exceptions'):
+                for i, sub_exc in enumerate(e.exceptions):
+                    logger.error(f"❌ [AGENTPRESS MCP REGISTRY] HTTP TaskGroup sub-exception [{i}]: {type(sub_exc).__name__}: {sub_exc}", exc_info=sub_exc)
+
         return schemas
     
     async def _load_json_mcp_schemas(self, config: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         """Load schemas from JSON/stdio MCP server"""
         command = config.get('command')
         if not command:
-            logger.error("❌ [MCP REGISTRY] Missing 'command' in JSON/stdio MCP config")
+            logger.error("❌ [AGENTPRESS MCP REGISTRY] Missing 'command' in JSON/stdio MCP config")
             return {}
         
         from mcp import ClientSession, StdioServerParameters
@@ -549,26 +562,10 @@ class MCPRegistry:
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
                     tools_result = await session.list_tools()
-                    tools = tools_result.tools if hasattr(tools_result, 'tools') else tools_result
-                    
-                    for tool in tools:
-                        schema = {
-                            "type": "function",
-                            "function": {
-                                "name": tool.name,
-                                "description": tool.description or f"Execute {tool.name}",
-                                "parameters": tool.inputSchema if hasattr(tool, 'inputSchema') else {
-                                    "type": "object",
-                                    "properties": {},
-                                    "required": []
-                                }
-                            }
-                        }
-                        schemas[tool.name] = schema
-                    
-                    logger.debug(f"⚡ [MCP REGISTRY] Discovered {len(schemas)} JSON/stdio schemas")
+                    schemas = self._extract_tool_schemas(tools_result)
+                    logger.debug(f"⚡ [AGENTPRESS MCP REGISTRY] Discovered {len(schemas)} JSON/stdio schemas")
         except Exception as e:
-            logger.error(f"❌ [MCP REGISTRY] Failed to load JSON/stdio schemas: {e}")
+            logger.error(f"❌ [AGENTPRESS MCP REGISTRY] Failed to load JSON/stdio schemas: {e}")
         
         return schemas
     
@@ -737,4 +734,4 @@ def init_mcp_registry_from_loader(mcp_loader) -> None:
         )
         registry.register_tool_info(mcp_tool_info)
     
-    logger.info(f"🔧 [MCP REGISTRY] Initialized with {len(registry._tools)} tools from {len(registry._toolkit_mapping)} toolkits")
+    logger.info(f"🔧 [AGENTPRESS MCP REGISTRY] Initialized with {len(registry._tools)} tools from {len(registry._toolkit_mapping)} toolkits")

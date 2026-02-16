@@ -287,14 +287,14 @@ class ExpandMessageTool(Tool):
             
             if not mcp_registry._initialized or loader_tool_count > registry_tool_count:
                 from core.agentpress.mcp_registry import init_mcp_registry_from_loader
-                logger.info(f"🔄 [MCP REGISTRY] Syncing registry: loader has {loader_tool_count} tools, registry has {registry_tool_count}")
+                logger.info(f"🔄 [Expand Message Tool] Syncing registry: loader has {loader_tool_count} tools, registry has {registry_tool_count}")
                 init_mcp_registry_from_loader(mcp_loader)
                 mcp_registry._initialized = True
 
                 account_id = getattr(self.thread_manager, 'account_id', None)
                 warmed = await mcp_registry.prewarm_schemas(account_id)
                 if warmed > 0:
-                    logger.info(f"⚡ [MCP REGISTRY] Pre-warmed {warmed} schemas from Redis cache")
+                    logger.info(f"⚡ [Expand Message Tool] Pre-warmed {warmed} schemas from Redis cache")
             else:
                 # DROP POINT 22: Registry sync SKIPPED — uses count comparison, not content comparison
                 # If loader has same or fewer tools but DIFFERENT tools (e.g., stale tools from previous run),
@@ -388,7 +388,7 @@ class ExpandMessageTool(Tool):
             
             if not mcp_registry._initialized or loader_tool_count > registry_tool_count:
                 from core.agentpress.mcp_registry import init_mcp_registry_from_loader
-                logger.info(f"🔄 [MCP REGISTRY] Syncing registry for execute: loader has {loader_tool_count} tools, registry has {registry_tool_count}")
+                logger.info(f"🔄 [Expand Message Tool] Syncing registry for execute: loader has {loader_tool_count} tools, registry has {registry_tool_count}")
                 init_mcp_registry_from_loader(mcp_loader)
                 mcp_registry._initialized = True
                 

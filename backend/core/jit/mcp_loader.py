@@ -163,47 +163,52 @@ class MCPJITLoader:
         custom_type = get_config_value(mcp_config, "custom_type", "").lower()
         server_name = mcp_config.get('name', 'unnamed')
         
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG] Processing {config_type} MCP config:")
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG]   server_name: {server_name}")
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG]   custom_type: {custom_type}")
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG]   cache_only: {cache_only}")
+        logger.info(f"🔍 [JIT-MCP-LOADER] Processing {config_type} MCP config:")
+        logger.info(f"🔍 [JIT-MCP-LOADER]   server_name: {server_name}")
+        logger.info(f"🔍 [JIT-MCP-LOADER]   custom_type: {custom_type}")
+        logger.info(f"🔍 [JIT-MCP-LOADER]   cache_only: {cache_only}")
         
         if custom_type in ("sse", "http", "json"):
-            logger.info(f"🔍 [MCP-PROCESS-DEBUG] Processing as custom MCP (type: {custom_type})")
+            logger.info(f"🔍 [JIT-MCP-LOADER] Processing as custom MCP (type: {custom_type})")
             await self._process_custom_mcp_config_internal(mcp_config, cache_only)
             return
 
-        # DROP POINT 10: custom_type is empty or unrecognized — falls through to Composio/configured path
-        if config_type == "custom" and custom_type not in ("sse", "http", "json"):
+        # DROP POINT 10: custom_type routing check
+        # "composio" type is EXPECTED to fall through to the Composio path — not a bug
+        # Empty or truly unrecognized types ARE a problem
+        if config_type == "custom" and custom_type not in ("sse", "http", "json", "composio"):
             logger.warning(
                 f"⚠️ [MCP DROP-POINT-10] Custom MCP '{server_name}' has custom_type='{custom_type}' which is NOT "
-                f"in ('sse','http','json') — it will be routed to the COMPOSIO/configured path instead of custom discovery! "
-                f"This is likely wrong. Config keys: {list(mcp_config.keys())}, "
+                f"in ('sse','http','json','composio') — it will be routed to the COMPOSIO/configured path. "
+                f"If this is a custom server (SSE/HTTP/JSON), it will NOT be discovered correctly! "
+                f"Config keys: {list(mcp_config.keys())}, "
                 f"has 'type': {bool(mcp_config.get('type'))}, has 'customType': {bool(mcp_config.get('customType'))}, "
                 f"has 'custom_type': {bool(mcp_config.get('custom_type'))}, "
                 f"raw config (truncated): {str(mcp_config)[:300]}"
             )
+        elif config_type == "custom" and custom_type == "composio":
+            logger.debug(f"🔍 [JIT-MCP-LOADER] '{server_name}' is a Composio-managed MCP (type=composio), routing to Composio path — expected")
 
         toolkit_slug = self._extract_toolkit_slug(mcp_config)
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG]   extracted toolkit_slug: {toolkit_slug}")
+        logger.info(f"🔍 [JIT-MCP-LOADER]   extracted toolkit_slug: {toolkit_slug}")
         
         if not toolkit_slug:
-            logger.warning(f"🔍 [MCP-PROCESS-DEBUG] ❌ No toolkit_slug found in {config_type} MCP config: {mcp_config}")
+            logger.warning(f"🔍 [JIT-MCP-LOADER] ❌ No toolkit_slug found in {config_type} MCP config: {mcp_config}")
             return
 
         enabled_tools = get_config_value(mcp_config, "enabled_tools", [])
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG] enabled_tools from config: {len(enabled_tools)} tools")
+        logger.info(f"🔍 [JIT-MCP-LOADER] enabled_tools from config: {len(enabled_tools)} tools")
         
         if enabled_tools:
-            logger.info(f"🔍 [MCP-PROCESS-DEBUG] ✅ Using enabled_tools DIRECTLY from config (bypassing registry cache)")
-            logger.info(f"🔍 [MCP-PROCESS-DEBUG] {toolkit_slug}: {len(enabled_tools)} enabled tools: {enabled_tools[:10]}{'...' if len(enabled_tools) > 10 else ''}")
+            logger.info(f"🔍 [JIT-MCP-LOADER] ✅ Using enabled_tools DIRECTLY from config (bypassing registry cache)")
+            logger.info(f"🔍 [JIT-MCP-LOADER] {toolkit_slug}: {len(enabled_tools)} enabled tools: {enabled_tools[:10]}{'...' if len(enabled_tools) > 10 else ''}")
             
             for tool_name in enabled_tools:
                 if tool_name in self.tool_map:
-                    logger.warning(f"🔍 [MCP-PROCESS-DEBUG] ⚠️ Tool '{tool_name}' already registered, skipping duplicate")
+                    logger.warning(f"🔍 [JIT-MCP-LOADER] ⚠️ Tool '{tool_name}' already registered, skipping duplicate")
                     continue
                 
-                logger.info(f"🔍 [MCP-PROCESS-DEBUG] ✅ Adding tool '{tool_name}' to map (from {toolkit_slug})")
+                logger.info(f"🔍 [JIT-MCP-LOADER] ✅ Adding tool '{tool_name}' to map (from {toolkit_slug})")
                 self.tool_map[tool_name] = MCPToolInfo(
                     tool_name=tool_name,
                     toolkit_slug=toolkit_slug,
@@ -212,27 +217,27 @@ class MCPJITLoader:
             return
         
         account_id = self.agent_config.get('account_id')
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG] No enabled_tools in config, querying registry for toolkit: {toolkit_slug}")
+        logger.info(f"🔍 [JIT-MCP-LOADER] No enabled_tools in config, querying registry for toolkit: {toolkit_slug}")
         
         available_tools = await get_toolkit_tools(toolkit_slug, account_id=account_id, cache_only=cache_only)
         
-        logger.info(f"🔍 [MCP-PROCESS-DEBUG] Registry returned {len(available_tools)} tools for {toolkit_slug}")
+        logger.info(f"🔍 [JIT-MCP-LOADER] Registry returned {len(available_tools)} tools for {toolkit_slug}")
         if available_tools:
-            logger.info(f"🔍 [MCP-PROCESS-DEBUG] Available tools: {available_tools[:10]}{'...' if len(available_tools) > 10 else ''}")
+            logger.info(f"🔍 [JIT-MCP-LOADER] Available tools: {available_tools[:10]}{'...' if len(available_tools) > 10 else ''}")
         
         if not available_tools:
             if cache_only:
-                logger.info(f"🔍 [MCP-PROCESS-DEBUG] No cached tools for {toolkit_slug} - will discover in enrichment")
+                logger.info(f"🔍 [JIT-MCP-LOADER] No cached tools for {toolkit_slug} - will discover in enrichment")
             else:
-                logger.warning(f"🔍 [MCP-PROCESS-DEBUG] ❌ No tools found for toolkit: {toolkit_slug}")
+                logger.warning(f"🔍 [JIT-MCP-LOADER] ❌ No tools found for toolkit: {toolkit_slug}")
             return
         
         for tool_name in available_tools:
             if tool_name in self.tool_map:
-                logger.warning(f"🔍 [MCP-PROCESS-DEBUG] ⚠️ Tool '{tool_name}' already registered, skipping duplicate")
+                logger.warning(f"🔍 [JIT-MCP-LOADER] ⚠️ Tool '{tool_name}' already registered, skipping duplicate")
                 continue
             
-            logger.info(f"🔍 [MCP-PROCESS-DEBUG] ✅ Adding tool '{tool_name}' to map (from {toolkit_slug})")
+            logger.info(f"🔍 [JIT-MCP-LOADER] ✅ Adding tool '{tool_name}' to map (from {toolkit_slug})")
             self.tool_map[tool_name] = MCPToolInfo(
                 tool_name=tool_name,
                 toolkit_slug=toolkit_slug,
@@ -245,13 +250,38 @@ class MCPJITLoader:
         custom_type = get_config_value(mcp_config, "custom_type", "http").lower()
         url = mcp_config.get('url') or mcp_config.get('config', {}).get('url')
         
-        logger.debug(f"⚡ [MCP JIT] Processing custom MCP: {server_name} (type: {custom_type})")
-        
+        logger.info(f"🔍 [MCP-CUSTOM-DEBUG] >>> ENTER _process_custom_mcp_config_internal for '{server_name}' "
+                    f"(type={custom_type}, url={url}, cache_only={cache_only}, toolkit_slug={toolkit_slug}, "
+                    f"config_keys={list(mcp_config.keys())})")
+
         if custom_type == "json":
             if cache_only:
                 logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: JSON type, skipping discovery in cache-only mode.")
                 return
             tool_names = await self._discover_json_tools(mcp_config)
+            if not tool_names:
+                logger.error(f"❌ [MCP-CUSTOM-DEBUG] '{server_name}' JSON discovery returned ZERO tools! "
+                             f"type={custom_type}, cache_only={cache_only}. "
+                             f"This server will be INVISIBLE to the LLM.")
+                return
+            # Register JSON-discovered tools
+            json_toolkit_slug = f"custom_{custom_type}_{server_name.replace(' ', '_').lower()}" if toolkit_slug == 'custom' else toolkit_slug
+            json_enabled_tools = get_config_value(mcp_config, "enabled_tools", [])
+            if json_enabled_tools:
+                tools_to_add = [t for t in tool_names if t in json_enabled_tools]
+                logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Filtered to {len(tools_to_add)}/{len(tool_names)} enabled tools")
+            else:
+                tools_to_add = tool_names
+                logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: No enabledTools filter, loading all {len(tools_to_add)} JSON tools")
+            for tool_name in tools_to_add:
+                if tool_name not in self.tool_map:
+                    self.tool_map[tool_name] = MCPToolInfo(
+                        tool_name=tool_name,
+                        toolkit_slug=json_toolkit_slug,
+                        mcp_config=mcp_config
+                    )
+            logger.info(f"✅ [MCP JIT] {server_name}: Successfully registered {len(tools_to_add)} JSON tools")
+            return
         elif url:
             if cache_only:
                 enabled_tools = get_config_value(mcp_config, "enabled_tools", [])
@@ -285,38 +315,70 @@ class MCPJITLoader:
                         f"config_sub_keys={list(mcp_config.get('config', {}).keys()) if mcp_config.get('config') else 'N/A'}"
                     )
                 return
+
+            # FIX #1: In full-discovery mode, FIRST register tools from enabledTools config
+            # so they're available even if the live probe fails (405, 401, network errors, etc).
+            # The live probe is then attempted as enrichment — if it succeeds, we may discover
+            # additional tools; if it fails, we still have the config-based tools registered.
+            enabled_tools = get_config_value(mcp_config, "enabled_tools", [])
+            final_toolkit_slug = f"custom_{custom_type}_{server_name.replace(' ', '_').lower()}" if toolkit_slug == 'custom' else toolkit_slug
+            config_tools_registered = 0
+
+            if enabled_tools:
+                for tool_name in enabled_tools:
+                    if tool_name not in self.tool_map:
+                        self.tool_map[tool_name] = MCPToolInfo(
+                            tool_name=tool_name,
+                            toolkit_slug=final_toolkit_slug,
+                            mcp_config=mcp_config
+                        )
+                        config_tools_registered += 1
+                logger.info(
+                    f"✅ [MCP JIT] {server_name}: Pre-registered {config_tools_registered} tools from enabledTools config "
+                    f"(total enabledTools={len(enabled_tools)}). Live probe will follow for enrichment."
+                )
+            else:
+                logger.warning(
+                    f"⚠️ [MCP JIT] {server_name}: No enabledTools in config for full-discovery mode. "
+                    f"Falling through to live probe — if probe fails, ZERO tools will be registered!"
+                )
+
+            # Now attempt live probe for enrichment (discover tools beyond what config lists)
             tool_names = await self._discover_tools_with_fallback(mcp_config)
+
+            if tool_names:
+                # Live probe succeeded — register any newly discovered tools not already in tool_map
+                new_from_probe = 0
+                for tool_name in tool_names:
+                    if tool_name not in self.tool_map:
+                        self.tool_map[tool_name] = MCPToolInfo(
+                            tool_name=tool_name,
+                            toolkit_slug=final_toolkit_slug,
+                            mcp_config=mcp_config
+                        )
+                        new_from_probe += 1
+                logger.info(
+                    f"✅ [MCP JIT] {server_name}: Live probe discovered {len(tool_names)} tools, "
+                    f"{new_from_probe} new (not already from config). "
+                    f"Total tools registered: {len([t for t in self.tool_map.values() if t.toolkit_slug == final_toolkit_slug])}"
+                )
+            else:
+                if config_tools_registered > 0:
+                    logger.warning(
+                        f"⚠️ [MCP JIT] {server_name}: Live probe returned ZERO tools (connection issue?), "
+                        f"but {config_tools_registered} tools already registered from enabledTools config. "
+                        f"Server will function with config-based tools only."
+                    )
+                else:
+                    logger.error(
+                        f"❌ [MCP-CUSTOM-DEBUG] '{server_name}' discovery returned ZERO tools AND no enabledTools in config! "
+                        f"type={custom_type}, url={url}, cache_only={cache_only}. "
+                        f"This server will be INVISIBLE to the LLM. Check probe logs above for connection errors."
+                    )
+            return
         else:
             logger.error(f"❌ [MCP JIT] Missing 'url' for custom MCP '{server_name}' of type '{custom_type}'")
-            return []
-        
-        if not tool_names:
-            logger.warning(f"⚠️ [MCP JIT] No tools discovered for '{server_name}' at {url or 'stdio'}")
             return
-
-        enabled_tools = mcp_config.get('enabledTools', [])
-        if enabled_tools:
-            tools_to_add = [tool for tool in tool_names if tool in enabled_tools]
-            logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: Filtered to {len(tools_to_add)}/{len(tool_names)} enabled tools")
-        else:
-            tools_to_add = tool_names
-            logger.debug(f"⚡ [MCP JIT] Custom MCP {server_name}: No enabledTools filter, loading all {len(tools_to_add)} tools")
-        
-        final_toolkit_slug = f"custom_{custom_type}_{server_name.replace(' ', '_').lower()}" if toolkit_slug == 'custom' else toolkit_slug
-
-        for tool_name in tools_to_add:
-            if tool_name in self.tool_map:
-                logger.warning(f"⚠️  [MCP JIT] Tool '{tool_name}' already registered, skipping duplicate")
-                continue
-            
-            logger.debug(f"📌 [MCP JIT] Mapping tool: {tool_name} -> {final_toolkit_slug}")
-            self.tool_map[tool_name] = MCPToolInfo(
-                tool_name=tool_name,
-                toolkit_slug=final_toolkit_slug,
-                mcp_config=mcp_config
-            )
-        
-        logger.info(f"✅ [MCP JIT] {server_name}: Successfully registered {len(tools_to_add)} tools")
     
     async def _discover_custom_mcp_tools(self, custom_type: str, config: Dict[str, Any]) -> List[str]:
         # This method is now largely superseded by _process_custom_mcp_config_internal
@@ -334,42 +396,58 @@ class MCPJITLoader:
         """Discovery with automatic transport fallback and path probing."""
         url = config.get('url') or config.get('config', {}).get('url')
         custom_type = config.get("customType", config.get("type", "http")).lower()
+        server_name = config.get('name', 'unnamed')
 
-        if not url: return []
+        logger.info(f"🔍 [MCP-DISCOVERY-DEBUG] >>> ENTER _discover_tools_with_fallback for '{server_name}' "
+                    f"(type={custom_type}, url={url})")
+
+        if not url:
+            logger.error(f"❌ [MCP-DISCOVERY-DEBUG] '{server_name}' has NO URL! Cannot discover tools. "
+                         f"Config keys: {list(config.keys())}, config.config keys: {list(config.get('config', {}).keys())}")
+            return []
 
         # SSRF Protection: Validate URL before connecting
         safe, error_msg = is_safe_url(url)
         if not safe:
-            logger.error(f"❌ [MCP JIT] SSRF Blocked during discovery for {url}: {error_msg}")
+            logger.error(f"❌ [MCP JIT] SSRF Blocked during discovery for '{server_name}' at {url}: {error_msg}")
             return []
         
         # Build headers
         config_nested = config.get('config', {})
         headers = (config.get('headers') or config_nested.get('headers') or {}).copy()
-        
+
         # 1. Try config first
         access_token = config.get("access_token") or config_nested.get("access_token")
-        
-        # 2. Try DB lookup if missing
+
+        # 2. Try DB lookup if missing — using canonical qualifiedName with fallback chain
         if not access_token:
-            qualified_name = config.get('qualifiedName') or config.get('name')
+            from core.utils.mcp_helpers import resolve_qualified_name_from_config
+            qualified_name = resolve_qualified_name_from_config(config)
             account_id = self.agent_config.get('account_id')
-            
+
             if qualified_name and account_id:
                 try:
                     from core.services.supabase import DBConnection
                     from core.credentials import get_credential_service
-                    
+
                     db = DBConnection()
                     service = get_credential_service(db)
-                    credential = await service.get_credential(account_id, qualified_name)
-                    
+                    # Use fallback lookup: tries canonical format, then legacy URL-hash formats
+                    credential = await service.get_credential_with_fallback(
+                        account_id, qualified_name, url=url
+                    )
+
                     if credential and credential.config and "access_token" in credential.config:
                         access_token = credential.config["access_token"]
                         config["access_token"] = access_token
-                        logger.debug(f"🔑 [MCP JIT] Used stored credential for {qualified_name}")
+                        logger.info(f"🔑 [MCP JIT] Found stored credential for '{server_name}' "
+                                    f"(qualifiedName={qualified_name})")
+                    else:
+                        logger.debug(f"🔑 [MCP JIT] No credential found for '{server_name}' "
+                                     f"(qualifiedName={qualified_name}, url={url})")
                 except Exception as e:
-                    logger.warning(f"⚠️ [MCP JIT] Failed credential lookup for {qualified_name}: {e}")
+                    logger.warning(f"⚠️ [MCP JIT] Failed credential lookup for '{server_name}' "
+                                   f"(qualifiedName={qualified_name}): {e}")
 
         if access_token and "Authorization" not in headers:
             headers["Authorization"] = f"Bearer {access_token}"
@@ -390,7 +468,7 @@ class MCPJITLoader:
                 current_url = url.rstrip('/') + path if path else url
                 try:
                     if transport == "sse":
-                        logger.debug(f"🌐 [MCP JIT] Discovery [SSE] -> {current_url}")
+                        logger.info(f"🌐 [MCP-DISCOVERY-DEBUG] Probing [{transport.upper()}] '{server_name}' -> {current_url}")
                         async def _probe_sse():
                             async with sse_client(current_url, headers=headers) as (read, write):
                                 async with ClientSession(read, write) as session:
@@ -402,7 +480,7 @@ class MCPJITLoader:
                         logger.info(f"✨ [MCP JIT] Success! {len(tool_names)} tools found via SSE at {current_url}")
                         return tool_names
                     else:
-                        logger.debug(f"🌐 [MCP JIT] Discovery [HTTP] -> {current_url}")
+                        logger.info(f"🌐 [MCP-DISCOVERY-DEBUG] Probing [{transport.upper()}] '{server_name}' -> {current_url}")
                         logger.info(f"📤 [MCP JIT] Discovery Headers: { {k: '***' if k.lower() == 'authorization' else v for k, v in headers.items()} }")
                         if "Authorization" in headers:
                             logger.info(f"🔑 [MCP JIT] Auth Token present in probe: Bearer {'*' * 10}{headers['Authorization'][-5:]}")
@@ -418,10 +496,12 @@ class MCPJITLoader:
                         logger.info(f"✨ [MCP JIT] Success! {len(tool_names)} tools found via HTTP at {current_url}")
                         return tool_names
                 except Exception as e:
-                    logger.debug(f"ℹ️ [MCP JIT] Probe failed ({transport} @ {current_url}): {e}")
-                    logger.debug(traceback.format_exc())
+                    logger.warning(f"⚠️ [MCP-DISCOVERY-DEBUG] Probe FAILED for '{server_name}' ({transport} @ {current_url}): "
+                                   f"{type(e).__name__}: {e}", exc_info=True)
                     continue
-        
+
+        logger.error(f"❌ [MCP-DISCOVERY-DEBUG] ALL probes FAILED for '{server_name}'. "
+                     f"Tried transports={transports}, paths={paths}, url={url}. Returning 0 tools.")
         return []
     
     async def _discover_json_tools(self, config: Dict[str, Any]) -> List[str]:

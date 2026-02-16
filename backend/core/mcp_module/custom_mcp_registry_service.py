@@ -12,7 +12,7 @@ from mcp.client.streamable_http import streamablehttp_client
 from core.utils.logger import logger
 from core.utils.config import config as app_config, EnvMode
 from core.utils.ssrf import is_safe_url
-from core.utils.mcp_helpers import get_custom_mcp_qualified_name
+from core.utils.mcp_helpers import get_custom_mcp_qualified_name, generate_custom_mcp_qualified_name
 
 @dataclass(frozen=True)
 class CustomMCPConnectionResult:
@@ -25,6 +25,7 @@ class CustomMCPConnectionResult:
     message: str
     oauth_metadata: Optional[Dict[str, Any]] = None
     requires_auth: bool = False
+    detected_transport: str = "unknown"  # "sse", "streamable-http", or "http" — the actual transport that succeeded
 
 from .exceptions import CustomMCPError
 
@@ -163,15 +164,18 @@ class CustomMCPRegistryService:
                             elapsed = (time.time() - start_probe) * 1000
                             self._logger.info(f"✅ [MCP DISCOVERY] HTTP probe successful for {current_url}. Found {len(tools_info)} tools in {elapsed:.1f}ms.")
                             
+                            # Use URL domain as default display name (frontend will override with user's actual name)
+                            default_display = f"Custom HTTP MCP ({urlparse(current_url).netloc or current_url})"
                             return CustomMCPConnectionResult(
                                 success=True,
-                                qualified_name=get_custom_mcp_qualified_name(current_url, "http"),
-                                display_name=f"Custom HTTP MCP ({current_url})",
+                                qualified_name=generate_custom_mcp_qualified_name(default_display, current_url),
+                                display_name=default_display,
                                 tools=tools_info,
                                 config=config,
                                 url=current_url,
                                 message=f"Connected via HTTP ({len(tools_info)} tools)",
-                                oauth_metadata=oauth_metadata
+                                oauth_metadata=oauth_metadata,
+                                detected_transport="streamable-http",
                             )
                 except Exception as probe_error:
                     self._logger.debug(f"ℹ️ [MCP DISCOVERY] Probe failed for {current_url}: {probe_error}")
@@ -348,18 +352,22 @@ class CustomMCPRegistryService:
                 "description": tool.description,
                 "inputSchema": tool.inputSchema
             })
-        
+
         display_transport = "SSE" if transport_type == "sse" else "Streamable HTTP"
-        
+        # Normalize transport for storage: "sse" stays "sse", "sse-http" becomes "streamable-http"
+        detected = "sse" if transport_type == "sse" else "streamable-http"
+
+        default_display = f"Custom {display_transport} MCP ({urlparse(url).netloc or url})"
         return CustomMCPConnectionResult(
             success=True,
-            qualified_name=get_custom_mcp_qualified_name(url, "sse"),
-            display_name=f"Custom {display_transport} MCP ({url})",
+            qualified_name=generate_custom_mcp_qualified_name(default_display, url),
+            display_name=default_display,
             tools=tools_info,
             config=config,
             url=url,
             message=f"Connected via {display_transport} ({len(tools_info)} tools)",
-            oauth_metadata=oauth_metadata
+            oauth_metadata=oauth_metadata,
+            detected_transport=detected,
         )
 
 # Global singleton

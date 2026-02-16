@@ -15,12 +15,12 @@
 | 4 | **COMPLETE** | 32/32 | Configuration Key Normalization |
 | 5 | **COMPLETE** | 45/45 | Comprehensive Test Suite (Gap Fill) |
 | 6 | **MOSTLY DONE** | — | Test Harness E2E verified (Valyu discover+run). Langfuse/reliability deferred. |
-| 7 | **IN PROGRESS** | — | Post-OAuth refresh DONE + credential lookup DONE + fallback DONE. UX 7.3-7.5 remaining. |
+| 7 | **IN PROGRESS** | 14/14 | Post-OAuth refresh, credential lookup, graceful fallback, qualifiedName standardization, Streamable HTTP transport detection + persistence. UX 7.3-7.5 remaining. |
 | 8 | NOT STARTED | — | Full-Stack E2E Production Verification |
 
-**Cumulative test results**: 143/143 tests passing in ~0.83s
+**Cumulative test results**: 157/157 tests passing (143 core + 14 transport)
 
-**Test command**: `docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests/test_mcp_phase1_core.py tests/test_mcp_phase2_jit.py tests/test_mcp_phase3_executor.py tests/test_mcp_phase4_config.py tests/test_mcp_phase5_coverage.py -v"`
+**Test command**: `docker compose exec backend bash -c "cd /app && .venv/bin/python -m pytest tests/test_mcp_phase1_core.py tests/test_mcp_phase2_jit.py tests/test_mcp_phase3_executor.py tests/test_mcp_phase4_config.py tests/test_mcp_phase5_coverage.py tests/test_mcp_registry_transport.py -v"`
 
 ---
 
@@ -308,6 +308,41 @@ Three bugs discovered during manual testing of the Phase 7.2 implementation:
 - [x] Task 7.2.10: **PostgreSQL trigger search_path** — `credential_profile` triggers failed with "relation not found" due to missing schema qualification. Created migration `20260216000000_fix_credential_profile_triggers.sql` to use explicit `public.` schema.
 
 - [x] Task 7.2.11: **store_profile crash guard** — Added try/except around `store_profile()` call in OAuth callback to prevent crash if profile storage fails (non-critical operation).
+
+### 7.2++ qualifiedName Standardization — COMPLETE ✅
+
+Canonical `qualifiedName` format across the full stack to fix credential lookup misses.
+
+- [x] Task 7.2.12: **Backend canonical generation** — Added `generate_custom_mcp_qualified_name(display_name, url)` to `mcp_helpers.py`. Format: `custom_mcp_{normalized_name}_{url_hash[:6]}`. Renamed old function to `_legacy_url_hash_qualified_name()`.
+- [x] Task 7.2.13: **Fallback credential lookup** — Added `get_credential_with_fallback(account_id, qualified_name, url)` to `credential_service.py`. Tries new format first, then legacy `custom_http_` and `custom_sse_` formats.
+- [x] Task 7.2.14: **OAuth callback storage** — Updated `api.py` to use `generate_custom_mcp_qualified_name()` for credential storage.
+- [x] Task 7.2.15: **Discovery service** — Updated `custom_mcp_registry_service.py` to return canonical `qualifiedName` in results.
+- [x] Task 7.2.16: **Auth service** — Updated `auth_service.py` to accept `display_name` parameter and try new format.
+- [x] Task 7.2.17: **JIT loader credential lookup** — Updated `mcp_loader.py` to use `resolve_qualified_name_from_config()` and `get_credential_with_fallback()`.
+- [x] Task 7.2.18: **Runtime config builder** — Updated `mcp_manager.py` to prefer config `qualifiedName` over inline generation.
+- [x] Task 7.2.19: **Frontend qualifiedName preservation** — Fixed `agent-mcp-configuration.tsx` to pass `qualifiedName` through save serialization (was being dropped).
+- [x] Task 7.2.20: **Frontend dialog** — Updated `custom-mcp-dialog.tsx` to pass `qualified_name` from discovery response into `onSave()`.
+- [x] Task 7.2.21: **Frontend deterministic names** — Replaced `Date.now()` in `mcp-configuration-new.tsx` with deterministic name-based format.
+- [x] Task 7.2.22: **Composio registry** — Same `Date.now()` → deterministic name fix in `composio-registry.tsx`.
+
+### 7.2+++ Streamable HTTP Transport Support — COMPLETE ✅
+
+SSE→Streamable HTTP fallback and transport type detection/persistence across the full stack.
+
+**Test file**: `backend/tests/test_mcp_registry_transport.py` — 14 tests (9 unit + 5 integration)
+
+- [x] Task 7.2.23: **Schema loading fallback** — Updated `mcp_registry.py` to catch SSE connection failures (including `ExceptionGroup` from anyio TaskGroup) and fall back to `streamablehttp_client`. Checks `detectedTransport` for direct dispatch.
+- [x] Task 7.2.24: **JIT execution fallback** — Updated `mcp_tool_wrapper.py` with SSE→Streamable HTTP fallback + `detectedTransport` direct dispatch.
+- [x] Task 7.2.25: **Unified execution fallback** — Updated `mcp_tool_executor.py` with same fallback pattern + direct dispatch.
+- [x] Task 7.2.26: **Discovery transport detection** — Updated `custom_mcp_registry_service.py` to return `detected_transport` field in `CustomMCPConnectionResult`.
+- [x] Task 7.2.27: **API transport response** — Updated `api.py` to include `detected_transport` in `CustomMCPConnectionResponse`.
+- [x] Task 7.2.28: **Frontend transport read** — Updated `custom-mcp-dialog.tsx` to read `detected_transport` from backend and pass to save callback.
+- [x] Task 7.2.29: **Frontend transport persistence** — Updated `mcp-configuration-new.tsx` to save `detectedTransport` in agent config.
+- [x] Task 7.2.30: **Frontend transport round-trip** — Updated `agent-mcp-configuration.tsx` inbound mapping to preserve `detectedTransport` from DB.
+- [x] Task 7.2.31: **TypeScript interface** — Added `detectedTransport?: string` to `MCPConfiguration` in `types.ts`.
+- [x] Task 7.2.32: **Transport unit tests** — 9 tests: schema loading SSE success, Streamable HTTP fallback, ExceptionGroup handling, direct dispatch for SSE/Streamable HTTP/HTTP, config passthrough.
+- [x] Task 7.2.33: **Transport integration tests** — 5 tests: discovery SSE, discovery HTTP, JIT execution SSE fallback to Streamable HTTP, unified executor fallback, direct dispatch pipeline.
+- [x] Task 7.2.34: **Docker rebuild + verification** — All 14/14 transport tests passing, all services healthy.
 
 ### 7.3 OAuth confirmation dialog (UX improvement)
 

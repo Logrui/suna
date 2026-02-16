@@ -113,7 +113,11 @@ class MCPToolExecutor:
     # ------------------------------------------------------------------
 
     async def _execute_direct(self, tool_name: str, arguments: Dict[str, Any]) -> ToolResult:
-        """Dispatch to transport handler based on server_type (direct mode)."""
+        """Dispatch to transport handler based on server_type (direct mode).
+
+        If detectedTransport is set from discovery, use it for direct dispatch
+        to avoid fallback overhead for servers with known transport type.
+        """
         cfg = self._mcp_config
         config_inner = cfg.get("config", {})
 
@@ -128,6 +132,12 @@ class MCPToolExecutor:
             url = cfg.get("url")
             if url:
                 tool_info["custom_config"]["url"] = url
+
+        # Check detectedTransport for direct dispatch (skip fallback overhead)
+        detected = cfg.get("detectedTransport", "")
+        if detected == "streamable-http":
+            logger.debug(f"⚡ [MCP EXEC] Direct Streamable HTTP dispatch for {tool_name} (detectedTransport={detected})")
+            return await self._execute_http_tool(tool_name, arguments, tool_info)
 
         if self._server_type == "composio":
             return await self._execute_composio_tool_direct(tool_name, arguments)
@@ -239,6 +249,12 @@ class MCPToolExecutor:
     # ------------------------------------------------------------------
 
     async def _execute_sse_tool(self, tool_name: str, arguments: Dict[str, Any], tool_info: Dict[str, Any]) -> ToolResult:
+        """Execute tool via SSE transport, with Streamable HTTP fallback on failure.
+
+        Many MCP servers registered as 'sse' type actually only support
+        Streamable HTTP (POST-based). When SSE fails (e.g. 405 Method Not Allowed),
+        we automatically fall back to Streamable HTTP transport.
+        """
         custom_config = tool_info['custom_config']
         original_tool_name = tool_info.get('original_name', tool_name)
 
@@ -255,6 +271,8 @@ class MCPToolExecutor:
         headers = self._get_headers(custom_config)
         logger.debug(f"🔑 [MCP EXEC] Headers: { {k: '***' if k.lower() == 'authorization' else v for k, v in headers.items()} }")
 
+        # --- Attempt 1: Standard SSE transport (GET-based) ---
+        sse_error = None
         start_exec = time.time()
         try:
             async with asyncio.timeout(30):
@@ -278,9 +296,27 @@ class MCPToolExecutor:
         except asyncio.TimeoutError:
             logger.error(f"❌ [MCP EXEC] SSE execution timeout for {tool_name}")
             return self._create_error_result("SSE tool execution timeout after 30 seconds")
-        except Exception as e:
-            logger.error(f"❌ [MCP EXEC] SSE execution failed for {tool_name}: {e}")
-            return self._create_error_result(f"Failed to execute SSE tool: {str(e)}")
+        except (Exception, BaseException) as e:
+            sse_error = e
+            logger.info(f"ℹ️ [MCP EXEC] SSE execution failed for {tool_name}: {type(e).__name__}. Trying Streamable HTTP fallback...")
+
+        # --- Attempt 2: Streamable HTTP transport (POST-based) fallback ---
+        start_exec = time.time()
+        try:
+            async with asyncio.timeout(30):
+                async with streamablehttp_client(url, headers=headers) as (read, write, _):
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        result = await session.call_tool(original_tool_name, arguments)
+                        elapsed = (time.time() - start_exec) * 1000
+                        logger.info(f"✅ [MCP EXEC] {tool_name} via Streamable HTTP fallback in {elapsed:.1f}ms")
+                        return self._create_success_result(self._extract_content(result))
+        except asyncio.TimeoutError:
+            logger.error(f"❌ [MCP EXEC] Streamable HTTP fallback timeout for {tool_name}")
+            return self._create_error_result("Tool execution timeout after 30 seconds (both SSE and Streamable HTTP)")
+        except (Exception, BaseException) as http_err:
+            logger.error(f"❌ [MCP EXEC] Both SSE and Streamable HTTP failed for {tool_name}. SSE: {sse_error}, HTTP: {http_err}")
+            return self._create_error_result(f"Failed to execute tool (SSE: {sse_error}, Streamable HTTP: {http_err})")
 
     async def _execute_http_tool(self, tool_name: str, arguments: Dict[str, Any], tool_info: Dict[str, Any]) -> ToolResult:
         custom_config = tool_info['custom_config']
