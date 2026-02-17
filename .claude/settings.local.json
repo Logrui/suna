@@ -8,7 +8,13 @@
       "Bash(jj st:*)",
       "Bash(jj log:*)",
       "Bash(jj diff:*)",
-      "Bash(jj squash:*)"
+      "Bash(jj squash:*)",
+      "Bash(docker compose cp:*)",
+      "Bash(uv lock:*)",
+      "Bash(for f in backend/core/utils/thread_name_generator.py backend/core/tools/sb_kb_tool.py backend/core/agentpress/context_manager.py backend/core/tools/web_search_tool.py backend/core/services/llm.py backend/core/tools/sb_file_reader_tool.py backend/core/utils/config.py backend/core/tools/utils/files_utils.py backend/core/knowledge_base/api.py)",
+      "Bash(do test -f \"$f\")",
+      "Bash(echo:*)",
+      "Bash(done)"
     ]
   }
 }

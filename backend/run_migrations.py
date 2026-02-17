@@ -127,7 +127,9 @@ async def run_migrations():
         for f in pending:
             logger.info(f"   → {f.name}")
 
-        # 4. Apply each pending migration
+        # 4. Apply each pending migration (non-blocking: skip failures, continue)
+        applied_count = 0
+        skipped = []
         for sql_file in pending:
             name = sql_file.name
             sql = sql_file.read_text(encoding="utf-8")
@@ -141,11 +143,16 @@ async def run_migrations():
                     name, checksum
                 )
                 logger.info(f"✅ Applied: {name}")
+                applied_count += 1
             except Exception as e:
-                logger.error(f"❌ Failed to apply {name}: {e}")
-                sys.exit(1)
+                logger.warning(f"⚠️  Skipped {name}: {e}")
+                skipped.append((name, str(e)))
 
-        logger.info(f"\n🏁 Migration run complete. {len(pending)} migration(s) applied.")
+        logger.info(f"\n🏁 Migration run complete. {applied_count}/{len(pending)} applied.")
+        if skipped:
+            logger.warning(f"⚠️  {len(skipped)} migration(s) skipped due to errors:")
+            for name, err in skipped:
+                logger.warning(f"   → {name}: {err}")
 
     finally:
         await conn.close()
