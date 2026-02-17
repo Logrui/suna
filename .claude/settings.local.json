@@ -8,7 +8,9 @@
       "Bash(jj st:*)",
       "Bash(jj log:*)",
       "Bash(jj diff:*)",
-      "Bash(jj squash:*)"
+      "Bash(jj squash:*)",
+      "Bash(docker compose cp:*)",
+      "Bash(uv lock:*)"
     ]
   }
 }
