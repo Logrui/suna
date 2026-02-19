@@ -70,6 +70,7 @@ import { RealityDefenderToolView } from '../reality-defender-tool/RealityDefende
 import { ApifyToolView } from '../apify-tool/ToolView';
 import { FileReaderToolView } from '../file-reader-tool/FileReaderToolView';
 import { SpreadsheetToolView } from '../spreadsheet/SpreadsheetToolview';
+import { SBSSHToolView } from '../sb_ssh_tool/ToolView';
 
 
 export type ToolViewComponent = React.ComponentType<ToolViewProps>;
@@ -270,6 +271,10 @@ const defaultRegistry: ToolViewRegistryType = {
 
   'detect-deepfake': RealityDefenderToolView,
   'detect_deepfake': RealityDefenderToolView,
+
+  'ssh_connect': SBSSHToolView,
+  'ssh_execute': SBSSHToolView,
+  'ssh_disconnect': SBSSHToolView,
 };
 
 class ToolViewRegistry {
